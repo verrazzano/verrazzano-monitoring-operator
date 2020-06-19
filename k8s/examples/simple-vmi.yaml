@@ -1,0 +1,23 @@
+# Copyright (C) 2020, Oracle Corporation and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+apiVersion: verrazzano.io/v1
+kind: VerrazzanoMonitoringInstance
+metadata:
+  name: vmi-1
+  namespace: default
+spec:
+    cascadingDelete: true
+    secretsName: vmi-secrets
+    serviceType: NodePort
+    grafana:
+      enabled: true
+    prometheus:
+      enabled: true
+    alertmanager:
+      enabled: true
+    elasticsearch:
+      enabled: true
+    kibana:
+      enabled: true
+    prometheusGW:
+        maintenanceSchedule: 10 17 * * *

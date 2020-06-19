@@ -1,0 +1,265 @@
+// Copyright (C) 2020, Oracle Corporation and/or its affiliates.
+// Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+package statefulsets
+
+import (
+	"fmt"
+	"strings"
+
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+// Creates StatefulSet objects for a Sauron resource
+func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
+	var statefulSets []*appsv1.StatefulSet
+
+	// Alert Manager
+	if sauron.Spec.AlertManager.Enabled {
+		statefulSets = append(statefulSets, createAlertManagerStatefulSet(sauron))
+	}
+	// Elasticsearch Master
+	if sauron.Spec.Elasticsearch.Enabled {
+		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(sauron))
+	}
+	return statefulSets, nil
+}
+
+// Creates StatefulSet for Elasticsearch Master
+func createElasticsearchMasterStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+	var readinessProbeCondition string
+
+	statefulSet := createStatefulSetElement(sauron, &sauron.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
+
+	//statefulSet.Spec.Replicas = resources.NewVal(sauron.Spec.Elasticsearch.MasterNode.Replicas)
+	statefulSet.Spec.Replicas = resources.NewVal(3)
+	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(sauron.Name, config.ElasticsearchMaster.Name)
+
+	var elasticsearchUID int64 = 1000
+	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &elasticsearchUID
+	statefulSet.Spec.Template.Spec.Containers[0].Ports[0].Name = "transport"
+	statefulSet.Spec.Template.Spec.Containers[0].Ports = append(statefulSet.Spec.Template.Spec.Containers[0].Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
+	var i int32
+	initialMasterNodes := make([]string, 0)
+	for i = 0; i < *statefulSet.Spec.Replicas; i++ {
+		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
+	}
+
+	statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env,
+		corev1.EnvVar{
+			Name:  "discovery.seed_hosts",
+			Value: resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name),
+		},
+		corev1.EnvVar{
+			Name: "node.name",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		corev1.EnvVar{Name: "cluster.name", Value: sauron.Name},
+		corev1.EnvVar{Name: "node.master", Value: "true"},
+		corev1.EnvVar{Name: "node.ingest", Value: "false"},
+		corev1.EnvVar{Name: "node.data", Value: "false"},
+		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
+		corev1.EnvVar{Name: "HTTP_ENABLE", Value: "true"},
+
+		corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
+	)
+
+	// Add init containers
+	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers, *resources.GetElasticsearchInitContainer())
+
+	basicAuthParams := ""
+	readinessProbeCondition = `
+        echo 'Cluster is not yet ready'
+        exit 1
+`
+
+	// Customized Readiness and Liveness probes
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe =
+		&corev1.Probe{
+			Handler: corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"sh",
+						"-c",
+						`#!/usr/bin/env bash -e
+# If the node is starting up wait for the cluster to be ready' )
+# Once it has started only check that the node itself is responding
+
+START_FILE=/tmp/.es_start_file
+
+http () {
+    local path="${1}"
+    curl -v -XGET -s -k ` + basicAuthParams + ` --fail http://127.0.0.1:9200${path}
+}
+
+if [ -f "${START_FILE}" ]; then
+    echo 'Elasticsearch is already running, lets check the node is healthy'
+    http "` + config.ElasticsearchMaster.ReadinessHTTPPath + `"
+else
+    echo 'Waiting for elasticsearch cluster to become cluster to be ready'
+    if http "` + config.ElasticsearchMaster.ReadinessHTTPPath + `" ; then
+        touch ${START_FILE}
+    else` + readinessProbeCondition + `
+    fi
+    exit 0
+fi`,
+					},
+				},
+			},
+			InitialDelaySeconds: 90,
+			SuccessThreshold:    3,
+			PeriodSeconds:       5,
+			TimeoutSeconds:      5,
+		}
+
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe =
+		&corev1.Probe{
+			Handler: corev1.Handler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.IntOrString{
+						IntVal: int32(config.ElasticsearchMaster.Port),
+					},
+				},
+			},
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			TimeoutSeconds:      5,
+			FailureThreshold:    5,
+		}
+
+	return statefulSet
+}
+
+// Creates StatefulSet for AlertManager
+func createAlertManagerStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+	alertManagerClusterService := resources.GetMetaName(sauron.Name, config.AlertManagerCluster.Name)
+	statefulSet := createStatefulSetElement(sauron, &sauron.Spec.AlertManager.Resources, config.AlertManager, alertManagerClusterService)
+	statefulSet.Spec.Replicas = resources.NewVal(sauron.Spec.AlertManager.Replicas)
+	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(sauron.Name, config.AlertManager.Name)
+	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.AlertManager.ImagePullPolicy
+
+	// Construct command line args, with a cluster peer entry for each replica
+	statefulSet.Spec.Template.Spec.Containers[0].Command = []string{"/bin/alertmanager"}
+	statefulSet.Spec.Template.Spec.Containers[0].Args = []string{
+		fmt.Sprintf("--config.file=%s", constants.AlertManagerConfigContainerLocation),
+		fmt.Sprintf("--cluster.listen-address=0.0.0.0:%d", config.AlertManagerCluster.Port),
+		fmt.Sprintf("--cluster.advertise-address=$(POD_IP):%d", config.AlertManagerCluster.Port),
+		"--cluster.pushpull-interval=10s",
+	}
+
+	if sauron.Spec.URI != "" {
+		alertManagerExternalURL := "https://" + config.AlertManager.Name + "." + sauron.Spec.URI
+		statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--web.external-url=%s", alertManagerExternalURL))
+		statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, "--web.route-prefix=/")
+	}
+
+	// We'll be using the first replica of the statefulset as the discovery "hub" for all cluster members.  This will be the
+	// *only* entry in the cluster peer list used by each cluster member.  The main reason to limit this peer list to the
+	// first member is so that when scaling up from 1 to N, our first replica is not restarted, and therefore does
+	// not lose its state before replicating over to subsequent replicas.
+
+	// First replica is addressed in the form <statefulset_name>-0.<service_name>
+	firstReplicaName := fmt.Sprintf("%s-%d.%s", statefulSet.Name, 0, alertManagerClusterService)
+	arg := fmt.Sprintf("--cluster.peer=%s:%d", firstReplicaName, config.AlertManagerCluster.Port)
+	statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, arg)
+	statefulSet.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+		{
+			Name: "POD_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "status.podIP",
+				},
+			},
+		},
+	}
+
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 5
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 1
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 10
+
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 1
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 10
+
+	// Alertmanager config volume
+	volumes := []corev1.Volume{
+		{
+			Name: "alert-config-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: sauron.Spec.AlertManager.ConfigMap},
+				},
+			},
+		},
+	}
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "alert-config-volume",
+			MountPath: constants.AlertManagerConfigMountPath,
+		},
+	}
+	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
+	statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, volumes...)
+
+	// Config-reloader container
+	statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, corev1.Container{
+		Name:            config.ConfigReloader.Name,
+		Image:           config.ConfigReloader.Image,
+		ImagePullPolicy: constants.DefaultImagePullPolicy,
+	})
+	statefulSet.Spec.Template.Spec.Containers[1].Args = []string{"-volume-dir=" + constants.AlertManagerConfigMountPath, "-webhook-url=" + constants.AlertManagerWebhookURL}
+	statefulSet.Spec.Template.Spec.Containers[1].VolumeMounts = volumeMounts
+
+	return statefulSet
+}
+
+// Creates a statefulset element for the given Sauron and component
+func createStatefulSetElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, sauronResources *vmcontrollerv1.Resources,
+	componentDetails config.ComponentDetails, serviceName string) *appsv1.StatefulSet {
+	labels := resources.GetSpecId(sauron.Name, componentDetails.Name)
+	statefulSetName := resources.GetMetaName(sauron.Name, componentDetails.Name)
+	if serviceName == "" {
+		serviceName = statefulSetName
+	}
+
+	return &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:          resources.GetMetaLabels(sauron),
+			Name:            statefulSetName,
+			Namespace:       sauron.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(sauron),
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: resources.NewVal(1),
+			// The default PodManagementPolicy (OrderedReady) has known issues where a statefulset with
+			// a crashing pod is never updated on further statefulset changes, so use Parallel here
+			PodManagementPolicy: appsv1.ParallelPodManagement,
+			ServiceName:         serviceName,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						resources.CreateContainerElement(nil, sauronResources, componentDetails),
+					},
+					TerminationGracePeriodSeconds: resources.New64Val(1),
+				},
+			},
+		},
+	}
+}
