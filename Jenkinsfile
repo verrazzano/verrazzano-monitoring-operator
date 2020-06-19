@@ -29,12 +29,17 @@ pipeline {
         ELASTICSEARCH_VERSION = '7.2.0'
         INGRESS_NODE_PORT = sh(script: "shuf -i 30000-32767 -n 1" , returnStdout: true)
         KUBECONFIG = '~/.kube/config'
+        NETRC_FILE = credentials('netrc')
     }
 
     stages {
         stage('Clean workspace and checkout') {
             steps {
                 checkout scm
+                sh """
+                    cp -f "${NETRC_FILE}" $HOME/.netrc
+                    chmod 600 $HOME/.netrc
+                """
       	        sh """
                     echo "${DOCKER_CREDS_PSW}" | docker login ${env.DOCKER_REPO} -u ${DOCKER_CREDS_USR} --password-stdin
                     rm -rf ${GO_REPO_PATH}/verrazzano-monitoring-operator
