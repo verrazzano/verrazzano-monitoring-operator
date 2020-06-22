@@ -252,3 +252,26 @@ func (c *Controller) loadAllAuthSecretData(ns, secretName string) (map[string]st
 
 	return m, nil
 }
+
+// The prometheus pusher needs to access the ca.ctl cert in system-tls secret from within the pod.  The secret must
+// be in the monitoring namespace to access it as a volume.  Copy the secret from the verrazzano-system
+// namespace.
+func CopyTLSSecretToMonitoringNS(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+
+	// The secret must be this name since the name is hardcoded in monitoring/deployments.do of verrazzano operator.
+	const secretName = "system-tls"
+	secret, err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		glog.Errorf("Error getting TLS secret %s from namespace %s, err: %s", secretName, sauron.Namespace, err)
+		return err
+	}
+
+	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(secret)
+	if err != nil {
+		glog.Errorf("caught an error trying to create a secret, err: %s", err)
+		return err
+	}
+	glog.V(6).Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
+
+	return nil
+}
