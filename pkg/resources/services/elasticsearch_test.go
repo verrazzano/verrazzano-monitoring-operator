@@ -3,10 +3,11 @@
 package services
 
 import (
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/stretchr/testify/assert"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestElasticsearchDefaultServices1(t *testing.T) {
@@ -24,5 +25,5 @@ func TestElasticsearchDefaultServices1(t *testing.T) {
 		},
 	}
 	services := createElasticsearchServiceElements(sauron)
-	assert.Equal(t, 4, len(services), "Length of generated services")
+	assert.Equal(t, 3, len(services), "Length of generated services")
 }
