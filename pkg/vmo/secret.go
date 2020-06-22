@@ -181,7 +181,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 			}
 			return nil
 		}
-		secret, err = secrets.NewTLS(sauron, sauron.Name+"-tls", secretData)
+		secret, err = secrets.NewTLS(sauron, sauron.Namespace, sauron.Name+"-tls", secretData)
 		if err != nil {
 			glog.Errorf("got an error trying to create a password hash, err: %s", err)
 			return err
@@ -192,6 +192,19 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 			return err
 		}
 		glog.V(6).Infof("Create TLS secret: %s", secretOut.Name)
+
+		secret, err = secrets.NewTLS(sauron, constants.MonitoringNamespace, sauron.Name+"-tls", secretData)
+		if err != nil {
+			glog.Errorf("got an error trying to create the TLS secret object: %s", err)
+			return err
+		}
+		secretOut, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Create(secret)
+		if err != nil {
+			glog.Errorf("Error trying to create a TLS secret in monitoring namespace, err: %s", err)
+			return err
+		}
+		glog.V(6).Infof("Create TLS secret in monitoring namespace: %s", secretOut.Name)
+
 	}
 	return nil
 }

@@ -24,13 +24,13 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string,
 	}, nil
 }
 
-func NewTLS(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, data map[string][]byte) (*corev1.Secret, error) {
+func NewTLS(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, nameSpace string, secretName string, data map[string][]byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          resources.GetMetaLabels(sauron),
 			Name:            secretName,
-			Namespace:       sauron.Namespace,
+			Namespace:       nameSpace,
 			OwnerReferences: resources.GetOwnerReferences(sauron),
 		},
 		Data: data,
