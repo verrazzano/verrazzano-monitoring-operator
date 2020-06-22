@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,7 +35,7 @@ func TestElasticsearchDefaultDeployments1(t *testing.T) {
 	}
 	var es Elasticsearch = ElasticsearchBasic{}
 	deployments := es.createElasticsearchDeploymentElements(sauron, map[string]string{})
-	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 }
 
 func TestElasticsearchDefaultDeployments2(t *testing.T) {
@@ -58,7 +58,7 @@ func TestElasticsearchDefaultDeployments2(t *testing.T) {
 	}
 	var es Elasticsearch = ElasticsearchBasic{}
 	deployments := es.createElasticsearchDeploymentElements(sauron, map[string]string{})
-	assert.Equal(t, 5, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
 
 	clientDeployment, _ := getDeploymentByName(resources.GetMetaName(sauron.Name, config.ElasticsearchIngest.Name), deployments)
 	assert.NotNil(t, clientDeployment, "Client deployment")

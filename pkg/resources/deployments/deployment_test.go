@@ -56,7 +56,7 @@ func TestSauronFullDeploymentSize(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, 8, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 7, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.SauronKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
