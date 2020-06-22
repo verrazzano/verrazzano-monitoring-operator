@@ -43,14 +43,14 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 		},
 	}
 	secret, _ := New(sauron, "secret", []byte{})
-	tls, _ := NewTLS(sauron, sauron.Namespace, "secret", map[string][]byte{})
+	tls, _ := NewTLS(sauron, "secret", map[string][]byte{})
 	assert.Equal(t, 1, len(secret.ObjectMeta.OwnerReferences), "OwnerReferences is not set with CascadingDelete true")
 	assert.Equal(t, 1, len(tls.ObjectMeta.OwnerReferences), "OwnerReferences is not set with CascadingDelete true")
 
 	// Without CascadingDelete
 	sauron.Spec.CascadingDelete = false
 	secret, _ = New(sauron, "secret", []byte{})
-	tls, _ = NewTLS(sauron, sauron.Namespace, "secret", map[string][]byte{})
+	tls, _ = NewTLS(sauron, "secret", map[string][]byte{})
 	assert.Equal(t, 0, len(secret.ObjectMeta.OwnerReferences), "OwnerReferences is set even with CascadingDelete false")
 	assert.Equal(t, 0, len(tls.ObjectMeta.OwnerReferences), "OwnerReferences is set even with CascadingDelete false")
 }
