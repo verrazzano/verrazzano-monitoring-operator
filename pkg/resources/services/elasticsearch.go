@@ -33,17 +33,11 @@ func createElasticsearchDataServiceElements(sauron *vmcontrollerv1.VerrazzanoMon
 	return elasticsearchDataService
 }
 
-// Creates Elasticsearch Exporter service element
-func createElasticsearchExporterServiceElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
-	return createServiceElement(sauron, config.ElasticsearchExporter)
-}
-
 // Creates *all* Elasticsearch service elements
 func createElasticsearchServiceElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) []*corev1.Service {
 	var services []*corev1.Service
 	services = append(services, createElasticsearchIngestServiceElements(sauron))
 	services = append(services, createElasticsearchMasterServiceElements(sauron))
 	services = append(services, createElasticsearchDataServiceElements(sauron))
-	services = append(services, createElasticsearchExporterServiceElements(sauron))
 	return services
 }

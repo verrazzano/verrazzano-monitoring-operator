@@ -8,10 +8,10 @@ import (
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 
+	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +56,7 @@ func TestSauronFullDeploymentSize(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, 8, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 7, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.SauronKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
@@ -191,8 +191,6 @@ func TestSauronWithResourceConstraints(t *testing.T) {
 		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name) {
 			// No resources specified on this endpoint
 		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.ElasticsearchData.Name) {
-			// No resources specified on this endpoint
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.ElasticsearchExporter.Name) {
 			// No resources specified on this endpoint
 		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.Api.Name) {
 			// No resources specified on API endpoint

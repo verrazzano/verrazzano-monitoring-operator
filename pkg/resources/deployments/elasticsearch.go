@@ -191,33 +191,10 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(sauron *v
 	return deployList
 }
 
-// Creates all Elasticsearch Exporter deployment elements
-func (es ElasticsearchBasic) createElasticsearchExporterDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
-	elasticsearchExporterDeployment := createDeploymentElement(sauron, nil, nil, config.ElasticsearchExporter)
-
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].Command = []string{
-		"/bin/elasticsearch_exporter",
-		"--es.uri=" + fmt.Sprintf("http://%s:%d", resources.GetMetaName(sauron.Name, config.ElasticsearchIngest.Name), config.ElasticsearchIngest.Port),
-		"--es.all",
-		"--es.timeout=20s",
-	}
-
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].Ports[0].Name = "http"
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold = 3
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 5
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 10
-
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 3
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 5
-	elasticsearchExporterDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 10
-	return []*appsv1.Deployment{elasticsearchExporterDeployment}
-}
-
 // Creates *all* Elasticsearch deployment elements
 func (es ElasticsearchBasic) createElasticsearchDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var deployList []*appsv1.Deployment
 	deployList = append(deployList, es.createElasticsearchIngestDeploymentElements(sauron)...)
 	deployList = append(deployList, es.createElasticsearchDataDeploymentElements(sauron, pvcToAdMap)...)
-	deployList = append(deployList, es.createElasticsearchExporterDeploymentElements(sauron)...)
 	return deployList
 }

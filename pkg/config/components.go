@@ -27,7 +27,7 @@ type ComponentDetails struct {
 }
 
 // Array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &Api, &ElasticsearchExporter, &ConfigReloader, &NodeExporter}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &Api, &ConfigReloader, &NodeExporter}
 
 // Storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
@@ -166,17 +166,6 @@ var Api = ComponentDetails{
 	LivenessHTTPPath:  "/healthcheck",
 	ReadinessHTTPPath: "/healthcheck",
 	Privileged:        false,
-}
-
-// Default ElasticsearchExporter configuration
-var ElasticsearchExporter = ComponentDetails{
-	Name:              "es-exporter",
-	EnvName:           "ELASTICSEARCH_EXPORTER_IMAGE",
-	ImagePullPolicy:   constants.DefaultImagePullPolicy,
-	Port:              9114,
-	LivenessHTTPPath:  "/",
-	ReadinessHTTPPath: "/",
-	Privileged:        true,
 }
 
 // Default config-reloader configuration
