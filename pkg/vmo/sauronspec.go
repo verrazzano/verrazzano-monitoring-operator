@@ -36,7 +36,7 @@ func InitializeSauronSpec(controller *Controller, sauron *vmcontrollerv1.Verrazz
 		glog.Errorf("Failed to create TLS Secrets for sauron: %v", err)
 	}
 
-	err = CopyTLSSecretToMonitoringNS(controller, sauron)
+	err = EnsureTlsSecretInMonitoringNS(controller, sauron)
 	if err != nil {
 		glog.Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
 	}
