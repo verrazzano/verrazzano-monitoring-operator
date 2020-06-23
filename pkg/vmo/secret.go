@@ -285,7 +285,7 @@ func CopyTLSSecretToMonitoringNS(controller *Controller, sauron *vmcontrollerv1.
 		glog.Errorf("caught an error trying to create a secret, err: %s", err)
 		return err
 	}
-	glog.V(6).Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
+	glog.Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
 
 	return nil
 }
