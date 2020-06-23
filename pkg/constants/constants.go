@@ -136,3 +136,6 @@ const OciFlexVolumeProvisioner = "oracle.com/oci"
 const OciAvailabilityDomainLabel = "oci-availability-domain"
 const K8sDefaultStorageClassAnnotation = "storageclass.kubernetes.io/is-default-class"
 const K8sDefaultStorageClassBetaAnnotation = "storageclass.beta.kubernetes.io/is-default-class"
+
+// Monitoring namespace
+const MonitoringNamespace = "monitoring"

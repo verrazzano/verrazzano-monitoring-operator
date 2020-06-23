@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"regexp"
 	"strings"
 
@@ -251,4 +252,43 @@ func (c *Controller) loadAllAuthSecretData(ns, secretName string) (map[string]st
 	}
 
 	return m, nil
+}
+
+// The prometheus pusher needs to access the ca.ctl cert in system-tls secret from within the pod.  The secret must
+// be in the monitoring namespace to access it as a volume.  Copy the secret from the verrazzano-system
+// namespace.
+func EnsureTlsSecretInMonitoringNS(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	const secretName = "system-tls"
+
+	// Don't copy the secret if it already exists.
+	secret, err := controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Get(secretName, metav1.GetOptions{})
+	if err == nil && secret != nil {
+		return nil
+	}
+
+	// The secret must be this name since the name is hardcoded in monitoring/deployments.do of verrazzano operator.
+	secret, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		glog.Errorf("Error getting TLS secret %s from namespace %s, err: %s", secretName, sauron.Namespace, err)
+		return err
+	}
+
+	// Create the secret
+	newSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secret.Name,
+			Namespace: constants.MonitoringNamespace,
+		},
+		Data:       secret.Data,
+		StringData: secret.StringData,
+		Type:       secret.Type,
+	}
+	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(&newSecret)
+	if err != nil {
+		glog.Errorf("caught an error trying to create a secret, err: %s", err)
+		return err
+	}
+	glog.Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
+
+	return nil
 }
