@@ -267,6 +267,10 @@ func CopyTLSSecretToMonitoringNS(controller *Controller, sauron *vmcontrollerv1.
 		return err
 	}
 
+	// Always copy the secret even it is already exists, so try to delete it first.
+	controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Delete(secret.Name, &metav1.DeleteOptions{})
+
+	// Create the secret
 	newSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secret.Name,
