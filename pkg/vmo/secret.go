@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"regexp"
 	"strings"
 
@@ -266,8 +267,15 @@ func CopyTLSSecretToMonitoringNS(controller *Controller, sauron *vmcontrollerv1.
 		return err
 	}
 
-	secret.Namespace = constants.MonitoringNamespace
-	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(secret)
+	newSecret := corev1.Secret{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Data:       secret.Data,
+		StringData: secret.StringData,
+		Type:       secret.Type,
+	}
+
+	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(newSecret)
 	if err != nil {
 		glog.Errorf("caught an error trying to create a secret, err: %s", err)
 		return err
