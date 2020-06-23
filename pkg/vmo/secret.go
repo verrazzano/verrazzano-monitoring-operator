@@ -275,7 +275,7 @@ func CopyTLSSecretToMonitoringNS(controller *Controller, sauron *vmcontrollerv1.
 		Type:       secret.Type,
 	}
 
-	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(newSecret)
+	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(&newSecret)
 	if err != nil {
 		glog.Errorf("caught an error trying to create a secret, err: %s", err)
 		return err
