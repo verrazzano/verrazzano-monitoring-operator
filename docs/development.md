@@ -53,7 +53,7 @@ export KUBECONFIG=<your_kubeconfig>
 make go-run
 ```
 
-From here you can manually deploy VMIs to your cluster (as in the [Usage doc](usage.md), or run integration tests.
+From here you can manually deploy VMIs to your cluster (as in the [Usage doc](usage.md)), or run integration tests.
 
 ### Running the operator as an in-cluster pod
 
@@ -102,16 +102,6 @@ make integ-test K8S_EXTERNAL_IP=<ip_of_a_worker_node>
 ```
 
 ## Other Development Notes
-
-## Generating/Updating THIRD_PARTY_LICENSES.txt
-
-Whenever project dependencies (go.mod) are updated, the `THIRD_PARTY_LICENSES.txt` file contained in this project must be updated as well.
-This is verified in the CI pipeline - the build will fail if this file is found to be out of sync with
-go.mod.
-
-To update the `THIRD_PARTY_LICENSES.txt` file, install the *Attribution Helper* tool as described [here](https://github.com/oracle/attribution-helper#how-to-use),
-run it against the this project specifying `-i=false` and then commit the updated `THIRD_PARTY_LICENSES.txt` file.
-
 
 ### Making changes to the operator-generated Kubernetes objects
 
