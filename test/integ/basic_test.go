@@ -86,7 +86,7 @@ func TestBasic1Sauron(t *testing.T) {
 
 	// Create secrets - domain only used with ingress
 	secretName := f.RunID + "-sauron-secrets"
-	testDomain := "ingress-test.oracledx.com"
+	testDomain := "ingress-test.example.com"
 	secret, err := createTestSecrets(secretName, testDomain)
 	if err != nil {
 		t.Errorf("failed to create test secrets: %+v", err)
@@ -131,7 +131,7 @@ func TestBasic2SauronWithDataVolumes(t *testing.T) {
 
 	// Create Secrets - domain only used with ingress
 	secretName := f.RunID + "-sauron-secrets"
-	testDomain := "ingress-test.oracledx.com"
+	testDomain := "ingress-test.example.com"
 	secret, err := createTestSecrets(secretName, testDomain)
 	if err != nil {
 		t.Errorf("failed to create test secrets: %+v", err)
@@ -206,7 +206,7 @@ func TestBasic3GrafanaOnlySauronAPITokenOperations(t *testing.T) {
 func TestBasic4SauronMultiUserAuthn(t *testing.T) {
 	f := framework.Global
 	var err error
-	testDomain := "multiuser-authn.oracledx.com"
+	testDomain := "multiuser-authn.example.com"
 
 	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain + ",prometheus-gw." +
 		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
@@ -258,7 +258,7 @@ func TestBasic4SauronMultiUserAuthn(t *testing.T) {
 func TestBasic4SauronWithIngress(t *testing.T) {
 	f := framework.Global
 
-	testDomain := "ingress-test.oracledx.com"
+	testDomain := "ingress-test.example.com"
 	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain + ",prometheus-gw." +
 		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
 
@@ -334,7 +334,7 @@ func TestBasic2PrometheusMultipleReplicas(t *testing.T) {
 
 	// Create secrets - domain only used with ingress
 	secretName := f.RunID + "-sauron-secrets"
-	testDomain := "ingress-test.oracledx.com"
+	testDomain := "ingress-test.example.com"
 	secret, err := createTestSecrets(secretName, testDomain)
 	if err != nil {
 		t.Errorf("failed to create test secrets: %+v", err)
