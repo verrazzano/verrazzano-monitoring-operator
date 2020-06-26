@@ -1,6 +1,8 @@
 // Copyright (c) 2020, Oracle Corporation and/or its affiliates. 
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
+def HEAD_COMMIT
+
 pipeline {
     options {
         skipDefaultCheckout true
@@ -141,7 +143,15 @@ pipeline {
         stage('Scan Image') {
             when { not { buildingTag() } }
             steps {
-                clairScan "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_CI_IMAGE_NAME}:${DOCKER_IMAGE_NAME}" 
+                script {
+                    HEAD_COMMIT = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
+                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME}:${HEAD_COMMIT}"
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '**/scanning-report.json', allowEmptyArchive: true
+                }
             }
         }
 
