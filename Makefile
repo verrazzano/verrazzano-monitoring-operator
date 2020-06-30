@@ -1,25 +1,32 @@
 # Copyright (C) 2020, Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
-NAME:=verrazzano-monitoring-operator
+OPERATOR_NAME:=verrazzano-monitoring-operator
+ESWAIT_NAME:=verrazzano-monitoring-instance-eswait
 
-DOCKER_IMAGE_NAME ?= ${NAME}-dev
+DOCKER_IMAGE_NAME_OPERATOR ?= ${OPERATOR_NAME}-dev
+DOCKERFILE_OPERATOR = docker-images/${OPERATOR_NAME}/Dockerfile
+
+DOCKER_IMAGE_NAME_ESWAIT ?= ${ESWAIT_NAME}-dev
+DOCKERFILE_ESWAIT = docker-images/${ESWAIT_NAME}/Dockerfile
+
 TAG=$(shell git rev-parse HEAD)
 VERSION = ${TAG}
 
 CREATE_LATEST_TAG=0
 
-ifeq ($(MAKECMDGOALS),$(filter $(MAKECMDGOALS),push push-tag))
+ifeq ($(MAKECMDGOALS),$(filter $(MAKECMDGOALS),push push-tag push-eswait push-tag-eswait))
 	ifndef DOCKER_REPO
 		$(error DOCKER_REPO must be defined as the name of the docker repository where image will be pushed)
 	endif
 	ifndef DOCKER_NAMESPACE
 		$(error DOCKER_NAMESPACE must be defined as the name of the docker namespace where image will be pushed)
 	endif
-	DOCKER_IMAGE_FULLNAME = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME}
+	DOCKER_IMAGE_FULLNAME_OPERATOR = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}
+	DOCKER_IMAGE_FULLNAME_ESWAIT = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}
 endif
 
 ifdef INTEG_RUN_ID
-    RUN_ID_OPT=--runid=${INTEG_RUN_ID}
+   RUN_ID_OPT=--runid=${INTEG_RUN_ID}
 endif
 
 ifdef INTEG_INGRESS
@@ -31,7 +38,7 @@ DOCKER_REPO ?= container-registry.oracle.com
 DOCKER_IMAGE_TAG ?= ${VERSION}
 DIST_DIR:=dist
 BIN_DIR:=${DIST_DIR}/bin
-BIN_NAME:=${NAME}
+BIN_NAME:=${OPERATOR_NAME}
 K8S_EXTERNAL_IP:=localhost
 K8S_NAMESPACE:=default
 WATCH_NAMESPACE:=
@@ -79,8 +86,9 @@ go-vendor:
 	glide install -v
 
 #
-# Docker-related tasks
+# Docker-related tasks nad functions
 #
+
 .PHONY: docker-clean
 docker-clean:
 	rm -rf ${DIST_DIR}
@@ -88,13 +96,13 @@ docker-clean:
 .PHONY: k8s-dist
 k8s-dist: docker-clean
 	echo ${VERSION} ${JENKINS_URL} ${CI_COMMIT_TAG} ${CI_COMMIT_SHA}
-	echo ${DOCKER_IMAGE_NAME}
+	echo ${DOCKER_IMAGE_NAME_OPERATOR}
 	mkdir -p ${DIST_DIR}
 	cp -r docker-images/verrazzano-monitoring-operator/* ${DIST_DIR}
 	cp -r k8s/manifests/verrazzano-monitoring-operator.yaml $(DIST_DIR)/verrazzano-monitoring-operator.yaml
 
 	# Fill in Docker image and tag that's being tested
-	sed -i.bak "s|${DOCKER_REPO}/${DOCKER_NAMESPACE}/verrazzano-monitoring-operator:latest|${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME}:$(DOCKER_IMAGE_TAG)|g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
+	sed -i.bak "s|${DOCKER_REPO}/${DOCKER_NAMESPACE}/verrazzano-monitoring-operator:latest|${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:$(DOCKER_IMAGE_TAG)|g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
 	sed -i.bak "s/latest/$(DOCKER_IMAGE_TAG)/g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
 	sed -i.bak "s/default/${K8S_NAMESPACE}/g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
 
@@ -106,24 +114,50 @@ build: k8s-dist
 	docker build --pull --no-cache \
 		--build-arg BUILDVERSION=${BUILDVERSION} \
 		--build-arg BUILDDATE=${BUILDDATE} \
-		-t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
-		-f ${DIST_DIR}/Dockerfile \
+		-t ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} \
+		-f ${DOCKERFILE_OPERATOR} \
 		.
+
 .PHONY: push
 push: build
-	docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME}:${DOCKER_IMAGE_TAG}
-	docker push ${DOCKER_IMAGE_FULLNAME}:${DOCKER_IMAGE_TAG}
+	docker tag ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
+	docker push ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
 
 	if [ "${CREATE_LATEST_TAG}" == "1" ]; then \
-		docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME}:latest; \
-		docker push ${DOCKER_IMAGE_FULLNAME}:latest; \
+		docker tag ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:latest; \
+		docker push ${DOCKER_IMAGE_FULLNAME_OPERATOR}:latest; \
 	fi
 
 .PHONY: push-tag
 push-tag:
-	docker pull ${DOCKER_IMAGE_FULLNAME}:${DOCKER_IMAGE_TAG}
-	docker tag ${DOCKER_IMAGE_FULLNAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME}:${TAG_NAME}
-	docker push ${DOCKER_IMAGE_FULLNAME}:${TAG_NAME}
+	docker pull ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
+	docker tag ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${TAG_NAME}
+	docker push ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${TAG_NAME}
+
+.PHONY: build-eswait
+build-eswait:
+	docker build --pull --no-cache \
+		--build-arg BUILDVERSION=${BUILDVERSION} \
+		--build-arg BUILDDATE=${BUILDDATE} \
+		-t ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} \
+		-f ${DOCKERFILE_ESWAIT} \
+		.
+
+.PHONY: push-eswait
+push-eswait: build-eswait
+	docker tag ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
+	docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
+
+	if [ "${CREATE_LATEST_TAG}" == "1" ]; then \
+		docker tag ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:latest; \
+		docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:latest; \
+	fi
+
+.PHONY: push-tag-eswait
+push-tag-eswait:
+	docker pull ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
+	docker tag ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${TAG_NAME}
+	docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${TAG_NAME}
 
 #
 # Tests-related tasks
