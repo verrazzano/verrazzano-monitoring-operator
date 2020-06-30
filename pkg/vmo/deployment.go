@@ -3,6 +3,7 @@
 package vmo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -48,7 +49,7 @@ func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.Verrazzano
 		existingDeployment, err := controller.deploymentLister.Deployments(sauron.Namespace).Get(deploymentName)
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
-				_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Create(curDeployment)
+				_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Create(context.TODO(), curDeployment, metav1.CreateOptions{})
 			} else {
 				return false, err
 			}
@@ -61,7 +62,7 @@ func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.Verrazzano
 				specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 				if specDiffs != "" {
 					glog.V(4).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-					_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Update(curDeployment)
+					_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
 		}
@@ -90,7 +91,7 @@ func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.Verrazzano
 	for _, deployment := range existingDeploymentsList {
 		if !contains(deploymentNames, deployment.Name) {
 			glog.V(6).Infof("Deleting deployment %s", deployment.Name)
-			err := controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Delete(deployment.Name, &metav1.DeleteOptions{})
+			err := controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
 				return false, err
@@ -115,7 +116,7 @@ func updateNextDeployment(controller *Controller, sauron *vmcontrollerv1.Verrazz
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 		if specDiffs != "" {
 			glog.V(4).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-			_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Update(curDeployment)
+			_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {
 				return false, err
 			}

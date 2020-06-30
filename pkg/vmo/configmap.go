@@ -4,6 +4,7 @@ package vmo
 
 import (
 	"bytes"
+	"context"
 	"html/template"
 	"strings"
 
@@ -118,7 +119,7 @@ func CreateConfigmaps(controller *Controller, sauron *vmcontrollerv1.VerrazzanoM
 	for _, configMap := range configMapList {
 		if !contains(configMaps, configMap.Name) {
 			glog.V(6).Infof("Deleting config map %s", configMap.Name)
-			err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Delete(configMap.Name, &metav1.DeleteOptions{})
+			err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Delete(context.TODO(), configMap.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete config map %s, for the reason (%v)", configMap.Name, err)
 				return err
@@ -149,13 +150,13 @@ func createConfigMap(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMo
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
 		if specDiffs != "" {
 			glog.V(4).Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
-			_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Update(configMap)
+			_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 			if err != nil {
 				glog.Errorf("Failed to update existing configmap %s ", configMap.Name)
 			}
 		}
 	} else {
-		_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Create(configMap)
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
 			glog.Errorf("Failed to create configmap %s for sauron %s", sauron.Name, configmap)
 			return err
@@ -173,7 +174,7 @@ func createConfigMapIfDoesntExist(controller *Controller, sauron *vmcontrollerv1
 	}
 	if existingConfig == nil {
 		configMap := configmaps.NewConfig(sauron, configmap, data)
-		_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Create(configMap)
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
 			glog.Errorf("Failed to create configmap %s for sauron %s", sauron.Name, configmap)
 			return err
@@ -195,7 +196,7 @@ func createAMConfigMapIfDoesntExist(controller *Controller, sauron *vmcontroller
 			sauron.Spec.AlertManager.Config = ""
 		}
 		configMap := configmaps.NewConfig(sauron, configmap, data)
-		_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Create(configMap)
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(sauron.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
 			glog.Errorf("Failed to create configmap %s for sauron %s", sauron.Name, configmap)
 			return err

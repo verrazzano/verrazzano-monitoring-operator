@@ -3,7 +3,9 @@
 package vmo
 
 import (
+	"context"
 	"errors"
+
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -39,14 +41,14 @@ func CreateServices(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMon
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingService, curService)
 			if specDiffs != "" {
 				glog.V(4).Infof("Service %s : Spec differences %s", curService.Name, specDiffs)
-				err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Delete(serviceName, &metav1.DeleteOptions{})
+				err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 				if err != nil {
 					glog.Errorf("Failed to delete service %s: %+v", serviceName, err)
 				}
-				_, err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Create(curService)
+				_, err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
 			}
 		} else {
-			_, err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Create(curService)
+			_, err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
 		}
 
 		if err != nil {
@@ -65,7 +67,7 @@ func CreateServices(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMon
 	for _, service := range existingServicesList {
 		if !contains(serviceNames, service.Name) {
 			glog.V(6).Infof("Deleting service %s", service.Name)
-			err := controller.kubeclientset.CoreV1().Services(sauron.Namespace).Delete(service.Name, &metav1.DeleteOptions{})
+			err := controller.kubeclientset.CoreV1().Services(sauron.Namespace).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete service %s, for the reason (%v)", service.Name, err)
 				return err

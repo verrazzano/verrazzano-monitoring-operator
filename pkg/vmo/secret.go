@@ -3,12 +3,14 @@
 package vmo
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"regexp"
 	"strings"
+
+	corev1 "k8s.io/api/core/v1"
 
 	// "fmt"
 	"errors"
@@ -94,7 +96,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.Ve
 		isEqual := reflect.DeepEqual(secretData, secret.Data)
 		if !isEqual {
 			secret.Data = secretData
-			_, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Update(secret)
+			_, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 			if err != nil {
 				glog.Errorf("caught an error trying to update a basic auth secret, err: %v", err)
 				return err
@@ -109,7 +111,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.Ve
 		glog.Errorf("got an error trying to create a password hash, err: %v", err)
 		return err
 	}
-	secretOut, err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Create(secret)
+	secretOut, err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
 		glog.Errorf("caught an error trying to create a secret, err: %v", err)
 		return err
@@ -127,7 +129,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.Ve
 	for _, existedSecret := range secretList {
 		if !contains(secretsNames, existedSecret.Name) {
 			glog.V(6).Infof("Deleting secret %s", existedSecret.Name)
-			err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Delete(existedSecret.Name, &metav1.DeleteOptions{})
+			err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Delete(context.TODO(), existedSecret.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete secret %s, for the reason (%v)", existedSecret.Name, err)
 				return err
@@ -174,7 +176,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 			isSecretDataEqual := reflect.DeepEqual(secretData, secret.Data)
 			if !isSecretDataEqual {
 				secret.Data = secretData
-				_, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Update(secret)
+				_, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 				if err != nil {
 					glog.Errorf("caught an error trying to update a basic auth secret, err: %v", err)
 					return err
@@ -187,7 +189,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 			glog.Errorf("got an error trying to create a password hash, err: %s", err)
 			return err
 		}
-		secretOut, err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Create(secret)
+		secretOut, err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 		if err != nil {
 			glog.Errorf("caught an error trying to create a secret, err: %s", err)
 			return err
@@ -261,13 +263,13 @@ func EnsureTlsSecretInMonitoringNS(controller *Controller, sauron *vmcontrollerv
 	const secretName = "system-tls"
 
 	// Don't copy the secret if it already exists.
-	secret, err := controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Get(secretName, metav1.GetOptions{})
+	secret, err := controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err == nil && secret != nil {
 		return nil
 	}
 
 	// The secret must be this name since the name is hardcoded in monitoring/deployments.do of verrazzano operator.
-	secret, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Get(secretName, metav1.GetOptions{})
+	secret, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		glog.Errorf("Error getting TLS secret %s from namespace %s, err: %s", secretName, sauron.Namespace, err)
 		return err
@@ -283,7 +285,7 @@ func EnsureTlsSecretInMonitoringNS(controller *Controller, sauron *vmcontrollerv
 		StringData: secret.StringData,
 		Type:       secret.Type,
 	}
-	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(&newSecret)
+	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(context.TODO(), &newSecret, metav1.CreateOptions{})
 	if err != nil {
 		glog.Errorf("caught an error trying to create a secret, err: %s", err)
 		return err

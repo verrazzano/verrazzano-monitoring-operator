@@ -3,7 +3,9 @@
 package vmo
 
 import (
+	"context"
 	"errors"
+
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -39,10 +41,10 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
 				glog.V(4).Infof("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
-				_, err = controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Update(curStatefulSet)
+				_, err = controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
 			}
 		} else {
-			_, err = controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Create(curStatefulSet)
+			_, err = controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
 		}
 		if err != nil {
 			return err
@@ -60,7 +62,7 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	for _, statefulSet := range existingStatefulSetsList {
 		if !contains(statefulSetNames, statefulSet.Name) {
 			glog.V(6).Infof("Deleting StatefulSet %s", statefulSet.Name)
-			err := controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Delete(statefulSet.Name, &metav1.DeleteOptions{})
+			err := controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
 				return err

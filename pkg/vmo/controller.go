@@ -3,11 +3,13 @@
 package vmo
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"reflect"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -135,7 +137,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	// Get the config from the ConfigMap
 	glog.V(6).Info("Loading ConfigMap ", configmapName)
 
-	operatorConfigMap, err := kubeclientset.CoreV1().ConfigMaps(namespace).Get(configmapName, metav1.GetOptions{})
+	operatorConfigMap, err := kubeclientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), configmapName, metav1.GetOptions{})
 	if err != nil {
 		glog.Fatalf("No configuration ConfigMap called %s found in namespace %s.", configmapName, namespace)
 	}
@@ -484,7 +486,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 		glog.V(6).Infof("Acquired lock in namespace: %s", sauron.Namespace)
 		glog.V(4).Infof("Sauron %s : Spec differences %s", sauron.Name, specDiffs)
 		glog.V(4).Infof("Updating Sauron")
-		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(sauron)
+		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(context.TODO(), sauron, metav1.UpdateOptions{})
 		if err != nil {
 			glog.Errorf("Failed to update status for sauron: %v", err)
 			errorObserved = true
@@ -496,7 +498,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 		// into production) to know when a given sauron has been (mostly) updated, and thus when it's relatively safe to
 		// start checking various aspects of the sauron for health.
 		sauron.Spec.Versioning.CurrentVersion = c.buildVersion
-		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(sauron)
+		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(context.TODO(), sauron, metav1.UpdateOptions{})
 		if err != nil {
 			glog.Errorf("Failed to update currentVersion for sauron %s: %v", sauron.Name, err)
 		} else {
@@ -545,7 +547,7 @@ func (c *Controller) IsHealthy() bool {
 	}
 
 	// Make sure the controller can talk to the API server and its CRD is defined.
-	crds, err := c.kubeextclientset.ApiextensionsV1beta1().CustomResourceDefinitions().List(metav1.ListOptions{})
+	crds, err := c.kubeextclientset.ApiextensionsV1beta1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
 	// Error getting CRD from API server
 	if err != nil {
 		return false
