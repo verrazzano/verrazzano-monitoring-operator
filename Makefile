@@ -86,7 +86,7 @@ go-vendor:
 	glide install -v
 
 #
-# Docker-related tasks nad functions
+# Docker-related tasks and functions
 #
 
 .PHONY: docker-clean
