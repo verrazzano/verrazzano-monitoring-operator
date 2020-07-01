@@ -99,7 +99,7 @@ func Setup() error {
 	cfg.GroupVersion = &s
 	cfg.APIPath = "/apis"
 	cfg.ContentType = runtime.ContentTypeJSON
-	cfg.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(&runtime.Scheme{})}
+	cfg.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: serializer.NewCodecFactory(&runtime.Scheme{})}
 	restClient, err := rest.RESTClientFor(cfg)
 	if err != nil {
 		return err

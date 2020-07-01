@@ -3,6 +3,7 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -52,7 +53,7 @@ func WaitForDeploymentAvailable(namespace string, deploymentName string, availab
 	var err error
 	fmt.Printf("Waiting for deployment '%s' to reach %d available and total replicas...\n", deploymentName, availableReplicas)
 	err = Retry(backoff, func() (bool, error) {
-		deployments, err := kubeClient.AppsV1().Deployments(namespace).List(metav1.ListOptions{})
+		deployments, err := kubeClient.AppsV1().Deployments(namespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -73,7 +74,7 @@ func WaitForStatefulSetAvailable(namespace string, statefulSetName string, avail
 	var err error
 	fmt.Printf("Waiting for statefulset '%s' to reach %d available and total replicas...\n", statefulSetName, availableReplicas)
 	err = Retry(backoff, func() (bool, error) {
-		statefulSets, err := kubeClient.AppsV1().StatefulSets(namespace).List(metav1.ListOptions{})
+		statefulSets, err := kubeClient.AppsV1().StatefulSets(namespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -96,7 +97,7 @@ func WaitForService(namespace string, serviceName string, backoff wait.Backoff,
 	var err error
 	fmt.Printf("Waiting for service '%s'...\n", serviceName)
 	err = Retry(backoff, func() (bool, error) {
-		services, err := kubeClient.CoreV1().Services(namespace).List(metav1.ListOptions{})
+		services, err := kubeClient.CoreV1().Services(namespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}

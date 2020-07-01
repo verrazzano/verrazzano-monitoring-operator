@@ -142,5 +142,5 @@ coverage:
 
 .PHONY: integ-test
 integ-test: go-install
-#	GO111MODULE=on $(GO) get -u github.com/oracle/oci-go-sdk
-#	GO111MODULE=on $(GO) test -v ./test/integ/ -timeout 30m --kubeconfig=${KUBECONFIG} --externalip=${K8S_EXTERNAL_IP} --namespace=${K8S_NAMESPACE} --skipteardown=${INTEG_SKIP_TEARDOWN} --run=${INTEG_RUN_REGEX} --phase=${INTEG_PHASE} --ingressControllerSvcName=${INGRESS_CONTROLLER_SVC_NAME} ${INGRESS_OPT} ${RUN_ID_OPT}
+	GO111MODULE=on $(GO) get -u github.com/oracle/oci-go-sdk
+	GO111MODULE=on $(GO) test -v ./test/integ/ -timeout 30m --kubeconfig=${KUBECONFIG} --externalip=${K8S_EXTERNAL_IP} --namespace=${K8S_NAMESPACE} --skipteardown=${INTEG_SKIP_TEARDOWN} --run=${INTEG_RUN_REGEX} --phase=${INTEG_PHASE} --ingressControllerSvcName=${INGRESS_CONTROLLER_SVC_NAME} ${INGRESS_OPT} ${RUN_ID_OPT}

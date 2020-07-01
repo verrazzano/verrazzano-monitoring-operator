@@ -4,13 +4,16 @@ package util
 
 import (
 	"context"
+
 	"k8s.io/client-go/kubernetes"
 
 	"fmt"
+
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/client"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func CreateSauron(
@@ -21,7 +24,7 @@ func CreateSauron(
 	secret *corev1.Secret) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
 
 	fmt.Printf("Creating secret '%s' in namespace '%s'\n", sauron.Name, ns)
-	_, err := clientSet.CoreV1().Secrets(ns).Create(secret)
+	_, err := clientSet.CoreV1().Secrets(ns).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		glog.Errorf("Cannot create a sauron secret: %s, due to err: %v", secret.Name, err)
 		return nil, err
@@ -65,7 +68,7 @@ func DeleteSauron(
 		return err
 	}
 	fmt.Printf("Deleting secret '%s' in namespace '%s'\n", sauron.Name, ns)
-	err = clientSet.CoreV1().Secrets(ns).Delete(secret.Name, nil)
+	err = clientSet.CoreV1().Secrets(ns).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 	if err != nil {
 		glog.Errorf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
 		return err
