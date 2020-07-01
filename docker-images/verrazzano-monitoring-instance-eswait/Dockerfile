@@ -13,27 +13,23 @@ RUN yum update -y \
 ARG BUILDVERSION
 ARG BUILDDATE
 
-# Need to use specific WORKDIR to match verrazzano-monitoring-operator's source packages
 WORKDIR /root/go/src/github.com/verrazzano/verrazzano-monitoring-operator
+
 ENV GOPATH /root/go
 ENV CGO_ENABLED 0
-COPY . .
+COPY ./eswait*.go ./
+
+RUN go test ...
 RUN go build \
     -ldflags '-extldflags "-static"' \
     -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
-    -o /usr/bin/verrazzano-monitoring-operator ./cmd/verrazzano-monitoring-ctrl
-
+    -o /usr/bin/eswait eswait.go
 
 FROM container-registry.oracle.com/os/oraclelinux:7-slim AS final
 
-RUN yum update -y && yum-config-manager --save --setopt=ol7_ociyum_config.skip_if_unavailable=true \
-    && yum install -y ca-certificates curl openssl && yum clean all && rm -rf /var/cache/yum
+COPY --from=build_base /usr/bin/eswait /usr/local/bin/eswait
+RUN chown nobody:nobody /usr/local/bin/eswait && chmod 500 /usr/local/bin/eswait
 
-COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
+USER nobody
 
-WORKDIR /usr/local/bin/
-RUN groupadd -r verrazzano-monitoring-operator && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
-RUN chown 1000:verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator && chmod 500 /usr/local/bin/verrazzano-monitoring-operator
-USER 1000
-
-ENTRYPOINT ["/usr/local/bin/verrazzano-monitoring-operator"]
+ENTRYPOINT ["/usr/local/bin/eswait"]

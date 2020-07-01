@@ -19,9 +19,14 @@ pipeline {
     }
 
     environment {
-        DOCKER_CI_IMAGE_NAME = 'verrazzano-monitoring-operator-jenkins'
-        DOCKER_PUBLISH_IMAGE_NAME = 'verrazzano-monitoring-operator'
-        DOCKER_IMAGE_NAME = "${env.BRANCH_NAME == 'master' ? env.DOCKER_PUBLISH_IMAGE_NAME : env.DOCKER_CI_IMAGE_NAME}"
+        DOCKER_CI_IMAGE_NAME_OPERATOR = 'verrazzano-monitoring-operator-jenkins'
+        DOCKER_PUBLISH_IMAGE_NAME_OPERATOR = 'verrazzano-monitoring-operator'
+        DOCKER_IMAGE_NAME_OPERATOR = "${env.BRANCH_NAME == 'master' ? env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR : env.DOCKER_CI_IMAGE_NAME_OPERATOR}"
+
+        DOCKER_CI_IMAGE_NAME_ESWAIT = 'verrazzano-monitoring-instance-eswait-jenkins'
+        DOCKER_PUBLISH_IMAGE_NAME_ESWAIT = 'verrazzano-monitoring-instance-eswait'
+        DOCKER_IMAGE_NAME_ESWAIT = "${env.BRANCH_NAME == 'master' ? env.DOCKER_PUBLISH_IMAGE_NAME_ESWAIT : env.DOCKER_CI_IMAGE_NAME_ESWAIT}"
+
         CREATE_LATEST_TAG = "${env.BRANCH_NAME == 'master' ? '1' : '0'}"
         GOPATH = '/home/opc/go'
         GO_REPO_PATH = "${GOPATH}/src/github.com/verrazzano"
@@ -56,7 +61,7 @@ pipeline {
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME} K8S_NAMESPACE=${VMI_NAMESAPCE_PREFIX}-${env.BUILD_NUMBER} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
+                    make push DOCKER_IMAGE_NAME_OPERATOR=${DOCKER_IMAGE_NAME_OPERATOR} K8S_NAMESPACE=${VMI_NAMESAPCE_PREFIX}-${env.BUILD_NUMBER} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
                 """
             }
         }
@@ -145,7 +150,7 @@ pipeline {
             steps {
                 script {
                     HEAD_COMMIT = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
-                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME}:${HEAD_COMMIT}"
+                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:${HEAD_COMMIT}"
                 }
             }
             post {
@@ -160,8 +165,58 @@ pipeline {
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-tag DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME=${env.DOCKER_PUBLISH_IMAGE_NAME}
-                    make k8s-dist DOCKER_IMAGE_NAME=${DOCKER_PUBLISH_IMAGE_NAME} VERSION=${BRANCH_NAME} K8S_NAMESPACE=default
+                    make push-tag DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_OPERATOR=${env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR}
+                    make k8s-dist DOCKER_IMAGE_NAME_OPERATOR=${DOCKER_PUBLISH_IMAGE_NAME_OPERATOR} VERSION=${BRANCH_NAME} K8S_NAMESPACE=default
+                """
+            }
+        }
+
+        stage('Build ESWait Image') {
+            when {
+                allOf {
+                    not { buildingTag() }
+                    changeset '**/*eswait*/**'
+                }
+            }
+            steps {
+                sh """
+                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
+                    make push-eswait DOCKER_IMAGE_NAME_ESWAIT=${DOCKER_IMAGE_NAME_ESWAIT} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
+                """
+            }
+        }
+
+        stage('Scan ESWait Image') {
+            when {
+                allOf {
+                    not { buildingTag() }
+                    changeset '**/*eswait*/**'
+                }
+            }
+            steps {
+                script {
+                    HEAD_COMMIT = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
+                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}:${HEAD_COMMIT}"
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '**/scanning-report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Publish ESWait Image') {
+            when {
+                allOf {
+                    buildingTag()
+                    changeset '**/*eswait*/**'
+                }
+            }
+            steps {
+                sh """
+                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
+                    make push-tag-eswait DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_ESWAIT=${env.DOCKER_PUBLISH_IMAGE_NAME_ESWAIT}
                 """
             }
         }
