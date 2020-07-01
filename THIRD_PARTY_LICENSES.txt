@@ -4208,12 +4208,6 @@ Copyright (c) 2012-2018 The Gorilla Authors. All rights reserved.
 // Copyright 2009 The Go Authors. All rights reserved.
 
 -------- Dependency
-github.com/ianlancetaylor/demangle
--------- Copyrights
-Copyright (c) 2015 The Go Authors. All rights reserved.
-// Copyright 2015 The Go Authors. All rights reserved.
-
--------- Dependency
 github.com/imdario/mergo
 -------- Copyrights
 Copyright (c) 2013 Dario Castañé. All rights reserved.
@@ -4662,7 +4656,6 @@ github.com/google/go-cmp
 github.com/google/uuid
 github.com/googleapis/gax-go/v2
 github.com/gorilla/mux
-github.com/ianlancetaylor/demangle
 github.com/imdario/mergo
 github.com/pborman/uuid
 github.com/spf13/pflag
@@ -4788,14 +4781,6 @@ Copyright (c) 2014 Benedikt Lang <github at benediktlang.de>
 github.com/cespare/xxhash/v2
 -------- Copyrights
 Copyright (c) 2016 Caleb Spare
-
--------- Dependency
-github.com/chzyer/readline
--------- Copyrights
-Copyright (c) 2015 Chzyer
-//  Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
-// Copyright 2011 The Go Authors. All rights reserved.
-// Copyright 2013 The Go Authors. All rights reserved.
 
 -------- Dependency
 github.com/client9/misspell
@@ -5117,7 +5102,6 @@ github.com/beorn7/perks
 github.com/bgentry/speakeasy
 github.com/blang/semver
 github.com/cespare/xxhash/v2
-github.com/chzyer/readline
 github.com/client9/misspell
 github.com/cpuguy83/go-md2man
 github.com/creack/pty
@@ -5389,4 +5373,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ATTRIBUTION-HELPER-GENERATED:
-License file based on go.mod with md5 sum: 0fa3bea3a5c6eab0ac8c9ffaadcb0296
+License file based on go.mod with md5 sum: 7b10cfc994455cb2a148004d6147eba1
