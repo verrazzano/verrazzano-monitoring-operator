@@ -3,6 +3,7 @@
 package vmo
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,11 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
+	"github.com/prometheus/client_golang/prometheus"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metrics"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/pvcs"
-	"github.com/prometheus/client_golang/prometheus"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -95,7 +96,7 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 			}
 			glog.Infof("Creating PVC %s in AD %s", currPvc.Name, newAd)
 
-			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(sauron.Namespace).Create(currPvc)
+			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(sauron.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
 
 			if err != nil {
 				return deploymentToAdMap, err

@@ -6,6 +6,8 @@
 package fake
 
 import (
+	"context"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -26,7 +28,7 @@ var verrazzanomonitoringinstancesResource = schema.GroupVersionResource{Group: "
 var verrazzanomonitoringinstancesKind = schema.GroupVersionKind{Group: "verrazzano.io", Version: "v1", Kind: "VerrazzanoMonitoringInstance"}
 
 // Get takes name of the verrazzanoMonitoringInstance, and returns the corresponding verrazzanoMonitoringInstance object, and an error if there is any.
-func (c *FakeVerrazzanoMonitoringInstances) Get(name string, options v1.GetOptions) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
+func (c *FakeVerrazzanoMonitoringInstances) Get(ctx context.Context, name string, options v1.GetOptions) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(verrazzanomonitoringinstancesResource, c.ns, name), &vmcontrollerv1.VerrazzanoMonitoringInstance{})
 
@@ -37,7 +39,7 @@ func (c *FakeVerrazzanoMonitoringInstances) Get(name string, options v1.GetOptio
 }
 
 // List takes label and field selectors, and returns the list of VerrazzanoMonitoringInstances that match those selectors.
-func (c *FakeVerrazzanoMonitoringInstances) List(opts v1.ListOptions) (result *vmcontrollerv1.VerrazzanoMonitoringInstanceList, err error) {
+func (c *FakeVerrazzanoMonitoringInstances) List(ctx context.Context, opts v1.ListOptions) (result *vmcontrollerv1.VerrazzanoMonitoringInstanceList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(verrazzanomonitoringinstancesResource, verrazzanomonitoringinstancesKind, c.ns, opts), &vmcontrollerv1.VerrazzanoMonitoringInstanceList{})
 
@@ -59,14 +61,14 @@ func (c *FakeVerrazzanoMonitoringInstances) List(opts v1.ListOptions) (result *v
 }
 
 // Watch returns a watch.Interface that watches the requested verrazzanoMonitoringInstances.
-func (c *FakeVerrazzanoMonitoringInstances) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeVerrazzanoMonitoringInstances) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(verrazzanomonitoringinstancesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a verrazzanoMonitoringInstance and creates it.  Returns the server's representation of the verrazzanoMonitoringInstance, and an error, if there is any.
-func (c *FakeVerrazzanoMonitoringInstances) Create(verrazzanoMonitoringInstance *vmcontrollerv1.VerrazzanoMonitoringInstance) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
+func (c *FakeVerrazzanoMonitoringInstances) Create(ctx context.Context, verrazzanoMonitoringInstance *vmcontrollerv1.VerrazzanoMonitoringInstance, opts v1.CreateOptions) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(verrazzanomonitoringinstancesResource, c.ns, verrazzanoMonitoringInstance), &vmcontrollerv1.VerrazzanoMonitoringInstance{})
 
@@ -77,7 +79,7 @@ func (c *FakeVerrazzanoMonitoringInstances) Create(verrazzanoMonitoringInstance 
 }
 
 // Update takes the representation of a verrazzanoMonitoringInstance and updates it. Returns the server's representation of the verrazzanoMonitoringInstance, and an error, if there is any.
-func (c *FakeVerrazzanoMonitoringInstances) Update(verrazzanoMonitoringInstance *vmcontrollerv1.VerrazzanoMonitoringInstance) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
+func (c *FakeVerrazzanoMonitoringInstances) Update(ctx context.Context, verrazzanoMonitoringInstance *vmcontrollerv1.VerrazzanoMonitoringInstance, opts v1.UpdateOptions) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(verrazzanomonitoringinstancesResource, c.ns, verrazzanoMonitoringInstance), &vmcontrollerv1.VerrazzanoMonitoringInstance{})
 
@@ -88,7 +90,7 @@ func (c *FakeVerrazzanoMonitoringInstances) Update(verrazzanoMonitoringInstance 
 }
 
 // Delete takes name of the verrazzanoMonitoringInstance and deletes it. Returns an error if one occurs.
-func (c *FakeVerrazzanoMonitoringInstances) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeVerrazzanoMonitoringInstances) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(verrazzanomonitoringinstancesResource, c.ns, name), &vmcontrollerv1.VerrazzanoMonitoringInstance{})
 
@@ -96,15 +98,15 @@ func (c *FakeVerrazzanoMonitoringInstances) Delete(name string, options *v1.Dele
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeVerrazzanoMonitoringInstances) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(verrazzanomonitoringinstancesResource, c.ns, listOptions)
+func (c *FakeVerrazzanoMonitoringInstances) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(verrazzanomonitoringinstancesResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &vmcontrollerv1.VerrazzanoMonitoringInstanceList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched verrazzanoMonitoringInstance.
-func (c *FakeVerrazzanoMonitoringInstances) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
+func (c *FakeVerrazzanoMonitoringInstances) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *vmcontrollerv1.VerrazzanoMonitoringInstance, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(verrazzanomonitoringinstancesResource, c.ns, name, pt, data, subresources...), &vmcontrollerv1.VerrazzanoMonitoringInstance{})
 

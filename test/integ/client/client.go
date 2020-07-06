@@ -57,7 +57,7 @@ func new1(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 	config.GroupVersion = &vmcontrollerv1.SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.ContentType = runtime.ContentTypeJSON
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{
+	config.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{
 		CodecFactory: serializer.NewCodecFactory(crScheme),
 	}
 
@@ -75,11 +75,10 @@ func (c *sauronCR) Create(ctx context.Context, sauron *vmcontrollerv1.Verrazzano
 	}
 	result := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	err := c.client.Post().
-		Context(ctx).
 		Namespace(sauron.Namespace).
 		Resource("verrazzanomonitoringinstances").
 		Body(sauron).
-		Do().
+		Do(ctx).
 		Into(result)
 	return result, err
 }
@@ -87,22 +86,20 @@ func (c *sauronCR) Create(ctx context.Context, sauron *vmcontrollerv1.Verrazzano
 func (c *sauronCR) Get(ctx context.Context, namespace, name string) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
 	result := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	err := c.client.Get().
-		Context(ctx).
 		Namespace(namespace).
 		Resource("verrazzanomonitoringinstances").
 		Name(name).
-		Do().
+		Do(ctx).
 		Into(result)
 	return result, err
 }
 
 func (c *sauronCR) Delete(ctx context.Context, namespace, name string) error {
 	return c.client.Delete().
-		Context(ctx).
 		Namespace(namespace).
 		Resource("verrazzanomonitoringinstances").
 		Name(name).
-		Do().
+		Do(ctx).
 		Error()
 }
 
@@ -116,12 +113,11 @@ func (c *sauronCR) Update(ctx context.Context, sauron *vmcontrollerv1.Verrazzano
 
 	result := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	err := c.client.Put().
-		Context(ctx).
 		Namespace(sauron.Namespace).
 		Resource("verrazzanomonitoringinstances").
 		Name(sauron.Name).
 		Body(sauron).
-		Do().
+		Do(ctx).
 		Into(result)
 	return result, err
 }

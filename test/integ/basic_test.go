@@ -4,11 +4,10 @@ package integ
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -17,14 +16,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 
 	"strconv"
 
+	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/framework"
 	testutil "github.com/verrazzano/verrazzano-monitoring-operator/test/integ/util"
-	"github.com/stretchr/testify/assert"
 	"gopkg.in/resty.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -307,13 +309,13 @@ func TestBasic4SauronWithIngress(t *testing.T) {
 
 	//update top-level secret new username/password
 	fmt.Println("Updating sauron username/paswword")
-	secret, err = f.KubeClient2.CoreV1().Secrets(sauron.Namespace).Get(secretName, metav1.GetOptions{})
+	secret, err = f.KubeClient2.CoreV1().Secrets(sauron.Namespace).Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("secret %s doesn't exists in namespace %s : %v", secretName, sauron.Namespace, err)
 	}
 	secret.Data["username"] = []byte(changeusername)
 	secret.Data["password"] = []byte(changepassword)
-	secret, err = f.KubeClient2.CoreV1().Secrets(sauron.Namespace).Update(secret)
+	secret, err = f.KubeClient2.CoreV1().Secrets(sauron.Namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
 	if err != nil {
 		t.Fatalf("Error when updating a secret %s, %v", secretName, err)
 	}
@@ -390,7 +392,7 @@ func TestBasic2PrometheusMultipleReplicas(t *testing.T) {
 	verifySauronDeployment(t, sauron)
 
 	// Verify PVC Locations of prometheus deployments to ensure they are on different ADs of a region
-	deploymentList, _ := f.KubeClient.AppsV1().Deployments(f.Namespace).List(metav1.ListOptions{})
+	deploymentList, _ := f.KubeClient.AppsV1().Deployments(f.Namespace).List(context.Background(), metav1.ListOptions{})
 	// Keep track of unique prometheus PVC AD information. Test expectes this should be 3, each PVC on unique AD
 	var prometheusADs []string
 	for _, deployment := range deploymentList.Items {
@@ -399,7 +401,7 @@ func TestBasic2PrometheusMultipleReplicas(t *testing.T) {
 		}
 		skip := false
 		pvcName := deployment.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName
-		pvc, err := f.KubeClient.CoreV1().PersistentVolumeClaims(f.Namespace).Get(pvcName, metav1.GetOptions{})
+		pvc, err := f.KubeClient.CoreV1().PersistentVolumeClaims(f.Namespace).Get(context.Background(), pvcName, metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
