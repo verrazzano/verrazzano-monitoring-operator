@@ -152,10 +152,11 @@ pipeline {
                     HEAD_COMMIT = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
                     clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:${HEAD_COMMIT}"
                 }
+                sh "mv scanning-report.json verrazzano-monitoring-operator.scanning-report.json"
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '**/scanning-report.json', allowEmptyArchive: true
+                    archiveArtifacts artifacts: '**/*scanning-report.json', allowEmptyArchive: true
                 }
             }
         }
@@ -198,10 +199,11 @@ pipeline {
                     HEAD_COMMIT = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
                     clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}:${HEAD_COMMIT}"
                 }
+                sh "mv scanning-report.json verrazzano-monitoring-instance-eswait.scanning-report.json"
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '**/scanning-report.json', allowEmptyArchive: true
+                    archiveArtifacts artifacts: '**/*scanning-report.json', allowEmptyArchive: true
                 }
             }
         }
