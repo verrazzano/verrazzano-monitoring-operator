@@ -3,9 +3,7 @@ module github.com/verrazzano/verrazzano-monitoring-operator
 go 1.13
 
 require (
-	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/gorilla/mux v1.7.3
-	github.com/ianlancetaylor/demangle v0.0.0-20200705045648-b855e248e31b // indirect
 	github.com/kylelemons/godebug v1.1.0
 	github.com/prometheus/client_golang v1.2.1
 	github.com/rs/zerolog v1.19.0
