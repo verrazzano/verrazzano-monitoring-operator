@@ -21,7 +21,6 @@ func TestAllImages(t *testing.T) {
 	//create log for image tester
 	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "TestAllImages").Str("name", "testing").Logger()
 
-
 	// Create environment variable for each component
 	for _, component := range AllComponentDetails {
 		if len(component.EnvName) > 0 {

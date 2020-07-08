@@ -4,9 +4,9 @@
 package logs
 
 import (
-	"strconv"
-	"os"
 	"github.com/rs/zerolog"
+	"os"
+	"strconv"
 )
 
 // Initialize logs with Time and Global Level of Logs set at Info

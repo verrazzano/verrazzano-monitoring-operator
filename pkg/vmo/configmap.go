@@ -28,7 +28,6 @@ func CreateConfigmaps(controller *Controller, sauron *vmcontrollerv1.VerrazzanoM
 	//create log for config maps
 	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
 
-
 	var configMaps []string
 	alertrulesMap := make(map[string]string)
 

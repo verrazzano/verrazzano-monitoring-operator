@@ -5,11 +5,11 @@ package metrics
 import (
 	"flag"
 	"fmt"
-	"github.com/rs/zerolog"
 	"github.com/gorilla/mux"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"net/http"
 	"os"
 )

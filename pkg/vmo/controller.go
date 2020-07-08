@@ -6,9 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"time"
-	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 
