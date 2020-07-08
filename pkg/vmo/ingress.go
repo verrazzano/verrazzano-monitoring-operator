@@ -6,8 +6,9 @@ package vmo
 import (
 	"context"
 	"errors"
+	"os"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
@@ -20,17 +21,20 @@ import (
 
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	//create log for creation of ingresses
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
+
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
-		glog.Errorf("Failed to create Ingress specs for vmo: %s", err)
+		logger.Error().Msgf("Failed to create Ingress specs for vmo: %s", err)
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
-		glog.V(6).Infof("No Ingress target specified, using default Ingress target: '%s'", controller.operatorConfig.DefaultIngressTargetDNSName)
+		logger.Debug().Msgf("No Ingress target specified, using default Ingress target: '%s'", controller.operatorConfig.DefaultIngressTargetDNSName)
 		vmo.Spec.IngressTargetDNSName = controller.operatorConfig.DefaultIngressTargetDNSName
 	}
 	var ingressNames []string
-	glog.V(4).Infof("Creating/updating Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	logger.Info().Msgf("Creating/updating Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	for _, curIngress := range ingList {
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
@@ -42,40 +46,41 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			return nil
 		}
 
-		glog.V(6).Infof("Applying Ingress '%s' in namespace '%s' for vmo '%s'\n", ingName, vmo.Namespace, vmo.Name)
+		logger.Debug().Msgf("Applying Ingress '%s' in namespace '%s' for vmo '%s'\n", ingName, vmo.Namespace, vmo.Name)
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingIngress, curIngress)
 			if specDiffs != "" {
-				glog.V(4).Infof("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
+				logger.Info().Msgf("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
 				_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
 			}
 		} else if k8serrors.IsNotFound(err) {
 			_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
-			glog.Errorf("Problem getting existing Ingress %s in namespace %s: %v", ingName, vmo.Namespace, err)
+			logger.Error().Msgf("Problem getting existing Ingress %s in namespace %s: %v", ingName, vmo.Namespace, err)
 			return err
 		}
 
 		if err != nil {
-			glog.Errorf("Failed to apply Ingress for vmo: %s", err)
+			logger.Error().Msgf("Failed to apply Ingress for vmo: %s", err)
 			return err
 		}
 	}
 
 	// Delete ingresses that shouldn't exist
-	glog.V(4).Infof("Deleting unwanted Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	logger.Info().Msgf("Deleting unwanted Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
+
 	if err != nil {
 		return err
 	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
-			glog.V(4).Infof("Deleting ingress %s", ingress.Name)
+			logger.Info().Msgf("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
+				logger.Error().Msgf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
 				return err
 			}
 		}

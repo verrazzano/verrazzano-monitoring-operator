@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/kylelemons/godebug v1.1.0
 	github.com/prometheus/client_golang v1.2.1
-	github.com/spf13/pflag v1.0.5
+	github.com/rs/zerolog v1.19.0
 	github.com/stretchr/testify v1.4.0
 	gopkg.in/resty.v1 v1.12.0
 	gopkg.in/yaml.v2 v2.2.8

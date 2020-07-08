@@ -5,16 +5,19 @@ package config
 
 import (
 	"fmt"
-
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	"os"
 )
 
 // NewConfigFromConfigMap creates a new OperatorConfig from the given ConfigMap,
 func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error) {
+	//create log for new config
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "ConfigMap").Str("name", configMap.Name).Logger()
+
 	// Parse configMap content and unmarshall into OperatorConfig struct
-	glog.Info("Constructing config from config map")
+	logger.Info().Msg("Constructing config from config map")
 	var configString string
 	if value, ok := configMap.Data[configKeyValue]; ok {
 		configString = value
@@ -23,13 +26,13 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error
 	}
 	var config OperatorConfig
 	err := yaml.Unmarshal([]byte(configString), &config)
-	glog.V(6).Infof("Unmarshalled configmap is:\n %s", configMap.String())
+	logger.Debug().Msgf("Unmarshalled configmap is:\n %s", configMap.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshall ConfigMap %s: %v", configMap.String(), err)
 	}
 
 	// Set defaults for any uninitialized values
-	glog.Info("Setting config defaults")
+	logger.Info().Msg("Setting config defaults")
 	setConfigDefaults(&config)
 	return &config, nil
 }

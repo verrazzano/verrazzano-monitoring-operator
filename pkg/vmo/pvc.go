@@ -6,6 +6,7 @@ package vmo
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -13,8 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metrics"
@@ -28,6 +29,9 @@ import (
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
 func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+	//create log for persistent volume claims
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
+
 	// Inspect the Storage Class to use
 	storageClass, err := determineStorageClass(controller)
 	if err != nil {
@@ -37,13 +41,12 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 
 	pvcList, err := pvcs.New(vmo, storageClass.Name)
 	if err != nil {
-		glog.Errorf("Failed to create PVC specs for vmo: %s", err)
+		logger.Error().Msgf("Failed to create PVC specs for vmo: %s", err)
 		return nil, err
 	}
 	deploymentToAdMap := map[string]string{}
 
-	glog.V(4).Infof("Creating/updating PVCs for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
-
+	logger.Info().Msgf("Creating/updating PVCs for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
 	if err != nil {
@@ -66,7 +69,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			return deploymentToAdMap, nil
 		}
 
-		glog.V(6).Infof("Applying PVC '%s' in namespace '%s' for vmo '%s'\n", pvcName, vmo.Namespace, vmo.Name)
+		logger.Debug().Msgf("Applying PVC '%s' in namespace '%s' for vmo '%s'\n", pvcName, vmo.Namespace, vmo.Name)
 		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).Get(pvcName)
 
 		// If the PVC already exists, we *only* read its current AD, *if possible* (this is not possible for all storage classes and situations)
@@ -95,7 +98,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 				}
 				currPvc.Spec.Selector = &metav1.LabelSelector{MatchLabels: map[string]string{storageClassInfo.PvcZoneMatchLabel: newAd}}
 			}
-			glog.Infof("Creating PVC %s in AD %s", currPvc.Name, newAd)
+			logger.Info().Msgf("Creating PVC %s in AD %s", currPvc.Name, newAd)
 
 			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
 
@@ -109,7 +112,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		if err != nil {
 			return deploymentToAdMap, err
 		}
-		glog.V(6).Infof("Successfully applied PVC '%s'\n", pvcName)
+		logger.Debug().Msgf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
 	//Report PVCs dangling

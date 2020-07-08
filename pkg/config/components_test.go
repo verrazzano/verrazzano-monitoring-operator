@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,10 +18,13 @@ func TestNoImages(t *testing.T) {
 }
 
 func TestAllImages(t *testing.T) {
+	//create log for image tester
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "TestAllImages").Str("name", "testing").Logger()
+
 	// Create environment variable for each component
 	for _, component := range AllComponentDetails {
 		if len(component.EnvName) > 0 {
-			glog.Infof("Setting environment variable %s", component.EnvName)
+			logger.Info().Msgf("Setting environment variable %s", component.EnvName)
 			err := os.Setenv(component.EnvName, "TEST")
 			assert.Nil(t, err, fmt.Sprintf("setting environment variable %s", component.EnvName))
 		}

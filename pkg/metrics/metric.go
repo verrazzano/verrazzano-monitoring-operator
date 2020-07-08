@@ -6,13 +6,14 @@ package metrics
 import (
 	"flag"
 	"fmt"
-	"net/http"
-
-	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"net/http"
+	"os"
+>>>>>>> 84804eb... Implemented structured logging
 )
 
 // DanglingPVC GaugeVec
@@ -48,5 +49,7 @@ func StartServer(port int) {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Handle("/metrics", promhttp.Handler())
 
-	glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
+	//create log for server
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "MonitoringOperator").Str("name", "MonitoringInit").Logger()
+	logger.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
 }
