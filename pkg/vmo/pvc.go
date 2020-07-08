@@ -5,6 +5,7 @@ package vmo
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	"github.com/prometheus/client_golang/prometheus"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -27,6 +28,9 @@ import (
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
 func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+	//create log for persistent volume claims
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	// Inspect the Storage Class to use
 	storageClass, err := determineStorageClass(controller)
 	if err != nil {
@@ -36,12 +40,12 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 
 	pvcList, err := pvcs.New(sauron, storageClass.Name)
 	if err != nil {
-		glog.Errorf("Failed to create PVC specs for sauron: %s", err)
+		logger.Error().Msgf("Failed to create PVC specs for sauron: %s", err)
 		return nil, err
 	}
 	deploymentToAdMap := map[string]string{}
 
-	glog.V(4).Infof("Creating/updating PVCs for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	logger.Info().Msgf("Creating/updating PVCs for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
@@ -65,7 +69,7 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 			return deploymentToAdMap, nil
 		}
 
-		glog.V(6).Infof("Applying PVC '%s' in namespace '%s' for sauron '%s'\n", pvcName, sauron.Namespace, sauron.Name)
+		logger.Debug().Msgf("Applying PVC '%s' in namespace '%s' for sauron '%s'\n", pvcName, sauron.Namespace, sauron.Name)
 		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(sauron.Namespace).Get(pvcName)
 
 		// If the PVC already exists, we *only* read its current AD, *if possible* (this is not possible for all storage classes and situations)
@@ -94,7 +98,7 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 				}
 				currPvc.Spec.Selector = &metav1.LabelSelector{MatchLabels: map[string]string{storageClassInfo.PvcZoneMatchLabel: newAd}}
 			}
-			glog.Infof("Creating PVC %s in AD %s", currPvc.Name, newAd)
+			logger.Info().Msgf("Creating PVC %s in AD %s", currPvc.Name, newAd)
 
 			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(sauron.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
 
@@ -108,7 +112,7 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 		if err != nil {
 			return deploymentToAdMap, err
 		}
-		glog.V(6).Infof("Successfully applied PVC '%s'\n", pvcName)
+		logger.Debug().Msgf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
 	//Report PVCs dangling

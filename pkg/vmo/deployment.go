@@ -6,8 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -21,20 +22,23 @@ import (
 )
 
 func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, sauronUsername string, sauronPassword string) (dirty bool, err error) {
+	//create log for creation of deployments
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	sauron.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
 	deployList, err := deployments.New(sauron, controller.operatorConfig, pvcToAdMap, sauronUsername, sauronPassword)
 	if err != nil {
-		glog.Errorf("Failed to create Deployment specs for sauron: %s", err)
+		logger.Error().Msgf("Failed to create Deployment specs for sauron: %s", err)
 		return false, err
 	}
 
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	glog.V(4).Infof("Creating/updating Deployments for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	logger.Info().Msgf("Creating/updating Deployments for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)
@@ -45,7 +49,7 @@ func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.Verrazzano
 			runtime.HandleError(errors.New("deployment name must be specified"))
 			return true, nil
 		}
-		glog.V(6).Infof("Applying Deployment '%s' in namespace '%s' for sauron '%s'\n", deploymentName, sauron.Namespace, sauron.Name)
+		logger.Debug().Msgf("Applying Deployment '%s' in namespace '%s' for sauron '%s'\n", deploymentName, sauron.Namespace, sauron.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(sauron.Namespace).Get(deploymentName)
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
@@ -61,7 +65,7 @@ func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.Verrazzano
 			} else {
 				specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 				if specDiffs != "" {
-					glog.V(4).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+					logger.Info().Msgf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 					_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
@@ -90,10 +94,10 @@ func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.Verrazzano
 	}
 	for _, deployment := range existingDeploymentsList {
 		if !contains(deploymentNames, deployment.Name) {
-			glog.V(6).Infof("Deleting deployment %s", deployment.Name)
+			logger.Debug().Msgf("Deleting deployment %s", deployment.Name)
 			err := controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
+				logger.Error().Msgf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
 				return false, err
 			}
 		}
@@ -106,6 +110,9 @@ func CreateDeployments(controller *Controller, sauron *vmcontrollerv1.Verrazzano
 // its precessors in the list have already been updated and are fully up and running.
 // return false if 1) no errors occurred, and 2) no work was done
 func updateNextDeployment(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
+	//create log for update of deployments
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	for index, curDeployment := range deployments {
 		existingDeployment, err := controller.deploymentLister.Deployments(sauron.Namespace).Get(curDeployment.Name)
 		if err != nil {
@@ -115,7 +122,7 @@ func updateNextDeployment(controller *Controller, sauron *vmcontrollerv1.Verrazz
 		// Deployment spec differences, so call Update() and return
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 		if specDiffs != "" {
-			glog.V(4).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+			logger.Info().Msgf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 			_, err = controller.kubeclientset.AppsV1().Deployments(sauron.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {
 				return false, err

@@ -5,8 +5,9 @@ package vmo
 import (
 	"context"
 	"errors"
+	"os"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -17,7 +18,10 @@ import (
 )
 
 func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	glog.V(4).Infof("Creating/updating RoleBindings for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	//create log for creation of role bindings
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
+	logger.Info().Msgf("Creating/updating RoleBindings for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
 
 	newRoleBindings, err := NewRoleBindings(sauron, controller)
 	if err != nil {
@@ -34,10 +38,10 @@ func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 		if existingRoleBinding != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingRoleBinding, newRoleBinding)
 			if specDiffs != "" {
-				glog.V(4).Infof("RoleBinding %s : Spec differences %s", newRoleBinding.Name, specDiffs)
+				logger.Info().Msgf("RoleBinding %s : Spec differences %s", newRoleBinding.Name, specDiffs)
 				err = controller.kubeclientset.RbacV1().RoleBindings(sauron.Namespace).Delete(context.TODO(), newRoleBinding.Name, metav1.DeleteOptions{})
 				if err != nil {
-					glog.Errorf("Problem deleting role binding %s: %+v", newRoleBinding.Name, err)
+					logger.Error().Msgf("Problem deleting role binding %s: %+v", newRoleBinding.Name, err)
 				}
 				_, err = controller.kubeclientset.RbacV1().RoleBindings(sauron.Namespace).Create(context.TODO(), newRoleBinding, metav1.CreateOptions{})
 			}
@@ -50,7 +54,7 @@ func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	}
 
 	// Delete RoleBindings that shouldn't exist
-	glog.V(4).Infof("Deleting unwanted RoleBindings for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	logger.Info().Msgf("Deleting unwanted RoleBindings for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.SauronLabel: sauron.Name})
 	existingRoleBindings, err := controller.roleBindingLister.RoleBindings(sauron.Namespace).List(selector)
 	if err != nil {
@@ -65,10 +69,10 @@ func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	}
 	for _, roleBinding := range existingRoleBindings {
 		if !contains(roleBindingNames, roleBinding.Name) {
-			glog.V(4).Infof("Deleting RoleBinding %s", roleBinding.Name)
+			logger.Info().Msgf("Deleting RoleBinding %s", roleBinding.Name)
 			err := controller.kubeclientset.RbacV1().RoleBindings(sauron.Namespace).Delete(context.TODO(), roleBinding.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete RoleBinding %s, for the reason (%v)", roleBinding.Name, err)
+				logger.Error().Msgf("Failed to delete RoleBinding %s, for the reason (%v)", roleBinding.Name, err)
 				return err
 			}
 		}

@@ -5,12 +5,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/rs/zerolog"
 	"os"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"github.com/golang/glog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs"
@@ -31,29 +31,33 @@ var (
 func main() {
 	flag.Parse()
 
+	// initialize logs for monitoring operator
 	logs.InitLogs()
+
+	//create log for main function
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "MonitoringOperator").Str("name", "MonitoringInit").Logger()
 
 	// Namespace must still be specified on the command line, as it is a prerequisite to fetching the config map
 	if namespace == "" {
-		glog.Fatalf("A namespace must be specified")
+		logger.Fatal().Msg("A namespace must be specified")
 	}
 
 	// Initialize the images to use
 	err := config.InitComponentDetails()
 	if err != nil {
-		glog.Fatalf("Error identifying docker images: %s", err.Error())
+		logger.Fatal().Msgf("Error identifying docker images: %s", err.Error())
 	}
 
-	glog.V(6).Infof("Creating new controller in namespace %s.", namespace)
+	logger.Debug().Msgf("Creating new controller in namespace %s.", namespace)
 	controller, err := vmo.NewController(namespace, configmapName, buildVersion, kubeconfig, masterURL, watchNamespace, watchVmi)
 	if err != nil {
-		glog.Fatalf("Error creating the controller: %s", err.Error())
+		logger.Fatal().Msgf("Error creating the controller: %s", err.Error())
 	}
 
 	vmo.StartHTTPServer(controller)
 
 	if err = controller.Run(1); err != nil {
-		glog.Fatalf("Error running controller: %s", err.Error())
+		logger.Fatal().Msgf("Error running controller: %s", err.Error())
 	}
 }
 

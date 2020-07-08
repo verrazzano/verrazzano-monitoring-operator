@@ -4,9 +4,10 @@ package ingresses
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -99,11 +100,14 @@ func createIngressElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, h
 
 // New will return a new Service for Sauron that needs to executed for on Complete
 func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta1.Ingress, error) {
+	//create log for new creating service
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	var ingresses []*extensions_v1beta1.Ingress
 
 	// Only create ingress if URI and secret name specified
 	if len(sauron.Spec.URI) <= 0 {
-		glog.V(6).Info("URI not specified, skipping ingress creation")
+		logger.Debug().Msg("URI not specified, skipping ingress creation")
 		return ingresses, nil
 	}
 

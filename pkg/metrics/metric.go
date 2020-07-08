@@ -5,12 +5,13 @@ package metrics
 import (
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	"github.com/gorilla/mux"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
+	"os"
 )
 
 var DanglingPVC = prometheus.NewGaugeVec(
@@ -42,5 +43,7 @@ func StartServer(port int) {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Handle("/metrics", promhttp.Handler())
 
-	glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
+	//create log for server
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "MonitoringOperator").Str("name", "MonitoringInit").Logger()
+	logger.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
 }

@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -109,42 +110,44 @@ type Controller struct {
 
 // NewController returns a new sauron controller
 func NewController(namespace string, configmapName string, buildVersion string, kubeconfig string, masterURL string, watchNamespace string, watchVmi string) (*Controller, error) {
+	//create log for main function
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "ClusterOperator").Str("name", "ClusterInit").Logger()
 
-	glog.V(6).Info("Building config")
+	logger.Debug().Msg("Building config")
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %v", err)
+		logger.Fatal().Msgf("Error building kubeconfig: %v", err)
 	}
 
-	glog.V(6).Info("Building kubernetes clientset")
+	logger.Debug().Msg("Building kubernetes clientset")
 	kubeclientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %v", err)
+		logger.Fatal().Msgf("Error building kubernetes clientset: %v", err)
 	}
 
-	glog.V(6).Info("Building sauron clientset")
+	logger.Debug().Msg("Building sauron clientset")
 	sauronclientset, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building sauron clientset: %v", err)
+		logger.Fatal().Msgf("Error building sauron clientset: %v", err)
 	}
 
-	glog.V(6).Info("Building api extensions clientset")
+	logger.Debug().Msg("Building api extensions clientset")
 	kubeextclientset, err := apiextensionsclient.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building apiextensions-apiserver clientset: %v", err)
+		logger.Fatal().Msgf("Error building apiextensions-apiserver clientset: %v", err)
 	}
 
 	// Get the config from the ConfigMap
-	glog.V(6).Info("Loading ConfigMap ", configmapName)
+	logger.Debug().Msgf("Loading ConfigMap ", configmapName)
 
 	operatorConfigMap, err := kubeclientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), configmapName, metav1.GetOptions{})
 	if err != nil {
-		glog.Fatalf("No configuration ConfigMap called %s found in namespace %s.", configmapName, namespace)
+		logger.Fatal().Msgf("No configuration ConfigMap called %s found in namespace %s.", configmapName, namespace)
 	}
-	glog.V(6).Infof("Building config from ConfigMap %s", configmapName)
+	logger.Debug().Msgf("Building config from ConfigMap %s", configmapName)
 	operatorConfig, err := config.NewConfigFromConfigMap(operatorConfigMap)
 	if err != nil {
-		glog.Fatalf("Error building verrazzano-monitoring-operator config from config map: %s", err.Error())
+		logger.Fatal().Msgf("Error building verrazzano-monitoring-operator config from config map: %s", err.Error())
 	}
 
 	var kubeInformerFactory kubeinformers.SharedInformerFactory
@@ -178,11 +181,11 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	// Add sauron-controller types to the default Kubernetes Scheme so Events can be
 	// logged for sauron-controller types.
 	if err := clientsetscheme.AddToScheme(scheme.Scheme); err != nil {
-		glog.Warningf("error adding scheme: %+v", err)
+		logger.Warn().Msgf("error adding scheme: %+v", err)
 	}
-	glog.V(4).Info("Creating event broadcaster")
+	logger.Info().Msg("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartLogging(logger.Info().Msgf)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
@@ -228,7 +231,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		latestConfigMap:       operatorConfigMap,
 	}
 
-	glog.Info("Setting up event handlers")
+	logger.Info().Msg("Setting up event handlers")
 
 	// Set up an event handler for when Sauron resources change
 	sauronInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -245,12 +248,12 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 			newConfigMap := new.(*corev1.ConfigMap)
 			// If the configMap has changed from our last known copy, process it
 			if newConfigMap.Name == controller.operatorConfigMapName && !reflect.DeepEqual(newConfigMap.Data, controller.latestConfigMap.Data) {
-				glog.V(2).Info("Reloading config...")
+				logger.Info().Msg("Reloading config...")
 				newOperatorConfig, err := config.NewConfigFromConfigMap(newConfigMap)
 				if err != nil {
-					glog.Errorf("Errors processing config updates - so we're staying at current configuration: %s", err)
+					logger.Error().Msgf("Errors processing config updates - so we're staying at current configuration: %s", err)
 				} else {
-					glog.V(2).Info("Successfully reloaded config")
+					logger.Info().Msg("Successfully reloaded config")
 					controller.operatorConfig = newOperatorConfig
 					controller.latestConfigMap = newConfigMap
 				}
@@ -259,7 +262,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	})
 
 	// set up signals so we handle the first shutdown signal gracefully
-	glog.V(6).Info("Setting up signals")
+	logger.Debug().Msg("Setting up signals")
 	controller.stopCh = signals.SetupSignalHandler()
 
 	go kubeInformerFactory.Start(controller.stopCh)
@@ -276,11 +279,14 @@ func (c *Controller) Run(threadiness int) error {
 	defer runtime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
+	//create log for run
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "Controller").Str("name", c.namespace).Logger()
+
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Sauron controller")
+	logger.Info().Msg("Starting Sauron controller")
 
 	// Wait for the caches to be synced before starting workers
-	glog.Info("Waiting for informer caches to sync")
+	logger.Info().Msg("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(c.stopCh, c.clusterRolesSynced, c.configMapsSynced, c.cronJobsSynced,
 		c.deploymentsSynced, c.ingressesSynced, c.nodesSynced, c.pvcsSynced, c.roleBindingsSynced, c.secretsSynced,
 		c.servicesSynced, c.statefulSetsSynced, c.sauronsSynced, c.storageClassesSynced); !ok {
@@ -292,15 +298,15 @@ func (c *Controller) Run(threadiness int) error {
 	// start Metrics server
 	go metrics.StartServer(*c.operatorConfig.MetricsPort)
 
-	glog.Info("Starting workers")
+	logger.Info().Msg("Starting workers")
 	// Launch two workers to process Sauron resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, c.stopCh)
 	}
 
-	glog.Info("Started workers")
+	logger.Info().Msg("Started workers")
 	<-c.stopCh
-	glog.Info("Shutting down workers")
+	logger.Info().Msg("Shutting down workers")
 
 	return nil
 }
@@ -367,6 +373,9 @@ func (c *Controller) processNextWorkItem() bool {
 
 // Process an update to a Sauron
 func (c *Controller) syncHandler(key string) error {
+	//create log for syncHandler
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "Controller").Str("name", c.namespace).Logger()
+
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -378,7 +387,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Get the Sauron resource with this namespace/name
-	glog.V(4).Infof("[Sauron] Name: %s  NameSpace: %s", name, namespace)
+	logger.Info().Msgf("[Sauron] Name: %s  NameSpace: %s", name, namespace)
 	sauron, err := c.sauronLister.VerrazzanoMonitoringInstances(namespace).Get(name)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("error getting Sauron %s in namespace %s: %v", name, namespace, err))
@@ -392,12 +401,15 @@ func (c *Controller) syncHandler(key string) error {
 // converge the two.  We then update the Status block of the Sauron resource
 // with the current status.
 func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	//create log for syncHandler
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	originalSauron := sauron.DeepCopy()
 
 	// If lock, controller will not sync/process the Sauron env
 	labels := prometheus.Labels{"namespace": sauron.Namespace, "sauron_name": sauron.Name}
 	if sauron.Spec.Lock {
-		glog.V(4).Infof("[%s/%s] Lock is set to true, this Sauron env will not be synced/processed.", sauron.Name, sauron.Namespace)
+		logger.Info().Msgf("[%s/%s] Lock is set to true, this Sauron env will not be synced/processed.", sauron.Name, sauron.Namespace)
 		metrics.Lock.With(labels).Set(1)
 		return nil
 	} else {
@@ -416,7 +428,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	 **********************/
 	err := CreateRoleBindings(c, sauron)
 	if err != nil {
-		glog.Errorf("Failed to create Role Bindings for sauron: %v", err)
+		logger.Error().Msgf("Failed to create Role Bindings for sauron: %v", err)
 		errorObserved = true
 	}
 
@@ -425,7 +437,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	**********************/
 	err = CreateConfigmaps(c, sauron)
 	if err != nil {
-		glog.Errorf("Failed to create config maps for sauron: %v", err)
+		logger.Error().Msgf("Failed to create config maps for sauron: %v", err)
 		errorObserved = true
 	}
 
@@ -434,7 +446,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	 **********************/
 	err = CreateServices(c, sauron)
 	if err != nil {
-		glog.Errorf("Failed to create Services for sauron: %v", err)
+		logger.Error().Msgf("Failed to create Services for sauron: %v", err)
 		errorObserved = true
 	}
 
@@ -443,7 +455,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	 **********************/
 	pvcToAdMap, err := CreatePersistentVolumeClaims(c, sauron)
 	if err != nil {
-		glog.Errorf("Failed to create PVCs for sauron: %v", err)
+		logger.Error().Msgf("Failed to create PVCs for sauron: %v", err)
 		errorObserved = true
 	}
 
@@ -452,12 +464,12 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	 **********************/
 	sauronUsername, sauronPassword, err := GetAuthSecrets(c, sauron)
 	if err != nil {
-		glog.Errorf("Failed to extract Sauron Secrets for sauron: %v", err)
+		logger.Error().Msgf("Failed to extract Sauron Secrets for sauron: %v", err)
 		errorObserved = true
 	}
 	deploymentsDirty, err := CreateDeployments(c, sauron, pvcToAdMap, sauronUsername, sauronPassword)
 	if err != nil {
-		glog.Errorf("Failed to create Deployments for sauron: %v", err)
+		logger.Error().Msgf("Failed to create Deployments for sauron: %v", err)
 		errorObserved = true
 	}
 	/*********************
@@ -465,7 +477,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	 **********************/
 	err = CreateStatefulSets(c, sauron)
 	if err != nil {
-		glog.Errorf("Failed to create StatefulSets for sauron: %v", err)
+		logger.Error().Msgf("Failed to create StatefulSets for sauron: %v", err)
 		errorObserved = true
 	}
 
@@ -474,7 +486,7 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	 **********************/
 	err = CreateIngresses(c, sauron)
 	if err != nil {
-		glog.Errorf("Failed to create Ingresses for sauron: %v", err)
+		logger.Error().Msgf("Failed to create Ingresses for sauron: %v", err)
 		errorObserved = true
 	}
 
@@ -483,12 +495,12 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	**********************/
 	specDiffs := diff.CompareIgnoreTargetEmpties(originalSauron, sauron)
 	if specDiffs != "" {
-		glog.V(6).Infof("Acquired lock in namespace: %s", sauron.Namespace)
-		glog.V(4).Infof("Sauron %s : Spec differences %s", sauron.Name, specDiffs)
-		glog.V(4).Infof("Updating Sauron")
+		logger.Debug().Msgf("Acquired lock in namespace: %s", sauron.Namespace)
+		logger.Info().Msgf("Sauron %s : Spec differences %s", sauron.Name, specDiffs)
+		logger.Info().Msgf("Updating Sauron")
 		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(context.TODO(), sauron, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update status for sauron: %v", err)
+			logger.Error().Msgf("Failed to update status for sauron: %v", err)
 			errorObserved = true
 		}
 	}
@@ -500,22 +512,22 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 		sauron.Spec.Versioning.CurrentVersion = c.buildVersion
 		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(context.TODO(), sauron, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update currentVersion for sauron %s: %v", sauron.Name, err)
+			logger.Error().Msgf("Failed to update currentVersion for sauron %s: %v", sauron.Name, err)
 		} else {
-			glog.Infof("Updated Sauron %s currentVersion to %s", sauron.Name, c.buildVersion)
+			logger.Info().Msgf("Updated Sauron %s currentVersion to %s", sauron.Name, c.buildVersion)
 		}
 	}
 
 	// Create a Hash on sauron/Status object to identify changes to sauron spec
 	hash, err := sauron.Hash()
 	if err != nil {
-		glog.Errorf("Error getting Sauron hash: %v", err)
+		logger.Error().Msgf("Error getting Sauron hash: %v", err)
 	}
 	if sauron.Status.Hash != hash {
 		sauron.Status.Hash = hash
 	}
 
-	glog.V(4).Infof("Successfully synced '%s/%s'", sauron.Namespace, sauron.Name)
+	logger.Info().Msgf("Successfully synced '%s/%s'", sauron.Namespace, sauron.Name)
 
 	return nil
 }
