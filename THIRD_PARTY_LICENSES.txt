@@ -4956,6 +4956,17 @@ github.com/peterbourgon/diskv
 Copyright (c) 2011-2012 Peter Bourgon
 
 -------- Dependency
+github.com/rs/xid
+-------- Copyrights
+Copyright (c) 2015 Olivier Poitrey <rs@dailymotion.com>
+
+-------- Dependency
+github.com/rs/zerolog
+-------- Copyrights
+Copyright (c) 2017 Olivier Poitrey
+Copyright (c) 2014, 2015, 2016 Carl Jackson (carl@avtok.com)
+
+-------- Dependency
 github.com/sirupsen/logrus
 -------- Copyrights
 Copyright (c) 2014 Simon Eskildsen
@@ -5132,6 +5143,8 @@ github.com/onsi/ginkgo
 github.com/onsi/gomega
 github.com/pelletier/go-toml
 github.com/peterbourgon/diskv
+github.com/rs/xid
+github.com/rs/zerolog
 github.com/sirupsen/logrus
 github.com/spf13/cast
 github.com/spf13/jwalterweatherman
@@ -5801,4 +5814,4 @@ Creative Commons may be contacted at creativecommons.org.
 
 
 ATTRIBUTION-HELPER-GENERATED:
-License file based on go.mod with md5 sum: 7b10cfc994455cb2a148004d6147eba1
+License file based on go.mod with md5 sum: c8b8ed71ff754b5dea912d160612c4f3

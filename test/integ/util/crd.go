@@ -4,12 +4,13 @@ package util
 
 import (
 	"context"
+	"os"
 
 	"k8s.io/client-go/kubernetes"
 
 	"fmt"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/client"
 	corev1 "k8s.io/api/core/v1"
@@ -23,10 +24,13 @@ func CreateVMO(
 	vmo *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	secret *corev1.Secret) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
 
+	//create log for creation of VMO
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
+
 	fmt.Printf("Creating secret '%s' in namespace '%s'\n", vmo.Name, ns)
 	_, err := clientSet.CoreV1().Secrets(ns).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("Cannot create a vmo secret: %s, due to err: %v", secret.Name, err)
+		logger.Error().Msgf("Cannot create a vmo secret: %s, due to err: %v", secret.Name, err)
 		return nil, err
 	}
 
@@ -34,7 +38,7 @@ func CreateVMO(
 	vmo.Namespace = ns
 	res, err := crClient.Create(context.TODO(), vmo)
 	if err != nil {
-		glog.Errorf("Unable to create vmo '%s' in namespace '%s'\n", vmo.Name, ns)
+		logger.Error().Msgf("Unable to create vmo '%s' in namespace '%s'\n", vmo.Name, ns)
 		return nil, err
 	}
 	fmt.Printf("Successfully created vmo '%s' in namespace '%s'\n", res.Name, res.Namespace)
@@ -62,6 +66,9 @@ func DeleteVMO(
 	ns string,
 	vmo *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	secret *corev1.Secret) error {
+	//create log for deletion of VMO
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
+
 	fmt.Printf("Deleting vmo '%s' in namespace '%s'\n", vmo.Name, vmo.Namespace)
 	err := crClient.Delete(context.TODO(), ns, vmo.Name)
 	if err != nil {
@@ -70,7 +77,7 @@ func DeleteVMO(
 	fmt.Printf("Deleting secret '%s' in namespace '%s'\n", vmo.Name, ns)
 	err = clientSet.CoreV1().Secrets(ns).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 	if err != nil {
-		glog.Errorf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
+		logger.Error().Msgf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
 		return err
 	}
 
