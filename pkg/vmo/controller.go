@@ -138,7 +138,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	}
 
 	// Get the config from the ConfigMap
-	logger.Debug().Msgf("Loading ConfigMap ", configmapName)
+	logger.Debug().Msgf("Loading ConfigMap %s", configmapName)
 
 	operatorConfigMap, err := kubeclientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), configmapName, metav1.GetOptions{})
 	if err != nil {
