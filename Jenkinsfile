@@ -174,10 +174,7 @@ pipeline {
 
         stage('Build ESWait Image') {
             when {
-                allOf {
-                    not { buildingTag() }
-                    changeset '**/*eswait*/**'
-                }
+                not { buildingTag() }
             }
             steps {
                 sh """
@@ -189,10 +186,7 @@ pipeline {
 
         stage('Scan ESWait Image') {
             when {
-                allOf {
-                    not { buildingTag() }
-                    changeset '**/*eswait*/**'
-                }
+                not { buildingTag() }
             }
             steps {
                 script {
@@ -210,10 +204,7 @@ pipeline {
 
         stage('Publish ESWait Image') {
             when {
-                allOf {
-                    buildingTag()
-                    changeset '**/*eswait*/**'
-                }
+                buildingTag()
             }
             steps {
                 sh """
