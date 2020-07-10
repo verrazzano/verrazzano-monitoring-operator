@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSauronWithCascadingDelete(t *testing.T) {
+func TestVMIWithCascadingDelete(t *testing.T) {
 	// With CascadingDelete
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
@@ -32,7 +32,7 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	services, err := New(sauron)
+	services, err := New(vmi)
 	if err != nil {
 		t.Error(err)
 	}
@@ -42,8 +42,8 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 	}
 
 	// Without CascadingDelete
-	sauron.Spec.CascadingDelete = false
-	services, err = New(sauron)
+	vmi.Spec.CascadingDelete = false
+	services, err = New(vmi)
 	if err != nil {
 		t.Error(err)
 	}

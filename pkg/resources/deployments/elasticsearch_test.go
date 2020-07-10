@@ -16,9 +16,9 @@ import (
 )
 
 func TestElasticsearchDefaultDeployments1(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "mySauron",
+			Name: "myVMI",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
@@ -34,14 +34,14 @@ func TestElasticsearchDefaultDeployments1(t *testing.T) {
 		},
 	}
 	var es Elasticsearch = ElasticsearchBasic{}
-	deployments := es.createElasticsearchDeploymentElements(sauron, map[string]string{})
+	deployments := es.createElasticsearchDeploymentElements(vmi, map[string]string{})
 	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 }
 
 func TestElasticsearchDefaultDeployments2(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "mySauron",
+			Name: "myVMI",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
@@ -57,17 +57,17 @@ func TestElasticsearchDefaultDeployments2(t *testing.T) {
 		},
 	}
 	var es Elasticsearch = ElasticsearchBasic{}
-	deployments := es.createElasticsearchDeploymentElements(sauron, map[string]string{})
+	deployments := es.createElasticsearchDeploymentElements(vmi, map[string]string{})
 	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
 
-	clientDeployment, _ := getDeploymentByName(resources.GetMetaName(sauron.Name, config.ElasticsearchIngest.Name), deployments)
+	clientDeployment, _ := getDeploymentByName(resources.GetMetaName(vmi.Name, config.ElasticsearchIngest.Name), deployments)
 	assert.NotNil(t, clientDeployment, "Client deployment")
 	assert.Equal(t, int32(5), *clientDeployment.Spec.Replicas, "Client replicas")
 	assert.Equal(t, "false", getEnvVarValue("node.master", clientDeployment.Spec.Template.Spec.Containers[0].Env), "Master setting on client")
 	assert.Equal(t, "false", getEnvVarValue("node.data", clientDeployment.Spec.Template.Spec.Containers[0].Env), "Data setting on client")
 	assert.Equal(t, "true", getEnvVarValue("node.ingest", clientDeployment.Spec.Template.Spec.Containers[0].Env), "Ingest setting on client")
 
-	//	masterDeployment, _ := getDeploymentByName(resources.GetMetaName(sauron.Name, constants.ElasticsearchMaster.Name), deployments)
+	//	masterDeployment, _ := getDeploymentByName(resources.GetMetaName(vmi.Name, constants.ElasticsearchMaster.Name), deployments)
 	//	assert.NotNil(t, masterDeployment, "Master deployment")
 	//	assert.Equal(t, int32(4), *masterDeployment.Spec.Replicas, "Master replicas")
 	//	assert.Equal(t, "true", getEnvVarValue("NODE_MASTER", masterDeployment.Spec.Template.Spec.Containers[0].Env), "Master setting on master")
@@ -77,7 +77,7 @@ func TestElasticsearchDefaultDeployments2(t *testing.T) {
 	//	assert.NotNil(t, masterDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe, "Master deployment readiness probe")
 
 	for i := 0; i < 3; i++ {
-		dataDeployment, _ := getDeploymentByName(resources.GetMetaName(sauron.Name, fmt.Sprintf("%s-%d", config.ElasticsearchData.Name, i)), deployments)
+		dataDeployment, _ := getDeploymentByName(resources.GetMetaName(vmi.Name, fmt.Sprintf("%s-%d", config.ElasticsearchData.Name, i)), deployments)
 		assert.Equal(t, "pvc"+strconv.Itoa(i+1), dataDeployment.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName, fmt.Sprintf("PVC for index %d", i))
 		assert.NotNil(t, dataDeployment, fmt.Sprintf("Data deployment for index %d", i))
 		assert.Equal(t, int32(1), *dataDeployment.Spec.Replicas, fmt.Sprintf("Data replicas for index %d", i))

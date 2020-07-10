@@ -44,14 +44,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const controllerAgentName = "sauron-controller"
+const controllerAgentName = "vmi-controller"
 
-// Controller is the controller implementation for Sauron resources
+// Controller is the controller implementation for VMI resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	// sauronclientset is a clientset for our own API group
-	sauronclientset  clientset.Interface
+	// vmiclientset is a clientset for our own API group
+	vmiclientset     clientset.Interface
 	kubeextclientset apiextensionsclient.Interface
 
 	// listers and syncs
@@ -77,8 +77,8 @@ type Controller struct {
 	servicesSynced       cache.InformerSynced
 	statefulSetLister    appslistersv1.StatefulSetLister
 	statefulSetsSynced   cache.InformerSynced
-	sauronLister         listers.VerrazzanoMonitoringInstanceLister
-	sauronsSynced        cache.InformerSynced
+	vmiLister            listers.VerrazzanoMonitoringInstanceLister
+	vmisSynced           cache.InformerSynced
 	storageClassLister   storagelisters1.StorageClassLister
 	storageClassesSynced cache.InformerSynced
 
@@ -107,7 +107,7 @@ type Controller struct {
 	recorder record.EventRecorder
 }
 
-// NewController returns a new sauron controller
+// NewController returns a new vmi controller
 func NewController(namespace string, configmapName string, buildVersion string, kubeconfig string, masterURL string, watchNamespace string, watchVmi string) (*Controller, error) {
 
 	glog.V(6).Info("Building config")
@@ -122,10 +122,10 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		glog.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
-	glog.V(6).Info("Building sauron clientset")
-	sauronclientset, err := clientset.NewForConfig(cfg)
+	glog.V(6).Info("Building vmi clientset")
+	vmiclientset, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building sauron clientset: %v", err)
+		glog.Fatalf("Error building vmi clientset: %v", err)
 	}
 
 	glog.V(6).Info("Building api extensions clientset")
@@ -148,18 +148,18 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	}
 
 	var kubeInformerFactory kubeinformers.SharedInformerFactory
-	var sauronInformerFactory informers.SharedInformerFactory
+	var vmiInformerFactory informers.SharedInformerFactory
 	if watchNamespace == "" {
 		// Consider all namespaces if our namespace is left wide open our set to default
 		kubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeclientset, constants.ResyncPeriod)
-		sauronInformerFactory = informers.NewSharedInformerFactory(sauronclientset, constants.ResyncPeriod)
+		vmiInformerFactory = informers.NewSharedInformerFactory(vmiclientset, constants.ResyncPeriod)
 	} else {
 		// Otherwise, restrict to a specific namespace
 		kubeInformerFactory = kubeinformers.NewSharedInformerFactoryWithOptions(kubeclientset, constants.ResyncPeriod, kubeinformers.WithNamespace(watchNamespace), kubeinformers.WithTweakListOptions(nil))
-		sauronInformerFactory = informers.NewSharedInformerFactoryWithOptions(sauronclientset, constants.ResyncPeriod, informers.WithNamespace(watchNamespace), informers.WithTweakListOptions(nil))
+		vmiInformerFactory = informers.NewSharedInformerFactoryWithOptions(vmiclientset, constants.ResyncPeriod, informers.WithNamespace(watchNamespace), informers.WithTweakListOptions(nil))
 	}
 
-	// obtain references to shared index informers for the Deployment and Sauron
+	// obtain references to shared index informers for the Deployment and VMI
 	// types.
 	clusterRoleInformer := kubeInformerFactory.Rbac().V1().ClusterRoles()
 	configmapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
@@ -172,11 +172,11 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	secretsInformer := kubeInformerFactory.Core().V1().Secrets()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	statefulSetInformer := kubeInformerFactory.Apps().V1().StatefulSets()
-	sauronInformer := sauronInformerFactory.Verrazzano().V1().VerrazzanoMonitoringInstances()
+	vmiInformer := vmiInformerFactory.Verrazzano().V1().VerrazzanoMonitoringInstances()
 	storageClassInformer := kubeInformerFactory.Storage().V1().StorageClasses()
 	// Create event broadcaster
-	// Add sauron-controller types to the default Kubernetes Scheme so Events can be
-	// logged for sauron-controller types.
+	// Add vmi-controller types to the default Kubernetes Scheme so Events can be
+	// logged for vmi-controller types.
 	if err := clientsetscheme.AddToScheme(scheme.Scheme); err != nil {
 		glog.Warningf("error adding scheme: %+v", err)
 	}
@@ -191,7 +191,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		watchNamespace:   watchNamespace,
 		watchVmi:         watchVmi,
 		kubeclientset:    kubeclientset,
-		sauronclientset:  sauronclientset,
+		vmiclientset:     vmiclientset,
 		kubeextclientset: kubeextclientset,
 
 		clusterRoleLister:     clusterRoleInformer.Lister(),
@@ -216,11 +216,11 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		servicesSynced:        serviceInformer.Informer().HasSynced,
 		statefulSetLister:     statefulSetInformer.Lister(),
 		statefulSetsSynced:    statefulSetInformer.Informer().HasSynced,
-		sauronLister:          sauronInformer.Lister(),
-		sauronsSynced:         sauronInformer.Informer().HasSynced,
+		vmiLister:             vmiInformer.Lister(),
+		vmisSynced:            vmiInformer.Informer().HasSynced,
 		storageClassLister:    storageClassInformer.Lister(),
 		storageClassesSynced:  storageClassInformer.Informer().HasSynced,
-		workqueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Saurons"),
+		workqueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "VMIs"),
 		recorder:              recorder,
 		buildVersion:          buildVersion,
 		operatorConfigMapName: configmapName,
@@ -230,11 +230,11 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 
 	glog.Info("Setting up event handlers")
 
-	// Set up an event handler for when Sauron resources change
-	sauronInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueSauron,
+	// Set up an event handler for when VMI resources change
+	vmiInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueVMI,
 		UpdateFunc: func(old, new interface{}) {
-			controller.enqueueSauron(new)
+			controller.enqueueVMI(new)
 		},
 	})
 
@@ -263,7 +263,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	controller.stopCh = signals.SetupSignalHandler()
 
 	go kubeInformerFactory.Start(controller.stopCh)
-	go sauronInformerFactory.Start(controller.stopCh)
+	go vmiInformerFactory.Start(controller.stopCh)
 
 	return controller, nil
 }
@@ -277,13 +277,13 @@ func (c *Controller) Run(threadiness int) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Sauron controller")
+	glog.Info("Starting VMI controller")
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(c.stopCh, c.clusterRolesSynced, c.configMapsSynced, c.cronJobsSynced,
 		c.deploymentsSynced, c.ingressesSynced, c.nodesSynced, c.pvcsSynced, c.roleBindingsSynced, c.secretsSynced,
-		c.servicesSynced, c.statefulSetsSynced, c.sauronsSynced, c.storageClassesSynced); !ok {
+		c.servicesSynced, c.statefulSetsSynced, c.vmisSynced, c.storageClassesSynced); !ok {
 		return errors.New("failed to wait for caches to sync")
 	}
 
@@ -293,7 +293,7 @@ func (c *Controller) Run(threadiness int) error {
 	go metrics.StartServer(*c.operatorConfig.MetricsPort)
 
 	glog.Info("Starting workers")
-	// Launch two workers to process Sauron resources
+	// Launch two workers to process VMI resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, c.stopCh)
 	}
@@ -347,7 +347,7 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
-		// Sauron resource to be synced.
+		// VMI resource to be synced.
 		if err := c.syncHandler(key); err != nil {
 			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
 		}
@@ -365,7 +365,7 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-// Process an update to a Sauron
+// Process an update to a VMI
 func (c *Controller) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -377,27 +377,27 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Get the Sauron resource with this namespace/name
-	glog.V(4).Infof("[Sauron] Name: %s  NameSpace: %s", name, namespace)
-	sauron, err := c.sauronLister.VerrazzanoMonitoringInstances(namespace).Get(name)
+	// Get the VMI resource with this namespace/name
+	glog.V(4).Infof("[VMI] Name: %s  NameSpace: %s", name, namespace)
+	vmi, err := c.vmiLister.VerrazzanoMonitoringInstances(namespace).Get(name)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("error getting Sauron %s in namespace %s: %v", name, namespace, err))
+		runtime.HandleError(fmt.Errorf("error getting VMI %s in namespace %s: %v", name, namespace, err))
 		return err
 	}
 
-	return c.syncHandlerStandardMode(sauron)
+	return c.syncHandlerStandardMode(vmi)
 }
 
 // In Standard Mode, we compare the actual state with the desired, and attempt to
-// converge the two.  We then update the Status block of the Sauron resource
+// converge the two.  We then update the Status block of the VMI resource
 // with the current status.
-func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	originalSauron := sauron.DeepCopy()
+func (c *Controller) syncHandlerStandardMode(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	originalVMI := vmi.DeepCopy()
 
-	// If lock, controller will not sync/process the Sauron env
-	labels := prometheus.Labels{"namespace": sauron.Namespace, "sauron_name": sauron.Name}
-	if sauron.Spec.Lock {
-		glog.V(4).Infof("[%s/%s] Lock is set to true, this Sauron env will not be synced/processed.", sauron.Name, sauron.Namespace)
+	// If lock, controller will not sync/process the VMI env
+	labels := prometheus.Labels{"namespace": vmi.Namespace, "vmi_name": vmi.Name}
+	if vmi.Spec.Lock {
+		glog.V(4).Infof("[%s/%s] Lock is set to true, this VMI env will not be synced/processed.", vmi.Name, vmi.Namespace)
 		metrics.Lock.With(labels).Set(1)
 		return nil
 	} else {
@@ -405,125 +405,125 @@ func (c *Controller) syncHandlerStandardMode(sauron *vmcontrollerv1.VerrazzanoMo
 	}
 
 	/*********************
-	 * Initialize Sauron Spec
+	 * Initialize VMI Spec
 	 **********************/
-	InitializeSauronSpec(c, sauron)
+	InitializeVMISpec(c, vmi)
 
 	errorObserved := false
 
 	/*********************
 	 * Create RoleBindings
 	 **********************/
-	err := CreateRoleBindings(c, sauron)
+	err := CreateRoleBindings(c, vmi)
 	if err != nil {
-		glog.Errorf("Failed to create Role Bindings for sauron: %v", err)
+		glog.Errorf("Failed to create Role Bindings for vmi: %v", err)
 		errorObserved = true
 	}
 
 	/*********************
 	* Create configmaps
 	**********************/
-	err = CreateConfigmaps(c, sauron)
+	err = CreateConfigmaps(c, vmi)
 	if err != nil {
-		glog.Errorf("Failed to create config maps for sauron: %v", err)
+		glog.Errorf("Failed to create config maps for vmi: %v", err)
 		errorObserved = true
 	}
 
 	/*********************
 	 * Create Services
 	 **********************/
-	err = CreateServices(c, sauron)
+	err = CreateServices(c, vmi)
 	if err != nil {
-		glog.Errorf("Failed to create Services for sauron: %v", err)
+		glog.Errorf("Failed to create Services for vmi: %v", err)
 		errorObserved = true
 	}
 
 	/*********************
 	 * Create Persistent Volume Claims
 	 **********************/
-	pvcToAdMap, err := CreatePersistentVolumeClaims(c, sauron)
+	pvcToAdMap, err := CreatePersistentVolumeClaims(c, vmi)
 	if err != nil {
-		glog.Errorf("Failed to create PVCs for sauron: %v", err)
+		glog.Errorf("Failed to create PVCs for vmi: %v", err)
 		errorObserved = true
 	}
 
 	/*********************
 	 * Create Deployments
 	 **********************/
-	sauronUsername, sauronPassword, err := GetAuthSecrets(c, sauron)
+	vmiUsername, vmiPassword, err := GetAuthSecrets(c, vmi)
 	if err != nil {
-		glog.Errorf("Failed to extract Sauron Secrets for sauron: %v", err)
+		glog.Errorf("Failed to extract VMI Secrets for vmi: %v", err)
 		errorObserved = true
 	}
-	deploymentsDirty, err := CreateDeployments(c, sauron, pvcToAdMap, sauronUsername, sauronPassword)
+	deploymentsDirty, err := CreateDeployments(c, vmi, pvcToAdMap, vmiUsername, vmiPassword)
 	if err != nil {
-		glog.Errorf("Failed to create Deployments for sauron: %v", err)
+		glog.Errorf("Failed to create Deployments for vmi: %v", err)
 		errorObserved = true
 	}
 	/*********************
 	 * Create StatefulSets
 	 **********************/
-	err = CreateStatefulSets(c, sauron)
+	err = CreateStatefulSets(c, vmi)
 	if err != nil {
-		glog.Errorf("Failed to create StatefulSets for sauron: %v", err)
+		glog.Errorf("Failed to create StatefulSets for vmi: %v", err)
 		errorObserved = true
 	}
 
 	/*********************
 	 * Create Ingresses
 	 **********************/
-	err = CreateIngresses(c, sauron)
+	err = CreateIngresses(c, vmi)
 	if err != nil {
-		glog.Errorf("Failed to create Ingresses for sauron: %v", err)
+		glog.Errorf("Failed to create Ingresses for vmi: %v", err)
 		errorObserved = true
 	}
 
 	/*********************
-	* Update Sauron itself (if necessary, if anything has changed)
+	* Update VMI itself (if necessary, if anything has changed)
 	**********************/
-	specDiffs := diff.CompareIgnoreTargetEmpties(originalSauron, sauron)
+	specDiffs := diff.CompareIgnoreTargetEmpties(originalVMI, vmi)
 	if specDiffs != "" {
-		glog.V(6).Infof("Acquired lock in namespace: %s", sauron.Namespace)
-		glog.V(4).Infof("Sauron %s : Spec differences %s", sauron.Name, specDiffs)
-		glog.V(4).Infof("Updating Sauron")
-		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(context.TODO(), sauron, metav1.UpdateOptions{})
+		glog.V(6).Infof("Acquired lock in namespace: %s", vmi.Namespace)
+		glog.V(4).Infof("VMI %s : Spec differences %s", vmi.Name, specDiffs)
+		glog.V(4).Infof("Updating VMI")
+		_, err = c.vmiclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmi.Namespace).Update(context.TODO(), vmi, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update status for sauron: %v", err)
+			glog.Errorf("Failed to update status for vmi: %v", err)
 			errorObserved = true
 		}
 	}
-	if !errorObserved && !deploymentsDirty && len(c.buildVersion) > 0 && sauron.Spec.Versioning.CurrentVersion != c.buildVersion {
+	if !errorObserved && !deploymentsDirty && len(c.buildVersion) > 0 && vmi.Spec.Versioning.CurrentVersion != c.buildVersion {
 		// The spec.versioning.currentVersion field should not be updated to the new value until a sync produces no
 		// changes.  This allows observers (e.g. the controlled rollout scripts used to put new versions of operator
-		// into production) to know when a given sauron has been (mostly) updated, and thus when it's relatively safe to
-		// start checking various aspects of the sauron for health.
-		sauron.Spec.Versioning.CurrentVersion = c.buildVersion
-		_, err = c.sauronclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(sauron.Namespace).Update(context.TODO(), sauron, metav1.UpdateOptions{})
+		// into production) to know when a given vmi has been (mostly) updated, and thus when it's relatively safe to
+		// start checking various aspects of the vmi for health.
+		vmi.Spec.Versioning.CurrentVersion = c.buildVersion
+		_, err = c.vmiclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmi.Namespace).Update(context.TODO(), vmi, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update currentVersion for sauron %s: %v", sauron.Name, err)
+			glog.Errorf("Failed to update currentVersion for vmi %s: %v", vmi.Name, err)
 		} else {
-			glog.Infof("Updated Sauron %s currentVersion to %s", sauron.Name, c.buildVersion)
+			glog.Infof("Updated VMI %s currentVersion to %s", vmi.Name, c.buildVersion)
 		}
 	}
 
-	// Create a Hash on sauron/Status object to identify changes to sauron spec
-	hash, err := sauron.Hash()
+	// Create a Hash on vmi/Status object to identify changes to vmi spec
+	hash, err := vmi.Hash()
 	if err != nil {
-		glog.Errorf("Error getting Sauron hash: %v", err)
+		glog.Errorf("Error getting VMI hash: %v", err)
 	}
-	if sauron.Status.Hash != hash {
-		sauron.Status.Hash = hash
+	if vmi.Status.Hash != hash {
+		vmi.Status.Hash = hash
 	}
 
-	glog.V(4).Infof("Successfully synced '%s/%s'", sauron.Namespace, sauron.Name)
+	glog.V(4).Infof("Successfully synced '%s/%s'", vmi.Namespace, vmi.Name)
 
 	return nil
 }
 
-// enqueueSauron takes a Sauron resource and converts it into a namespace/name
+// enqueueVMI takes a VMI resource and converts it into a namespace/name
 // string which is then put onto the work queue. This method should *not* be
-// passed resources of any type other than Sauron.
-func (c *Controller) enqueueSauron(obj interface{}) {
+// passed resources of any type other than VMI.
+func (c *Controller) enqueueVMI(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -558,7 +558,7 @@ func (c *Controller) IsHealthy() bool {
 	}
 	crdExists := false
 	for _, crd := range crds.Items {
-		if crd.Name == constants.SauronFullname {
+		if crd.Name == constants.VMIFullname {
 			crdExists = true
 		}
 	}

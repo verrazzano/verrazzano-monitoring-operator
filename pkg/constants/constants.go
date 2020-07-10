@@ -12,30 +12,30 @@ const DefaultImagePullPolicy = corev1.PullIfNotPresent
 
 const NobodyUID = 65534
 
-type SauronStatus string
+type VMIStatus string
 
 const (
-	Running = SauronStatus("Running")
+	Running = VMIStatus("Running")
 )
 
 type StorageOperationType string
 
-// SauronLabel to be applied to all components of a Sauron
-const SauronGroup = "verrazzano.io"
-const SauronVersion = "v1"
-const SauronLabel = "sauron." + SauronVersion + "." + SauronGroup
-const SauronKind = "VerrazzanoMonitoringInstance"
-const SauronPlural = "verrazzanomonitoringinstances"
-const SauronFullname = SauronPlural + "." + SauronGroup
+// VMILabel to be applied to all components of a VMI
+const VMIGroup = "verrazzano.io"
+const VMIVersion = "v1"
+const VMILabel = "vmi." + VMIVersion + "." + VMIGroup
+const VMIKind = "VerrazzanoMonitoringInstance"
+const VMIPlural = "verrazzanomonitoringinstances"
+const VMIFullname = VMIPlural + "." + VMIGroup
 
-const RoleBindingForSauronInstance = "verrazzano-monitoring-operator"
-const ClusterRoleForSauronInstances = "vmi-cluster-role"
+const RoleBindingForVMIInstance = "verrazzano-monitoring-operator"
+const ClusterRoleForVMIInstances = "vmi-cluster-role"
 
-// ResyncPeriod (re-list time period) for Sauron Controller
+// ResyncPeriod (re-list time period) for VMI Controller
 const ResyncPeriod = 30 * time.Second
 
-// SauronServiceNamePrefix to be applied to all Sauron services
-const SauronServiceNamePrefix = "vmi-"
+// VMIServiceNamePrefix to be applied to all VMI services
+const VMIServiceNamePrefix = "vmi-"
 
 const StorageVolumeName = "storage-volume"
 const DefaultNamespace = "default"
@@ -44,17 +44,17 @@ const K8SAppLabel = "k8s-app"
 
 const HyperOperatorModeLabel = "hyper-mode"
 
-// in order to create a Sauron one needs to provide a k8s secret with keys
-// various secrets needed by sauron
-const SauronSecretUsername = "username"
-const SauronSecretPassword = "password"
+// in order to create a VMI one needs to provide a k8s secret with keys
+// various secrets needed by vmi
+const VMISecretUsername = "username"
+const VMISecretPassword = "password"
 
 // TLS secrets
 const TLSCRTName = "tls.crt"
 const TLSKeyName = "tls.key"
 
-//Sauron Metrics
-const MetricsNameSpace = "sauron_operator"
+//VMI Metrics
+const MetricsNameSpace = "vmi_operator"
 
 // Default Prometheus retention configuration
 const DefaultPrometheusRetentionPeriod = 90

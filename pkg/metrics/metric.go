@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"net/http"
 )
 
@@ -28,7 +28,7 @@ var Lock = prometheus.NewGaugeVec(
 		Name:      "do_not_sync",
 		Help:      "value tells the Lock flag is on",
 	},
-	[]string{"namespace", "sauron_name"},
+	[]string{"namespace", "vmi_name"},
 )
 
 func RegisterMetrics() {

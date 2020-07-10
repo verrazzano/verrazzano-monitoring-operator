@@ -16,10 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	glog.V(4).Infof("Creating/updating RoleBindings for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+func CreateRoleBindings(controller *Controller, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	glog.V(4).Infof("Creating/updating RoleBindings for vmi '%s' in namespace '%s'", vmi.Name, vmi.Namespace)
 
-	newRoleBindings, err := NewRoleBindings(sauron, controller)
+	newRoleBindings, err := NewRoleBindings(vmi, controller)
 	if err != nil {
 		return err
 	}
@@ -29,20 +29,20 @@ func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	for _, newRoleBinding := range newRoleBindings {
 		roleBindingNames = append(roleBindingNames, newRoleBinding.Name)
 		newRoleBinding.OwnerReferences = ownerReferences // set OwnerReferences to the Hyper Operator deployment
-		existingRoleBinding, _ := controller.roleBindingLister.RoleBindings(sauron.Namespace).Get(newRoleBinding.Name)
+		existingRoleBinding, _ := controller.roleBindingLister.RoleBindings(vmi.Namespace).Get(newRoleBinding.Name)
 		var err error
 		if existingRoleBinding != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingRoleBinding, newRoleBinding)
 			if specDiffs != "" {
 				glog.V(4).Infof("RoleBinding %s : Spec differences %s", newRoleBinding.Name, specDiffs)
-				err = controller.kubeclientset.RbacV1().RoleBindings(sauron.Namespace).Delete(context.TODO(), newRoleBinding.Name, metav1.DeleteOptions{})
+				err = controller.kubeclientset.RbacV1().RoleBindings(vmi.Namespace).Delete(context.TODO(), newRoleBinding.Name, metav1.DeleteOptions{})
 				if err != nil {
 					glog.Errorf("Problem deleting role binding %s: %+v", newRoleBinding.Name, err)
 				}
-				_, err = controller.kubeclientset.RbacV1().RoleBindings(sauron.Namespace).Create(context.TODO(), newRoleBinding, metav1.CreateOptions{})
+				_, err = controller.kubeclientset.RbacV1().RoleBindings(vmi.Namespace).Create(context.TODO(), newRoleBinding, metav1.CreateOptions{})
 			}
 		} else {
-			_, err = controller.kubeclientset.RbacV1().RoleBindings(sauron.Namespace).Create(context.TODO(), newRoleBinding, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.RbacV1().RoleBindings(vmi.Namespace).Create(context.TODO(), newRoleBinding, metav1.CreateOptions{})
 		}
 		if err != nil {
 			return err
@@ -50,23 +50,23 @@ func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	}
 
 	// Delete RoleBindings that shouldn't exist
-	glog.V(4).Infof("Deleting unwanted RoleBindings for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
-	selector := labels.SelectorFromSet(map[string]string{constants.SauronLabel: sauron.Name})
-	existingRoleBindings, err := controller.roleBindingLister.RoleBindings(sauron.Namespace).List(selector)
+	glog.V(4).Infof("Deleting unwanted RoleBindings for vmi '%s' in namespace '%s'", vmi.Name, vmi.Namespace)
+	selector := labels.SelectorFromSet(map[string]string{constants.VMILabel: vmi.Name})
+	existingRoleBindings, err := controller.roleBindingLister.RoleBindings(vmi.Namespace).List(selector)
 	if err != nil {
 		return err
 	}
-	// While we transition from the old to the new per-Sauron RoleBinding name, the following line explicitly adds
+	// While we transition from the old to the new per-VMI RoleBinding name, the following line explicitly adds
 	// the *old* RoleBinding to the list of RoleBindings to remove.  It is otherwise not in the existingRoleBindingsList
-	// list because we didn't originally add our usual Sauron label set to it...
-	oldRoleBinding, _ := controller.roleBindingLister.RoleBindings(sauron.Namespace).Get("sauron-instance-role-binding")
+	// list because we didn't originally add our usual VMI label set to it...
+	oldRoleBinding, _ := controller.roleBindingLister.RoleBindings(vmi.Namespace).Get("vmi-instance-role-binding")
 	if oldRoleBinding != nil {
 		existingRoleBindings = append(existingRoleBindings, oldRoleBinding)
 	}
 	for _, roleBinding := range existingRoleBindings {
 		if !contains(roleBindingNames, roleBinding.Name) {
 			glog.V(4).Infof("Deleting RoleBinding %s", roleBinding.Name)
-			err := controller.kubeclientset.RbacV1().RoleBindings(sauron.Namespace).Delete(context.TODO(), roleBinding.Name, metav1.DeleteOptions{})
+			err := controller.kubeclientset.RbacV1().RoleBindings(vmi.Namespace).Delete(context.TODO(), roleBinding.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete RoleBinding %s, for the reason (%v)", roleBinding.Name, err)
 				return err
@@ -76,9 +76,9 @@ func CreateRoleBindings(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	return nil
 }
 
-// Constructs the necessary RoleBindings for a Sauron instance's Sub-Operator.
-func NewRoleBindings(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, controller *Controller) ([]*rbacv1.RoleBinding, error) {
-	instanceClusterRole, err := findClusterRole(controller, constants.ClusterRoleForSauronInstances)
+// Constructs the necessary RoleBindings for a VMI instance's Sub-Operator.
+func NewRoleBindings(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, controller *Controller) ([]*rbacv1.RoleBinding, error) {
+	instanceClusterRole, err := findClusterRole(controller, constants.ClusterRoleForVMIInstances)
 	if err != nil {
 		return nil, err
 	}
@@ -86,16 +86,16 @@ func NewRoleBindings(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, contro
 	roleBindings := []*rbacv1.RoleBinding{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:          resources.GetMetaLabels(sauron),
-				Name:            resources.GetMetaName(sauron.Name, constants.RoleBindingForSauronInstance),
-				Namespace:       sauron.Namespace,
-				OwnerReferences: resources.GetOwnerReferences(sauron),
+				Labels:          resources.GetMetaLabels(vmi),
+				Name:            resources.GetMetaName(vmi.Name, constants.RoleBindingForVMIInstance),
+				Namespace:       vmi.Namespace,
+				OwnerReferences: resources.GetOwnerReferences(vmi),
 			},
 			Subjects: []rbacv1.Subject{
 				{
 					Kind:      "ServiceAccount",
 					Name:      "default",
-					Namespace: sauron.Namespace,
+					Namespace: vmi.Namespace,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -116,7 +116,7 @@ func findClusterRole(controller *Controller, prefix string) (*rbacv1.ClusterRole
 	if clusterRole == nil {
 		clusterRole, _ = controller.clusterRoleLister.Get(prefix + "-default")
 		if clusterRole == nil {
-			return nil, errors.New("unable to find a valid ClusterRole to assign to Sauron instances")
+			return nil, errors.New("unable to find a valid ClusterRole to assign to VMI instances")
 		}
 	}
 	return clusterRole, nil

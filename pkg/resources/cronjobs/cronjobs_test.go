@@ -3,21 +3,21 @@
 package cronjobs
 
 import (
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	corev1 "k8s.io/api/core/v1"
 	"testing"
 )
 
-func TestSauronWithCascadingDelete(t *testing.T) {
+func TestVMIWithCascadingDelete(t *testing.T) {
 	// Without CascadingDelete
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	sauron.Spec.CascadingDelete = true
-	cronJob := New(sauron, "my-cron", "*", []corev1.Container{}, []corev1.Container{}, []corev1.Volume{})
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
+	vmi.Spec.CascadingDelete = true
+	cronJob := New(vmi, "my-cron", "*", []corev1.Container{}, []corev1.Container{}, []corev1.Volume{})
 	assert.Equal(t, 1, len(cronJob.ObjectMeta.OwnerReferences), "OwnerReferences is not set with CascadingDelete true")
 
 	// Without CascadingDelete
-	sauron.Spec.CascadingDelete = false
-	cronJob = New(sauron, "my-cron", "*", []corev1.Container{}, []corev1.Container{}, []corev1.Volume{})
+	vmi.Spec.CascadingDelete = false
+	cronJob = New(vmi, "my-cron", "*", []corev1.Container{}, []corev1.Container{}, []corev1.Volume{})
 	assert.Equal(t, 0, len(cronJob.ObjectMeta.OwnerReferences), "OwnerReferences is set even with CascadingDelete false")
 }

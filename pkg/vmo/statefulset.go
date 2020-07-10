@@ -16,14 +16,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	statefulSetList, err := statefulsets.New(sauron)
+func CreateStatefulSets(controller *Controller, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	statefulSetList, err := statefulsets.New(vmi)
 	if err != nil {
-		glog.Errorf("Failed to create StatefulSet specs for sauron: %s", err)
+		glog.Errorf("Failed to create StatefulSet specs for vmi: %s", err)
 		return err
 	}
 
-	glog.V(4).Infof("Creating/updating Statefulsets for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	glog.V(4).Infof("Creating/updating Statefulsets for vmi '%s' in namespace '%s'", vmi.Name, vmi.Namespace)
 	var statefulSetNames []string
 	for _, curStatefulSet := range statefulSetList {
 		statefulSetName := curStatefulSet.Name
@@ -35,16 +35,16 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 			runtime.HandleError(errors.New("statefulset name must be specified"))
 			return nil
 		}
-		glog.V(6).Infof("Applying StatefulSet '%s' in namespace '%s' for sauron '%s'\n", statefulSetName, sauron.Namespace, sauron.Name)
-		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(sauron.Namespace).Get(statefulSetName)
+		glog.V(6).Infof("Applying StatefulSet '%s' in namespace '%s' for vmi '%s'\n", statefulSetName, vmi.Namespace, vmi.Name)
+		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmi.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
 				glog.V(4).Infof("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
-				_, err = controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
+				_, err = controller.kubeclientset.AppsV1().StatefulSets(vmi.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
 			}
 		} else {
-			_, err = controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmi.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
 		}
 		if err != nil {
 			return err
@@ -53,16 +53,16 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	}
 
 	// Delete StatefulSets that shouldn't exist
-	glog.V(4).Infof("Deleting unwanted Statefulsets for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
-	selector := labels.SelectorFromSet(map[string]string{constants.SauronLabel: sauron.Name})
-	existingStatefulSetsList, err := controller.statefulSetLister.StatefulSets(sauron.Namespace).List(selector)
+	glog.V(4).Infof("Deleting unwanted Statefulsets for vmi '%s' in namespace '%s'", vmi.Name, vmi.Namespace)
+	selector := labels.SelectorFromSet(map[string]string{constants.VMILabel: vmi.Name})
+	existingStatefulSetsList, err := controller.statefulSetLister.StatefulSets(vmi.Namespace).List(selector)
 	if err != nil {
 		return err
 	}
 	for _, statefulSet := range existingStatefulSetsList {
 		if !contains(statefulSetNames, statefulSet.Name) {
 			glog.V(6).Infof("Deleting StatefulSet %s", statefulSet.Name)
-			err := controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
+			err := controller.kubeclientset.AppsV1().StatefulSets(vmi.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
 				return err
@@ -70,6 +70,6 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 		}
 	}
 
-	glog.V(4).Infof("Successfully applied StatefulSets for sauron '%s'", sauron.Name)
+	glog.V(4).Infof("Successfully applied StatefulSets for vmi '%s'", vmi.Name)
 	return nil
 }

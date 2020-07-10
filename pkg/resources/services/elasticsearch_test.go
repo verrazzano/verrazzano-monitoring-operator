@@ -11,9 +11,9 @@ import (
 )
 
 func TestElasticsearchDefaultServices1(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "mySauron",
+			Name: "myVMI",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
@@ -24,6 +24,6 @@ func TestElasticsearchDefaultServices1(t *testing.T) {
 			},
 		},
 	}
-	services := createElasticsearchServiceElements(sauron)
+	services := createElasticsearchServiceElements(vmi)
 	assert.Equal(t, 3, len(services), "Length of generated services")
 }

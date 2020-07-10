@@ -19,10 +19,10 @@ type ElasticsearchBasic struct {
 }
 
 // Returns a common base deployment structure for all Elasticsearch components
-func (es ElasticsearchBasic) createElasticsearchCommonDeployment(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, sauronStorage *vmcontrollerv1.Storage,
-	sauronResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, index int) *appsv1.Deployment {
+func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, vmiStorage *vmcontrollerv1.Storage,
+	vmiResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, index int) *appsv1.Deployment {
 
-	deploymentElement := createDeploymentElementByPvcIndex(sauron, sauronStorage, sauronResources, componentDetails, index)
+	deploymentElement := createDeploymentElementByPvcIndex(vmi, vmiStorage, vmiResources, componentDetails, index)
 
 	deploymentElement.Spec.Template.Spec.Containers[0].Env = append(deploymentElement.Spec.Template.Spec.Containers[0].Env,
 		corev1.EnvVar{
@@ -41,7 +41,7 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(sauron *vmcontr
 				},
 			},
 		},
-		corev1.EnvVar{Name: "cluster.name", Value: sauron.Name})
+		corev1.EnvVar{Name: "cluster.name", Value: vmi.Name})
 
 	deploymentElement.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
 		{Name: "http", ContainerPort: int32(constants.ESHttpPort)},
@@ -74,27 +74,27 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(sauron *vmcontr
 }
 
 // Creates all Elasticsearch Client deployment elements
-func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
+func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
 	javaOpts := constants.DefaultESIngestMemArgs
-	if sauron.Spec.Elasticsearch.IngestNode.JavaOpts != "" {
-		javaOpts = sauron.Spec.Elasticsearch.IngestNode.JavaOpts
+	if vmi.Spec.Elasticsearch.IngestNode.JavaOpts != "" {
+		javaOpts = vmi.Spec.Elasticsearch.IngestNode.JavaOpts
 	}
 
-	elasticsearchIngestDeployment := es.createElasticsearchCommonDeployment(sauron, nil, &sauron.Spec.Elasticsearch.IngestNode.Resources, config.ElasticsearchIngest, -1)
+	elasticsearchIngestDeployment := es.createElasticsearchCommonDeployment(vmi, nil, &vmi.Spec.Elasticsearch.IngestNode.Resources, config.ElasticsearchIngest, -1)
 
-	elasticsearchIngestDeployment.Spec.Replicas = resources.NewVal(sauron.Spec.Elasticsearch.IngestNode.Replicas)
+	elasticsearchIngestDeployment.Spec.Replicas = resources.NewVal(vmi.Spec.Elasticsearch.IngestNode.Replicas)
 
 	// Anti-affinity on other client zones
-	elasticsearchIngestDeployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(sauron.Name, config.ElasticsearchIngest.Name)
+	elasticsearchIngestDeployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmi.Name, config.ElasticsearchIngest.Name)
 
 	initialMasterNodes := make([]string, 0)
-	masterReplicas := resources.NewVal(sauron.Spec.Elasticsearch.MasterNode.Replicas)
+	masterReplicas := resources.NewVal(vmi.Spec.Elasticsearch.MasterNode.Replicas)
 	var i int32
 	for i = 0; i < *masterReplicas; i++ {
-		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
+		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmi.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
 	}
 	elasticsearchIngestDeployment.Spec.Template.Spec.Containers[0].Env = append(elasticsearchIngestDeployment.Spec.Template.Spec.Containers[0].Env,
-		corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name)},
+		corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmi.Name, config.ElasticsearchMaster.Name)},
 		corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
 		corev1.EnvVar{Name: "node.master", Value: "false"},
 		corev1.EnvVar{Name: "NETWORK_HOST", Value: "0.0.0.0"},
@@ -107,27 +107,27 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(sauron 
 }
 
 // Creates all Elasticsearch Data deployment elements
-func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
+func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	javaOpts := constants.DefaultESDataMemArgs
-	if sauron.Spec.Elasticsearch.DataNode.JavaOpts != "" {
-		javaOpts = sauron.Spec.Elasticsearch.DataNode.JavaOpts
+	if vmi.Spec.Elasticsearch.DataNode.JavaOpts != "" {
+		javaOpts = vmi.Spec.Elasticsearch.DataNode.JavaOpts
 	}
 
 	initialMasterNodes := make([]string, 0)
-	masterReplicas := resources.NewVal(sauron.Spec.Elasticsearch.MasterNode.Replicas)
+	masterReplicas := resources.NewVal(vmi.Spec.Elasticsearch.MasterNode.Replicas)
 	var i int32
 	for i = 0; i < *masterReplicas; i++ {
-		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
+		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmi.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
 	}
 	var deployList []*appsv1.Deployment
-	for i := 0; i < int(sauron.Spec.Elasticsearch.DataNode.Replicas); i++ {
-		elasticsearchDataDeployment := es.createElasticsearchCommonDeployment(sauron, &sauron.Spec.Elasticsearch.Storage, &sauron.Spec.Elasticsearch.DataNode.Resources, config.ElasticsearchData, i)
+	for i := 0; i < int(vmi.Spec.Elasticsearch.DataNode.Replicas); i++ {
+		elasticsearchDataDeployment := es.createElasticsearchCommonDeployment(vmi, &vmi.Spec.Elasticsearch.Storage, &vmi.Spec.Elasticsearch.DataNode.Resources, config.ElasticsearchData, i)
 
 		elasticsearchDataDeployment.Spec.Replicas = resources.NewVal(1)
-		availabilityDomain := getAvailabilityDomainForPvcIndex(&sauron.Spec.Elasticsearch.Storage, pvcToAdMap, i)
+		availabilityDomain := getAvailabilityDomainForPvcIndex(&vmi.Spec.Elasticsearch.Storage, pvcToAdMap, i)
 		if availabilityDomain == "" {
 			// With shard allocation awareness, we must provide something for the AD, even in the case of the simple
-			// Sauron with no persistence volumes
+			// VMI with no persistence volumes
 			availabilityDomain = "None"
 		}
 
@@ -139,7 +139,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(sauron *v
 						Weight: 100,
 						PodAffinityTerm: corev1.PodAffinityTerm{
 							LabelSelector: &metav1.LabelSelector{
-								MatchLabels: resources.GetSpecId(sauron.Name, config.ElasticsearchData.Name),
+								MatchLabels: resources.GetSpecId(vmi.Name, config.ElasticsearchData.Name),
 							},
 							TopologyKey: "kubernetes.io/hostname",
 						},
@@ -161,7 +161,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(sauron *v
 		elasticsearchDataDeployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 		elasticsearchDataDeployment.Spec.Strategy.RollingUpdate = nil
 		elasticsearchDataDeployment.Spec.Template.Spec.Containers[0].Env = append(elasticsearchDataDeployment.Spec.Template.Spec.Containers[0].Env,
-			corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name)},
+			corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmi.Name, config.ElasticsearchMaster.Name)},
 			corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
 			corev1.EnvVar{Name: "node.attr.availability_domain", Value: availabilityDomain},
 			corev1.EnvVar{Name: "node.master", Value: "false"},
@@ -182,7 +182,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(sauron *v
 				MountPath: constants.ElasticSearchNodeExporterPath,
 			},
 		}
-		if sauron.Spec.Elasticsearch.Storage.Size != "" {
+		if vmi.Spec.Elasticsearch.Storage.Size != "" {
 			elasticsearchDataDeployment.Spec.Template.Spec.Containers[1].VolumeMounts = volumeMounts
 		}
 
@@ -192,9 +192,9 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(sauron *v
 }
 
 // Creates *all* Elasticsearch deployment elements
-func (es ElasticsearchBasic) createElasticsearchDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
+func (es ElasticsearchBasic) createElasticsearchDeploymentElements(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var deployList []*appsv1.Deployment
-	deployList = append(deployList, es.createElasticsearchIngestDeploymentElements(sauron)...)
-	deployList = append(deployList, es.createElasticsearchDataDeploymentElements(sauron, pvcToAdMap)...)
+	deployList = append(deployList, es.createElasticsearchIngestDeploymentElements(vmi)...)
+	deployList = append(deployList, es.createElasticsearchDataDeploymentElements(vmi, pvcToAdMap)...)
 	return deployList
 }

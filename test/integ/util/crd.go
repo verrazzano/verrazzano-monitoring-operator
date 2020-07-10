@@ -16,64 +16,64 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateSauron(
-	crClient client.SauronCR,
+func CreateVMI(
+	crClient client.VMICR,
 	clientSet kubernetes.Clientset,
 	ns string,
-	sauron *vmcontrollerv1.VerrazzanoMonitoringInstance,
+	vmi *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	secret *corev1.Secret) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
 
-	fmt.Printf("Creating secret '%s' in namespace '%s'\n", sauron.Name, ns)
+	fmt.Printf("Creating secret '%s' in namespace '%s'\n", vmi.Name, ns)
 	_, err := clientSet.CoreV1().Secrets(ns).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("Cannot create a sauron secret: %s, due to err: %v", secret.Name, err)
+		glog.Errorf("Cannot create a vmi secret: %s, due to err: %v", secret.Name, err)
 		return nil, err
 	}
 
-	fmt.Printf("Creating sauron '%s' in namespace '%s'\n", sauron.Name, ns)
-	sauron.Namespace = ns
-	res, err := crClient.Create(context.TODO(), sauron)
+	fmt.Printf("Creating vmi '%s' in namespace '%s'\n", vmi.Name, ns)
+	vmi.Namespace = ns
+	res, err := crClient.Create(context.TODO(), vmi)
 	if err != nil {
-		glog.Errorf("Unable to create sauron '%s' in namespace '%s'\n", sauron.Name, ns)
+		glog.Errorf("Unable to create vmi '%s' in namespace '%s'\n", vmi.Name, ns)
 		return nil, err
 	}
-	fmt.Printf("Successfully created sauron '%s' in namespace '%s'\n", res.Name, res.Namespace)
+	fmt.Printf("Successfully created vmi '%s' in namespace '%s'\n", res.Name, res.Namespace)
 	return res, nil
 }
 
-func GetSauron(
-	crClient client.SauronCR,
+func GetVMI(
+	crClient client.VMICR,
 	ns string,
-	sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
+	vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
 
-	fmt.Printf("Getting existing sauron '%s' in namespace '%s'\n", sauron.Name, ns)
-	res, err := crClient.Get(context.TODO(), ns, sauron.Name)
+	fmt.Printf("Getting existing vmi '%s' in namespace '%s'\n", vmi.Name, ns)
+	res, err := crClient.Get(context.TODO(), ns, vmi.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("Successfully got existing sauron '%s' in namespace '%s'\n", res.Name, res.Namespace)
+	fmt.Printf("Successfully got existing vmi '%s' in namespace '%s'\n", res.Name, res.Namespace)
 	return res, nil
 }
 
-func DeleteSauron(
-	crClient client.SauronCR,
+func DeleteVMI(
+	crClient client.VMICR,
 	clientSet kubernetes.Clientset,
 	ns string,
-	sauron *vmcontrollerv1.VerrazzanoMonitoringInstance,
+	vmi *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	secret *corev1.Secret) error {
-	fmt.Printf("Deleting sauron '%s' in namespace '%s'\n", sauron.Name, sauron.Namespace)
-	err := crClient.Delete(context.TODO(), ns, sauron.Name)
+	fmt.Printf("Deleting vmi '%s' in namespace '%s'\n", vmi.Name, vmi.Namespace)
+	err := crClient.Delete(context.TODO(), ns, vmi.Name)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Deleting secret '%s' in namespace '%s'\n", sauron.Name, ns)
+	fmt.Printf("Deleting secret '%s' in namespace '%s'\n", vmi.Name, ns)
 	err = clientSet.CoreV1().Secrets(ns).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 	if err != nil {
 		glog.Errorf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
 		return err
 	}
 
-	fmt.Printf("Successfully deleted sauron '%s' in namespace '%s'\n", sauron.Name, sauron.Namespace)
+	fmt.Printf("Successfully deleted vmi '%s' in namespace '%s'\n", vmi.Name, vmi.Namespace)
 	return nil
 }

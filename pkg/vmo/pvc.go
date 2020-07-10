@@ -23,10 +23,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-// Creates PVCs for the given Sauron instance.  Returns a pvc->AD map, which is populated *only if* AD information
+// Creates PVCs for the given VMI instance.  Returns a pvc->AD map, which is populated *only if* AD information
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
-func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+func CreatePersistentVolumeClaims(controller *Controller, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
 	// Inspect the Storage Class to use
 	storageClass, err := determineStorageClass(controller)
 	if err != nil {
@@ -34,14 +34,14 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 	}
 	storageClassInfo := parseStorageClassInfo(storageClass, controller.operatorConfig)
 
-	pvcList, err := pvcs.New(sauron, storageClass.Name)
+	pvcList, err := pvcs.New(vmi, storageClass.Name)
 	if err != nil {
-		glog.Errorf("Failed to create PVC specs for sauron: %s", err)
+		glog.Errorf("Failed to create PVC specs for vmi: %s", err)
 		return nil, err
 	}
 	deploymentToAdMap := map[string]string{}
 
-	glog.V(4).Infof("Creating/updating PVCs for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	glog.V(4).Infof("Creating/updating PVCs for vmi '%s' in namespace '%s'", vmi.Name, vmi.Namespace)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
@@ -65,8 +65,8 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 			return deploymentToAdMap, nil
 		}
 
-		glog.V(6).Infof("Applying PVC '%s' in namespace '%s' for sauron '%s'\n", pvcName, sauron.Namespace, sauron.Name)
-		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(sauron.Namespace).Get(pvcName)
+		glog.V(6).Infof("Applying PVC '%s' in namespace '%s' for vmi '%s'\n", pvcName, vmi.Namespace, vmi.Name)
+		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(vmi.Namespace).Get(pvcName)
 
 		// If the PVC already exists, we *only* read its current AD, *if possible* (this is not possible for all storage classes and situations)
 		if existingPvc != nil {
@@ -96,7 +96,7 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 			}
 			glog.Infof("Creating PVC %s in AD %s", currPvc.Name, newAd)
 
-			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(sauron.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmi.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
 
 			if err != nil {
 				return deploymentToAdMap, err
@@ -112,8 +112,8 @@ func CreatePersistentVolumeClaims(controller *Controller, sauron *vmcontrollerv1
 	}
 
 	//Report PVCs dangling
-	selector := labels.SelectorFromSet(map[string]string{constants.SauronLabel: sauron.Name})
-	existingPVCList, err := controller.pvcLister.PersistentVolumeClaims(sauron.Namespace).List(selector)
+	selector := labels.SelectorFromSet(map[string]string{constants.VMILabel: vmi.Name})
+	existingPVCList, err := controller.pvcLister.PersistentVolumeClaims(vmi.Namespace).List(selector)
 	if err != nil {
 		return deploymentToAdMap, err
 	}

@@ -16,14 +16,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-func CreateServices(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	svcList, err := services.New(sauron)
+func CreateServices(controller *Controller, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	svcList, err := services.New(vmi)
 	if err != nil {
-		glog.Errorf("Failed to create Services for sauron: %s", err)
+		glog.Errorf("Failed to create Services for vmi: %s", err)
 		return err
 	}
 	var serviceNames []string
-	glog.V(4).Infof("Creating/updating Services for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	glog.V(4).Infof("Creating/updating Services for vmi '%s' in namespace '%s'", vmi.Name, vmi.Namespace)
 	for _, curService := range svcList {
 		serviceName := curService.Name
 		serviceNames = append(serviceNames, serviceName)
@@ -35,39 +35,39 @@ func CreateServices(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMon
 			return nil
 		}
 
-		glog.V(6).Infof("Applying Service '%s' in namespace '%s' for sauron '%s'\n", serviceName, sauron.Namespace, sauron.Name)
-		existingService, err := controller.serviceLister.Services(sauron.Namespace).Get(serviceName)
+		glog.V(6).Infof("Applying Service '%s' in namespace '%s' for vmi '%s'\n", serviceName, vmi.Namespace, vmi.Name)
+		existingService, err := controller.serviceLister.Services(vmi.Namespace).Get(serviceName)
 		if existingService != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingService, curService)
 			if specDiffs != "" {
 				glog.V(4).Infof("Service %s : Spec differences %s", curService.Name, specDiffs)
-				err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
+				err = controller.kubeclientset.CoreV1().Services(vmi.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 				if err != nil {
 					glog.Errorf("Failed to delete service %s: %+v", serviceName, err)
 				}
-				_, err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
+				_, err = controller.kubeclientset.CoreV1().Services(vmi.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
 			}
 		} else {
-			_, err = controller.kubeclientset.CoreV1().Services(sauron.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.CoreV1().Services(vmi.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
 		}
 
 		if err != nil {
-			glog.Errorf("Failed to apply Service for sauron: %s", err)
+			glog.Errorf("Failed to apply Service for vmi: %s", err)
 			return err
 		}
 		glog.V(6).Infof("Successfully applied Service '%s'\n", serviceName)
 	}
 
 	// Delete services that shouldn't exist
-	selector := labels.SelectorFromSet(map[string]string{constants.SauronLabel: sauron.Name})
-	existingServicesList, err := controller.serviceLister.Services(sauron.Namespace).List(selector)
+	selector := labels.SelectorFromSet(map[string]string{constants.VMILabel: vmi.Name})
+	existingServicesList, err := controller.serviceLister.Services(vmi.Namespace).List(selector)
 	if err != nil {
 		return err
 	}
 	for _, service := range existingServicesList {
 		if !contains(serviceNames, service.Name) {
 			glog.V(6).Infof("Deleting service %s", service.Name)
-			err := controller.kubeclientset.CoreV1().Services(sauron.Namespace).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
+			err := controller.kubeclientset.CoreV1().Services(vmi.Namespace).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
 				glog.Errorf("Failed to delete service %s, for the reason (%v)", service.Name, err)
 				return err

@@ -10,14 +10,14 @@ import (
 )
 
 // NewConfig returns a Kubernetes ConfigMap containing the runner config that is volume mounted to /etc/canary-runner/config.yaml
-func NewConfig(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, mapname string, data map[string]string) *corev1.ConfigMap {
+func NewConfig(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, mapname string, data map[string]string) *corev1.ConfigMap {
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(sauron),
+			Labels:          resources.GetMetaLabels(vmi),
 			Name:            mapname,
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Namespace:       vmi.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmi),
 		},
 		Data: data,
 	}

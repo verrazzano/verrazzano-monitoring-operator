@@ -5,23 +5,23 @@ package statefulsets
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestSauronEmptyStatefulSetSize(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	statefulsets, err := New(sauron)
+func TestVMIEmptyStatefulSetSize(t *testing.T) {
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
+	statefulsets, err := New(vmi)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 0, len(statefulsets), "Length of generated statefulsets")
 }
 
-func TestSauronWithReplicas(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMIWithReplicas(t *testing.T) {
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			AlertManager: vmcontrollerv1.AlertManager{
 				Enabled:  true,
@@ -33,21 +33,21 @@ func TestSauronWithReplicas(t *testing.T) {
 			},
 		},
 	}
-	statefulsets, err := New(sauron)
+	statefulsets, err := New(vmi)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 2, len(statefulsets), "Length of generated statefulsets")
 	for _, statefulset := range statefulsets {
 		switch statefulset.Name {
-		case resources.GetMetaName(sauron.Name, config.AlertManager.Name):
+		case resources.GetMetaName(vmi.Name, config.AlertManager.Name):
 			assert.Equal(t, *resources.NewVal(3), *statefulset.Spec.Replicas, "AlertManager replicas")
-		case resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name):
+		case resources.GetMetaName(vmi.Name, config.ElasticsearchMaster.Name):
 			assert.Equal(t, *resources.NewVal(3), *statefulset.Spec.Replicas, "Elasticsearch Master replicas")
 		default:
 			t.Error("Unknown Deployment Name: " + statefulset.Name)
 		}
-		if statefulset.Name == resources.GetMetaName(sauron.Name, config.AlertManager.Name) {
+		if statefulset.Name == resources.GetMetaName(vmi.Name, config.AlertManager.Name) {
 			assert.Equal(t, *resources.NewVal(3), *statefulset.Spec.Replicas, "AlertManager replicas")
 		}
 	}
