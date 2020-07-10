@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -16,7 +17,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/secrets"
@@ -59,25 +60,29 @@ func (hp HashedPasswords) SetPassword(name, password string) (err error) {
 }
 
 func GetAuthSecrets(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) (string, string, error) {
-	// setup username/passwords and secrets
+	//create log for getting authentication secrets
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
 
+	// setup username/passwords and secrets
 	username, err := controller.loadSecretData(sauron.Namespace,
 		sauron.Spec.SecretsName, constants.SauronSecretUsername)
 	if err != nil {
-		glog.Errorf("problem getting username, error: %v", err)
+		logger.Error().Msgf("problem getting username, error: %v", err)
 		return "", "", err
 	}
 
 	password, err := controller.loadSecretData(sauron.Namespace,
 		sauron.Spec.SecretsName, constants.SauronSecretPassword)
 	if err != nil {
-		glog.Errorf("problem getting password, error: %v", err)
+		logger.Error().Msgf("problem getting password, error: %v", err)
 		return "", "", err
 	}
 	return string(username), string(password), nil
 }
 
 func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, credsMap map[string]string) error {
+	//create log for updating or creating authentication secrets
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
 
 	passwords := HashedPasswords(map[string]string{})
 	for k, v := range credsMap {
@@ -98,7 +103,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.Ve
 			secret.Data = secretData
 			_, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 			if err != nil {
-				glog.Errorf("caught an error trying to update a basic auth secret, err: %v", err)
+				logger.Error().Msgf("caught an error trying to update a basic auth secret, err: %v", err)
 				return err
 			}
 		}
@@ -108,15 +113,15 @@ func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.Ve
 	// create the secret based on the Username/Password passed in the spec
 	secret, err = secrets.New(sauron, sauron.Spec.SecretName, []byte(auth))
 	if err != nil {
-		glog.Errorf("got an error trying to create a password hash, err: %v", err)
+		logger.Error().Msgf("got an error trying to create a password hash, err: %v", err)
 		return err
 	}
 	secretOut, err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("caught an error trying to create a secret, err: %v", err)
+		logger.Error().Msgf("caught an error trying to create a secret, err: %v", err)
 		return err
 	}
-	glog.V(6).Infof("Created secret: %s", secretOut.Name)
+	logger.Debug().Msgf("Created secret: %s", secretOut.Name)
 
 	// Delete Auth secrets if it is not supposed to exists
 
@@ -128,10 +133,10 @@ func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.Ve
 	}
 	for _, existedSecret := range secretList {
 		if !contains(secretsNames, existedSecret.Name) {
-			glog.V(6).Infof("Deleting secret %s", existedSecret.Name)
+			logger.Debug().Msgf("Deleting secret %s", existedSecret.Name)
 			err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Delete(context.TODO(), existedSecret.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete secret %s, for the reason (%v)", existedSecret.Name, err)
+				logger.Error().Msgf("Failed to delete secret %s, for the reason (%v)", existedSecret.Name, err)
 				return err
 			}
 		}
@@ -141,9 +146,11 @@ func CreateOrUpdateAuthSecrets(controller *Controller, sauron *vmcontrollerv1.Ve
 }
 
 func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	//create log for updating or creating authentication secrets
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
 
 	if sauron.Spec.AutoSecret {
-		glog.V(6).Info("Not explicitly creating TLS secret, we expect it to be auto-generated")
+		logger.Debug().Msg("Not explicitly creating TLS secret, we expect it to be auto-generated")
 		// by setting the AutoSecret to true we ask that a certificate be made for us
 		// currently the mechanism relies on ingressShim part of cert-manager to notice the
 		// annotation we set on the ingress rule which is set off by AutoSecret being true
@@ -153,7 +160,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 	tlsCrt, err := controller.loadSecretData(sauron.Namespace,
 		sauron.Spec.SecretsName, constants.TLSCRTName)
 	if err != nil {
-		glog.Errorf("problem getting tls.crt data using name: %s, from secret: %s, error: %s",
+		logger.Error().Msgf("problem getting tls.crt data using name: %s, from secret: %s, error: %s",
 			constants.TLSCRTName, sauron.Spec.SecretsName, err)
 		return err
 	}
@@ -161,7 +168,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 	tlsKey, err := controller.loadSecretData(sauron.Namespace,
 		sauron.Spec.SecretsName, constants.TLSKeyName)
 	if err != nil {
-		glog.Errorf("problem getting tls.key data using name: %s, from secret: %s, error: %s",
+		logger.Error().Msgf("problem getting tls.key data using name: %s, from secret: %s, error: %s",
 			constants.TLSKeyName, sauron.Spec.SecretsName, err)
 		return err
 	}
@@ -178,7 +185,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 				secret.Data = secretData
 				_, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 				if err != nil {
-					glog.Errorf("caught an error trying to update a basic auth secret, err: %v", err)
+					logger.Error().Msgf("caught an error trying to update a basic auth secret, err: %v", err)
 					return err
 				}
 			}
@@ -186,15 +193,15 @@ func CreateOrUpdateTLSSecrets(controller *Controller, sauron *vmcontrollerv1.Ver
 		}
 		secret, err = secrets.NewTLS(sauron, sauron.Name+"-tls", secretData)
 		if err != nil {
-			glog.Errorf("got an error trying to create a password hash, err: %s", err)
+			logger.Error().Msgf("got an error trying to create a password hash, err: %s", err)
 			return err
 		}
 		secretOut, err := controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 		if err != nil {
-			glog.Errorf("caught an error trying to create a secret, err: %s", err)
+			logger.Error().Msgf("caught an error trying to create a secret, err: %s", err)
 			return err
 		}
-		glog.V(6).Infof("Create TLS secret: %s", secretOut.Name)
+		logger.Debug().Msgf("Create TLS secret: %s", secretOut.Name)
 	}
 	return nil
 }
@@ -260,6 +267,9 @@ func (c *Controller) loadAllAuthSecretData(ns, secretName string) (map[string]st
 // be in the monitoring namespace to access it as a volume.  Copy the secret from the verrazzano-system
 // namespace.
 func EnsureTlsSecretInMonitoringNS(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	//create log for ensuring TLS
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	const secretName = "system-tls"
 
 	// Don't copy the secret if it already exists.
@@ -271,7 +281,7 @@ func EnsureTlsSecretInMonitoringNS(controller *Controller, sauron *vmcontrollerv
 	// The secret must be this name since the name is hardcoded in monitoring/deployments.do of verrazzano operator.
 	secret, err = controller.kubeclientset.CoreV1().Secrets(sauron.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		glog.Errorf("Error getting TLS secret %s from namespace %s, err: %s", secretName, sauron.Namespace, err)
+		logger.Error().Msgf("Error getting TLS secret %s from namespace %s, err: %s", secretName, sauron.Namespace, err)
 		return err
 	}
 
@@ -287,10 +297,10 @@ func EnsureTlsSecretInMonitoringNS(controller *Controller, sauron *vmcontrollerv
 	}
 	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(context.TODO(), &newSecret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("caught an error trying to create a secret, err: %s", err)
+		logger.Error().Msgf("caught an error trying to create a secret, err: %s", err)
 		return err
 	}
-	glog.Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
+	logger.Info().Msgf("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
 
 	return nil
 }

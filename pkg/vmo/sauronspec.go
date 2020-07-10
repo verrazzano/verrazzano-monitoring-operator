@@ -3,17 +3,21 @@
 package vmo
 
 import (
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os"
 )
 
 // Initializes any uninitialized elements of the Sauron spec.
 func InitializeSauronSpec(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+	//create log for initializing Sauron
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	// The secretName we use for basic authentication in the Nginx ingress controller
 	sauron.Spec.SecretName = sauron.Name + "-basicauth"
 
@@ -22,23 +26,23 @@ func InitializeSauronSpec(controller *Controller, sauron *vmcontrollerv1.Verrazz
 	 **********************/
 	credsMap, err := controller.loadAllAuthSecretData(sauron.Namespace, sauron.Spec.SecretsName)
 	if err != nil {
-		glog.Errorf("Failed to extract Sauron Secrets for sauron %s in namespace %s: %v", sauron.Name, sauron.Namespace, err)
+		logger.Error().Msgf("Failed to extract Sauron Secrets for sauron %s in namespace %s: %v", sauron.Name, sauron.Namespace, err)
 	}
 
 	err = CreateOrUpdateAuthSecrets(controller, sauron, credsMap)
 	if err != nil {
-		glog.Errorf("Failed to create Sauron Secrets for sauron %s in namespace %s: %v", sauron.Name, sauron.Namespace, err)
+		logger.Error().Msgf("Failed to create Sauron Secrets for sauron %s in namespace %s: %v", sauron.Name, sauron.Namespace, err)
 	}
 
 	// Create TLS secrets or get certs
 	err = CreateOrUpdateTLSSecrets(controller, sauron)
 	if err != nil {
-		glog.Errorf("Failed to create TLS Secrets for sauron: %v", err)
+		logger.Error().Msgf("Failed to create TLS Secrets for sauron: %v", err)
 	}
 
 	err = EnsureTlsSecretInMonitoringNS(controller, sauron)
 	if err != nil {
-		glog.Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
+		logger.Error().Msgf("Failed to copy TLS Secret to monitoring namespace: %v", err)
 	}
 
 	// Set creation time

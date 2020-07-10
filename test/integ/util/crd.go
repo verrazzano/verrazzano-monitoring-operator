@@ -4,12 +4,13 @@ package util
 
 import (
 	"context"
+	"os"
 
 	"k8s.io/client-go/kubernetes"
 
 	"fmt"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/client"
 	corev1 "k8s.io/api/core/v1"
@@ -23,10 +24,13 @@ func CreateSauron(
 	sauron *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	secret *corev1.Secret) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
 
+	//create log for creation of Sauron
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	fmt.Printf("Creating secret '%s' in namespace '%s'\n", sauron.Name, ns)
 	_, err := clientSet.CoreV1().Secrets(ns).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("Cannot create a sauron secret: %s, due to err: %v", secret.Name, err)
+		logger.Error().Msgf("Cannot create a sauron secret: %s, due to err: %v", secret.Name, err)
 		return nil, err
 	}
 
@@ -34,7 +38,7 @@ func CreateSauron(
 	sauron.Namespace = ns
 	res, err := crClient.Create(context.TODO(), sauron)
 	if err != nil {
-		glog.Errorf("Unable to create sauron '%s' in namespace '%s'\n", sauron.Name, ns)
+		logger.Error().Msgf("Unable to create sauron '%s' in namespace '%s'\n", sauron.Name, ns)
 		return nil, err
 	}
 	fmt.Printf("Successfully created sauron '%s' in namespace '%s'\n", res.Name, res.Namespace)
@@ -62,6 +66,9 @@ func DeleteSauron(
 	ns string,
 	sauron *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	secret *corev1.Secret) error {
+	//create log for deletion of Sauron
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	fmt.Printf("Deleting sauron '%s' in namespace '%s'\n", sauron.Name, sauron.Namespace)
 	err := crClient.Delete(context.TODO(), ns, sauron.Name)
 	if err != nil {
@@ -70,7 +77,7 @@ func DeleteSauron(
 	fmt.Printf("Deleting secret '%s' in namespace '%s'\n", sauron.Name, ns)
 	err = clientSet.CoreV1().Secrets(ns).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 	if err != nil {
-		glog.Errorf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
+		logger.Error().Msgf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
 		return err
 	}
 

@@ -5,8 +5,9 @@ package vmo
 import (
 	"context"
 	"errors"
+	"os"
 
-	"github.com/golang/glog"
+	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
@@ -17,13 +18,16 @@ import (
 )
 
 func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	//create log for creation of stateful sets
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+
 	statefulSetList, err := statefulsets.New(sauron)
 	if err != nil {
-		glog.Errorf("Failed to create StatefulSet specs for sauron: %s", err)
+		logger.Error().Msgf("Failed to create StatefulSet specs for sauron: %s", err)
 		return err
 	}
 
-	glog.V(4).Infof("Creating/updating Statefulsets for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	logger.Info().Msgf("Creating/updating Statefulsets for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
 	var statefulSetNames []string
 	for _, curStatefulSet := range statefulSetList {
 		statefulSetName := curStatefulSet.Name
@@ -35,12 +39,12 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 			runtime.HandleError(errors.New("statefulset name must be specified"))
 			return nil
 		}
-		glog.V(6).Infof("Applying StatefulSet '%s' in namespace '%s' for sauron '%s'\n", statefulSetName, sauron.Namespace, sauron.Name)
+		logger.Debug().Msgf("Applying StatefulSet '%s' in namespace '%s' for sauron '%s'\n", statefulSetName, sauron.Namespace, sauron.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(sauron.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
-				glog.V(4).Infof("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
+				logger.Info().Msgf("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
 				_, err = controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
 			}
 		} else {
@@ -49,11 +53,11 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 		if err != nil {
 			return err
 		}
-		glog.V(4).Infof("Successfully applied StatefulSet '%s'\n", statefulSetName)
+		logger.Info().Msgf("Successfully applied StatefulSet '%s'\n", statefulSetName)
 	}
 
 	// Delete StatefulSets that shouldn't exist
-	glog.V(4).Infof("Deleting unwanted Statefulsets for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
+	logger.Info().Msgf("Deleting unwanted Statefulsets for sauron '%s' in namespace '%s'", sauron.Name, sauron.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.SauronLabel: sauron.Name})
 	existingStatefulSetsList, err := controller.statefulSetLister.StatefulSets(sauron.Namespace).List(selector)
 	if err != nil {
@@ -61,15 +65,15 @@ func CreateStatefulSets(controller *Controller, sauron *vmcontrollerv1.Verrazzan
 	}
 	for _, statefulSet := range existingStatefulSetsList {
 		if !contains(statefulSetNames, statefulSet.Name) {
-			glog.V(6).Infof("Deleting StatefulSet %s", statefulSet.Name)
+			logger.Debug().Msgf("Deleting StatefulSet %s", statefulSet.Name)
 			err := controller.kubeclientset.AppsV1().StatefulSets(sauron.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
+				logger.Error().Msgf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
 				return err
 			}
 		}
 	}
 
-	glog.V(4).Infof("Successfully applied StatefulSets for sauron '%s'", sauron.Name)
+	logger.Info().Msgf("Successfully applied StatefulSets for sauron '%s'", sauron.Name)
 	return nil
 }
