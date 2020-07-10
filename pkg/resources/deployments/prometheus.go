@@ -13,10 +13,10 @@ import (
 )
 
 // Creates Prometheus node deployment elements
-func createPrometheusNodeDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
+func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var prometheusNodeDeployments []*appsv1.Deployment
-	for i := 0; i < int(sauron.Spec.Prometheus.Replicas); i++ {
-		prometheusDeployment := createDeploymentElementByPvcIndex(sauron, &sauron.Spec.Prometheus.Storage, &sauron.Spec.Prometheus.Resources, config.Prometheus, i)
+	for i := 0; i < int(vmo.Spec.Prometheus.Replicas); i++ {
+		prometheusDeployment := createDeploymentElementByPvcIndex(vmo, &vmo.Spec.Prometheus.Storage, &vmo.Spec.Prometheus.Resources, config.Prometheus, i)
 		prometheusDeployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 
 		// Main Prometheus parameters
@@ -27,14 +27,14 @@ func createPrometheusNodeDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMon
 		prometheusDeployment.Spec.Template.Spec.Containers[0].Args = []string{
 			"--config.file=" + constants.PrometheusConfigContainerLocation,
 			"--storage.tsdb.path=" + config.Prometheus.DataDir,
-			fmt.Sprintf("--storage.tsdb.retention.time=%dd", sauron.Spec.Prometheus.RetentionPeriod),
+			fmt.Sprintf("--storage.tsdb.retention.time=%dd", vmo.Spec.Prometheus.RetentionPeriod),
 			"--web.enable-lifecycle",
 			"--web.enable-admin-api",
 			"--storage.tsdb.no-lockfile"}
 
 		// Not strictly necessary, but makes debugging easier to have a trace of the AD in the deployment itself
 		env := prometheusDeployment.Spec.Template.Spec.Containers[0].Env
-		env = append(env, corev1.EnvVar{Name: "AVAILABILITY_DOMAIN", Value: getAvailabilityDomainForPvcIndex(&sauron.Spec.Prometheus.Storage, pvcToAdMap, i)})
+		env = append(env, corev1.EnvVar{Name: "AVAILABILITY_DOMAIN", Value: getAvailabilityDomainForPvcIndex(&vmo.Spec.Prometheus.Storage, pvcToAdMap, i)})
 		prometheusDeployment.Spec.Template.Spec.Containers[0].Env = env
 
 		// Volumes for Prometheus config and alert rules
@@ -43,7 +43,7 @@ func createPrometheusNodeDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMon
 				Name: "rules-volume",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: sauron.Spec.Prometheus.RulesConfigMap},
+						LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Prometheus.RulesConfigMap},
 					},
 				},
 			},
@@ -51,7 +51,7 @@ func createPrometheusNodeDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMon
 				Name: "config-volume",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: sauron.Spec.Prometheus.ConfigMap},
+						LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Prometheus.ConfigMap},
 					},
 				},
 			},
@@ -100,7 +100,7 @@ func createPrometheusNodeDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMon
 				MountPath: constants.PrometheusNodeExporterPath,
 			},
 		}
-		if sauron.Spec.Prometheus.Storage.Size != "" {
+		if vmo.Spec.Prometheus.Storage.Size != "" {
 			prometheusDeployment.Spec.Template.Spec.Containers[2].VolumeMounts = nodeExporterMount
 		}
 
@@ -114,7 +114,7 @@ func createPrometheusNodeDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMon
 				VolumeMounts:    []corev1.VolumeMount{{Name: constants.StorageVolumeName, MountPath: config.PrometheusInit.DataDir}},
 			},
 		}
-		if sauron.Spec.Prometheus.Storage.Size == "" {
+		if vmo.Spec.Prometheus.Storage.Size == "" {
 			prometheusDeployment.Spec.Template.Spec.Volumes = append(
 				prometheusDeployment.Spec.Template.Spec.Volumes,
 				corev1.Volume{Name: constants.StorageVolumeName, VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}})
@@ -129,8 +129,8 @@ func createPrometheusNodeDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMon
 }
 
 // Creates Prometheus Push Gateway deployment element
-func createPrometheusPushGatewayDeploymentElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.Deployment {
-	pushGatewayDeployment := createDeploymentElement(sauron, nil, &sauron.Spec.PrometheusGW.Resources, config.PrometheusGW)
+func createPrometheusPushGatewayDeploymentElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.Deployment {
+	pushGatewayDeployment := createDeploymentElement(vmo, nil, &vmo.Spec.PrometheusGW.Resources, config.PrometheusGW)
 	pushGatewayDeployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.PrometheusGW.ImagePullPolicy
 	pushGatewayDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 5
 	pushGatewayDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
@@ -146,9 +146,9 @@ func createPrometheusPushGatewayDeploymentElement(sauron *vmcontrollerv1.Verrazz
 }
 
 // Creates *all* Prometheus-related deployment elements
-func createPrometheusDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
+func createPrometheusDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var deployList []*appsv1.Deployment
-	deployList = append(deployList, createPrometheusNodeDeploymentElements(sauron, pvcToAdMap)...)
-	deployList = append(deployList, createPrometheusPushGatewayDeploymentElement(sauron))
+	deployList = append(deployList, createPrometheusNodeDeploymentElements(vmo, pvcToAdMap)...)
+	deployList = append(deployList, createPrometheusPushGatewayDeploymentElement(vmo))
 	return deployList
 }

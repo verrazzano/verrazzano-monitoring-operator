@@ -46,7 +46,7 @@ var Grafana = ComponentDetails{
 
 // Default Prometheus configuration
 // Note: Update promtool version to match any version changes here
-//    - sauron/images/cirith-server-for-operator/docker-images
+//    - vmo/images/cirith-server-for-operator/docker-images
 var Prometheus = ComponentDetails{
 	Name:              "prometheus",
 	EnvName:           "PROMETHEUS_IMAGE",
@@ -80,7 +80,7 @@ var PrometheusGW = ComponentDetails{
 
 // Default AlertManager configuration
 // Note: Update amtool version to match any version changes here
-//   - sauron/images/cirith-server-for-operator/docker-images
+//   - vmo/images/cirith-server-for-operator/docker-images
 var AlertManager = ComponentDetails{
 	Name:              "alertmanager",
 	EnvName:           "ALERT_MANAGER_IMAGE",

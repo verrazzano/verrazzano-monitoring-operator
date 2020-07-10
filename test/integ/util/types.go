@@ -15,10 +15,10 @@ func NewSecret(secretName, namespace string) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
-			//OwnerReferences: resources.GetOwnerReferences(sauron),
+			//OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Data: map[string][]byte{
-			"username": []byte("sauron"),
+			"username": []byte("vmo"),
 			"password": []byte("changeme"),
 		},
 	}
@@ -34,7 +34,7 @@ func NewSecretWithTLS(secretName, namespace string, tlsCrt, tlsKey []byte, user 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
-			//OwnerReferences: resources.GetOwnerReferences(sauron),
+			//OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Data: map[string][]byte{
 			"username": []byte(user),
@@ -55,7 +55,7 @@ func NewSecretWithTLSWithMultiUser(secretName, namespace string, tlsCrt, tlsKey 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
-			//OwnerReferences: resources.GetOwnerReferences(sauron),
+			//OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Data: map[string][]byte{
 			"username":  []byte(user),
@@ -68,8 +68,8 @@ func NewSecretWithTLSWithMultiUser(secretName, namespace string, tlsCrt, tlsKey 
 	}
 }
 
-// NewSauron creates a new sauron
-func NewSauron(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInstance {
+// NewVMO creates a new vmo
+func NewVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInstance {
 	return &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: vmcontrollerv1.SchemeGroupVersion.String(),
@@ -116,8 +116,8 @@ func NewSauron(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringI
 	}
 }
 
-// NewGrafanaOnlySauron Sauron with Grafana Service only enabled
-func NewGrafanaOnlySauron(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInstance {
+// NewGrafanaOnlyVMO VMO with Grafana Service only enabled
+func NewGrafanaOnlyVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInstance {
 	return &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: vmcontrollerv1.SchemeGroupVersion.String(),

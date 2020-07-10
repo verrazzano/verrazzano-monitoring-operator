@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	username = "sauron"
+	username = "vmo"
 	password = "changeme"
 )
 
@@ -49,9 +49,9 @@ const (
 // ********************************************************
 // *** Scenarios covered by the Basic Integration Tests ***
 // Setup
-// - creation of a basic Sauron instance + validations below
-// - creation of a Sauron instance with block volumes + validations below
-// Sauron API Server validations
+// - creation of a basic VMO instance + validations below
+// - creation of a VMO instance with block volumes + validations below
+// VMO API Server validations
 // - Verify service endpoint connectivity
 // - Update/PUT Prometheus configuration via HTTP API /prometheus/config
 // - GET Prometheus configuration via HTTP API /prometheus/config
@@ -62,7 +62,7 @@ const (
 // Prometheus Server validations
 // - Verify service endpoint connectivity
 // - Verify Elasticsearch configuration via Prometheus HTTP API
-// - Use Sauron API to addd http://localhost:9090/metrics as a local scrape target
+// - Use VMO API to addd http://localhost:9090/metrics as a local scrape target
 // - Verify special 'up' metric which is updated when it performs a scrape
 // Grafana Server validations
 // - Verify service endpoint connectivity
@@ -82,130 +82,130 @@ const (
 // - GET/DELETE entire index via Elasticsearch HTTP API
 // ********************************************************
 
-func TestBasic1Sauron(t *testing.T) {
+func TestBasic1VMO(t *testing.T) {
 	f := framework.Global
-	var sauronName string
+	var vmoName string
 
 	// Create secrets - domain only used with ingress
-	secretName := f.RunID + "-sauron-secrets"
+	secretName := f.RunID + "-vmo-secrets"
 	testDomain := "ingress-test.example.com"
 	secret, err := createTestSecrets(secretName, testDomain)
 	if err != nil {
 		t.Errorf("failed to create test secrets: %+v", err)
 	}
 
-	// Create sauron
+	// Create vmo
 	if f.Ingress {
-		sauronName = f.RunID + "-ingress"
+		vmoName = f.RunID + "-ingress"
 	} else {
-		sauronName = f.RunID + "-sauron-basic"
+		vmoName = f.RunID + "-vmo-basic"
 	}
-	sauron := testutil.NewSauron(sauronName, secretName)
+	vmo := testutil.NewVMO(vmoName, secretName)
 	if f.Ingress {
-		sauron.Spec.URI = testDomain
+		vmo.Spec.URI = testDomain
 	}
 
 	if testutil.RunBeforePhase(f) {
-		// Create Sauron instance
-		sauron, err = testutil.CreateSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret)
+		// Create VMO instance
+		vmo, err = testutil.CreateVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret)
 		if err != nil {
-			t.Fatalf("Failed to create Sauron: %v", err)
+			t.Fatalf("Failed to create VMO: %v", err)
 		}
 	} else {
-		sauron, err = testutil.GetSauron(f.CRClient, f.Namespace, sauron)
+		vmo, err = testutil.GetVMO(f.CRClient, f.Namespace, vmo)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
 	}
-	// Delete Sauron instance if we are tearing down
+	// Delete VMO instance if we are tearing down
 	if !testutil.SkipTeardown(f) {
 		defer func() {
-			if err := testutil.DeleteSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret); err != nil {
-				t.Fatalf("Failed to clean up Sauron: %v", err)
+			if err := testutil.DeleteVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret); err != nil {
+				t.Fatalf("Failed to clean up VMO: %v", err)
 			}
 		}()
 	}
-	verifySauronDeployment(t, sauron)
+	verifyVMODeployment(t, vmo)
 }
 
-func TestBasic2SauronWithDataVolumes(t *testing.T) {
+func TestBasic2VMOWithDataVolumes(t *testing.T) {
 	f := framework.Global
 
 	// Create Secrets - domain only used with ingress
-	secretName := f.RunID + "-sauron-secrets"
+	secretName := f.RunID + "-vmo-secrets"
 	testDomain := "ingress-test.example.com"
 	secret, err := createTestSecrets(secretName, testDomain)
 	if err != nil {
 		t.Errorf("failed to create test secrets: %+v", err)
 	}
 
-	// Create Sauron
-	sauron := testutil.NewSauron(f.RunID+"-sauron-data", secretName)
-	sauron.Spec.Elasticsearch.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
-	sauron.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
-	sauron.Spec.Grafana.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
-	sauron.Spec.AlertManager.Replicas = 3
-	sauron.Spec.Api.Replicas = 2
+	// Create VMO
+	vmo := testutil.NewVMO(f.RunID+"-vmo-data", secretName)
+	vmo.Spec.Elasticsearch.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
+	vmo.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
+	vmo.Spec.Grafana.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
+	vmo.Spec.AlertManager.Replicas = 3
+	vmo.Spec.Api.Replicas = 2
 	if f.Ingress {
-		sauron.Spec.URI = testDomain
+		vmo.Spec.URI = testDomain
 	}
 
 	if testutil.RunBeforePhase(f) {
-		// Create Sauron instance
-		sauron, err = testutil.CreateSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret)
+		// Create VMO instance
+		vmo, err = testutil.CreateVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret)
 		if err != nil {
-			t.Fatalf("Failed to create Sauron: %v", err)
+			t.Fatalf("Failed to create VMO: %v", err)
 		}
 	} else {
-		sauron, err = testutil.GetSauron(f.CRClient, f.Namespace, sauron)
+		vmo, err = testutil.GetVMO(f.CRClient, f.Namespace, vmo)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
 	}
-	// Delete Sauron instance if we are tearing down
+	// Delete VMO instance if we are tearing down
 	if !testutil.SkipTeardown(f) {
 		defer func() {
-			if err := testutil.DeleteSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret); err != nil {
-				t.Fatalf("Failed to clean up Sauron: %v", err)
+			if err := testutil.DeleteVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret); err != nil {
+				t.Fatalf("Failed to clean up VMO: %v", err)
 			}
 		}()
 	}
 
-	verifySauronDeployment(t, sauron)
+	verifyVMODeployment(t, vmo)
 }
 
-func TestBasic3GrafanaOnlySauronAPITokenOperations(t *testing.T) {
+func TestBasic3GrafanaOnlyVMOAPITokenOperations(t *testing.T) {
 	f := framework.Global
-	secretName := f.RunID + "-sauron-secrets"
+	secretName := f.RunID + "-vmo-secrets"
 	secret := testutil.NewSecret(secretName, f.Namespace)
-	sauron := testutil.NewGrafanaOnlySauron(f.RunID+"-"+"grafana-only", secretName)
+	vmo := testutil.NewGrafanaOnlyVMO(f.RunID+"-"+"grafana-only", secretName)
 	var err error
 	if testutil.RunBeforePhase(f) {
-		// Create Sauron instance
-		sauron, err = testutil.CreateSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret)
+		// Create VMO instance
+		vmo, err = testutil.CreateVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret)
 		if err != nil {
-			t.Fatalf("Failed to create Sauron: %v", err)
+			t.Fatalf("Failed to create VMO: %v", err)
 		}
 	} else {
-		sauron, err = testutil.GetSauron(f.CRClient, f.Namespace, sauron)
+		vmo, err = testutil.GetVMO(f.CRClient, f.Namespace, vmo)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
 	}
-	// Delete Sauron instance if we are tearing down
+	// Delete VMO instance if we are tearing down
 	if !testutil.SkipTeardown(f) {
 		defer func() {
-			if err := testutil.DeleteSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret); err != nil {
-				t.Fatalf("Failed to clean up Sauron: %v", err)
+			if err := testutil.DeleteVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret); err != nil {
+				t.Fatalf("Failed to clean up VMO: %v", err)
 			}
 		}()
 	}
-	verifyGrafanaAPITokenOperations(t, sauron)
+	verifyGrafanaAPITokenOperations(t, vmo)
 }
 
-// Creates Simple sauron without canaries definied
+// Creates Simple vmo without canaries definied
 // Use API server REST apis to create/update/delete canaries
-func TestBasic4SauronMultiUserAuthn(t *testing.T) {
+func TestBasic4VMOMultiUserAuthn(t *testing.T) {
 	f := framework.Global
 	var err error
 	testDomain := "multiuser-authn.example.com"
@@ -226,38 +226,38 @@ func TestBasic4SauronMultiUserAuthn(t *testing.T) {
 		fmt.Print(err)
 	}
 
-	secretName := f.RunID + "-sauron-secrets"
+	secretName := f.RunID + "-vmo-secrets"
 	extraCreds := []string{reporterUsername, reporterPassword}
 	secret := testutil.NewSecretWithTLSWithMultiUser(secretName, f.Namespace, tCert, tKey, username, password, extraCreds)
 
-	// Create Sauron
-	sauron := testutil.NewSauron(f.RunID+"-"+"multiuser-authn", secretName)
-	sauron.Spec.URI = testDomain
+	// Create VMO
+	vmo := testutil.NewVMO(f.RunID+"-"+"multiuser-authn", secretName)
+	vmo.Spec.URI = testDomain
 
 	if testutil.RunBeforePhase(f) {
-		// Create Sauron instance
-		sauron, err = testutil.CreateSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret)
+		// Create VMO instance
+		vmo, err = testutil.CreateVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret)
 		if err != nil {
-			t.Fatalf("Failed to create Sauron: %v", err)
+			t.Fatalf("Failed to create VMO: %v", err)
 		}
 	} else {
-		sauron, err = testutil.GetSauron(f.CRClient, f.Namespace, sauron)
+		vmo, err = testutil.GetVMO(f.CRClient, f.Namespace, vmo)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
 	}
-	// Delete Sauron instance if we are tearing down
+	// Delete VMO instance if we are tearing down
 	if !testutil.SkipTeardown(f) {
 		defer func() {
-			if err := testutil.DeleteSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret); err != nil {
-				t.Fatalf("Failed to clean up Sauron: %v", err)
+			if err := testutil.DeleteVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret); err != nil {
+				t.Fatalf("Failed to clean up VMO: %v", err)
 			}
 		}()
 	}
-	verifyMultiUserAuthnOperations(t, sauron)
+	verifyMultiUserAuthnOperations(t, vmo)
 }
 
-func TestBasic4SauronWithIngress(t *testing.T) {
+func TestBasic4VMOWithIngress(t *testing.T) {
 	f := framework.Global
 
 	testDomain := "ingress-test.example.com"
@@ -277,52 +277,52 @@ func TestBasic4SauronWithIngress(t *testing.T) {
 		fmt.Print(err)
 	}
 
-	secretName := f.RunID + "-sauron-secrets"
+	secretName := f.RunID + "-vmo-secrets"
 	secret := testutil.NewSecretWithTLS(secretName, f.Namespace, tCert, tKey, username, password)
 
-	// Create Sauron
-	sauron := testutil.NewSauron(f.RunID+"-ingress", secretName)
-	sauron.Spec.URI = testDomain
+	// Create VMO
+	vmo := testutil.NewVMO(f.RunID+"-ingress", secretName)
+	vmo.Spec.URI = testDomain
 
 	if testutil.RunBeforePhase(f) {
-		// Create Sauron instance
-		sauron, err = testutil.CreateSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret)
+		// Create VMO instance
+		vmo, err = testutil.CreateVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret)
 		if err != nil {
-			t.Fatalf("Failed to create Sauron: %v", err)
+			t.Fatalf("Failed to create VMO: %v", err)
 		}
-		fmt.Printf("Ingress SauronSpec: %v", sauron)
+		fmt.Printf("Ingress VMOSpec: %v", vmo)
 	} else {
-		sauron, err = testutil.GetSauron(f.CRClient, f.Namespace, sauron)
+		vmo, err = testutil.GetVMO(f.CRClient, f.Namespace, vmo)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
 	}
-	// Delete Sauron instance if we are tearing down
+	// Delete VMO instance if we are tearing down
 	if !testutil.SkipTeardown(f) {
 		defer func() {
-			if err := testutil.DeleteSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret); err != nil {
-				t.Fatalf("Failed to clean up Sauron: %v", err)
+			if err := testutil.DeleteVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret); err != nil {
+				t.Fatalf("Failed to clean up VMO: %v", err)
 			}
 		}()
 	}
-	verifySauronDeploymentWithIngress(t, sauron, username, password)
+	verifyVMODeploymentWithIngress(t, vmo, username, password)
 
 	//update top-level secret new username/password
-	fmt.Println("Updating sauron username/paswword")
-	secret, err = f.KubeClient2.CoreV1().Secrets(sauron.Namespace).Get(context.Background(), secretName, metav1.GetOptions{})
+	fmt.Println("Updating vmo username/paswword")
+	secret, err = f.KubeClient2.CoreV1().Secrets(vmo.Namespace).Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("secret %s doesn't exists in namespace %s : %v", secretName, sauron.Namespace, err)
+		t.Fatalf("secret %s doesn't exists in namespace %s : %v", secretName, vmo.Namespace, err)
 	}
 	secret.Data["username"] = []byte(changeusername)
 	secret.Data["password"] = []byte(changepassword)
-	secret, err = f.KubeClient2.CoreV1().Secrets(sauron.Namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+	secret, err = f.KubeClient2.CoreV1().Secrets(vmo.Namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
 	if err != nil {
 		t.Fatalf("Error when updating a secret %s, %v", secretName, err)
 	}
-	verifySauronDeploymentWithIngress(t, sauron, changeusername, changepassword)
+	verifyVMODeploymentWithIngress(t, vmo, changeusername, changepassword)
 }
 
-func TestBasic4SauronOperatorMetricsServer(t *testing.T) {
+func TestBasic4VMOOperatorMetricsServer(t *testing.T) {
 	f := framework.Global
 	operatorSvcPort := getPortFromService(t, f.OperatorNamespace, "verrazzano-monitoring-operator")
 	if err := testutil.WaitForEndpointAvailable("verrazzano-monitoring-operator", f.ExternalIP, operatorSvcPort, "/metrics", http.StatusOK, testutil.DefaultRetry); err != nil {
@@ -332,53 +332,53 @@ func TestBasic4SauronOperatorMetricsServer(t *testing.T) {
 
 func TestBasic2PrometheusMultipleReplicas(t *testing.T) {
 	f := framework.Global
-	var sauronName string
+	var vmoName string
 
 	// Create secrets - domain only used with ingress
-	secretName := f.RunID + "-sauron-secrets"
+	secretName := f.RunID + "-vmo-secrets"
 	testDomain := "ingress-test.example.com"
 	secret, err := createTestSecrets(secretName, testDomain)
 	if err != nil {
 		t.Errorf("failed to create test secrets: %+v", err)
 	}
 
-	// Create sauron
+	// Create vmo
 	if f.Ingress {
-		sauronName = f.RunID + "-ingress"
+		vmoName = f.RunID + "-ingress"
 	} else {
-		sauronName = f.RunID + "-prom-2x"
+		vmoName = f.RunID + "-prom-2x"
 	}
-	sauron := testutil.NewSauron(sauronName, secretName)
-	sauron.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
-	sauron.Spec.Prometheus.Replicas = 3
+	vmo := testutil.NewVMO(vmoName, secretName)
+	vmo.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
+	vmo.Spec.Prometheus.Replicas = 3
 	if f.Ingress {
-		sauron.Spec.URI = testDomain
+		vmo.Spec.URI = testDomain
 	}
 
 	if testutil.RunBeforePhase(f) {
-		// Create Sauron instance
-		sauron, err = testutil.CreateSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret)
+		// Create VMO instance
+		vmo, err = testutil.CreateVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret)
 		if err != nil {
-			t.Fatalf("Failed to create Sauron: %v", err)
+			t.Fatalf("Failed to create VMO: %v", err)
 		}
 	} else {
-		sauron, err = testutil.GetSauron(f.CRClient, f.Namespace, sauron)
+		vmo, err = testutil.GetVMO(f.CRClient, f.Namespace, vmo)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
 	}
-	// Delete Sauron instance if we are tearing down
+	// Delete VMO instance if we are tearing down
 	if !testutil.SkipTeardown(f) {
 		defer func() {
-			if err := testutil.DeleteSauron(f.CRClient, f.KubeClient2, f.Namespace, sauron, secret); err != nil {
-				t.Fatalf("Failed to clean up Sauron: %v", err)
+			if err := testutil.DeleteVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret); err != nil {
+				t.Fatalf("Failed to clean up VMO: %v", err)
 			}
 		}()
 	}
 	// Check additional prometheus deployments
 	var deploymentNamesToReplicas = map[string]int32{
-		constants.SauronServiceNamePrefix + sauron.Name + "-prometheus-1": 1,
-		constants.SauronServiceNamePrefix + sauron.Name + "-prometheus-2": 1,
+		constants.VMOServiceNamePrefix + vmo.Name + "-prometheus-1": 1,
+		constants.VMOServiceNamePrefix + vmo.Name + "-prometheus-2": 1,
 	}
 	for deploymentName := range deploymentNamesToReplicas {
 		err := testutil.WaitForDeploymentAvailable(f.Namespace, deploymentName,
@@ -389,14 +389,14 @@ func TestBasic2PrometheusMultipleReplicas(t *testing.T) {
 	}
 	t.Log("  ==> Additional Prometheus deployments are available")
 
-	verifySauronDeployment(t, sauron)
+	verifyVMODeployment(t, vmo)
 
 	// Verify PVC Locations of prometheus deployments to ensure they are on different ADs of a region
 	deploymentList, _ := f.KubeClient.AppsV1().Deployments(f.Namespace).List(context.Background(), metav1.ListOptions{})
 	// Keep track of unique prometheus PVC AD information. Test expectes this should be 3, each PVC on unique AD
 	var prometheusADs []string
 	for _, deployment := range deploymentList.Items {
-		if !(deployment.Spec.Template.Labels["app"] == fmt.Sprintf("%s-%s", sauron.Name, "prometheus")) {
+		if !(deployment.Spec.Template.Labels["app"] == fmt.Sprintf("%s-%s", vmo.Name, "prometheus")) {
 			continue
 		}
 		skip := false
@@ -448,7 +448,7 @@ func createTestSecrets(secretName, testDomain string) (*corev1.Secret, error) {
 	return testutil.NewSecretWithTLS(secretName, f.Namespace, tCert, tKey, username, password), nil
 }
 
-func verifyMultiUserAuthnOperations(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 	var httpProtocol, myURL, host, body string
 	var promPort, promGWPort, apiPort, esPort int32
@@ -457,7 +457,7 @@ func verifyMultiUserAuthnOperations(t *testing.T, sauron *vmcontrollerv1.Verrazz
 	var headers = map[string]string{}
 
 	fmt.Println("======================================================")
-	fmt.Printf("Testing Sauron %s components in namespace '%s'\n", sauron.Name, f.Namespace)
+	fmt.Printf("Testing VMO %s components in namespace '%s'\n", vmo.Name, f.Namespace)
 	if f.Ingress {
 		fmt.Println("Mode: Testing via the Ingress Controller")
 	} else {
@@ -473,26 +473,26 @@ func verifyMultiUserAuthnOperations(t *testing.T, sauron *vmcontrollerv1.Verrazz
 		apiPort = promPort
 	} else {
 		httpProtocol = "http://"
-		promPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Prometheus.Name+"-0")
-		promGWPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.PrometheusGW.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Api.Name)
-		esPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.ElasticsearchIngest.Name)
+		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name+"-0")
+		promGWPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.PrometheusGW.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
+		esPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name)
 	}
 
 	// Verify service endpoint connectivity
 	// Verify Prometheus availability
-	waitForEndpoint(t, sauron, "Prometheus", promPort, "/-/healthy")
+	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
 
 	// Verify Prometheus-GW availability
-	waitForEndpoint(t, sauron, "Prometheus-GW", promGWPort, "/")
+	waitForEndpoint(t, vmo, "Prometheus-GW", promGWPort, "/")
 
 	// Verify API availability
-	waitForEndpoint(t, sauron, "API", apiPort, "/healthcheck")
+	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
 	fmt.Println("  ==> Service endpoint is available")
 
 	//Test 1: Validate get Unauthorized for reporter user
 	myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/config")
-	host = "api." + sauron.Spec.URI
+	host = "api." + vmo.Spec.URI
 	resp, body, err = sendRequestWithUserPassword("GET", myURL, host, false, headers, "", reporterUsername, reporterPassword)
 	if err != nil {
 		t.Fatal(err)
@@ -522,7 +522,7 @@ func verifyMultiUserAuthnOperations(t *testing.T, sauron *vmcontrollerv1.Verrazz
 	}
 
 	myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, esPort, docPath)
-	host = "elasticsearch." + sauron.Spec.URI
+	host = "elasticsearch." + vmo.Spec.URI
 	headers["Content-Type"] = "application/json"
 	resp, _, err = sendRequestWithUserPassword("POST", myURL, host, false, headers, string(jsonPayload), reporterUsername, reporterPassword)
 	if err != nil {
@@ -534,7 +534,7 @@ func verifyMultiUserAuthnOperations(t *testing.T, sauron *vmcontrollerv1.Verrazz
 	fmt.Println("  ==> Document " + docPath + " created")
 
 	// Push metric to the Push Gateway
-	resp, _, err = sendRequestWithUserPassword("POST", pushGatewayJobURL, "prometheus-gw."+sauron.Spec.URI, false, headers, metricData, reporterUsername, reporterPassword)
+	resp, _, err = sendRequestWithUserPassword("POST", pushGatewayJobURL, "prometheus-gw."+vmo.Spec.URI, false, headers, metricData, reporterUsername, reporterPassword)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -546,10 +546,10 @@ func verifyMultiUserAuthnOperations(t *testing.T, sauron *vmcontrollerv1.Verrazz
 
 }
 
-func verifySauronDeployment(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 	fmt.Println("======================================================")
-	fmt.Printf("Testing Sauron %s components in namespace '%s'\n", sauron.Name, f.Namespace)
+	fmt.Printf("Testing VMO %s components in namespace '%s'\n", vmo.Name, f.Namespace)
 	if f.Ingress {
 		fmt.Println("Mode: Testing via the Ingress Controller")
 	} else {
@@ -558,28 +558,28 @@ func verifySauronDeployment(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonit
 	fmt.Println("======================================================")
 
 	// Verify deployments
-	fmt.Println("Step 1: Verify Sauron instance deployments")
+	fmt.Println("Step 1: Verify VMO instance deployments")
 
 	// Verify deployments
 	var deploymentNamesToReplicas = map[string]int32{
-		constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Api.Name:                 sauron.Spec.Api.Replicas,
-		constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Grafana.Name:             1,
-		constants.SauronServiceNamePrefix + sauron.Name + "-" + config.PrometheusGW.Name:        1,
-		constants.SauronServiceNamePrefix + sauron.Name + "-" + config.AlertManager.Name:        sauron.Spec.AlertManager.Replicas,
-		constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Kibana.Name:              sauron.Spec.Kibana.Replicas,
-		constants.SauronServiceNamePrefix + sauron.Name + "-" + config.ElasticsearchIngest.Name: sauron.Spec.Elasticsearch.IngestNode.Replicas,
-		constants.SauronServiceNamePrefix + sauron.Name + "-" + config.ElasticsearchMaster.Name: sauron.Spec.Elasticsearch.MasterNode.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Api.Name:                 vmo.Spec.Api.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.PrometheusGW.Name:        1,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name:        vmo.Spec.AlertManager.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name:              vmo.Spec.Kibana.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Elasticsearch.IngestNode.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchMaster.Name: vmo.Spec.Elasticsearch.MasterNode.Replicas,
 	}
-	for i := 0; i < int(sauron.Spec.Prometheus.Replicas); i++ {
-		deploymentNamesToReplicas[constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Prometheus.Name+"-"+strconv.Itoa(i)] = 1
+	for i := 0; i < int(vmo.Spec.Prometheus.Replicas); i++ {
+		deploymentNamesToReplicas[constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name+"-"+strconv.Itoa(i)] = 1
 	}
-	for i := 0; i < int(sauron.Spec.Elasticsearch.DataNode.Replicas); i++ {
-		deploymentNamesToReplicas[constants.SauronServiceNamePrefix+sauron.Name+"-"+config.ElasticsearchData.Name+"-"+strconv.Itoa(i)] = 1
+	for i := 0; i < int(vmo.Spec.Elasticsearch.DataNode.Replicas); i++ {
+		deploymentNamesToReplicas[constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchData.Name+"-"+strconv.Itoa(i)] = 1
 	}
 
-	statefulSetComponents := []string{constants.SauronServiceNamePrefix + sauron.Name + "-" + config.AlertManager.Name}
+	statefulSetComponents := []string{constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name}
 
-	statefulSetComponents = append(statefulSetComponents, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.ElasticsearchMaster.Name)
+	statefulSetComponents = append(statefulSetComponents, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchMaster.Name)
 	for deploymentName := range deploymentNamesToReplicas {
 		var err error
 		if resources.SliceContains(statefulSetComponents, deploymentName) {
@@ -599,22 +599,22 @@ func verifySauronDeployment(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonit
 	// Run the tests
 	fmt.Println("Step 2: Verify API service")
 
-	verifyAPI(t, sauron)
+	verifyAPI(t, vmo)
 	fmt.Println("Step 3: Verify Prometheus")
-	verifyPrometheus(t, sauron)
+	verifyPrometheus(t, vmo)
 	fmt.Println("Step 4: Verify Grafana")
-	verifyGrafana(t, sauron)
+	verifyGrafana(t, vmo)
 	fmt.Println("Step 5: Verify Alertmanager")
-	verifyAlertmanager(t, sauron)
+	verifyAlertmanager(t, vmo)
 	fmt.Println("Step 6: Verify Elasticsearch")
-	verifyElasticsearch(t, sauron, true, false)
+	verifyElasticsearch(t, vmo, true, false)
 	fmt.Println("Step 7: Verify Kibana")
-	verifyKibana(t, sauron)
+	verifyKibana(t, vmo)
 
 	fmt.Println("======================================================")
 }
 
-func verifyAPI(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyAPI(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 	var apiPort, promPort int32
 
@@ -623,19 +623,19 @@ func verifyAPI(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance
 		apiPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
 		promPort = apiPort
 	} else {
-		apiPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Api.Name)
-		promPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Prometheus.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
+		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
 	}
 
 	// Wait for API availability
-	waitForEndpoint(t, sauron, "API", apiPort, "/healthcheck")
+	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
 
 	// Wait for Prometheus availability
-	waitForEndpoint(t, sauron, "Prometheus", promPort, "/-/healthy")
+	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
 	fmt.Println("  ==> Service endpoint is available")
 }
 
-func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyPrometheus(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 	var promPort, promGWPort, apiPort int32
 	var resp *http.Response
@@ -643,7 +643,7 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 	var err error
 	var headers = map[string]string{}
 
-	if !sauron.Spec.Prometheus.Enabled {
+	if !vmo.Spec.Prometheus.Enabled {
 		return
 	}
 
@@ -654,20 +654,20 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 		apiPort = promPort
 		httpProtocol = "https://"
 	} else {
-		promPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Prometheus.Name)
-		promGWPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.PrometheusGW.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Api.Name)
+		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
+		promGWPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.PrometheusGW.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
 		httpProtocol = "http://"
 	}
 
 	// Verify Prometheus availability
-	waitForEndpoint(t, sauron, "Prometheus", promPort, "/-/healthy")
+	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
 
 	// Verify Prometheus-GW availability
-	waitForEndpoint(t, sauron, "Prometheus-GW", promGWPort, "/")
+	waitForEndpoint(t, vmo, "Prometheus-GW", promGWPort, "/")
 
 	// Verify API availability
-	waitForEndpoint(t, sauron, "API", apiPort, "/healthcheck")
+	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
 	fmt.Println("  ==> Service endpoint is available")
 
 	// Add local Prometheus /metrics
@@ -686,7 +686,7 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 
 		// GET - /prometheus/config
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/config")
-		host = "api." + sauron.Spec.URI
+		host = "api." + vmo.Spec.URI
 		resp, body, err = sendRequest("GET", myURL, host, false, headers, "")
 		if err != nil {
 			t.Fatal(err)
@@ -708,14 +708,14 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 		fmt.Println("  ==> Local Prometheus scrape target defined")
 
 		// Verify Push Gateway scrape target is present in Prometheus
-		err = waitForKeyWithValueResponse("prometheus."+sauron.Spec.URI, f.ExternalIP, promPort, "/api/v1/targets", "job", "PushGateway")
+		err = waitForKeyWithValueResponse("prometheus."+vmo.Spec.URI, f.ExternalIP, promPort, "/api/v1/targets", "job", "PushGateway")
 		if err != nil {
 			t.Fatal(err)
 		}
 		fmt.Println("  ==> Push Gateway target defined ")
 
 		// Push metric to the Push Gateway
-		resp, _, err = sendRequest("POST", pushGatewayJobURL, "prometheus-gw."+sauron.Spec.URI, false, headers, metricData)
+		resp, _, err = sendRequest("POST", pushGatewayJobURL, "prometheus-gw."+vmo.Spec.URI, false, headers, metricData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -725,7 +725,7 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 		fmt.Println("  ==> Metric pushed to Push Gateway")
 
 		// Wait for metric to appear in Prometheus
-		err = waitForPrometheusMetric(sauron.Spec.URI, prometheusURL, metricName)
+		err = waitForPrometheusMetric(vmo.Spec.URI, prometheusURL, metricName)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -734,7 +734,7 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 		// We delete the metric from GW here to ensure that by the time we are verifying the metric after
 		// upgrade, we don't have any _new_ data coming in from the GW.  We want to be verifying old data at that point.
 
-		resp, _, err = sendRequest("DELETE", pushGatewayJobURL, "prometheus-gw."+sauron.Spec.URI, false, headers, metricData)
+		resp, _, err = sendRequest("DELETE", pushGatewayJobURL, "prometheus-gw."+vmo.Spec.URI, false, headers, metricData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -745,10 +745,10 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 	}
 
 	if testutil.RunAfterPhase(f) {
-		// Verify Prometheus config using Sauron API Server
+		// Verify Prometheus config using VMO API Server
 
 		myURL := fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/config")
-		resp, body, _ = sendRequest("GET", myURL, "api."+sauron.Spec.URI, false, headers, "")
+		resp, body, _ = sendRequest("GET", myURL, "api."+vmo.Spec.URI, false, headers, "")
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)", http.StatusOK, "/prometheus/config", resp.StatusCode, resp)
 		}
@@ -757,12 +757,12 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 		}
 
 		// Verify local scrape target was added by the API server
-		err = waitForKeyWithValueResponse("prometheus."+sauron.Spec.URI, f.ExternalIP, promPort, "/api/v1/targets", "job", f.RunID)
+		err = waitForKeyWithValueResponse("prometheus."+vmo.Spec.URI, f.ExternalIP, promPort, "/api/v1/targets", "job", f.RunID)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		err = waitForPrometheusMetric(sauron.Spec.URI, prometheusURL, metricName)
+		err = waitForPrometheusMetric(vmo.Spec.URI, prometheusURL, metricName)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -770,14 +770,14 @@ func verifyPrometheus(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringI
 	}
 }
 
-func verifyGrafanaAPITokenOperations(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 
-	if !sauron.Spec.Grafana.Enabled {
+	if !vmo.Spec.Grafana.Enabled {
 		return
 	}
 
-	grafanaSvc, err := testutil.WaitForService(f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-grafana", testutil.DefaultRetry, f.KubeClient)
+	grafanaSvc, err := testutil.WaitForService(f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-grafana", testutil.DefaultRetry, f.KubeClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -791,7 +791,7 @@ func verifyGrafanaAPITokenOperations(t *testing.T, sauron *vmcontrollerv1.Verraz
 
 	if testutil.RunBeforePhase(f) {
 		// Test1 - Accessing the grafana endpoint root URL using NGINX basic auth should return 200.
-		//         This validates backward compatability, Users can continue to use Sauron basic auth
+		//         This validates backward compatability, Users can continue to use VMO basic auth
 		fmt.Println("Dashboard API Token tests")
 		resp, err := resty.R().SetBasicAuth(username, password).
 			Get(fmt.Sprintf("http://%s:%d%s",
@@ -964,7 +964,7 @@ func verifyGrafanaAPITokenOperations(t *testing.T, sauron *vmcontrollerv1.Verraz
 	}
 }
 
-func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyGrafana(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 	var port int32
 	var httpProtocol, myURL, host, body string
@@ -973,7 +973,7 @@ func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInst
 	var headers = map[string]string{}
 
 	externalDomainName := "localhost"
-	if !sauron.Spec.Grafana.Enabled {
+	if !vmo.Spec.Grafana.Enabled {
 		return
 	}
 
@@ -981,18 +981,18 @@ func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInst
 	if f.Ingress {
 		port = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
 		httpProtocol = "https://"
-		externalDomainName = "grafana." + sauron.Spec.URI
+		externalDomainName = "grafana." + vmo.Spec.URI
 	} else {
-		port = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Grafana.Name)
+		port = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Grafana.Name)
 		httpProtocol = "http://"
 	}
 
 	// Verify Grafana availability
-	waitForEndpoint(t, sauron, "Grafana", port, "/api/health")
+	waitForEndpoint(t, vmo, "Grafana", port, "/api/health")
 	fmt.Println("  ==> Service endpoint is available")
 
 	/* Verify domain and root_url */
-	host = "grafana." + sauron.Spec.URI
+	host = "grafana." + vmo.Spec.URI
 	myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, port, "/api/admin/settings")
 	resp, body, err = sendRequest("GET", myURL, host, true, headers, "")
 
@@ -1045,10 +1045,10 @@ func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInst
 
 	if testutil.RunBeforePhase(f) {
 
-		// Verify "sauron" user can retrieve the user list
+		// Verify "vmo" user can retrieve the user list
 		// This is a good check that authentication is being passedi properly with ingress
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, port, "/api/users")
-		host = "grafana." + sauron.Spec.URI
+		host = "grafana." + vmo.Spec.URI
 		resp, _, err = sendRequest("GET", myURL, host, true, headers, "")
 		if err != nil {
 			t.Fatal(err)
@@ -1061,7 +1061,7 @@ func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInst
 
 		// Upload a new dashboard via Grafana HTTP API
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, port, "/api/dashboards/db")
-		host = "grafana." + sauron.Spec.URI
+		host = "grafana." + vmo.Spec.URI
 		headers["Content-Type"] = "application/json"
 		resp, _, err = sendRequest("POST", myURL, host, true, headers, dashboardConfig)
 		if err != nil {
@@ -1076,7 +1076,7 @@ func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInst
 	if testutil.RunAfterPhase(f) {
 		// GET dashboard via Grafana HTTP API
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, port, "/api/search?type=dash-db&query="+f.RunID)
-		host = "grafana." + sauron.Spec.URI
+		host = "grafana." + vmo.Spec.URI
 		fmt.Printf("URL: %s\n", myURL)
 		resp, body, err = sendRequest("GET", myURL, host, true, headers, "")
 
@@ -1113,7 +1113,7 @@ func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInst
 		// DELETE dashboard via Grafana HTTP API if we are tearing down
 		if !testutil.SkipTeardown(f) {
 			myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, port, "/api/dashboards/uid/"+dashUID)
-			host = "grafana." + sauron.Spec.URI
+			host = "grafana." + vmo.Spec.URI
 			fmt.Printf("URL: %s\n", myURL)
 			resp, _, err = sendRequest("DELETE", myURL, host, true, headers, "")
 			if err != nil {
@@ -1127,10 +1127,10 @@ func verifyGrafana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInst
 	}
 }
 
-func verifyAlertmanager(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyAlertmanager(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 
-	if !sauron.Spec.AlertManager.Enabled {
+	if !vmo.Spec.AlertManager.Enabled {
 		return
 	}
 
@@ -1172,33 +1172,33 @@ groups:
 		promPort = alertPort
 		httpProtocol = "https://"
 	} else {
-		alertPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.AlertManager.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Api.Name)
-		promPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Prometheus.Name)
+		alertPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.AlertManager.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
+		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
 		httpProtocol = "http://"
 	}
 
 	//Verify service endpoint connectivity
-	waitForEndpoint(t, sauron, "AlertManager", alertPort, "/#/status")
+	waitForEndpoint(t, vmo, "AlertManager", alertPort, "/#/status")
 	fmt.Println("  ==> Service endpoint is available")
 
 	// Get alertmanagers
 	myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, promPort, "/api/v1/alertmanagers")
-	host = "prometheus." + sauron.Spec.URI
+	host = "prometheus." + vmo.Spec.URI
 	_, body, err = sendRequest("GET", myURL, host, false, headers, "")
 	if err != nil {
 		t.Fatalf("Failed to GET /api/v1/alertmanagers %v", err)
 	}
 
 	// Verify cluster state
-	fmt.Printf("  ==> Verifying AlertManager cluster size reaches %d\n", sauron.Spec.AlertManager.Replicas)
-	err = waitForStringInResponse("alertmanager."+sauron.Spec.URI, f.ExternalIP, alertPort, "/metrics", fmt.Sprintf("alertmanager_cluster_members %d", sauron.Spec.AlertManager.Replicas))
+	fmt.Printf("  ==> Verifying AlertManager cluster size reaches %d\n", vmo.Spec.AlertManager.Replicas)
+	err = waitForStringInResponse("alertmanager."+vmo.Spec.URI, f.ExternalIP, alertPort, "/metrics", fmt.Sprintf("alertmanager_cluster_members %d", vmo.Spec.AlertManager.Replicas))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get Alertmanager service - needed for target port
-	alertMgrSvc, err := testutil.WaitForService(f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-alertmanager", testutil.DefaultRetry, f.KubeClient)
+	alertMgrSvc, err := testutil.WaitForService(f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-alertmanager", testutil.DefaultRetry, f.KubeClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1211,7 +1211,7 @@ groups:
 	if testutil.RunBeforePhase(f) {
 
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/alertmanager/config")
-		host = "api." + sauron.Spec.URI
+		host = "api." + vmo.Spec.URI
 		resp, _, err = sendRequest("PUT", myURL, host, false, headers, alrtMgrConfig)
 		if err != nil {
 			t.Fatal(err)
@@ -1222,10 +1222,10 @@ groups:
 		fmt.Println("  ==> Alertmanager config set via API")
 
 		//api server is causing trouble for immediate PUT requests, wait for api server url is ready before attempting to send another PUT request
-		waitForEndpoint(t, sauron, "API", apiPort, "/prometheus/rules")
+		waitForEndpoint(t, vmo, "API", apiPort, "/prometheus/rules")
 
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/rules/"+f.RunID+".rules")
-		host = "api." + sauron.Spec.URI
+		host = "api." + vmo.Spec.URI
 		resp, _, err = sendRequest("PUT", myURL, host, false, headers, alrtDef)
 		if err != nil {
 			t.Fatal(err)
@@ -1238,7 +1238,7 @@ groups:
 	if testutil.RunAfterPhase(f) {
 		// Verify alert manager config
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/alertmanager/config")
-		host = "api." + sauron.Spec.URI
+		host = "api." + vmo.Spec.URI
 		resp, body, _ = sendRequest("GET", myURL, host, false, headers, "")
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)", http.StatusOK, "/alertmanager/config", resp.StatusCode, resp)
@@ -1249,7 +1249,7 @@ groups:
 
 		// Verify alert definition
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/rules/"+f.RunID+".rules")
-		host = "api." + sauron.Spec.URI
+		host = "api." + vmo.Spec.URI
 		resp, body, _ = sendRequest("GET", myURL, host, false, headers, "")
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)", http.StatusOK, "/prometheus/rules/"+f.RunID+".rules", resp.StatusCode, resp)
@@ -1259,7 +1259,7 @@ groups:
 		}
 
 		// Wait for alert to trigger
-		err = waitForKeyWithValueResponse("alertmanager."+sauron.Spec.URI, f.ExternalIP, alertPort, "/api/v1/alerts", "receivers", "["+f.RunID+"]")
+		err = waitForKeyWithValueResponse("alertmanager."+vmo.Spec.URI, f.ExternalIP, alertPort, "/api/v1/alerts", "receivers", "["+f.RunID+"]")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1269,7 +1269,7 @@ groups:
 		if !testutil.SkipTeardown(f) {
 			// Delete alertrule
 			myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/rules/"+f.RunID+".rules")
-			host = "api." + sauron.Spec.URI
+			host = "api." + vmo.Spec.URI
 			resp, _, err = sendRequest("DELETE", myURL, host, false, headers, alrtDef)
 			if err != nil {
 				t.Fatal(err)
@@ -1280,7 +1280,7 @@ groups:
 			fmt.Println("  ==> Alert definition unset via API")
 
 			myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/alertmanager/config")
-			host = "api." + sauron.Spec.URI
+			host = "api." + vmo.Spec.URI
 			payload = `route:
    receiver: Test
 receivers:
@@ -1297,7 +1297,7 @@ receivers:
 	}
 }
 
-func verifyElasticsearch(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, verifyIngestPipeline bool, verifySauronIndex bool) {
+func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, verifyIngestPipeline bool, verifyVMOIndex bool) {
 	f := framework.Global
 
 	var httpProtocol, myURL, host string
@@ -1306,7 +1306,7 @@ func verifyElasticsearch(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitori
 	var err error
 	var headers = map[string]string{}
 
-	if !sauron.Spec.Elasticsearch.Enabled {
+	if !vmo.Spec.Elasticsearch.Enabled {
 		return
 	}
 
@@ -1320,18 +1320,18 @@ func verifyElasticsearch(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitori
 		esPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
 		httpProtocol = "https://"
 	} else {
-		esPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.ElasticsearchIngest.Name)
+		esPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name)
 		httpProtocol = "http://"
 	}
-	host = "elasticsearch." + sauron.Spec.URI
+	host = "elasticsearch." + vmo.Spec.URI
 
 	// Verify service endpoint connectivity
-	waitForEndpoint(t, sauron, "Elasticsearch", esPort, "/_cluster/health")
-	waitForEndpoint(t, sauron, "Elasticsearch", esPort, "/_cat/indices")
+	waitForEndpoint(t, vmo, "Elasticsearch", esPort, "/_cluster/health")
+	waitForEndpoint(t, vmo, "Elasticsearch", esPort, "/_cat/indices")
 	fmt.Println("  ==> Service endpoint is available")
 
 	// Verify expected cluster size
-	expectedClusterSize := sauron.Spec.Elasticsearch.MasterNode.Replicas + sauron.Spec.Elasticsearch.IngestNode.Replicas + sauron.Spec.Elasticsearch.DataNode.Replicas
+	expectedClusterSize := vmo.Spec.Elasticsearch.MasterNode.Replicas + vmo.Spec.Elasticsearch.IngestNode.Replicas + vmo.Spec.Elasticsearch.DataNode.Replicas
 	fmt.Printf("  ==> Verifying Elasticsearch cluster size is as expected (%d)\n", expectedClusterSize)
 	err = waitForKeyWithValueResponse(host, f.ExternalIP, esPort, "/_cluster/stats", "successful", strconv.Itoa(int(expectedClusterSize)))
 	if err != nil {
@@ -1375,7 +1375,7 @@ func verifyElasticsearch(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitori
 			fmt.Println("  ==> Ingest Pipeline " + ingestPipelinePath + " created")
 		}
 
-		ElasticSearchService, err := testutil.WaitForService(f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.ElasticsearchIngest.Name, testutil.DefaultRetry, f.KubeClient)
+		ElasticSearchService, err := testutil.WaitForService(f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name, testutil.DefaultRetry, f.KubeClient)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1407,7 +1407,7 @@ func verifyElasticsearch(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitori
 		fmt.Println("  ==> 100 Documents " + docPath + " retrieved")
 
 		//Verify Doc Count
-		ElasticSearchService, err := testutil.WaitForService(f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.ElasticsearchIngest.Name, testutil.DefaultRetry, f.KubeClient)
+		ElasticSearchService, err := testutil.WaitForService(f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name, testutil.DefaultRetry, f.KubeClient)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1437,17 +1437,17 @@ func verifyElasticsearch(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitori
 			}
 		}
 
-		if verifySauronIndex {
-			// Verify presence of .sauron index added by backup/restore process
-			myURL = fmt.Sprintf("%s%s:%d/.sauron", httpProtocol, f.ExternalIP, esPort)
+		if verifyVMOIndex {
+			// Verify presence of .vmo index added by backup/restore process
+			myURL = fmt.Sprintf("%s%s:%d/.vmo", httpProtocol, f.ExternalIP, esPort)
 			resp, _, err = sendRequest("GET", myURL, host, false, headers, "")
 			if err != nil {
-				t.Fatalf("Failed to check for Sauron index %v", err)
+				t.Fatalf("Failed to check for VMO index %v", err)
 			}
 			if resp.StatusCode != http.StatusOK {
 				t.Fatalf("Expected response code %d from GET but got %d: (%v)", http.StatusOK, resp.StatusCode, resp)
 			}
-			fmt.Println("  ==> .sauron index observed")
+			fmt.Println("  ==> .vmo index observed")
 		}
 
 		// DELETE message document via elasticsearch HTTP API if we are tearing down
@@ -1480,7 +1480,7 @@ func verifyElasticsearch(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitori
 	}
 }
 
-func verifyKibana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+func verifyKibana(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 	var httpProtocol, myURL, host, body string
 	var resp *http.Response
@@ -1488,7 +1488,7 @@ func verifyKibana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInsta
 	var kbPort, esPort int32
 	var headers = map[string]string{}
 
-	if !sauron.Spec.Kibana.Enabled {
+	if !vmo.Spec.Kibana.Enabled {
 		return
 	}
 
@@ -1501,13 +1501,13 @@ func verifyKibana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInsta
 		esPort = kbPort
 		httpProtocol = "https://"
 	} else {
-		kbPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.Kibana.Name)
-		esPort = getPortFromService(t, f.Namespace, constants.SauronServiceNamePrefix+sauron.Name+"-"+config.ElasticsearchIngest.Name)
+		kbPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Kibana.Name)
+		esPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name)
 		httpProtocol = "http://"
 	}
 
 	// Verify service endpoint connectivity
-	waitForEndpoint(t, sauron, "Kibana", kbPort, "/api/status")
+	waitForEndpoint(t, vmo, "Kibana", kbPort, "/api/status")
 	fmt.Println("  ==> Service endpoint is available")
 
 	testMessage := "verifyKibana." + f.RunID
@@ -1523,7 +1523,7 @@ func verifyKibana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInsta
 		}
 
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, esPort, docPath)
-		host = "elasticsearch." + sauron.Spec.URI
+		host = "elasticsearch." + vmo.Spec.URI
 		headers["Content-Type"] = "application/json"
 		resp, _, err = sendRequest("POST", myURL, host, false, headers, string(jsonPayload))
 		if err != nil {
@@ -1550,7 +1550,7 @@ func verifyKibana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInsta
 }
 `
 		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, kbPort, "/elasticsearch/"+index+"/_search")
-		host = "kibana." + sauron.Spec.URI
+		host = "kibana." + vmo.Spec.URI
 		headers["Content-Type"] = "application/json"
 		headers["kbn-version"] = f.ElasticsearchVersion
 		resp, body, err = sendRequest("POST", myURL, host, false, headers, query)
@@ -1574,7 +1574,7 @@ func verifyKibana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInsta
 		if !testutil.SkipTeardown(f) {
 
 			myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, esPort, "/"+index)
-			host = "elasticsearch." + sauron.Spec.URI
+			host = "elasticsearch." + vmo.Spec.URI
 			resp, _, err = sendRequest("DELETE", myURL, host, false, headers, "")
 			if err != nil {
 				t.Fatal(err)
@@ -1587,7 +1587,7 @@ func verifyKibana(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInsta
 	}
 }
 
-func verifySauronDeploymentWithIngress(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, username, password string) {
+func verifyVMODeploymentWithIngress(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, username, password string) {
 	f := framework.Global
 
 	type ingress struct {
@@ -1598,19 +1598,19 @@ func verifySauronDeploymentWithIngress(t *testing.T, sauron *vmcontrollerv1.Verr
 		replicas       int32
 	}
 	ingressMappings := []ingress{
-		{"api", "api", constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Api.Name, "/prometheus/config", 1},
-		{"grafana", "grafana", constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Grafana.Name, "", 1},
-		{"prometheus", "prometheus", constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Prometheus.Name + "-0", "/graph", 1},
-		{"prometheus-gw", "prometheus-gw", constants.SauronServiceNamePrefix + sauron.Name + "-" + config.PrometheusGW.Name, "", 1},
-		{"alertmanager", "alertmanager", constants.SauronServiceNamePrefix + sauron.Name + "-" + config.AlertManager.Name, "", 1},
-		{"elasticsearch-ingest", "elasticsearch", constants.SauronServiceNamePrefix + sauron.Name + "-" + config.ElasticsearchIngest.Name, "", 1},
-		{"kibana", "kibana", constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Kibana.Name, "/app/kibana", 1},
+		{"api", "api", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Api.Name, "/prometheus/config", 1},
+		{"grafana", "grafana", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name, "", 1},
+		{"prometheus", "prometheus", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + "-0", "/graph", 1},
+		{"prometheus-gw", "prometheus-gw", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.PrometheusGW.Name, "", 1},
+		{"alertmanager", "alertmanager", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name, "", 1},
+		{"elasticsearch-ingest", "elasticsearch", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name, "", 1},
+		{"kibana", "kibana", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name, "/app/kibana", 1},
 	}
 	statefulSetComponents := []string{"alertmanager"}
 
-	// Verify Sauron instance deployments
+	// Verify VMO instance deployments
 
-	fmt.Println("when junk credentials provided Mapping of Sauron Endpoints")
+	fmt.Println("when junk credentials provided Mapping of VMO Endpoints")
 	for p := range ingressMappings {
 		var err error
 		if resources.SliceContains(statefulSetComponents, ingressMappings[p].componentName) {
@@ -1638,7 +1638,7 @@ func verifySauronDeploymentWithIngress(t *testing.T, sauron *vmcontrollerv1.Verr
 		if ingressControllerSvc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 			if err := testutil.WaitForEndpointAvailableWithAuth(
 				ingressMappings[i].endpointName,
-				sauron.Spec.URI,
+				vmo.Spec.URI,
 				"",
 				ingressControllerSvc.Spec.Ports[0].Port,
 				ingressMappings[i].urlPath,
@@ -1651,7 +1651,7 @@ func verifySauronDeploymentWithIngress(t *testing.T, sauron *vmcontrollerv1.Verr
 		} else {
 			if err := testutil.WaitForEndpointAvailableWithAuth(
 				ingressMappings[i].endpointName,
-				sauron.Spec.URI,
+				vmo.Spec.URI,
 				f.ExternalIP,
 				ingressControllerSvc.Spec.Ports[0].NodePort,
 				ingressMappings[i].urlPath,
@@ -1672,7 +1672,7 @@ func verifySauronDeploymentWithIngress(t *testing.T, sauron *vmcontrollerv1.Verr
 		if ingressControllerSvc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 			if err := testutil.WaitForEndpointAvailableWithAuth(
 				ingressMappings[i].endpointName,
-				sauron.Spec.URI,
+				vmo.Spec.URI,
 				"",
 				ingressControllerSvc.Spec.Ports[0].Port,
 				ingressMappings[i].urlPath,
@@ -1685,7 +1685,7 @@ func verifySauronDeploymentWithIngress(t *testing.T, sauron *vmcontrollerv1.Verr
 		} else {
 			if err := testutil.WaitForEndpointAvailableWithAuth(
 				ingressMappings[i].endpointName,
-				sauron.Spec.URI,
+				vmo.Spec.URI,
 				f.ExternalIP,
 				ingressControllerSvc.Spec.Ports[0].NodePort,
 				ingressMappings[i].urlPath,
@@ -1845,13 +1845,13 @@ func getPortFromService(t *testing.T, namespace, name string) int32 {
 }
 
 // Call appropriate Wait function depending on whether or not we have ingress
-func waitForEndpoint(t *testing.T, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, componentName string, componentPort int32, componentURL string) {
+func waitForEndpoint(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentName string, componentPort int32, componentURL string) {
 	f := framework.Global
 
 	if f.Ingress {
 		if err := testutil.WaitForEndpointAvailableWithAuth(
 			componentName,
-			sauron.Spec.URI,
+			vmo.Spec.URI,
 			f.ExternalIP,
 			componentPort,
 			componentURL,

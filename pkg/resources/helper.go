@@ -19,30 +19,30 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func GetMetaName(sauronName string, componentName string) string {
-	return constants.SauronServiceNamePrefix + sauronName + "-" + componentName
+func GetMetaName(vmoName string, componentName string) string {
+	return constants.VMOServiceNamePrefix + vmoName + "-" + componentName
 }
 
-func GetMetaLabels(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]string {
-	return map[string]string{constants.K8SAppLabel: constants.SauronGroup, constants.SauronLabel: sauron.Name}
+func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]string {
+	return map[string]string{constants.K8SAppLabel: constants.VMOGroup, constants.VMOLabel: vmo.Name}
 }
 
-func GetSpecId(sauronName string, componentName string) map[string]string {
-	return map[string]string{constants.ServiceAppLabel: sauronName + "-" + componentName}
+func GetSpecId(vmoName string, componentName string) map[string]string {
+	return map[string]string{constants.ServiceAppLabel: vmoName + "-" + componentName}
 }
 
 func GetServicePort(componentDetails config.ComponentDetails) corev1.ServicePort {
 	return corev1.ServicePort{Name: componentDetails.Name, Port: int32(componentDetails.Port)}
 }
 
-func GetOwnerReferences(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) []metav1.OwnerReference {
+func GetOwnerReferences(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []metav1.OwnerReference {
 	var ownerReferences []metav1.OwnerReference
-	if sauron.Spec.CascadingDelete {
+	if vmo.Spec.CascadingDelete {
 		ownerReferences = []metav1.OwnerReference{
-			*metav1.NewControllerRef(sauron, schema.GroupVersionKind{
+			*metav1.NewControllerRef(vmo, schema.GroupVersionKind{
 				Group:   vmcontrollerv1.SchemeGroupVersion.Group,
 				Version: vmcontrollerv1.SchemeGroupVersion.Version,
-				Kind:    constants.SauronKind,
+				Kind:    constants.VMOKind,
 			}),
 		}
 	}
@@ -59,27 +59,27 @@ func SliceContains(slice []string, value string) bool {
 	return false
 }
 
-func GetStorageElementForComponent(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (storage *vmcontrollerv1.Storage) {
+func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (storage *vmcontrollerv1.Storage) {
 	switch component.Name {
 	case config.Grafana.Name:
-		return &sauron.Spec.Grafana.Storage
+		return &vmo.Spec.Grafana.Storage
 	case config.Prometheus.Name:
-		return &sauron.Spec.Prometheus.Storage
+		return &vmo.Spec.Prometheus.Storage
 	case config.ElasticsearchData.Name:
-		return &sauron.Spec.Elasticsearch.Storage
+		return &vmo.Spec.Elasticsearch.Storage
 	}
 	return nil
 }
 
 // Returns number of replicas for a given component
-func GetReplicasForComponent(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (replicas int32) {
+func GetReplicasForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (replicas int32) {
 	switch component.Name {
 	case config.Grafana.Name:
 		return int32(1)
 	case config.Prometheus.Name:
-		return sauron.Spec.Prometheus.Replicas
+		return vmo.Spec.Prometheus.Replicas
 	case config.ElasticsearchData.Name:
-		return sauron.Spec.Elasticsearch.DataNode.Replicas
+		return vmo.Spec.Elasticsearch.DataNode.Replicas
 	}
 	return 0
 }
@@ -100,29 +100,29 @@ func GetNextStringInSequence(name string) string {
 	}
 }
 
-// Creates a generic container element for the given component of the given Sauron object.
-func CreateContainerElement(sauronStorage *vmcontrollerv1.Storage,
-	sauronResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) corev1.Container {
+// Creates a generic container element for the given component of the given VMO object.
+func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
+	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) corev1.Container {
 
 	var volumeMounts []corev1.VolumeMount
-	if sauronStorage != nil && sauronStorage.Size != "" {
+	if vmoStorage != nil && vmoStorage.Size != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: componentDetails.DataDir, Name: constants.StorageVolumeName})
 	}
 
 	limitResourceList := corev1.ResourceList{}
 	requestResourceList := corev1.ResourceList{}
-	if sauronResources != nil {
-		if sauronResources.LimitCPU != "" {
-			limitResourceList[corev1.ResourceCPU] = resource.MustParse(sauronResources.LimitCPU)
+	if vmoResources != nil {
+		if vmoResources.LimitCPU != "" {
+			limitResourceList[corev1.ResourceCPU] = resource.MustParse(vmoResources.LimitCPU)
 		}
-		if sauronResources.LimitMemory != "" {
-			limitResourceList[corev1.ResourceMemory] = resource.MustParse(sauronResources.LimitMemory)
+		if vmoResources.LimitMemory != "" {
+			limitResourceList[corev1.ResourceMemory] = resource.MustParse(vmoResources.LimitMemory)
 		}
-		if sauronResources.RequestCPU != "" {
-			requestResourceList[corev1.ResourceCPU] = resource.MustParse(sauronResources.RequestCPU)
+		if vmoResources.RequestCPU != "" {
+			requestResourceList[corev1.ResourceCPU] = resource.MustParse(vmoResources.RequestCPU)
 		}
-		if sauronResources.RequestMemory != "" {
-			requestResourceList[corev1.ResourceMemory] = resource.MustParse(sauronResources.RequestMemory)
+		if vmoResources.RequestMemory != "" {
+			requestResourceList[corev1.ResourceMemory] = resource.MustParse(vmoResources.RequestMemory)
 		}
 	}
 
@@ -169,7 +169,7 @@ func CreateContainerElement(sauronStorage *vmcontrollerv1.Storage,
 	}
 }
 
-func CreateZoneAntiAffinityElement(sauronName string, component string) *corev1.Affinity {
+func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Affinity {
 	return &corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
@@ -177,7 +177,7 @@ func CreateZoneAntiAffinityElement(sauronName string, component string) *corev1.
 					Weight: 100,
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: GetSpecId(sauronName, component),
+							MatchLabels: GetSpecId(vmoName, component),
 						},
 						TopologyKey: constants.K8sZoneLabel,
 					},
@@ -195,15 +195,15 @@ func GetElasticsearchInitContainer() *corev1.Container {
 	return &elasticsearchInitContainer
 }
 
-// Gets the default Prometheus configuration for a Sauron instance
-func GetDefaultPrometheusConfiguration(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
-	pushGWUrl := GetMetaName(sauron.Name, config.PrometheusGW.Name) + ":" + strconv.Itoa(config.PrometheusGW.Port)
-	alertmanagerURL := fmt.Sprintf(GetMetaName(sauron.Name, config.AlertManager.Name)+":%d", config.AlertManager.Port)
+// Gets the default Prometheus configuration for a VMO instance
+func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	pushGWUrl := GetMetaName(vmo.Name, config.PrometheusGW.Name) + ":" + strconv.Itoa(config.PrometheusGW.Port)
+	alertmanagerURL := fmt.Sprintf(GetMetaName(vmo.Name, config.AlertManager.Name)+":%d", config.AlertManager.Port)
 	// Prometheus does not allow any special characters in their label names, So they need to be removed using reg exp
 	re := regexp.MustCompile("[^a-zA-Z0-9_]")
-	prometheusValidLabelName := re.ReplaceAllString(sauron.Name, "")
+	prometheusValidLabelName := re.ReplaceAllString(vmo.Name, "")
 	dynamicScrapeAnnotation := prometheusValidLabelName + "_io_scrape"
-	namespace := sauron.Namespace
+	namespace := vmo.Namespace
 	nginxNamespace := "ingress-nginx"
 	var prometheusConfig = []byte(`
 global:
@@ -250,10 +250,10 @@ scrape_configs:
 	return string(prometheusConfig)
 }
 
-// Gets the default Prometheus configuration for a Sauron instance
-func GetDefaultAlertManagerConfiguration(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+// Gets the default Prometheus configuration for a VMO instance
+func GetDefaultAlertManagerConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 
-	name := sauron.Name
+	name := vmo.Name
 
 	var alertManagerConfig = []byte(`
 route:

@@ -17,18 +17,18 @@ import (
 )
 
 type Elasticsearch interface {
-	createElasticsearchDeploymentElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment
+	createElasticsearchDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment
 }
 
-// Creates Deployment objects for a Sauron resource.  It also sets the appropriate OwnerReferences on
-// the resource so handleObject can discover the Sauron resource that 'owns' it.
-func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
+// Creates Deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
+// the resource so handleObject can discover the VMO resource that 'owns' it.
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
 
 	// Grafana
-	if sauron.Spec.Grafana.Enabled {
+	if vmo.Spec.Grafana.Enabled {
 
-		deployment := createDeploymentElement(sauron, &sauron.Spec.Grafana.Storage, &sauron.Spec.Grafana.Resources, config.Grafana)
+		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 
 		deployment.Spec.Strategy.Type = "Recreate"
@@ -53,10 +53,10 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *co
 			{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
 			{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Admin"},
 
-			{Name: "PROMETHEUS_TARGETS", Value: "http://" + constants.SauronServiceNamePrefix + sauron.Name + "-" + config.Prometheus.Name + ":" + strconv.Itoa(config.Prometheus.Port)},
+			{Name: "PROMETHEUS_TARGETS", Value: "http://" + constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + ":" + strconv.Itoa(config.Prometheus.Port)},
 		}
-		if sauron.Spec.URI != "" {
-			externalDomainName := config.Grafana.Name + "." + sauron.Spec.URI
+		if vmo.Spec.URI != "" {
+			externalDomainName := config.Grafana.Name + "." + vmo.Spec.URI
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_DOMAIN", Value: externalDomainName})
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_ROOT_URL", Value: "https://" + externalDomainName})
 		}
@@ -78,7 +78,7 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *co
 				Name: "dashboards-volume",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: sauron.Spec.Grafana.DashboardsConfigMap},
+						LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
 					},
 				},
 			},
@@ -86,7 +86,7 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *co
 				Name: "datasources-volume",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: sauron.Spec.Grafana.DatasourcesConfigMap},
+						LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DatasourcesConfigMap},
 					},
 				},
 			},
@@ -119,23 +119,23 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *co
 	}
 
 	// Prometheus
-	if sauron.Spec.Prometheus.Enabled {
-		deployments = append(deployments, createPrometheusDeploymentElements(sauron, pvcToAdMap)...)
+	if vmo.Spec.Prometheus.Enabled {
+		deployments = append(deployments, createPrometheusDeploymentElements(vmo, pvcToAdMap)...)
 	}
 
 	// Elasticsearch
-	if sauron.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Elasticsearch.Enabled {
 		var es Elasticsearch = ElasticsearchBasic{}
-		deployments = append(deployments, es.createElasticsearchDeploymentElements(sauron, pvcToAdMap)...)
+		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
 	}
 
 	// Kibana
-	if sauron.Spec.Kibana.Enabled {
-		elasticsearchUrl := fmt.Sprintf("http://%s%s-%s:%d/", constants.SauronServiceNamePrefix, sauron.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
-		deployment := createDeploymentElement(sauron, nil, &sauron.Spec.Kibana.Resources, config.Kibana)
+	if vmo.Spec.Kibana.Enabled {
+		elasticsearchUrl := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
+		deployment := createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.Kibana)
 
-		deployment.Spec.Replicas = resources.NewVal(sauron.Spec.Kibana.Replicas)
-		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(sauron.Name, config.Kibana.Name)
+		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "ELASTICSEARCH_HOSTS", Value: elasticsearchUrl},
 		}
@@ -162,17 +162,17 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *co
 	}
 
 	// API
-	deployment := createDeploymentElement(sauron, nil, nil, config.Api)
+	deployment := createDeploymentElement(vmo, nil, nil, config.Api)
 	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Api.ImagePullPolicy
-	deployment.Spec.Replicas = resources.NewVal(sauron.Spec.Api.Replicas)
-	deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(sauron.Name, config.Api.Name)
+	deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Api.Replicas)
+	deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Api.Name)
 	deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-		{Name: "VMI_NAME", Value: sauron.Name},
-		{Name: "NAMESPACE", Value: sauron.Namespace},
+		{Name: "VMI_NAME", Value: vmo.Name},
+		{Name: "NAMESPACE", Value: vmo.Namespace},
 		{Name: "ENV_NAME", Value: operatorConfig.EnvName},
 	}
-	if len(sauron.Spec.NatGatewayIPs) > 0 {
-		deployment.Spec.Template.Spec.Containers[0].Args = []string{fmt.Sprintf("--natGatewayIPs=%s", strings.Join(sauron.Spec.NatGatewayIPs, ","))}
+	if len(vmo.Spec.NatGatewayIPs) > 0 {
+		deployment.Spec.Template.Spec.Containers[0].Args = []string{fmt.Sprintf("--natGatewayIPs=%s", strings.Join(vmo.Spec.NatGatewayIPs, ","))}
 	}
 
 	deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 15
@@ -197,39 +197,39 @@ func createVolumeElement(pvcName string) corev1.Volume {
 	}
 }
 
-// Creates a deployment element for the given Sauron and component.
-func createDeploymentElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, sauronStorage *vmcontrollerv1.Storage,
-	sauronResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) *appsv1.Deployment {
-	return createDeploymentElementByPvcIndex(sauron, sauronStorage, sauronResources, componentDetails, -1)
+// Creates a deployment element for the given VMO and component.
+func createDeploymentElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage,
+	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) *appsv1.Deployment {
+	return createDeploymentElementByPvcIndex(vmo, vmoStorage, vmoResources, componentDetails, -1)
 }
 
-// Creates a deployment element for the given Sauron and component.  A non-negative pvcIndex is used to indicate which
+// Creates a deployment element for the given VMO and component.  A non-negative pvcIndex is used to indicate which
 // PVC in the list of PVCs should be used for this particular deployment.
-func createDeploymentElementByPvcIndex(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, sauronStorage *vmcontrollerv1.Storage,
-	sauronResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, pvcIndex int) *appsv1.Deployment {
+func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage,
+	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, pvcIndex int) *appsv1.Deployment {
 
-	labels := resources.GetSpecId(sauron.Name, componentDetails.Name)
+	labels := resources.GetSpecId(vmo.Name, componentDetails.Name)
 	var deploymentName string
 	if pvcIndex < 0 {
-		deploymentName = resources.GetMetaName(sauron.Name, componentDetails.Name)
+		deploymentName = resources.GetMetaName(vmo.Name, componentDetails.Name)
 		pvcIndex = 0
 	} else {
-		deploymentName = resources.GetMetaName(sauron.Name, fmt.Sprintf("%s-%d", componentDetails.Name, pvcIndex))
+		deploymentName = resources.GetMetaName(vmo.Name, fmt.Sprintf("%s-%d", componentDetails.Name, pvcIndex))
 	}
 
 	var volumes []corev1.Volume
-	if sauronStorage != nil && sauronStorage.Size != "" {
+	if vmoStorage != nil && vmoStorage.Size != "" {
 		// Create volume element for this component, attaching to that component's current known PVC (if set)
-		volumes = append(volumes, createVolumeElement(sauronStorage.PvcNames[pvcIndex]))
+		volumes = append(volumes, createVolumeElement(vmoStorage.PvcNames[pvcIndex]))
 		labels["index"] = strconv.Itoa(pvcIndex)
 	}
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(sauron),
+			Labels:          resources.GetMetaLabels(vmo),
 			Name:            deploymentName,
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: resources.NewVal(1),
@@ -243,7 +243,7 @@ func createDeploymentElementByPvcIndex(sauron *vmcontrollerv1.VerrazzanoMonitori
 				Spec: corev1.PodSpec{
 					Volumes: volumes,
 					Containers: []corev1.Container{
-						resources.CreateContainerElement(sauronStorage, sauronResources, componentDetails),
+						resources.CreateContainerElement(vmoStorage, vmoResources, componentDetails),
 					},
 					TerminationGracePeriodSeconds: resources.New64Val(1),
 				},
@@ -254,11 +254,11 @@ func createDeploymentElementByPvcIndex(sauron *vmcontrollerv1.VerrazzanoMonitori
 
 // Helper function that returns the AD name for the PVC at the given index in the given Storage element.  Under any
 // error condition, an empty string is returned.
-func getAvailabilityDomainForPvcIndex(sauronStorage *vmcontrollerv1.Storage, pvcToAdMap map[string]string, pvcIndex int) string {
-	if sauronStorage == nil || pvcIndex > len(sauronStorage.PvcNames)-1 || pvcIndex < 0 {
+func getAvailabilityDomainForPvcIndex(vmoStorage *vmcontrollerv1.Storage, pvcToAdMap map[string]string, pvcIndex int) string {
+	if vmoStorage == nil || pvcIndex > len(vmoStorage.PvcNames)-1 || pvcIndex < 0 {
 		return ""
 	}
-	if ad, ok := pvcToAdMap[sauronStorage.PvcNames[pvcIndex]]; ok {
+	if ad, ok := pvcToAdMap[vmoStorage.PvcNames[pvcIndex]]; ok {
 		return ad
 	}
 	return ""

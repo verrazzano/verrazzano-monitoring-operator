@@ -9,14 +9,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, auth []byte) (*corev1.Secret, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, auth []byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(sauron),
+			Labels:          resources.GetMetaLabels(vmo),
 			Name:            secretName,
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Data: map[string][]byte{
 			"auth": auth,
@@ -24,14 +24,14 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string,
 	}, nil
 }
 
-func NewTLS(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, data map[string][]byte) (*corev1.Secret, error) {
+func NewTLS(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, data map[string][]byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(sauron),
+			Labels:          resources.GetMetaLabels(vmo),
 			Name:            secretName,
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Data: data,
 	}, nil

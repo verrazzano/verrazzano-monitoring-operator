@@ -3,9 +3,9 @@
 package diff
 
 import (
+	"github.com/stretchr/testify/assert"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"testing"
@@ -95,10 +95,10 @@ func TestParseElement(t *testing.T) {
 func TestFilterDiffs01(t *testing.T) {
 	input := `{
   ObjectMeta: {
-   Name: "sauron-foo1-grafana",
+   Name: "vmo-foo1-grafana",
    GenerateName: "",
    Namespace: "foo1",
--  SelfLink: "/apis/apps/v1/namespaces/foo1/deployments/sauron-foo1-grafana",
+-  SelfLink: "/apis/apps/v1/namespaces/foo1/deployments/vmo-foo1-grafana",
 -  UID: "a90900b7-2a35-11e9-86dc-0a580aed2744",
 -  ResourceVersion: "17752256",
 -  Generation: 1,
@@ -119,10 +119,10 @@ func TestFilterDiffs01(t *testing.T) {
 func TestFilterDiffs02(t *testing.T) {
 	input := `{
   ObjectMeta: {
-   Name: "sauron-foo1-grafana",
+   Name: "vmo-foo1-grafana",
    GenerateName: "",
    Namespace: "foo1",
--  SelfLink: "/apis/apps/v1/namespaces/foo1/deployments/sauron-foo1-grafana",
+-  SelfLink: "/apis/apps/v1/namespaces/foo1/deployments/vmo-foo1-grafana",
 -  UID: "a90900b7-2a35-11e9-86dc-0a580aed2744",
 -  ResourceVersion: "17752256",
 -  Generation: 1,
@@ -147,10 +147,10 @@ func TestFilterDiffs02(t *testing.T) {
 `
 	expected := `{
   ObjectMeta: {
-   Name: "sauron-foo1-grafana",
+   Name: "vmo-foo1-grafana",
    GenerateName: "",
    Namespace: "foo1",
-   SelfLink: "/apis/apps/v1/namespaces/foo1/deployments/sauron-foo1-grafana",
+   SelfLink: "/apis/apps/v1/namespaces/foo1/deployments/vmo-foo1-grafana",
    UID: "a90900b7-2a35-11e9-86dc-0a580aed2744",
    ResourceVersion: "17752256",
    Generation: 1,
@@ -173,7 +173,7 @@ func TestFilterDiffs02(t *testing.T) {
 func TestFilterDiffs03(t *testing.T) {
 	input := `{
   ObjectMeta: {
-   Name: "sauron-foo1-grafana",
+   Name: "vmo-foo1-grafana",
 +  Foo1: "foo1",
 +  Foo2: "foo2",
 +  Foo3: "foo3",
@@ -190,7 +190,7 @@ func TestFilterDiffs03(t *testing.T) {
 func TestFilterDiffs04(t *testing.T) {
 	input := `{
   ObjectMeta: {
-   Name: "sauron-foo1-grafana",
+   Name: "vmo-foo1-grafana",
 -  Foo1: "foo1",
 -  Foo2: "foo2",
 -  Foo3: "foo3",
@@ -608,12 +608,12 @@ func TestCompare(t *testing.T) {
 	assert.NotEqual(t, "", CompareIgnoreTargetEmpties(liveDeployment, desiredDeployment), "Different sized list in desired object from live")
 }
 
-// Other examples of changes on the Sauron spec
+// Other examples of changes on the VMO spec
 func TestCompare1(t *testing.T) {
-	// Reducing the PVCs list of a live Sauron - should get reported as a diff
-	liveSauron := v1.VerrazzanoMonitoringInstance{}
-	liveSauron.Spec.Elasticsearch.Storage.PvcNames = []string{"foo", "bar"}
-	desiredSauron := v1.VerrazzanoMonitoringInstance{}
-	desiredSauron.Spec.Elasticsearch.Storage.PvcNames = []string{"foo"}
-	assert.NotEqual(t, "", CompareIgnoreTargetEmpties(liveSauron, desiredSauron), "Different sized PVC lists")
+	// Reducing the PVCs list of a live VMO - should get reported as a diff
+	liveVMO := v1.VerrazzanoMonitoringInstance{}
+	liveVMO.Spec.Elasticsearch.Storage.PvcNames = []string{"foo", "bar"}
+	desiredVMO := v1.VerrazzanoMonitoringInstance{}
+	desiredVMO.Spec.Elasticsearch.Storage.PvcNames = []string{"foo"}
+	assert.NotEqual(t, "", CompareIgnoreTargetEmpties(liveVMO, desiredVMO), "Different sized PVC lists")
 }

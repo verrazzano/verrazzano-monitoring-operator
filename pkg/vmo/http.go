@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// StartHTTPServer runs an embedded HTTP server for any Sauron handlers as a "resilient" goroutine meaning it runs in
+// StartHTTPServer runs an embedded HTTP server for any VMO handlers as a "resilient" goroutine meaning it runs in
 // the background and will be restarted if it dies.
 func StartHTTPServer(controller *Controller) {
 	setupHandlers(controller)
@@ -17,7 +17,7 @@ func StartHTTPServer(controller *Controller) {
 		glog.Info("Starting HTTP server")
 		err := http.ListenAndServe(":8080", nil)
 		if err != nil {
-			glog.Errorf("Failed to start HTTP server for sauron: %s", err)
+			glog.Errorf("Failed to start HTTP server for vmo: %s", err)
 		}
 	}, time.Second*3, wait.NeverStop)
 }

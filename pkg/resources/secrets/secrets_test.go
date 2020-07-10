@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-func TestSauronNoSecret(t *testing.T) {
+func TestVMONoSecret(t *testing.T) {
 	/*
-		sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 			Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 				Grafana: vmcontrollerv1.Grafana{
 					Enabled: true,
@@ -27,7 +27,7 @@ func TestSauronNoSecret(t *testing.T) {
 			},
 		}
 
-		secrets, err := New(sauron)
+		secrets, err := New(vmo)
 		if err != nil {
 			t.Error(err)
 		}
@@ -35,22 +35,22 @@ func TestSauronNoSecret(t *testing.T) {
 	*/
 }
 
-func TestSauronWithCascadingDelete(t *testing.T) {
+func TestVMOWithCascadingDelete(t *testing.T) {
 	// With CascadingDelete
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 		},
 	}
-	secret, _ := New(sauron, "secret", []byte{})
-	tls, _ := NewTLS(sauron, "secret", map[string][]byte{})
+	secret, _ := New(vmo, "secret", []byte{})
+	tls, _ := NewTLS(vmo, "secret", map[string][]byte{})
 	assert.Equal(t, 1, len(secret.ObjectMeta.OwnerReferences), "OwnerReferences is not set with CascadingDelete true")
 	assert.Equal(t, 1, len(tls.ObjectMeta.OwnerReferences), "OwnerReferences is not set with CascadingDelete true")
 
 	// Without CascadingDelete
-	sauron.Spec.CascadingDelete = false
-	secret, _ = New(sauron, "secret", []byte{})
-	tls, _ = NewTLS(sauron, "secret", map[string][]byte{})
+	vmo.Spec.CascadingDelete = false
+	secret, _ = New(vmo, "secret", []byte{})
+	tls, _ = NewTLS(vmo, "secret", map[string][]byte{})
 	assert.Equal(t, 0, len(secret.ObjectMeta.OwnerReferences), "OwnerReferences is set even with CascadingDelete false")
 	assert.Equal(t, 0, len(tls.ObjectMeta.OwnerReferences), "OwnerReferences is set even with CascadingDelete false")
 }

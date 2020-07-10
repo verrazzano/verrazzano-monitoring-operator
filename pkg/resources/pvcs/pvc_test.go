@@ -6,12 +6,12 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"testing"
 
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
-func TestSauronNoStorageVolumes(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMONoStorageVolumes(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
@@ -27,15 +27,15 @@ func TestSauronNoStorageVolumes(t *testing.T) {
 			},
 		},
 	}
-	pvcs, err := New(sauron, constants.OciFlexVolumeProvisioner)
+	pvcs, err := New(vmo, constants.OciFlexVolumeProvisioner)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 0, len(pvcs), "Length of generated PVCs")
 }
 
-func TestSauronWithStorageVolumes1(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMOWithStorageVolumes1(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
@@ -63,15 +63,15 @@ func TestSauronWithStorageVolumes1(t *testing.T) {
 			},
 		},
 	}
-	pvcs, err := New(sauron, constants.OciFlexVolumeProvisioner)
+	pvcs, err := New(vmo, constants.OciFlexVolumeProvisioner)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 2, len(pvcs), "Length of generated PVCs")
 }
 
-func TestSauronWithStorageVolumes2(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMOWithStorageVolumes2(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
@@ -83,16 +83,16 @@ func TestSauronWithStorageVolumes2(t *testing.T) {
 			},
 		},
 	}
-	pvcs, err := New(sauron, constants.OciFlexVolumeProvisioner)
+	pvcs, err := New(vmo, constants.OciFlexVolumeProvisioner)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 1, len(pvcs), "Length of generated PVCs")
 }
 
-func TestSauronWithCascadingDelete(t *testing.T) {
+func TestVMOWithCascadingDelete(t *testing.T) {
 	// With CascadingDelete
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
@@ -121,7 +121,7 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	pvcs, err := New(sauron, constants.OciFlexVolumeProvisioner)
+	pvcs, err := New(vmo, constants.OciFlexVolumeProvisioner)
 	if err != nil {
 		t.Error(err)
 	}
@@ -131,8 +131,8 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 	}
 
 	// Without CascadingDelete
-	sauron.Spec.CascadingDelete = false
-	pvcs, err = New(sauron, constants.OciFlexVolumeProvisioner)
+	vmo.Spec.CascadingDelete = false
+	pvcs, err = New(vmo, constants.OciFlexVolumeProvisioner)
 	if err != nil {
 		t.Error(err)
 	}

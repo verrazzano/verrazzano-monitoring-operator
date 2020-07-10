@@ -16,13 +16,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func createIngressRuleElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) extensions_v1beta1.IngressRule {
-	serviceName := resources.GetMetaName(sauron.Name, componentDetails.Name)
+func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) extensions_v1beta1.IngressRule {
+	serviceName := resources.GetMetaName(vmo.Name, componentDetails.Name)
 	endpointName := componentDetails.EndpointName
 	if endpointName == "" {
 		endpointName = componentDetails.Name
 	}
-	fqdn := fmt.Sprintf("%s.%s", endpointName, sauron.Spec.URI)
+	fqdn := fmt.Sprintf("%s.%s", endpointName, vmo.Spec.URI)
 
 	return extensions_v1beta1.IngressRule{
 		Host: fqdn,
@@ -42,21 +42,21 @@ func createIngressRuleElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstanc
 	}
 }
 
-func createIngressElementNoBasicAuth(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule extensions_v1beta1.IngressRule) (*extensions_v1beta1.Ingress, error) {
+func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule extensions_v1beta1.IngressRule) (*extensions_v1beta1.Ingress, error) {
 	var hosts = []string{hostName}
 	ingress := &extensions_v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
-			Labels:          resources.GetMetaLabels(sauron),
-			Name:            fmt.Sprintf("%s%s-%s", constants.SauronServiceNamePrefix, sauron.Name, componentDetails.Name),
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Labels:          resources.GetMetaLabels(vmo),
+			Name:            fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, componentDetails.Name),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Spec: extensions_v1beta1.IngressSpec{
 			TLS: []extensions_v1beta1.IngressTLS{
 				{
 					Hosts:      hosts,
-					SecretName: sauron.Name + "-tls",
+					SecretName: vmo.Name + "-tls",
 				},
 			},
 			Rules: []extensions_v1beta1.IngressRule{ingressRule},
@@ -65,12 +65,12 @@ func createIngressElementNoBasicAuth(sauron *vmcontrollerv1.VerrazzanoMonitoring
 
 	ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
 
-	if len(sauron.Spec.IngressTargetDNSName) != 0 {
-		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = sauron.Spec.IngressTargetDNSName
+	if len(vmo.Spec.IngressTargetDNSName) != 0 {
+		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = vmo.Spec.IngressTargetDNSName
 		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDnsTTLSeconds)
 	}
 	// if we specify AutoSecret: true we attach an annotation that will create a cert
-	if sauron.Spec.AutoSecret {
+	if vmo.Spec.AutoSecret {
 		// we must create a secret name too
 		ingress.Annotations["kubernetes.io/tls-acme"] = "true"
 	} else {
@@ -79,103 +79,103 @@ func createIngressElementNoBasicAuth(sauron *vmcontrollerv1.VerrazzanoMonitoring
 	return ingress, nil
 }
 
-func addBasicAuthIngressAnnotations(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *extensions_v1beta1.Ingress, healthLocations string) {
+func addBasicAuthIngressAnnotations(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *extensions_v1beta1.Ingress, healthLocations string) {
 	ingress.Annotations["nginx.ingress.kubernetes.io/auth-type"] = "basic"
-	ingress.Annotations["nginx.ingress.kubernetes.io/auth-secret"] = sauron.Spec.SecretName
-	ingress.Annotations["nginx.ingress.kubernetes.io/auth-realm"] = sauron.Spec.URI + " auth"
+	ingress.Annotations["nginx.ingress.kubernetes.io/auth-secret"] = vmo.Spec.SecretName
+	ingress.Annotations["nginx.ingress.kubernetes.io/auth-realm"] = vmo.Spec.URI + " auth"
 	//For custom location snippets k8s recommends we use server-snippet instead of configuration-snippet
 	// With ingress controller 0.24.1 our code using configuration-snippet no longer works
 	ingress.Annotations["nginx.ingress.kubernetes.io/server-snippet"] = healthLocations
 }
 
-func createIngressElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule extensions_v1beta1.IngressRule, healthLocations string) (*extensions_v1beta1.Ingress, error) {
-	ingress, err := createIngressElementNoBasicAuth(sauron, hostName, componentDetails, ingressRule)
+func createIngressElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule extensions_v1beta1.IngressRule, healthLocations string) (*extensions_v1beta1.Ingress, error) {
+	ingress, err := createIngressElementNoBasicAuth(vmo, hostName, componentDetails, ingressRule)
 	if err != nil {
 		return ingress, err
 	}
-	addBasicAuthIngressAnnotations(sauron, ingress, healthLocations)
+	addBasicAuthIngressAnnotations(vmo, ingress, healthLocations)
 	return ingress, nil
 }
 
-// New will return a new Service for Sauron that needs to executed for on Complete
-func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta1.Ingress, error) {
+// New will return a new Service for VMO that needs to executed for on Complete
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta1.Ingress, error) {
 	var ingresses []*extensions_v1beta1.Ingress
 
 	// Only create ingress if URI and secret name specified
-	if len(sauron.Spec.URI) <= 0 {
+	if len(vmo.Spec.URI) <= 0 {
 		glog.V(6).Info("URI not specified, skipping ingress creation")
 		return ingresses, nil
 	}
 
 	// Create Ingress Rule for API Endpoint
-	ingRule := createIngressRuleElement(sauron, config.Api)
-	host := config.Api.Name + "." + sauron.Spec.URI
-	healthLocations := noAuthOnHealthCheckSnippet(sauron, "", config.Api)
-	ingress, err := createIngressElement(sauron, host, config.Api, ingRule, healthLocations)
+	ingRule := createIngressRuleElement(vmo, config.Api)
+	host := config.Api.Name + "." + vmo.Spec.URI
+	healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Api)
+	ingress, err := createIngressElement(vmo, host, config.Api, ingRule, healthLocations)
 	if err != nil {
 		return ingresses, err
 	}
 	ingresses = append(ingresses, ingress)
 
-	if sauron.Spec.Grafana.Enabled {
+	if vmo.Spec.Grafana.Enabled {
 		// Create Ingress Rule for Grafana Endpoint
-		ingRule = createIngressRuleElement(sauron, config.Grafana)
-		host := config.Grafana.Name + "." + sauron.Spec.URI
-		ingress, err := createIngressElementNoBasicAuth(sauron, host, config.Grafana, ingRule)
+		ingRule = createIngressRuleElement(vmo, config.Grafana)
+		host := config.Grafana.Name + "." + vmo.Spec.URI
+		ingress, err := createIngressElementNoBasicAuth(vmo, host, config.Grafana, ingRule)
 		if err != nil {
 			return ingresses, err
 		}
 		ingresses = append(ingresses, ingress)
 	}
-	if sauron.Spec.Prometheus.Enabled {
+	if vmo.Spec.Prometheus.Enabled {
 		// Create Ingress Rule for Prometheus Endpoint
-		ingRule = createIngressRuleElement(sauron, config.Prometheus)
-		host = config.Prometheus.Name + "." + sauron.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(sauron, "", config.Prometheus)
-		ingress, err = createIngressElement(sauron, host, config.Prometheus, ingRule, healthLocations)
+		ingRule = createIngressRuleElement(vmo, config.Prometheus)
+		host = config.Prometheus.Name + "." + vmo.Spec.URI
+		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Prometheus)
+		ingress, err = createIngressElement(vmo, host, config.Prometheus, ingRule, healthLocations)
 		if err != nil {
 			return ingresses, err
 		}
 		ingresses = append(ingresses, ingress)
 
-		ingRule = createIngressRuleElement(sauron, config.PrometheusGW)
-		host = config.PrometheusGW.Name + "." + sauron.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(sauron, "", config.PrometheusGW)
-		ingress, err = createIngressElement(sauron, host, config.PrometheusGW, ingRule, healthLocations)
+		ingRule = createIngressRuleElement(vmo, config.PrometheusGW)
+		host = config.PrometheusGW.Name + "." + vmo.Spec.URI
+		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.PrometheusGW)
+		ingress, err = createIngressElement(vmo, host, config.PrometheusGW, ingRule, healthLocations)
 		if err != nil {
 			return ingresses, err
 		}
 		ingresses = append(ingresses, ingress)
 	}
-	if sauron.Spec.AlertManager.Enabled {
+	if vmo.Spec.AlertManager.Enabled {
 		// Create Ingress Rule for AlertManager Endpoint
-		ingRule = createIngressRuleElement(sauron, config.AlertManager)
-		host = config.AlertManager.Name + "." + sauron.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(sauron, "", config.AlertManager)
-		ingress, err = createIngressElement(sauron, host, config.AlertManager, ingRule, healthLocations)
+		ingRule = createIngressRuleElement(vmo, config.AlertManager)
+		host = config.AlertManager.Name + "." + vmo.Spec.URI
+		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.AlertManager)
+		ingress, err = createIngressElement(vmo, host, config.AlertManager, ingRule, healthLocations)
 		if err != nil {
 			return ingresses, err
 		}
 		ingresses = append(ingresses, ingress)
 	}
-	if sauron.Spec.Kibana.Enabled {
+	if vmo.Spec.Kibana.Enabled {
 		// Create Ingress Rule for Kibana Endpoint
-		ingRule = createIngressRuleElement(sauron, config.Kibana)
-		host := config.Kibana.Name + "." + sauron.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(sauron, "", config.Kibana)
+		ingRule = createIngressRuleElement(vmo, config.Kibana)
+		host := config.Kibana.Name + "." + vmo.Spec.URI
+		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Kibana)
 
-		ingress, err = createIngressElement(sauron, host, config.Kibana, ingRule, healthLocations)
+		ingress, err = createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
 		if err != nil {
 			return ingresses, err
 		}
 		ingresses = append(ingresses, ingress)
 	}
-	if sauron.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Elasticsearch.Enabled {
 		var ingress *extensions_v1beta1.Ingress
-		ingRule = createIngressRuleElement(sauron, config.ElasticsearchIngest)
-		host = config.ElasticsearchIngest.EndpointName + "." + sauron.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(sauron, "", config.ElasticsearchIngest)
-		ingress, err = createIngressElement(sauron, host, config.ElasticsearchIngest, ingRule, healthLocations)
+		ingRule = createIngressRuleElement(vmo, config.ElasticsearchIngest)
+		host = config.ElasticsearchIngest.EndpointName + "." + vmo.Spec.URI
+		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.ElasticsearchIngest)
+		ingress, err = createIngressElement(vmo, host, config.ElasticsearchIngest, ingRule, healthLocations)
 		if err != nil {
 			return ingresses, err
 		}
@@ -188,12 +188,12 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1b
 
 // noAuthOnHealthCheckSnippet returns an NGINX configuration snippet with Basic Authentication disabled for the the
 // specified component's health check path.
-func noAuthOnHealthCheckSnippet(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, disambiguationRoot string, componentDetails config.ComponentDetails) string {
+func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, disambiguationRoot string, componentDetails config.ComponentDetails) string {
 	// Added = check so nginx matches only this path i.e. strict check
 	return `location = ` + disambiguationRoot + componentDetails.LivenessHTTPPath + ` {
    auth_basic off;
    auth_request off;
-   proxy_pass  ` + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d%s", constants.SauronServiceNamePrefix+sauron.Name+"-"+componentDetails.Name, sauron.Namespace, componentDetails.Port, componentDetails.LivenessHTTPPath) + `;
+   proxy_pass  ` + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d%s", constants.VMOServiceNamePrefix+vmo.Name+"-"+componentDetails.Name, vmo.Namespace, componentDetails.Port, componentDetails.LivenessHTTPPath) + `;
 }
 `
 }
