@@ -29,7 +29,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 
 	// Configmap for Grafana dashboard
 	dashboardTemplateMap := map[string]string{"vmo-dashboard-provider.yml": constants.DashboardProviderTmpl}
-	// Only create the CM if it doesnt exist. This will allow us to override the provider file e.g. Tiburon
+	// Only create the CM if it doesnt exist. This will allow us to override the provider file e.g. Verrazzano
 	err := createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Grafana.DashboardsConfigMap, dashboardTemplateMap)
 	if err != nil {
 		glog.Errorf("Failed to create dashboard configmap %s, for reason %v", vmo.Spec.Grafana.DashboardsConfigMap, err)
