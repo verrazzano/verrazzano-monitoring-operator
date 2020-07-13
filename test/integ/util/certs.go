@@ -104,7 +104,7 @@ func GenerateKeys(host string, domain string, validFrom string, validFor time.Du
 		Subject: pkix.Name{
 			Country:            []string{"US"},
 			Locality:           []string{"Portland"},
-			Organization:       []string{"Sauron"},
+			Organization:       []string{"VMO"},
 			OrganizationalUnit: []string{"PDX"},
 			CommonName:         domain,
 		},

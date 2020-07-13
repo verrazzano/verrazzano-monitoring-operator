@@ -11,14 +11,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, cronjobName string, schedule string, initContainers []corev1.Container,
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, cronjobName string, schedule string, initContainers []corev1.Container,
 	containers []corev1.Container, volumes []corev1.Volume) *batchv1beta1.CronJob {
 	one := int32(1)
 	return &batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            cronjobName,
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Spec: batchv1beta1.CronJobSpec{
 			Schedule:                   schedule,

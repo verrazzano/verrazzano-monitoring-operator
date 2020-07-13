@@ -10,26 +10,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// New will return a new Service for Sauron that needs to executed for on Complete
-func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
+// New will return a new Service for VMO that needs to executed for on Complete
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	var pvcList []*corev1.PersistentVolumeClaim
 
-	if sauron.Spec.Prometheus.Enabled && sauron.Spec.Prometheus.Storage.Size != "" {
-		pvcs, err := createPvcElements(sauron, &sauron.Spec.Prometheus.Storage, storageClassName)
+	if vmo.Spec.Prometheus.Enabled && vmo.Spec.Prometheus.Storage.Size != "" {
+		pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
 		pvcList = append(pvcList, pvcs...)
 	}
-	if sauron.Spec.Elasticsearch.Enabled && sauron.Spec.Elasticsearch.Storage.Size != "" {
-		pvcs, err := createPvcElements(sauron, &sauron.Spec.Elasticsearch.Storage, storageClassName)
+	if vmo.Spec.Elasticsearch.Enabled && vmo.Spec.Elasticsearch.Storage.Size != "" {
+		pvcs, err := createPvcElements(vmo, &vmo.Spec.Elasticsearch.Storage, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
 		pvcList = append(pvcList, pvcs...)
 	}
-	if sauron.Spec.Grafana.Enabled && sauron.Spec.Grafana.Storage.Size != "" {
-		pvcs, err := createPvcElements(sauron, &sauron.Spec.Grafana.Storage, storageClassName)
+	if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
+		pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
@@ -39,19 +39,19 @@ func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName s
 }
 
 // Returns slice of pvc elements
-func createPvcElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, sauronStorage *vmcontrollerv1.Storage, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
-	storageQuantity, err := resource.ParseQuantity(sauronStorage.Size)
+func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
+	storageQuantity, err := resource.ParseQuantity(vmoStorage.Size)
 	if err != nil {
 		return nil, err
 	}
 	var pvcList []*corev1.PersistentVolumeClaim
-	for _, pvcName := range sauronStorage.PvcNames {
+	for _, pvcName := range vmoStorage.PvcNames {
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:          resources.GetMetaLabels(sauron),
+				Labels:          resources.GetMetaLabels(vmo),
 				Name:            pvcName,
-				Namespace:       sauron.Namespace,
-				OwnerReferences: resources.GetOwnerReferences(sauron),
+				Namespace:       vmo.Namespace,
+				OwnerReferences: resources.GetOwnerReferences(vmo),
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{

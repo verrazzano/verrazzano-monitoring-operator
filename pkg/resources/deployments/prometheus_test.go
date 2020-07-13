@@ -3,18 +3,18 @@
 package deployments
 
 import (
+	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
 func TestPrometheusDeploymentsNoStorage(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "my-sauron",
+			Name: "my-vmo",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Prometheus: vmcontrollerv1.Prometheus{
@@ -23,11 +23,11 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
-	promDeployment, err := getDeploymentByName(constants.SauronServiceNamePrefix+"my-sauron-prometheus-0", deployments)
+	promDeployment, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,9 +40,9 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 }
 
 func TestPrometheusDeploymentsWithStorage(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "my-sauron",
+			Name: "my-vmo",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Prometheus: vmcontrollerv1.Prometheus{
@@ -55,11 +55,11 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
-	promDeployment, err := getDeploymentByName(constants.SauronServiceNamePrefix+"my-sauron-prometheus-0", deployments)
+	promDeployment, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,9 +71,9 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 }
 
 func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "my-sauron",
+			Name: "my-vmo",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Prometheus: vmcontrollerv1.Prometheus{
@@ -87,23 +87,23 @@ func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
 		},
 	}
 
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 5, len(deployments), "Length of generated deployments")
 
-	promDeployment0, err := getDeploymentByName(constants.SauronServiceNamePrefix+"my-sauron-prometheus-0", deployments)
+	promDeployment0, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, "prometheus-pvc", promDeployment0.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName, "Associated pvc for Prometheus 0")
-	promDeployment1, err := getDeploymentByName(constants.SauronServiceNamePrefix+"my-sauron-prometheus-1", deployments)
+	promDeployment1, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-1", deployments)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, "prometheus-pvc-1", promDeployment1.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName, "Associated pvc for Prometheus 1")
-	promDeployment2, err := getDeploymentByName(constants.SauronServiceNamePrefix+"my-sauron-prometheus-2", deployments)
+	promDeployment2, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-2", deployments)
 	if err != nil {
 		t.Error(err)
 	}

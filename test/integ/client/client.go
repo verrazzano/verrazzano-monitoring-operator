@@ -13,34 +13,34 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
-// SauronCR provides a client interface for sauron CRs.
-type SauronCR interface {
-	// Create creates a sauron CR with the desired CR.
+// VMOCR provides a client interface for vmo CRs.
+type VMOCR interface {
+	// Create creates a vmo CR with the desired CR.
 	Create(ctx context.Context, cl *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error)
 
-	// Get returns the specified sauron CR.
+	// Get returns the specified vmo CR.
 	Get(ctx context.Context, namespace, name string) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error)
 
-	// Delete deletes the specified sauron CR.
+	// Delete deletes the specified vmo CR.
 	Delete(ctx context.Context, namespace, name string) error
 
-	// Update updates the sauron CR.
-	Update(ctx context.Context, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error)
+	// Update updates the vmo CR.
+	Update(ctx context.Context, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error)
 }
 
-type sauronCR struct {
+type vmoCR struct {
 	client     *rest.RESTClient
 	crScheme   *runtime.Scheme
 	paramCodec runtime.ParameterCodec
 }
 
-// NewCRClient creates a new sauron CR client.
-func NewCRClient(cfg *rest.Config) (SauronCR, error) {
+// NewCRClient creates a new vmo CR client.
+func NewCRClient(cfg *rest.Config) (VMOCR, error) {
 	cli, crScheme, err := new1(cfg)
 	if err != nil {
 		return nil, err
 	}
-	return &sauronCR{
+	return &vmoCR{
 		client:     cli,
 		crScheme:   crScheme,
 		paramCodec: runtime.NewParameterCodec(crScheme),
@@ -69,21 +69,21 @@ func new1(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 	return client, crScheme, nil
 }
 
-func (c *sauronCR) Create(ctx context.Context, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
-	if len(sauron.Namespace) == 0 {
-		return nil, errors.New("need to set metadata.Namespace in sauron CR")
+func (c *vmoCR) Create(ctx context.Context, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
+	if len(vmo.Namespace) == 0 {
+		return nil, errors.New("need to set metadata.Namespace in vmo CR")
 	}
 	result := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	err := c.client.Post().
-		Namespace(sauron.Namespace).
+		Namespace(vmo.Namespace).
 		Resource("verrazzanomonitoringinstances").
-		Body(sauron).
+		Body(vmo).
 		Do(ctx).
 		Into(result)
 	return result, err
 }
 
-func (c *sauronCR) Get(ctx context.Context, namespace, name string) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
+func (c *vmoCR) Get(ctx context.Context, namespace, name string) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
 	result := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	err := c.client.Get().
 		Namespace(namespace).
@@ -94,7 +94,7 @@ func (c *sauronCR) Get(ctx context.Context, namespace, name string) (*vmcontroll
 	return result, err
 }
 
-func (c *sauronCR) Delete(ctx context.Context, namespace, name string) error {
+func (c *vmoCR) Delete(ctx context.Context, namespace, name string) error {
 	return c.client.Delete().
 		Namespace(namespace).
 		Resource("verrazzanomonitoringinstances").
@@ -103,20 +103,20 @@ func (c *sauronCR) Delete(ctx context.Context, namespace, name string) error {
 		Error()
 }
 
-func (c *sauronCR) Update(ctx context.Context, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
-	if len(sauron.Namespace) == 0 {
-		return nil, errors.New("need to set metadata.Namespace in sauron CR")
+func (c *vmoCR) Update(ctx context.Context, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*vmcontrollerv1.VerrazzanoMonitoringInstance, error) {
+	if len(vmo.Namespace) == 0 {
+		return nil, errors.New("need to set metadata.Namespace in vmo CR")
 	}
-	if len(sauron.Name) == 0 {
-		return nil, errors.New("need to set metadata.Name in sauron CR")
+	if len(vmo.Name) == 0 {
+		return nil, errors.New("need to set metadata.Name in vmo CR")
 	}
 
 	result := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	err := c.client.Put().
-		Namespace(sauron.Namespace).
+		Namespace(vmo.Namespace).
 		Resource("verrazzanomonitoringinstances").
-		Name(sauron.Name).
-		Body(sauron).
+		Name(vmo.Name).
+		Body(vmo).
 		Do(ctx).
 		Into(result)
 	return result, err

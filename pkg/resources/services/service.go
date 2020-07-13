@@ -10,55 +10,55 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// New creates a new Service for a Sauron resource. It also sets
+// New creates a new Service for a VMO resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
-// the Sauron resource that 'owns' it.
-func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, error) {
+// the VMO resource that 'owns' it.
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, error) {
 	var services []*corev1.Service
 
-	if sauron.Spec.Grafana.Enabled {
-		service := createServiceElement(sauron, config.Grafana)
+	if vmo.Spec.Grafana.Enabled {
+		service := createServiceElement(vmo, config.Grafana)
 		services = append(services, service)
 	}
-	if sauron.Spec.Prometheus.Enabled {
-		service := createServiceElement(sauron, config.Prometheus)
+	if vmo.Spec.Prometheus.Enabled {
+		service := createServiceElement(vmo, config.Prometheus)
 		service.Spec.Ports = append(service.Spec.Ports, resources.GetServicePort(config.NodeExporter))
 		services = append(services, service)
-		services = append(services, createServiceElement(sauron, config.PrometheusGW))
+		services = append(services, createServiceElement(vmo, config.PrometheusGW))
 	}
-	if sauron.Spec.AlertManager.Enabled {
-		alertManagerService := createServiceElement(sauron, config.AlertManager)
+	if vmo.Spec.AlertManager.Enabled {
+		alertManagerService := createServiceElement(vmo, config.AlertManager)
 		services = append(services, alertManagerService)
 
-		alertManagerClusterService := createServiceElement(sauron, config.AlertManagerCluster)
-		alertManagerClusterService.Spec.Selector = resources.GetSpecId(sauron.Name, config.AlertManager.Name)
+		alertManagerClusterService := createServiceElement(vmo, config.AlertManagerCluster)
+		alertManagerClusterService.Spec.Selector = resources.GetSpecId(vmo.Name, config.AlertManager.Name)
 		alertManagerClusterService.Spec.Type = corev1.ServiceTypeClusterIP
 		alertManagerClusterService.Spec.ClusterIP = corev1.ClusterIPNone
 		services = append(services, alertManagerClusterService)
 	}
-	if sauron.Spec.Elasticsearch.Enabled {
-		services = append(services, createElasticsearchServiceElements(sauron)...)
+	if vmo.Spec.Elasticsearch.Enabled {
+		services = append(services, createElasticsearchServiceElements(vmo)...)
 	}
-	if sauron.Spec.Kibana.Enabled {
-		service := createServiceElement(sauron, config.Kibana)
+	if vmo.Spec.Kibana.Enabled {
+		service := createServiceElement(vmo, config.Kibana)
 		services = append(services, service)
 	}
 
-	services = append(services, createServiceElement(sauron, config.Api))
+	services = append(services, createServiceElement(vmo, config.Api))
 
 	return services, nil
 }
-func createServiceElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) *corev1.Service {
+func createServiceElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(sauron),
-			Name:            resources.GetMetaName(sauron.Name, componentDetails.Name),
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Labels:          resources.GetMetaLabels(vmo),
+			Name:            resources.GetMetaName(vmo.Name, componentDetails.Name),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     sauron.Spec.ServiceType,
-			Selector: resources.GetSpecId(sauron.Name, componentDetails.Name),
+			Type:     vmo.Spec.ServiceType,
+			Selector: resources.GetSpecId(vmo.Name, componentDetails.Name),
 			Ports:    []corev1.ServicePort{resources.GetServicePort(componentDetails)},
 		},
 	}

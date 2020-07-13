@@ -25,7 +25,7 @@ The following parameters can be used to configure the tests:
 | kubeconfig   | path to kubeconfig   | KUBECONFIG   | ""   |
 | externalIp   | external IP over which to access deployments   | INTEG_K8S_EXTERNAL_IP   | localhost   |
 | namespace   | integration test namespace to use   | K8S_NAMESPACE   | default   |
-| skipteardown   | skips tearing down Sauron instances and artifacts created by the tests (useful to save test run)   | INTEG_SKIP_TEARDOWN   | false  |
+| skipteardown   | skips tearing down VMO instances and artifacts created by the tests (useful to save test run)   | INTEG_SKIP_TEARDOWN   | false  |
 | runid   | optional string that will be used to uniquely identify this test run   | INTEG_RUN_ID  | generated  |
 | phase   | optional phase to test (before|after) | none   | ""  |
 
@@ -41,7 +41,7 @@ go test -v ./test/integ/ --kubeconfig=$KUBECONFIG --externalip=$INTEG_K8S_EXTERN
 
 ### Run a specific integration tests using go test
 ```
-go test -v ./test/integ/ -run SimpleSauron --kubeconfig=$KUBECONFIG --externalip=$INTEG_K8S_EXTERNAL_IP --namespace=integ-test
+go test -v ./test/integ/ -run SimpleVMO --kubeconfig=$KUBECONFIG --externalip=$INTEG_K8S_EXTERNAL_IP --namespace=integ-test
 ```
 
 ## Developing new tests

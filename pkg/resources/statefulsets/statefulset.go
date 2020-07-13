@@ -16,30 +16,30 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// Creates StatefulSet objects for a Sauron resource
-func New(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
+// Creates StatefulSet objects for a VMO resource
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
-	if sauron.Spec.AlertManager.Enabled {
-		statefulSets = append(statefulSets, createAlertManagerStatefulSet(sauron))
+	if vmo.Spec.AlertManager.Enabled {
+		statefulSets = append(statefulSets, createAlertManagerStatefulSet(vmo))
 	}
 	// Elasticsearch Master
-	if sauron.Spec.Elasticsearch.Enabled {
-		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(sauron))
+	if vmo.Spec.Elasticsearch.Enabled {
+		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(vmo))
 	}
 	return statefulSets, nil
 }
 
 // Creates StatefulSet for Elasticsearch Master
-func createElasticsearchMasterStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
-	statefulSet := createStatefulSetElement(sauron, &sauron.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
+	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
 
-	//statefulSet.Spec.Replicas = resources.NewVal(sauron.Spec.Elasticsearch.MasterNode.Replicas)
+	//statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Elasticsearch.MasterNode.Replicas)
 	statefulSet.Spec.Replicas = resources.NewVal(3)
-	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(sauron.Name, config.ElasticsearchMaster.Name)
+	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
 	var elasticsearchUID int64 = 1000
 	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &elasticsearchUID
@@ -48,13 +48,13 @@ func createElasticsearchMasterStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonit
 	var i int32
 	initialMasterNodes := make([]string, 0)
 	for i = 0; i < *statefulSet.Spec.Replicas; i++ {
-		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
+		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
 	}
 
 	statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env,
 		corev1.EnvVar{
 			Name:  "discovery.seed_hosts",
-			Value: resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name),
+			Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
 		},
 		corev1.EnvVar{
 			Name: "node.name",
@@ -64,7 +64,7 @@ func createElasticsearchMasterStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonit
 				},
 			},
 		},
-		corev1.EnvVar{Name: "cluster.name", Value: sauron.Name},
+		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name},
 		corev1.EnvVar{Name: "node.master", Value: "true"},
 		corev1.EnvVar{Name: "node.ingest", Value: "false"},
 		corev1.EnvVar{Name: "node.data", Value: "false"},
@@ -141,11 +141,11 @@ fi`,
 }
 
 // Creates StatefulSet for AlertManager
-func createAlertManagerStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
-	alertManagerClusterService := resources.GetMetaName(sauron.Name, config.AlertManagerCluster.Name)
-	statefulSet := createStatefulSetElement(sauron, &sauron.Spec.AlertManager.Resources, config.AlertManager, alertManagerClusterService)
-	statefulSet.Spec.Replicas = resources.NewVal(sauron.Spec.AlertManager.Replicas)
-	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(sauron.Name, config.AlertManager.Name)
+func createAlertManagerStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+	alertManagerClusterService := resources.GetMetaName(vmo.Name, config.AlertManagerCluster.Name)
+	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.AlertManager.Resources, config.AlertManager, alertManagerClusterService)
+	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.AlertManager.Replicas)
+	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.AlertManager.Name)
 	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.AlertManager.ImagePullPolicy
 
 	// Construct command line args, with a cluster peer entry for each replica
@@ -157,8 +157,8 @@ func createAlertManagerStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonitoringIn
 		"--cluster.pushpull-interval=10s",
 	}
 
-	if sauron.Spec.URI != "" {
-		alertManagerExternalURL := "https://" + config.AlertManager.Name + "." + sauron.Spec.URI
+	if vmo.Spec.URI != "" {
+		alertManagerExternalURL := "https://" + config.AlertManager.Name + "." + vmo.Spec.URI
 		statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--web.external-url=%s", alertManagerExternalURL))
 		statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, "--web.route-prefix=/")
 	}
@@ -198,7 +198,7 @@ func createAlertManagerStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonitoringIn
 			Name: "alert-config-volume",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: sauron.Spec.AlertManager.ConfigMap},
+					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.AlertManager.ConfigMap},
 				},
 			},
 		},
@@ -224,21 +224,21 @@ func createAlertManagerStatefulSet(sauron *vmcontrollerv1.VerrazzanoMonitoringIn
 	return statefulSet
 }
 
-// Creates a statefulset element for the given Sauron and component
-func createStatefulSetElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance, sauronResources *vmcontrollerv1.Resources,
+// Creates a statefulset element for the given VMO and component
+func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources,
 	componentDetails config.ComponentDetails, serviceName string) *appsv1.StatefulSet {
-	labels := resources.GetSpecId(sauron.Name, componentDetails.Name)
-	statefulSetName := resources.GetMetaName(sauron.Name, componentDetails.Name)
+	labels := resources.GetSpecId(vmo.Name, componentDetails.Name)
+	statefulSetName := resources.GetMetaName(vmo.Name, componentDetails.Name)
 	if serviceName == "" {
 		serviceName = statefulSetName
 	}
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(sauron),
+			Labels:          resources.GetMetaLabels(vmo),
 			Name:            statefulSetName,
-			Namespace:       sauron.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(sauron),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: resources.NewVal(1),
@@ -255,7 +255,7 @@ func createStatefulSetElement(sauron *vmcontrollerv1.VerrazzanoMonitoringInstanc
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						resources.CreateContainerElement(nil, sauronResources, componentDetails),
+						resources.CreateContainerElement(nil, vmoResources, componentDetails),
 					},
 					TerminationGracePeriodSeconds: resources.New64Val(1),
 				},

@@ -11,7 +11,7 @@ const (
 	DashboardProviderTmpl = `
 apiVersion: 1
 providers:
-- name: 'SauronProvider'
+- name: 'VMOProvider'
   orgId: 1
   folder: ''
   type: file

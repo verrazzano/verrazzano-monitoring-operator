@@ -17,18 +17,18 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestSauronEmptyDeploymentSize(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
+func TestVMOEmptyDeploymentSize(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	operatorConfig := &config.OperatorConfig{}
-	deployments, err := New(sauron, operatorConfig, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, operatorConfig, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 1, len(deployments), "Length of generated deployments")
 }
 
-func TestSauronFullDeploymentSize(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMOFullDeploymentSize(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
@@ -52,17 +52,17 @@ func TestSauronFullDeploymentSize(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 7, len(deployments), "Length of generated deployments")
-	assert.Equal(t, constants.SauronKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
+	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
-func TestSauronWithCascadingDelete(t *testing.T) {
+func TestVMOWithCascadingDelete(t *testing.T) {
 	// With CascadingDelete
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
@@ -83,7 +83,7 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
@@ -93,8 +93,8 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 	}
 
 	// Without CascadingDelete
-	sauron.Spec.CascadingDelete = false
-	deployments, err = New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	vmo.Spec.CascadingDelete = false
+	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
@@ -104,8 +104,8 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 	}
 }
 
-func TestSauronWithResourceConstraints(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMOWithResourceConstraints(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
@@ -157,44 +157,44 @@ func TestSauronWithResourceConstraints(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
 
 	for _, deployment := range deployments {
-		if deployment.Name == resources.GetMetaName(sauron.Name, config.Grafana.Name) {
+		if deployment.Name == resources.GetMetaName(vmo.Name, config.Grafana.Name) {
 			assert.Equal(t, resource.MustParse("500m"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("120Mi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
 			assert.Equal(t, resource.MustParse("200m"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
 			assert.Equal(t, resource.MustParse("60Mi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.Prometheus.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Prometheus.Name) {
 			assert.Equal(t, resource.MustParse("0.51"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("121M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
 			assert.Equal(t, resource.MustParse("0.21"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
 			assert.Equal(t, resource.MustParse("61M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.AlertManager.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.AlertManager.Name) {
 			assert.Equal(t, resource.MustParse("0.52"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("122M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
 			assert.Equal(t, resource.MustParse("0.22"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
 			assert.Equal(t, resource.MustParse("62M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.Kibana.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Kibana.Name) {
 			assert.Equal(t, resource.MustParse("0.53"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("123M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
 			assert.Equal(t, resource.MustParse("0.23"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
 			assert.Equal(t, resource.MustParse("63M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.ElasticsearchIngest.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchIngest.Name) {
 			assert.Equal(t, resource.MustParse("0.54"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("124M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
 			assert.Equal(t, resource.MustParse("0.24"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
 			assert.Equal(t, resource.MustParse("64M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.ElasticsearchMaster.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name) {
 			// No resources specified on this endpoint
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.ElasticsearchData.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name) {
 			// No resources specified on this endpoint
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.Api.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Api.Name) {
 			// No resources specified on API endpoint
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.PrometheusGW.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.PrometheusGW.Name) {
 			// No resources specified on Prometheus GW
 		} else {
 			t.Error("Unknown Deployment Name: " + deployment.Name)
@@ -202,8 +202,8 @@ func TestSauronWithResourceConstraints(t *testing.T) {
 	}
 }
 
-func TestSauronWithReplicas(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMOWithReplicas(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Api: vmcontrollerv1.Api{
 				Replicas: 2,
@@ -214,15 +214,15 @@ func TestSauronWithReplicas(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 	for _, deployment := range deployments {
-		if deployment.Name == resources.GetMetaName(sauron.Name, config.Api.Name) {
+		if deployment.Name == resources.GetMetaName(vmo.Name, config.Api.Name) {
 			assert.Equal(t, *resources.NewVal(2), *deployment.Spec.Replicas, "Api replicas")
-		} else if deployment.Name == resources.GetMetaName(sauron.Name, config.Kibana.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Kibana.Name) {
 			assert.Equal(t, *resources.NewVal(4), *deployment.Spec.Replicas, "Kibana replicas")
 		}
 	}
@@ -245,19 +245,19 @@ func TestGetAdForPvcIndex(t *testing.T) {
 }
 
 func TestAPIWithNatGatewayIPs(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "my-sauron",
+			Name: "my-vmo",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			NatGatewayIPs: []string{"1.1.1.1", "2.1.1.1"},
 		},
 	}
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
-	apiDeployment, err := getDeploymentByName(constants.SauronServiceNamePrefix+"my-sauron-api", deployments)
+	apiDeployment, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-api", deployments)
 	if err != nil {
 		t.Error(err)
 	}
@@ -275,7 +275,7 @@ func getDeploymentByName(deploymentName string, deploymentList []*appsv1.Deploym
 }
 
 func TestWaitForElasticsearchTargetVersion(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
@@ -298,17 +298,17 @@ func TestWaitForElasticsearchTargetVersion(t *testing.T) {
 	}
 	targetVersion := "7.4.2"
 	config.ESWaitTargetVersion = targetVersion
-	deployments, err := New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
-	kibana, _ := getDeploymentByName(resources.GetMetaName(sauron.Name, config.Kibana.Name), deployments)
+	kibana, _ := getDeploymentByName(resources.GetMetaName(vmo.Name, config.Kibana.Name), deployments)
 	assert.Contains(t, kibana.Spec.Template.Spec.InitContainers[0].Args, targetVersion)
 
 	targetVersion = "7.5.2"
 	config.ESWaitTargetVersion = targetVersion
 
-	deployments, err = New(sauron, &config.OperatorConfig{}, map[string]string{}, "sauron", "changeme")
-	kibana, _ = getDeploymentByName(resources.GetMetaName(sauron.Name, config.Kibana.Name), deployments)
+	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	kibana, _ = getDeploymentByName(resources.GetMetaName(vmo.Name, config.Kibana.Name), deployments)
 	assert.Contains(t, kibana.Spec.Template.Spec.InitContainers[0].Args, targetVersion)
 }

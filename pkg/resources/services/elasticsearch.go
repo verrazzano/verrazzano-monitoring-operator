@@ -10,13 +10,13 @@ import (
 )
 
 // Creates Elasticsearch Client service element
-func createElasticsearchIngestServiceElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
-	return createServiceElement(sauron, config.ElasticsearchIngest)
+func createElasticsearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
+	return createServiceElement(vmo, config.ElasticsearchIngest)
 }
 
 // Creates Elasticsearch Master service element
-func createElasticsearchMasterServiceElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
-	elasticSearchMasterService := createServiceElement(sauron, config.ElasticsearchMaster)
+func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
+	elasticSearchMasterService := createServiceElement(vmo, config.ElasticsearchMaster)
 
 	// Master service is headless
 	elasticSearchMasterService.Spec.Type = corev1.ServiceTypeClusterIP
@@ -25,8 +25,8 @@ func createElasticsearchMasterServiceElements(sauron *vmcontrollerv1.VerrazzanoM
 }
 
 // Creates Elasticsearch Data service element
-func createElasticsearchDataServiceElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
-	elasticsearchDataService := createServiceElement(sauron, config.ElasticsearchData)
+func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
+	elasticsearchDataService := createServiceElement(vmo, config.ElasticsearchData)
 
 	// Data k8s service only needs to expose NodeExporter port
 	elasticsearchDataService.Spec.Ports = []corev1.ServicePort{resources.GetServicePort(config.NodeExporter)}
@@ -34,10 +34,10 @@ func createElasticsearchDataServiceElements(sauron *vmcontrollerv1.VerrazzanoMon
 }
 
 // Creates *all* Elasticsearch service elements
-func createElasticsearchServiceElements(sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) []*corev1.Service {
+func createElasticsearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*corev1.Service {
 	var services []*corev1.Service
-	services = append(services, createElasticsearchIngestServiceElements(sauron))
-	services = append(services, createElasticsearchMasterServiceElements(sauron))
-	services = append(services, createElasticsearchDataServiceElements(sauron))
+	services = append(services, createElasticsearchIngestServiceElements(vmo))
+	services = append(services, createElasticsearchMasterServiceElements(vmo))
+	services = append(services, createElasticsearchDataServiceElements(vmo))
 	return services
 }

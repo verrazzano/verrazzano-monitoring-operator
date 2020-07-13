@@ -40,7 +40,7 @@ type Framework struct {
 	KubeClientExt            clientset.Clientset
 	RestClient               rest.RESTClient
 	ExternalIP               string
-	CRClient                 client.SauronCR
+	CRClient                 client.VMOCR
 	Namespace                string
 	OperatorNamespace        string
 	SkipTeardown             bool
@@ -57,7 +57,7 @@ func Setup() error {
 	externalIp := flag.String("externalip", "localhost", "External IP over which to access deployments.")
 	namespace := flag.String("namespace", "default", "Integration test namespace")
 	operatorNamespace := flag.String("operatorNamespace", "", "Local test run mimicks prod environments")
-	skipTeardown := flag.Bool("skipteardown", false, "Skips tearing down Sauron instances created by the tests")
+	skipTeardown := flag.Bool("skipteardown", false, "Skips tearing down VMO instances created by the tests")
 	runid := flag.String("runid", "test-"+generateRandomID(3), "Optional string that will be used to uniquely identify this test run.")
 	phase := flag.String("phase", "", "Optional 'phase' to test ("+Before+", "+After+")")
 	ingressControllerSvcName := flag.String("ingressControllerSvcName", "vmi-ingress-controller", "Ingress controller service name")
@@ -95,7 +95,7 @@ func Setup() error {
 		return err
 	}
 
-	s := schema.GroupVersion{Group: constants.SauronGroup, Version: constants.SauronVersion}
+	s := schema.GroupVersion{Group: constants.VMOGroup, Version: constants.VMOVersion}
 	cfg.GroupVersion = &s
 	cfg.APIPath = "/apis"
 	cfg.ContentType = runtime.ContentTypeJSON

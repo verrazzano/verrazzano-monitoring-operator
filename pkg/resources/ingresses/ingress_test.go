@@ -7,12 +7,12 @@ import (
 
 	"strings"
 
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
-func TestSauronNoIngress(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMONoIngress(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
@@ -28,15 +28,15 @@ func TestSauronNoIngress(t *testing.T) {
 			},
 		},
 	}
-	ingresses, err := New(sauron)
+	ingresses, err := New(vmo)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 0, len(ingresses), "Length of generated Ingresses")
 }
 
-func TestSauronWithIngresses(t *testing.T) {
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+func TestVMOWithIngresses(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			SecretName: "secret",
 			URI:        "example.com",
@@ -51,7 +51,7 @@ func TestSauronWithIngresses(t *testing.T) {
 			},
 		},
 	}
-	ingresses, err := New(sauron)
+	ingresses, err := New(vmo)
 	if err != nil {
 		t.Error(err)
 	}
@@ -64,9 +64,9 @@ func TestSauronWithIngresses(t *testing.T) {
 	assert.Equal(t, "example.com auth", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-realm"], "Auth realm")
 }
 
-func TestSauronWithCascadingDelete(t *testing.T) {
+func TestVMOWithCascadingDelete(t *testing.T) {
 	// With CascadingDelete
-	sauron := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			SecretName:      "secret",
@@ -89,7 +89,7 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	ingresses, err := New(sauron)
+	ingresses, err := New(vmo)
 	if err != nil {
 		t.Error(err)
 	}
@@ -99,8 +99,8 @@ func TestSauronWithCascadingDelete(t *testing.T) {
 	}
 
 	// Without CascadingDelete
-	sauron.Spec.CascadingDelete = false
-	ingresses, err = New(sauron)
+	vmo.Spec.CascadingDelete = false
+	ingresses, err = New(vmo)
 	if err != nil {
 		t.Error(err)
 	}

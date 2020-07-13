@@ -12,30 +12,30 @@ const DefaultImagePullPolicy = corev1.PullIfNotPresent
 
 const NobodyUID = 65534
 
-type SauronStatus string
+type VMOStatus string
 
 const (
-	Running = SauronStatus("Running")
+	Running = VMOStatus("Running")
 )
 
 type StorageOperationType string
 
-// SauronLabel to be applied to all components of a Sauron
-const SauronGroup = "verrazzano.io"
-const SauronVersion = "v1"
-const SauronLabel = "sauron." + SauronVersion + "." + SauronGroup
-const SauronKind = "VerrazzanoMonitoringInstance"
-const SauronPlural = "verrazzanomonitoringinstances"
-const SauronFullname = SauronPlural + "." + SauronGroup
+// VMOLabel to be applied to all components of a VMO
+const VMOGroup = "verrazzano.io"
+const VMOVersion = "v1"
+const VMOLabel = "vmo." + VMOVersion + "." + VMOGroup
+const VMOKind = "VerrazzanoMonitoringInstance"
+const VMOPlural = "verrazzanomonitoringinstances"
+const VMOFullname = VMOPlural + "." + VMOGroup
 
-const RoleBindingForSauronInstance = "verrazzano-monitoring-operator"
-const ClusterRoleForSauronInstances = "vmi-cluster-role"
+const RoleBindingForVMOInstance = "verrazzano-monitoring-operator"
+const ClusterRoleForVMOInstances = "vmi-cluster-role"
 
-// ResyncPeriod (re-list time period) for Sauron Controller
+// ResyncPeriod (re-list time period) for VMO Controller
 const ResyncPeriod = 30 * time.Second
 
-// SauronServiceNamePrefix to be applied to all Sauron services
-const SauronServiceNamePrefix = "vmi-"
+// VMOServiceNamePrefix to be applied to all VMO services
+const VMOServiceNamePrefix = "vmi-"
 
 const StorageVolumeName = "storage-volume"
 const DefaultNamespace = "default"
@@ -44,17 +44,17 @@ const K8SAppLabel = "k8s-app"
 
 const HyperOperatorModeLabel = "hyper-mode"
 
-// in order to create a Sauron one needs to provide a k8s secret with keys
-// various secrets needed by sauron
-const SauronSecretUsername = "username"
-const SauronSecretPassword = "password"
+// in order to create a VMO one needs to provide a k8s secret with keys
+// various secrets needed by vmo
+const VMOSecretUsername = "username"
+const VMOSecretPassword = "password"
 
 // TLS secrets
 const TLSCRTName = "tls.crt"
 const TLSKeyName = "tls.key"
 
-//Sauron Metrics
-const MetricsNameSpace = "sauron_operator"
+//VMO Metrics
+const MetricsNameSpace = "vmo_operator"
 
 // Default Prometheus retention configuration
 const DefaultPrometheusRetentionPeriod = 90
