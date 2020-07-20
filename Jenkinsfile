@@ -1,6 +1,8 @@
 // Copyright (c) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
+@Library('verrazzano-shared') _
+
 def HEAD_COMMIT
 
 pipeline {
@@ -69,10 +71,7 @@ pipeline {
         stage('Third Party License Check') {
             when { not { buildingTag() } }
             steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make thirdparty-check
-                """
+                thirdpartyCheck("./build/scripts")
             }
         }
 
