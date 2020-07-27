@@ -62,14 +62,14 @@ func GetAuthSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 	// setup username/passwords and secrets
 
 	username, err := controller.loadSecretData(vmo.Namespace,
-		vmo.Spec.SecretsName, constants.VMOSecretUsername)
+		vmo.Spec.SecretsName, constants.VMOSecretUsernameField)
 	if err != nil {
 		glog.Errorf("problem getting username, error: %v", err)
 		return "", "", err
 	}
 
 	password, err := controller.loadSecretData(vmo.Namespace,
-		vmo.Spec.SecretsName, constants.VMOSecretPassword)
+		vmo.Spec.SecretsName, constants.VMOSecretPasswordField)
 	if err != nil {
 		glog.Errorf("problem getting password, error: %v", err)
 		return "", "", err

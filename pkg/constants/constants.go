@@ -46,8 +46,8 @@ const HyperOperatorModeLabel = "hyper-mode"
 
 // in order to create a VMO one needs to provide a k8s secret with keys
 // various secrets needed by vmo
-const VMOSecretUsername = "username"
-const VMOSecretPassword = "password"
+const VMOSecretUsernameField = "username"
+const VMOSecretPasswordField = "password"
 
 // TLS secrets
 const TLSCRTName = "tls.crt"
