@@ -5,7 +5,9 @@ package integ
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -33,18 +35,14 @@ import (
 )
 
 const (
-	username = "vmo"
-	password = "changeme"
+	username         = "vmo"
+	reporterUsername = "vmi-reporter"
+	changeUsername   = "s@ur0n"
 )
 
-const (
-	reporterUsername = "vmi-reporter"
-	reporterPassword = "changeme"
-)
-const (
-	changeusername = "s@ur0n"
-	changepassword = "ch@ngeMe"
-)
+var password = generateRandomString()
+var reporterPassword = generateRandomString()
+var changePassword = generateRandomString()
 
 // ********************************************************
 // *** Scenarios covered by the Basic Integration Tests ***
@@ -313,13 +311,13 @@ func TestBasic4VMOWithIngress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("secret %s doesn't exists in namespace %s : %v", secretName, vmo.Namespace, err)
 	}
-	secret.Data["username"] = []byte(changeusername)
-	secret.Data["password"] = []byte(changepassword)
+	secret.Data["username"] = []byte(changeUsername)
+	secret.Data["password"] = []byte(changePassword)
 	secret, err = f.KubeClient2.CoreV1().Secrets(vmo.Namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
 	if err != nil {
 		t.Fatalf("Error when updating a secret %s, %v", secretName, err)
 	}
-	verifyVMODeploymentWithIngress(t, vmo, changeusername, changepassword)
+	verifyVMODeploymentWithIngress(t, vmo, changeUsername, changePassword)
 }
 
 func TestBasic4VMOOperatorMetricsServer(t *testing.T) {
@@ -1934,4 +1932,11 @@ func sendRequestWithUserPassword(action, myURL, host string, useAuth bool, heade
 	// fmt.Printf(" --> Body: %s", string(body))
 
 	return resp, string(body), err
+}
+
+// generateRandomString returns a base64 encoded generated random string.
+func generateRandomString() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
 }
