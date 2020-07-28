@@ -3,6 +3,8 @@
 package util
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +21,7 @@ func NewSecret(secretName, namespace string) *corev1.Secret {
 		},
 		Data: map[string][]byte{
 			"username": []byte("vmo"),
-			"password": []byte("changeme"),
+			"password": []byte(generateRandomString()),
 		},
 	}
 }
@@ -146,4 +148,11 @@ func NewGrafanaOnlyVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMon
 			},
 		},
 	}
+}
+
+// generateRandomString returns a base64 encoded generated random string.
+func generateRandomString() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
 }
