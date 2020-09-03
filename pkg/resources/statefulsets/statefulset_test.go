@@ -28,8 +28,10 @@ func TestVMOWithReplicas(t *testing.T) {
 				Replicas: 3,
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled:    true,
-				MasterNode: vmcontrollerv1.ElasticsearchNode{},
+				Enabled: true,
+				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 5,
+				},
 			},
 		},
 	}
@@ -43,7 +45,7 @@ func TestVMOWithReplicas(t *testing.T) {
 		case resources.GetMetaName(vmo.Name, config.AlertManager.Name):
 			assert.Equal(t, *resources.NewVal(3), *statefulset.Spec.Replicas, "AlertManager replicas")
 		case resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name):
-			assert.Equal(t, *resources.NewVal(3), *statefulset.Spec.Replicas, "Elasticsearch Master replicas")
+			assert.Equal(t, *resources.NewVal(5), *statefulset.Spec.Replicas, "Elasticsearch Master replicas")
 		default:
 			t.Error("Unknown Deployment Name: " + statefulset.Name)
 		}
