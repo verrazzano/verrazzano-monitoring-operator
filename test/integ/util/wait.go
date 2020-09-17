@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package util
 
 import (
@@ -48,7 +49,7 @@ func Retry(backoff wait.Backoff, fn wait.ConditionFunc) error {
 	return err
 }
 
-// Waits for the given deployment to reach the given number of available replicas
+// WaitForDeploymentAvailable waits for the given deployment to reach the given number of available replicas
 func WaitForDeploymentAvailable(namespace string, deploymentName string, availableReplicas int32, backoff wait.Backoff, kubeClient kubernetes.Interface) error {
 	var err error
 	fmt.Printf("Waiting for deployment '%s' to reach %d available and total replicas...\n", deploymentName, availableReplicas)
@@ -69,7 +70,7 @@ func WaitForDeploymentAvailable(namespace string, deploymentName string, availab
 	return err
 }
 
-// Waits for the given statefulset to reach the given number of available replicas
+// WaitForStatefulSetAvailable waits for the given statefulset to reach the given number of available replicas
 func WaitForStatefulSetAvailable(namespace string, statefulSetName string, availableReplicas int32, backoff wait.Backoff, kubeClient kubernetes.Interface) error {
 	var err error
 	fmt.Printf("Waiting for statefulset '%s' to reach %d available and total replicas...\n", statefulSetName, availableReplicas)
@@ -90,7 +91,7 @@ func WaitForStatefulSetAvailable(namespace string, statefulSetName string, avail
 	return err
 }
 
-// Waits for the given service to become available
+// WaitForService waits for the given service to become available
 func WaitForService(namespace string, serviceName string, backoff wait.Backoff,
 	kubeClient kubernetes.Interface) (*apiv1.Service, error) {
 	var latest *apiv1.Service
@@ -116,7 +117,7 @@ func WaitForService(namespace string, serviceName string, backoff wait.Backoff,
 
 }
 
-// Waits for doc count to show up in elasticsearch
+// WaitForElasticSearchIndexDocCount waits for doc count to show up in elasticsearch
 func WaitForElasticSearchIndexDocCount(ElasticSearchIndexDocCountURL string, count string, backoff wait.Backoff) (bool, error) {
 	var err error
 	fmt.Println("Getting index doc count from elasticsearch url: " + ElasticSearchIndexDocCountURL)
@@ -135,12 +136,11 @@ func WaitForElasticSearchIndexDocCount(ElasticSearchIndexDocCountURL string, cou
 		if strings.Compare(docCount, count) == 0 {
 			fmt.Println("  ==> Index has " + count + " docs.")
 			return true, nil
-		} else {
-			fmt.Println("Index does not have " + count + " docs. It only has " + docCount + " docs. Waiting ...")
-			return false, err
 		}
-
+		fmt.Println("Index does not have " + count + " docs. It only has " + docCount + " docs. Waiting ...")
+		return false, err
 	})
+
 	if err != nil {
 		return false, err
 	}
@@ -153,7 +153,7 @@ func WaitForElasticSearchIndexDocCount(ElasticSearchIndexDocCountURL string, cou
 func WaitForEndpointAvailableWithAuth(
 	component string,
 	domainName string,
-	useIp string,
+	useIP string,
 	port int32,
 	path string,
 	expectedStatusCode int,
@@ -176,7 +176,7 @@ func WaitForEndpointAvailableWithAuth(
 	tURL := url.URL{}
 
 	// Set proxy for http client
-	if useIp != "localhost" {
+	if useIP != "localhost" {
 		proxyURL := os.Getenv("http_proxy")
 		if proxyURL != "" {
 			fmt.Println("Setting proxy for http clients to :" + proxyURL)
@@ -188,8 +188,8 @@ func WaitForEndpointAvailableWithAuth(
 	var myURL string
 
 	// if requesting to use a specific worker IP to verify endpoint
-	if useIp != "" {
-		myURL = fmt.Sprintf("https://%s:%d%s", useIp, port, path)
+	if useIP != "" {
+		myURL = fmt.Sprintf("https://%s:%d%s", useIP, port, path)
 	} else { // otherwise, use the dns name(component.domainName)
 		myURL = fmt.Sprintf("https://%s:%d%s", component+"."+domainName, port, path)
 	}
@@ -197,7 +197,7 @@ func WaitForEndpointAvailableWithAuth(
 	req, _ := http.NewRequest("GET", myURL, nil)
 
 	//Only fix the HEADER in when requesting to use a specific worker IP to verify endpoint
-	if useIp != "" {
+	if useIP != "" {
 		req.Host = component + "." + domainName
 	}
 
@@ -225,23 +225,23 @@ func WaitForEndpointAvailableWithAuth(
 	return nil
 }
 
-// Waits for the given endpoint to become available
-func WaitForEndpointAvailable(name string, externalIp string, port int32, urlPath string, expectedStatusCode int, backoff wait.Backoff) error {
+// WaitForEndpointAvailable waits for the given endpoint to become available
+func WaitForEndpointAvailable(name string, externalIP string, port int32, urlPath string, expectedStatusCode int, backoff wait.Backoff) error {
 	var err error
-	endpointUrl := fmt.Sprintf("http://%s:%d%s", externalIp, port, urlPath)
-	fmt.Printf("Waiting for %s (%s) to reach status code %d...\n", name, endpointUrl, expectedStatusCode)
+	endpointURL := fmt.Sprintf("http://%s:%d%s", externalIP, port, urlPath)
+	fmt.Printf("Waiting for %s (%s) to reach status code %d...\n", name, endpointURL, expectedStatusCode)
 	restyClient := resty.New()
 	restyClient.SetTimeout(10 * time.Second)
 	startTime := time.Now()
 	err = Retry(backoff, func() (bool, error) {
-		resp, e := restyClient.R().Get(endpointUrl)
+		resp, e := restyClient.R().Get(endpointURL)
 		if e != nil {
-			fmt.Printf("error requesting URL %s: %+v", endpointUrl, e)
+			fmt.Printf("error requesting URL %s: %+v", endpointURL, e)
 			return false, nil
 		}
 		observedStatusCode := resp.StatusCode()
 		if observedStatusCode != expectedStatusCode {
-			fmt.Printf("URL %s: expected status code %d, observed %d", endpointUrl, expectedStatusCode, observedStatusCode)
+			fmt.Printf("URL %s: expected status code %d, observed %d", endpointURL, expectedStatusCode, observedStatusCode)
 			return false, nil
 		}
 		return true, nil

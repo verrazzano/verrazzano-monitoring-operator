@@ -19,22 +19,27 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {
 	return constants.VMOServiceNamePrefix + vmoName + "-" + componentName
 }
 
+// GetMetaLabels returns k8s-app and vmo lables
 func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]string {
 	return map[string]string{constants.K8SAppLabel: constants.VMOGroup, constants.VMOLabel: vmo.Name}
 }
 
-func GetSpecId(vmoName string, componentName string) map[string]string {
+// GetSpecID returns app label
+func GetSpecID(vmoName string, componentName string) map[string]string {
 	return map[string]string{constants.ServiceAppLabel: vmoName + "-" + componentName}
 }
 
+// GetServicePort returns service port
 func GetServicePort(componentDetails config.ComponentDetails) corev1.ServicePort {
 	return corev1.ServicePort{Name: componentDetails.Name, Port: int32(componentDetails.Port)}
 }
 
+// GetOwnerReferences returns owner references
 func GetOwnerReferences(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []metav1.OwnerReference {
 	var ownerReferences []metav1.OwnerReference
 	if vmo.Spec.CascadingDelete {
@@ -49,7 +54,7 @@ func GetOwnerReferences(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []meta
 	return ownerReferences
 }
 
-// Returns whether or not the given slice contains the given string
+// SliceContains returns whether or not the given slice contains the given string
 func SliceContains(slice []string, value string) bool {
 	for _, a := range slice {
 		if a == value {
@@ -59,6 +64,7 @@ func SliceContains(slice []string, value string) bool {
 	return false
 }
 
+// GetStorageElementForComponent returns storage for a given component
 func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (storage *vmcontrollerv1.Storage) {
 	switch component.Name {
 	case config.Grafana.Name:
@@ -71,7 +77,7 @@ func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	return nil
 }
 
-// Returns number of replicas for a given component
+// GetReplicasForComponent returns number of replicas for a given component
 func GetReplicasForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (replicas int32) {
 	switch component.Name {
 	case config.Grafana.Name:
@@ -84,23 +90,21 @@ func GetReplicasForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, c
 	return 0
 }
 
-// Given a string, returns the next string in the incremental sequence.
+// GetNextStringInSequence returns the next string in the incremental sequence given a string
 func GetNextStringInSequence(name string) string {
 	tokens := strings.Split(name, "-")
 	if len(tokens) < 2 {
 		return name + "-1" // Starting a new sequence
-	} else {
-		number, err := strconv.Atoi(tokens[len(tokens)-1])
-		if err != nil {
-			return name + "-1" // Starting a new sequence
-		} else {
-			tokens[len(tokens)-1] = strconv.Itoa(number + 1)
-			return strings.Join(tokens, "-")
-		}
 	}
+	number, err := strconv.Atoi(tokens[len(tokens)-1])
+	if err != nil {
+		return name + "-1" // Starting a new sequence
+	}
+	tokens[len(tokens)-1] = strconv.Itoa(number + 1)
+	return strings.Join(tokens, "-")
 }
 
-// Creates a generic container element for the given component of the given VMO object.
+// CreateContainerElement creates a generic container element for the given component of the given VMO object.
 func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) corev1.Container {
 
@@ -169,6 +173,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	}
 }
 
+// CreateZoneAntiAffinityElement return an Affinity resource for a given VMO instance and component
 func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Affinity {
 	return &corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
@@ -177,7 +182,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 					Weight: 100,
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: GetSpecId(vmoName, component),
+							MatchLabels: GetSpecID(vmoName, component),
 						},
 						TopologyKey: constants.K8sZoneLabel,
 					},
@@ -187,7 +192,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 	}
 }
 
-// Returns an Elasticsearch Init container object
+// GetElasticsearchInitContainer returns an Elasticsearch Init container object
 func GetElasticsearchInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
 	elasticsearchInitContainer.Args = []string{"sysctl", "-w", "vm.max_map_count=262144"}
@@ -195,7 +200,7 @@ func GetElasticsearchInitContainer() *corev1.Container {
 	return &elasticsearchInitContainer
 }
 
-// Gets the default Prometheus configuration for a VMO instance
+// GetDefaultPrometheusConfiguration returns the default Prometheus configuration for a VMO instance
 func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 	pushGWUrl := GetMetaName(vmo.Name, config.PrometheusGW.Name) + ":" + strconv.Itoa(config.PrometheusGW.Port)
 	alertmanagerURL := fmt.Sprintf(GetMetaName(vmo.Name, config.AlertManager.Name)+":%d", config.AlertManager.Port)
@@ -250,7 +255,7 @@ scrape_configs:
 	return string(prometheusConfig)
 }
 
-// Gets the default Prometheus configuration for a VMO instance
+// GetDefaultAlertManagerConfiguration returns the default Prometheus configuration for a VMO instance
 func GetDefaultAlertManagerConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 
 	name := vmo.Name
@@ -270,16 +275,19 @@ receivers:
 	return string(alertManagerConfig)
 }
 
+// NewVal return a pointer to an int32 given an int32 value
 func NewVal(value int32) *int32 {
 	var val = value
 	return &val
 }
 
+// New64Val return a pointer to an int64 given an int64 value
 func New64Val(value int64) *int64 {
 	var val = value
 	return &val
 }
 
+// NewBool return a pointer to a boolean given a boolean value
 func NewBool(value bool) *bool {
 	var val = value
 	return &val

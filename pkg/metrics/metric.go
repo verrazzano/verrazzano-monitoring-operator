@@ -1,18 +1,21 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package metrics
 
 import (
 	"flag"
 	"fmt"
+	"net/http"
+
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"net/http"
 )
 
+// DanglingPVC GaugeVec
 var DanglingPVC = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Namespace: constants.MetricsNameSpace,
@@ -22,6 +25,7 @@ var DanglingPVC = prometheus.NewGaugeVec(
 	[]string{"pvc_name", "availability_domain"},
 )
 
+// Lock GaugeVec
 var Lock = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Namespace: constants.MetricsNameSpace,
@@ -31,11 +35,13 @@ var Lock = prometheus.NewGaugeVec(
 	[]string{"namespace", "vmo_name"},
 )
 
+// RegisterMetrics register Prometheus metrics
 func RegisterMetrics() {
 	prometheus.MustRegister(DanglingPVC)
 	prometheus.MustRegister(Lock)
 }
 
+// StartServer starts server for Prometheus metrics
 func StartServer(port int) {
 	flag.IntVar(&port, "port", port, "Port on which to expose Prometheus metrics")
 	flag.Parse()

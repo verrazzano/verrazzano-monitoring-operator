@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
@@ -26,7 +27,7 @@ import (
 // Creates PVCs for the given VMO instance.  Returns a pvc->AD map, which is populated *only if* AD information
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
-func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
 	// Inspect the Storage Class to use
 	storageClass, err := determineStorageClass(controller)
 	if err != nil {
@@ -131,11 +132,12 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	return deploymentToAdMap, nil
 }
 
+// AdPvcCounter type for AD PVC counts
 type AdPvcCounter struct {
 	pvcCountByAd map[string]int
 }
 
-// The provided ADs are the only ones schedulable; create entries in the map
+// NewAdPvcCounter return new counter.  The provided ADs are the only ones schedulable; create entries in the map
 func NewAdPvcCounter(ads []string) *AdPvcCounter {
 	var counter AdPvcCounter
 	counter.pvcCountByAd = make(map[string]int)
@@ -145,13 +147,14 @@ func NewAdPvcCounter(ads []string) *AdPvcCounter {
 	return &counter
 }
 
-// Any AD not already in map is not schedulable, so ignore
+// Inc increments counter. Any AD not already in map is not schedulable, so ignore
 func (p *AdPvcCounter) Inc(ad string) {
 	if _, ok := p.pvcCountByAd[ad]; ok {
 		p.pvcCountByAd[ad] = p.pvcCountByAd[ad] + 1
 	}
 }
 
+// GetLeastUsedAd returns least used AD
 func (p *AdPvcCounter) GetLeastUsedAd() string {
 	adsByPvcCount := make(map[int][]string)
 	var pvcCounts []int

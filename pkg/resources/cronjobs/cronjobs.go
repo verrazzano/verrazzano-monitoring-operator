@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package cronjobs
 
 import (
@@ -11,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// New function creates CronJob objects for a VMO resource.
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, cronjobName string, schedule string, initContainers []corev1.Container,
 	containers []corev1.Container, volumes []corev1.Volume) *batchv1beta1.CronJob {
 	one := int32(1)

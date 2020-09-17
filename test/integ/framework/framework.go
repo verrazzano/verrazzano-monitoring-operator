@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package framework
 
 import (
@@ -23,11 +24,13 @@ import (
 )
 
 const (
+	// Before represents constant for before
 	Before = "before"
-	After  = "after"
+	// After represents constant for after
+	After = "after"
 )
 
-// Storage Type
+// BackupStorageType type of storage
 type BackupStorageType string
 
 // Global framework.
@@ -54,7 +57,7 @@ type Framework struct {
 // Setup sets up a test framework and initialises framework.Global.
 func Setup() error {
 	kubeconfig := flag.String("kubeconfig", "", "Path to kubeconfig file with authorization and master location information.")
-	externalIp := flag.String("externalip", "localhost", "External IP over which to access deployments.")
+	externalIP := flag.String("externalip", "localhost", "External IP over which to access deployments.")
 	namespace := flag.String("namespace", "default", "Integration test namespace")
 	operatorNamespace := flag.String("operatorNamespace", "", "Local test run mimicks prod environments")
 	skipTeardown := flag.Bool("skipteardown", false, "Skips tearing down VMO instances created by the tests")
@@ -68,7 +71,7 @@ func Setup() error {
 		operatorNamespace = namespace
 	}
 	// Set proxy for resty clients
-	if *externalIp != "localhost" {
+	if *externalIP != "localhost" {
 		proxyURL := os.Getenv("http_proxy")
 		if proxyURL != "" {
 			fmt.Println("Setting proxy for resty clients to :" + proxyURL)
@@ -110,7 +113,7 @@ func Setup() error {
 		KubeClient2:              *kubeClient,
 		KubeClientExt:            *kubeClientExt,
 		RestClient:               *restClient,
-		ExternalIP:               *externalIp,
+		ExternalIP:               *externalIP,
 		CRClient:                 crClient,
 		Namespace:                *namespace,
 		OperatorNamespace:        *operatorNamespace,

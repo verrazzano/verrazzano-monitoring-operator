@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package deployments
 
 import (
@@ -15,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ElasticsearchBasic function type
 type ElasticsearchBasic struct {
 }
 
@@ -139,7 +141,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 						Weight: 100,
 						PodAffinityTerm: corev1.PodAffinityTerm{
 							LabelSelector: &metav1.LabelSelector{
-								MatchLabels: resources.GetSpecId(vmo.Name, config.ElasticsearchData.Name),
+								MatchLabels: resources.GetSpecID(vmo.Name, config.ElasticsearchData.Name),
 							},
 							TopologyKey: "kubernetes.io/hostname",
 						},

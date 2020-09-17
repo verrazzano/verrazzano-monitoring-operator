@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package secrets
 
 import (
@@ -9,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// New creates auth secret objects for a VMO resource
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, auth []byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,
@@ -24,6 +26,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, au
 	}, nil
 }
 
+// NewTLS creates TLS secret objects for a VMO resource
 func NewTLS(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, secretName string, data map[string][]byte) (*corev1.Secret, error) {
 	return &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,

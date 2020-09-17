@@ -1,15 +1,17 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package config
 
 import (
 	"fmt"
+
 	"github.com/golang/glog"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Creates a new OperatorConfig from the given ConfigMap,
+// NewConfigFromConfigMap creates a new OperatorConfig from the given ConfigMap,
 func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error) {
 	// Parse configMap content and unmarshall into OperatorConfig struct
 	glog.Info("Constructing config from config map")

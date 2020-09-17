@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package util
 
 import (
@@ -11,12 +12,13 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/golang/glog"
 	"math/big"
 	"net"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 func publicKey(priv interface{}) interface{} {

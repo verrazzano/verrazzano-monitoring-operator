@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package services
 
 import (
@@ -31,7 +32,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 		services = append(services, alertManagerService)
 
 		alertManagerClusterService := createServiceElement(vmo, config.AlertManagerCluster)
-		alertManagerClusterService.Spec.Selector = resources.GetSpecId(vmo.Name, config.AlertManager.Name)
+		alertManagerClusterService.Spec.Selector = resources.GetSpecID(vmo.Name, config.AlertManager.Name)
 		alertManagerClusterService.Spec.Type = corev1.ServiceTypeClusterIP
 		alertManagerClusterService.Spec.ClusterIP = corev1.ClusterIPNone
 		services = append(services, alertManagerClusterService)
@@ -44,7 +45,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 		services = append(services, service)
 	}
 
-	services = append(services, createServiceElement(vmo, config.Api))
+	services = append(services, createServiceElement(vmo, config.API))
 
 	return services, nil
 }
@@ -58,7 +59,7 @@ func createServiceElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, comp
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     vmo.Spec.ServiceType,
-			Selector: resources.GetSpecId(vmo.Name, componentDetails.Name),
+			Selector: resources.GetSpecID(vmo.Name, componentDetails.Name),
 			Ports:    []corev1.ServicePort{resources.GetServicePort(componentDetails)},
 		},
 	}

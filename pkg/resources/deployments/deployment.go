@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package deployments
 
 import (
@@ -16,11 +17,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Elasticsearch interface
 type Elasticsearch interface {
 	createElasticsearchDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment
 }
 
-// Creates Deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
+// New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
 // the resource so handleObject can discover the VMO resource that 'owns' it.
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
@@ -131,13 +133,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 
 	// Kibana
 	if vmo.Spec.Kibana.Enabled {
-		elasticsearchUrl := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
+		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
 		deployment := createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.Kibana)
 
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
 		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-			{Name: "ELASTICSEARCH_HOSTS", Value: elasticsearchUrl},
+			{Name: "ELASTICSEARCH_HOSTS", Value: elasticsearchURL},
 		}
 
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 120
@@ -155,17 +157,17 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 			Image: config.ESWait.Image,
 			// `-number-of-data-nodes 1` tells eswait to look for at least one data node
 			// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
-			Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchUrl, config.ESWaitTargetVersion},
+			Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
 		}
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
 		deployments = append(deployments, deployment)
 	}
 
 	// API
-	deployment := createDeploymentElement(vmo, nil, nil, config.Api)
-	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Api.ImagePullPolicy
+	deployment := createDeploymentElement(vmo, nil, nil, config.API)
+	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.API.ImagePullPolicy
 	deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Api.Replicas)
-	deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Api.Name)
+	deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.API.Name)
 	deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 		{Name: "VMI_NAME", Value: vmo.Name},
 		{Name: "NAMESPACE", Value: vmo.Namespace},
@@ -208,7 +210,7 @@ func createDeploymentElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, v
 func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage,
 	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, pvcIndex int) *appsv1.Deployment {
 
-	labels := resources.GetSpecId(vmo.Name, componentDetails.Name)
+	labels := resources.GetSpecID(vmo.Name, componentDetails.Name)
 	var deploymentName string
 	if pvcIndex < 0 {
 		deploymentName = resources.GetMetaName(vmo.Name, componentDetails.Name)
