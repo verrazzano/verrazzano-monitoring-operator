@@ -33,14 +33,14 @@ func TestConfigDefaults(t *testing.T) {
 	}
 
 	assert.Equal(t, *operatorConfig.MetricsPort, 8090)
-	assert.Equal(t, *operatorConfig.DefaultSimpleComponentReplicas, DefaultSimpleComponentReplicas)
-	assert.Equal(t, *operatorConfig.DefaultPrometheusReplicas, DefaultPrometheusReplicas)
+	assert.Equal(t, *operatorConfig.DefaultSimpleComponentReplicas, defaultSimpleComponentReplicas)
+	assert.Equal(t, *operatorConfig.DefaultPrometheusReplicas, defaultPrometheusReplicas)
 	assert.Equal(t, operatorConfig.DefaultIngressTargetDNSName, "")
 }
 
 func CreateConfigFromStr(configStr string) (*OperatorConfig, error) {
 	configMap := corev1.ConfigMap{}
-	configMap.Data = map[string]string{ConfigKeyValue: configStr}
+	configMap.Data = map[string]string{configKeyValue: configStr}
 	operatorConfig, err := NewConfigFromConfigMap(&configMap)
 	return operatorConfig, err
 }

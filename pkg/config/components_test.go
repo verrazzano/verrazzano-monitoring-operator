@@ -26,8 +26,8 @@ func TestAllImages(t *testing.T) {
 			assert.Nil(t, err, fmt.Sprintf("setting environment variable %s", component.EnvName))
 		}
 	}
-	err := os.Setenv(ESWaitTargetVersionEnv, "es.TEST")
-	assert.Nil(t, err, fmt.Sprintf("setting environment variable %s", ESWaitTargetVersionEnv))
+	err := os.Setenv(eswaitTargetVersionEnv, "es.TEST")
+	assert.Nil(t, err, fmt.Sprintf("setting environment variable %s", eswaitTargetVersionEnv))
 
 	err = InitComponentDetails()
 	assert.Nil(t, err, "Expected initComponentDetails to succeed")

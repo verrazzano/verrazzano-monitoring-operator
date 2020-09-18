@@ -16,10 +16,10 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error
 	// Parse configMap content and unmarshall into OperatorConfig struct
 	glog.Info("Constructing config from config map")
 	var configString string
-	if value, ok := configMap.Data[ConfigKeyValue]; ok {
+	if value, ok := configMap.Data[configKeyValue]; ok {
 		configString = value
 	} else {
-		return nil, fmt.Errorf("expected key '%s' not found in ConfigMap %s", ConfigKeyValue, configMap.Name)
+		return nil, fmt.Errorf("expected key '%s' not found in ConfigMap %s", configKeyValue, configMap.Name)
 	}
 	var config OperatorConfig
 	err := yaml.Unmarshal([]byte(configString), &config)
@@ -38,13 +38,13 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error
 func setConfigDefaults(config *OperatorConfig) {
 
 	if config.DefaultSimpleComponentReplicas == nil {
-		config.DefaultSimpleComponentReplicas = newIntVal(DefaultSimpleComponentReplicas)
+		config.DefaultSimpleComponentReplicas = newIntVal(defaultSimpleComponentReplicas)
 	}
 	if config.DefaultPrometheusReplicas == nil {
-		config.DefaultPrometheusReplicas = newIntVal(DefaultPrometheusReplicas)
+		config.DefaultPrometheusReplicas = newIntVal(defaultPrometheusReplicas)
 	}
 	if config.MetricsPort == nil {
-		config.MetricsPort = newIntVal(DefaultMetricsPort)
+		config.MetricsPort = newIntVal(defaultMetricsPort)
 	}
 
 }

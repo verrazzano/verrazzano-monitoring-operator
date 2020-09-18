@@ -157,7 +157,7 @@ var ElasticsearchInit = ComponentDetails{
 	Privileged:      true,
 }
 
-// Api is the default Api configuration
+// API is the default API configuration
 var API = ComponentDetails{
 	Name:              "api",
 	EnvName:           "VERRAZZANO_MONITORING_INSTANCE_API_IMAGE",
@@ -185,7 +185,7 @@ var NodeExporter = ComponentDetails{
 	Privileged:      true,
 }
 
-const waitTargetVersionEnv = "ELASTICSEARCH_WAIT_TARGET_VERSION"
+const eswaitTargetVersionEnv = "ELASTICSEARCH_WAIT_TARGET_VERSION"
 
 // ESWaitTargetVersion contains value for environment variable ELASTICSEARCH_WAIT_TARGET_VERSION
 var ESWaitTargetVersion string
@@ -201,9 +201,9 @@ func InitComponentDetails() error {
 			}
 		}
 	}
-	ESWaitTargetVersion = os.Getenv(waitTargetVersionEnv)
+	ESWaitTargetVersion = os.Getenv(eswaitTargetVersionEnv)
 	if len(ESWaitTargetVersion) == 0 {
-		return fmt.Errorf("The environment variable %s translated to an empty string", waitTargetVersionEnv)
+		return fmt.Errorf("The environment variable %s translated to an empty string", eswaitTargetVersionEnv)
 	}
 	return nil
 }
