@@ -36,7 +36,8 @@ type ESNode struct {
 	Name string `json:"name"`
 }
 
-type clusterHealth struct {
+// The ClusterHealth struct defines the status of the cluster
+type ClusterHealth struct {
 	Status string `json:"status"`
 }
 
@@ -62,7 +63,7 @@ func init() {
 	client = http.Client{Timeout: time.Duration(checkInterval * time.Second)}
 }
 
-func (ch clusterHealth) isSufficient() bool {
+func (ch ClusterHealth) isSufficient() bool {
 	return ch.Status != "red"
 }
 
@@ -102,12 +103,12 @@ func getResponseBody(url string) ([]byte, error) {
 	return body, nil
 }
 
-func getClusterHealth(url string) (*clusterHealth, error) {
+func getClusterHealth(url string) (*ClusterHealth, error) {
 	body, err := getResponseBody(url)
 	if err != nil {
 		return nil, err
 	}
-	var clusterHealth clusterHealth
+	var clusterHealth ClusterHealth
 	if err = json.Unmarshal(body, &clusterHealth); err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func getNodes(url string) (*[]ESNode, error) {
 	return &nodes, nil
 }
 
-func isSufficient(clusterHealth *clusterHealth, nodes *[]ESNode, version string, requiredDataNodes int) bool {
+func isSufficient(clusterHealth *ClusterHealth, nodes *[]ESNode, version string, requiredDataNodes int) bool {
 	if nodes == nil || clusterHealth == nil {
 		return false
 	}

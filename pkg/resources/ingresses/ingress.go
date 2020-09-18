@@ -68,7 +68,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 
 	if len(vmo.Spec.IngressTargetDNSName) != 0 {
 		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = vmo.Spec.IngressTargetDNSName
-		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDnsTTLSeconds)
+		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDNSTTLSeconds)
 	}
 	// if we specify AutoSecret: true we attach an annotation that will create a cert
 	if vmo.Spec.AutoSecret {

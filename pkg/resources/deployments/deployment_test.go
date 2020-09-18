@@ -206,7 +206,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 func TestVMOWithReplicas(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Api: vmcontrollerv1.Api{
+			API: vmcontrollerv1.API{
 				Replicas: 2,
 			},
 			Kibana: vmcontrollerv1.Kibana{

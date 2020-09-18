@@ -23,12 +23,22 @@ const (
 	Running = VMOStatus("Running")
 )
 
-// VMOLabel to be applied to all components of a VMO
+// VMOGroup group name for an instance resource
 const VMOGroup = "verrazzano.io"
+
+// VMOVersion version of instance resource
 const VMOVersion = "v1"
+
+// VMOLabel label for an instance resource
 const VMOLabel = "vmo." + VMOVersion + "." + VMOGroup
+
+// VMOKind kind for an instance resource
 const VMOKind = "VerrazzanoMonitoringInstance"
+
+// VMOPlural plural name for an instance resource
 const VMOPlural = "verrazzanomonitoringinstances"
+
+// VMOFullname full name for an instance resource
 const VMOFullname = VMOPlural + "." + VMOGroup
 
 // RoleBindingForVMOInstance rolebinding name for VMO instance
@@ -43,36 +53,61 @@ const ResyncPeriod = 30 * time.Second
 // VMOServiceNamePrefix to be applied to all VMO services
 const VMOServiceNamePrefix = "vmi-"
 
+// StorageVolumeName constant for storage volume
 const StorageVolumeName = "storage-volume"
+
+// DefaultNamespace constant for default namespace
 const DefaultNamespace = "default"
+
+// ServiceAppLabel label name for service app
 const ServiceAppLabel = "app"
+
+// K8SAppLabel label name for k8s app
 const K8SAppLabel = "k8s-app"
 
+// HyperOperatorModeLabel label name for hyper mode
 const HyperOperatorModeLabel = "hyper-mode"
 
 // in order to create a VMO one needs to provide a k8s secret with keys
 // various secrets needed by vmo
+
+// VMOSecretUsernameField constant for username
 const VMOSecretUsernameField = "username"
+
+// VMOSecretPasswordField constant for password
 const VMOSecretPasswordField = "password"
 
-// TLS secrets
+// TLSCRTName constant for tls crt
 const TLSCRTName = "tls.crt"
+
+// TLSKeyName constant for tls key
 const TLSKeyName = "tls.key"
 
-//VMO Metrics
+// MetricsNameSpace constant for metrics namespace
 const MetricsNameSpace = "vmo_operator"
 
-// Default Prometheus retention configuration
+// DefaultPrometheusRetentionPeriod default Prometheus retention configuration
 const DefaultPrometheusRetentionPeriod = 90
 
+// ESHttpPort default Elasticsearch HTTP port
 const ESHttpPort = 9200
+
+// ESTransportPort default Elasticsearch transport port
 const ESTransportPort = 9300
+
+// DefaultESIngestMemArgs default Elasticsearch Ingest memory settings
 const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
+
+// DefaultESDataMemArgs default Elasticsearch Data memory settings
 const DefaultESDataMemArgs = "-Xms4g -Xmx4g"
 
-// Various Kubernetes constants
+// K8sTaintNoScheduleEffect constant for Noschedule
 const K8sTaintNoScheduleEffect = "NoSchedule"
+
+// K8sReadyCondition constant for Ready
 const K8sReadyCondition = "Ready"
+
+// K8sZoneLabel constant used for affinity
 const K8sZoneLabel = "failure-domain.beta.kubernetes.io/zone"
 
 // DashboardConfig dashboards config
@@ -99,38 +134,40 @@ const AlertManagerConfigVersions = "alertmanager-config-versions"
 // AlertManagerConfigMountPath alertmanager config mountpath
 const AlertManagerConfigMountPath = "/etc/alertmanager/config"
 
-// AlertManagerWebhookURL alertmanager webhook url
+// AlertManagerWebhookURL alertmanager webhook URL
 const AlertManagerWebhookURL = "http://localhost:9093/-/reload"
 
 // AlertManagerConfigContainerLocation alertmanager config inside container
 const AlertManagerConfigContainerLocation = "/etc/alertmanager/config/" + AlertManagerYaml
 
-// PrometheusConfig prometheus config
+// PrometheusConfig Prometheus config
 const PrometheusConfig = "prometheus-config"
 
-// PrometheusConfigVersions prometheus config versions
+// PrometheusConfigVersions Prometheus config versions
 const PrometheusConfigVersions = "prometheus-config-versions"
 
-// PrometheusConfigMountPath prometheus config mountpath
+// PrometheusConfigMountPath Prometheus config mountpath
 const PrometheusConfigMountPath = "/etc/prometheus/config"
 
-// PrometheusRulesMountPath prometheus rules mountpath
+// PrometheusRulesMountPath Prometheus rules mountpath
 const PrometheusRulesMountPath = "/etc/prometheus/rules"
 
-// PrometheusConfigContainerLocation prometheus config inside container
+// PrometheusConfigContainerLocation Prometheus config inside container
 const PrometheusConfigContainerLocation = "/etc/prometheus/config/prometheus.yml"
 
-// PrometheusNodeExporterPath prometheus node exporter mountpath
+// PrometheusNodeExporterPath Prometheus node exporter mountpath
 const PrometheusNodeExporterPath = "/prometheus-disk"
 
-// ElasticSearchNodeExporterPath prometheus node exporter mountpath
+// ElasticSearchNodeExporterPath Prometheus node exporter mountpath
 const ElasticSearchNodeExporterPath = "/elasticsearch-disk"
 
-// External DNS constants
-const ExternalDnsTTLSeconds = 60
+// ExternalDNSTTLSeconds value used for ingress annotation
+const ExternalDNSTTLSeconds = 60
 
-// External site monitor constants
+// NginxClientMaxBodySize value used for ingress annotation
 const NginxClientMaxBodySize = "6M"
+
+// NginxProxyReadTimeoutForKibana value used for ingress annotation
 const NginxProxyReadTimeoutForKibana = "210s"
 
 // DefaultElasticsearchDataReplicas default replicas for ESData

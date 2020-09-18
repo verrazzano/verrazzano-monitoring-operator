@@ -144,7 +144,7 @@ func TestBasic2VMOWithDataVolumes(t *testing.T) {
 	vmo.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.Grafana.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.AlertManager.Replicas = 3
-	vmo.Spec.Api.Replicas = 2
+	vmo.Spec.API.Replicas = 2
 	if f.Ingress {
 		vmo.Spec.URI = testDomain
 	}
@@ -561,7 +561,7 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 
 	// Verify deployments
 	var deploymentNamesToReplicas = map[string]int32{
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.Api.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.API.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.PrometheusGW.Name:        1,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name:        vmo.Spec.AlertManager.Replicas,

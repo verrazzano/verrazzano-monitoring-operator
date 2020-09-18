@@ -166,7 +166,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 	// API
 	deployment := createDeploymentElement(vmo, nil, nil, config.API)
 	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.API.ImagePullPolicy
-	deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Api.Replicas)
+	deployment.Spec.Replicas = resources.NewVal(vmo.Spec.API.Replicas)
 	deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.API.Name)
 	deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 		{Name: "VMI_NAME", Value: vmo.Name},

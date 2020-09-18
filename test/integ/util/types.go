@@ -113,7 +113,7 @@ func NewVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInst
 					Replicas: 1,
 				},
 			},
-			Api: vmcontrollerv1.Api{
+			API: vmcontrollerv1.API{
 				Replicas: 1,
 			},
 		},

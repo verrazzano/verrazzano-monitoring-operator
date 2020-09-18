@@ -85,8 +85,8 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 
 	// Number of replicas for each component
-	if vmo.Spec.Api.Replicas == 0 {
-		vmo.Spec.Api.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
+	if vmo.Spec.API.Replicas == 0 {
+		vmo.Spec.API.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
 	if vmo.Spec.Kibana.Replicas == 0 {
 		vmo.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
