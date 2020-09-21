@@ -227,6 +227,25 @@ scrape_configs:
    scrape_timeout: 15s
    static_configs:
    - targets: ["` + pushGWUrl + `"]
+ - job_name: 'cadvisor'
+   scrape_interval: 20s
+   scrape_timeout: 15s
+   kubernetes_sd_configs:
+   - role: node
+   scheme: https
+   tls_config:
+     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+     insecure_skip_verify: true
+   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+   relabel_configs:
+   - action: labelmap
+     regex: __meta_kubernetes_node_label_(.+)
+   - target_label: __address__
+     replacement: kubernetes.default.svc:443
+   - source_labels: [__meta_kubernetes_node_name]
+     regex: (.+)
+     target_label: __metrics_path__
+     replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
  - job_name: 'kubernetes-pods'
    kubernetes_sd_configs:
    - role: pod
