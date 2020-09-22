@@ -256,6 +256,7 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 					Containers: []corev1.Container{
 						resources.CreateContainerElement(nil, vmoResources, componentDetails),
 					},
+					ServiceAccountName:            constants.ServiceAccountName,
 					TerminationGracePeriodSeconds: resources.New64Val(1),
 				},
 			},
