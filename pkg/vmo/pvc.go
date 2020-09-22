@@ -29,7 +29,7 @@ import (
 // subsequent deployment processing logic to do the job of choosing ADs.
 func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
 	//create log for persistent volume claims
-	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
 
 	// Inspect the Storage Class to use
 	storageClass, err := determineStorageClass(controller)

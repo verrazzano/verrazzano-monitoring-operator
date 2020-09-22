@@ -19,7 +19,7 @@ import (
 
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	//create log for creation of role bindings
-	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
 	logger.Info().Msgf("Creating/updating RoleBindings for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 
 	newRoleBindings, err := NewRoleBindings(vmo, controller)

@@ -3,6 +3,7 @@ module github.com/verrazzano/verrazzano-monitoring-operator
 go 1.13
 
 require (
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/gorilla/mux v1.7.3
 	github.com/kylelemons/godebug v1.1.0
 	github.com/prometheus/client_golang v1.2.1

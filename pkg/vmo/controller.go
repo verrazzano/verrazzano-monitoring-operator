@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
 	"os"
 	"reflect"
 	"time"
@@ -403,7 +402,7 @@ func (c *Controller) syncHandler(key string) error {
 // with the current status.
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	//create log for syncHandler
-	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
 
 	originalVMO := vmo.DeepCopy()
 

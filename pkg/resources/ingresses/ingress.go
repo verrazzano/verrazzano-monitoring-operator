@@ -101,7 +101,7 @@ func createIngressElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, host
 // New will return a new Service for VMO that needs to executed for on Complete
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta1.Ingress, error) {
 	//create log for new creating service
-	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
 
 	var ingresses []*extensions_v1beta1.Ingress
 

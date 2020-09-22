@@ -5,7 +5,6 @@ package vmo
 import (
 	"bytes"
 	"context"
-	"github.com/golang/glog"
 	"html/template"
 	"os"
 	"strings"

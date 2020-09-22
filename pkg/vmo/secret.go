@@ -269,7 +269,7 @@ func (c *Controller) loadAllAuthSecretData(ns, secretName string) (map[string]st
 // namespace.
 func EnsureTlsSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	//create log for ensuring TLS
-	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmo.Name).Logger()
 	const secretName = "system-tls"
 
 	// Don't copy the secret if it already exists.
