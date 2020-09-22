@@ -28,6 +28,7 @@ const VMOKind = "VerrazzanoMonitoringInstance"
 const VMOPlural = "verrazzanomonitoringinstances"
 const VMOFullname = VMOPlural + "." + VMOGroup
 
+const ServiceAccountName = "verrazzano-monitoring-operator"
 const RoleBindingForVMOInstance = "verrazzano-monitoring-operator"
 const ClusterRoleForVMOInstances = "vmi-cluster-role"
 

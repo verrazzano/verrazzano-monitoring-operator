@@ -245,6 +245,7 @@ func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 					Containers: []corev1.Container{
 						resources.CreateContainerElement(vmoStorage, vmoResources, componentDetails),
 					},
+					ServiceAccountName:            constants.ServiceAccountName,
 					TerminationGracePeriodSeconds: resources.New64Val(1),
 				},
 			},
