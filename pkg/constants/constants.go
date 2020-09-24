@@ -41,6 +41,9 @@ const VMOPlural = "verrazzanomonitoringinstances"
 // VMOFullname full name for an instance resource
 const VMOFullname = VMOPlural + "." + VMOGroup
 
+// ServiceAccountName service account name for VMO
+const ServiceAccountName = "verrazzano-monitoring-operator"
+
 // RoleBindingForVMOInstance rolebinding name for VMO instance
 const RoleBindingForVMOInstance = "verrazzano-monitoring-operator"
 

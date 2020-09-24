@@ -21,10 +21,10 @@ func TestGetDefaultPrometheusConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error parsing PrometheusConfiguration yaml %v", err)
 	}
-	scrape_configs := config["scrape_configs"]
-	cadvisor := getItem("job_name", "cadvisor", scrape_configs.([]interface{}))
-	kubernetes_sd_configs := cadvisor["kubernetes_sd_configs"]
-	role := kubernetes_sd_configs.([]interface{})[0].(map[interface{}]interface{})["role"]
+	scrapeConfigs := config["scrape_configs"]
+	cadvisor := getItem("job_name", "cadvisor", scrapeConfigs.([]interface{}))
+	kubernetesSdConfigs := cadvisor["kubernetes_sd_configs"]
+	role := kubernetesSdConfigs.([]interface{})[0].(map[interface{}]interface{})["role"]
 	assert.Equal(t, "node", role, "kubernetes_sd_configs should have - role: node")
 	relabelConfigs := cadvisor["relabel_configs"]
 	relabelConfig := getItem("target_label", "__metrics_path__", relabelConfigs.([]interface{}))
