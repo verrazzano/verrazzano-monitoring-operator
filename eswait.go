@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package main
 
 import (
@@ -21,12 +22,13 @@ import (
 // Otherwise, it tries again.  When the maximum wait time has elapsed without
 // success, it exits with a non-zero status.
 
-// Define structs to match JSON schema returned by ES REST API endpoints
+// The Version struct is defined to match JSON schema returned by ES REST API endpoints
 type Version struct {
 	Number string `json:"number"`
 }
 
-// NOTE: the field tags need to be kept in sync with the h querystring value in the nodes URL below
+// The ESNode struct is defined to match JSON schema returned by ES REST API endpoints
+// Note: the field tags need to be kept in sync with the h querystring value in the nodes URL below
 type ESNode struct {
 	Version string `json:"version"`
 	Role    string `json:"node.role"`
@@ -34,13 +36,14 @@ type ESNode struct {
 	Name string `json:"name"`
 }
 
+// The ClusterHealth struct defines the status of the cluster
 type ClusterHealth struct {
 	Status string `json:"status"`
 }
 
 const (
-	DEFAULT_WAIT   = "1m"
-	CHECK_INTERVAL = 5
+	defaultDefaultWait = "1m"
+	checkInterval      = 5
 )
 
 var (
@@ -49,15 +52,15 @@ var (
 	defaultWait      time.Duration
 	maxWait          time.Duration
 	numDataNodes     int
-	esUrl            string
-	clusterHealthUrl string
-	nodesUrl         string
+	esURL            string
+	clusterHealthURL string
+	nodesURL         string
 	version          string
 )
 
 func init() {
-	defaultWait, _ = time.ParseDuration(DEFAULT_WAIT)
-	client = http.Client{Timeout: time.Duration(CHECK_INTERVAL * time.Second)}
+	defaultWait, _ = time.ParseDuration(defaultDefaultWait)
+	client = http.Client{Timeout: time.Duration(checkInterval * time.Second)}
 }
 
 func (ch ClusterHealth) isSufficient() bool {
@@ -163,38 +166,38 @@ func main() {
 		log.Fatalf("Usage: eswait [-number-of-data-nodes number-of-data-nodes -timeout wait-duration] elasticsearch-url elasticsearch-version")
 	}
 
-	baseUrl, err := url.Parse(args[0])
+	baseURL, err := url.Parse(args[0])
 	if err != nil {
 		log.Fatalf("invalid ES URL: %v", err)
 	}
-	esUrl = baseUrl.String()
+	esURL = baseURL.String()
 
 	clusterHealthPath, _ := url.Parse("/_cluster/health")
-	clusterHealthUrl = baseUrl.ResolveReference(clusterHealthPath).String()
+	clusterHealthURL = baseURL.ResolveReference(clusterHealthPath).String()
 	//NOTE: the h values in the querystring need to be kept in sync with the JSON tags on ESNode struct fields above
 	nodesPath, _ := url.Parse("/_cat/nodes?h=name,node.role,version")
-	nodesUrl = baseUrl.ResolveReference(nodesPath).String()
+	nodesURL = baseURL.ResolveReference(nodesPath).String()
 
 	version = args[1]
 	if len(version) == 0 {
 		log.Fatalf("version is required")
 	}
 
-	log.Printf("will wait %v for %s to satisfy:", maxWait, esUrl)
+	log.Printf("will wait %v for %s to satisfy:", maxWait, esURL)
 	log.Printf("* version %s", version)
 	log.Printf("* at least %d data nodes", numDataNodes)
 	log.Print("* at least cluster status \"yellow\"")
 
 	deadline := time.Now().Add(maxWait)
 	for time.Now().Before(deadline) {
-		clusterHealth, err := getClusterHealth(clusterHealthUrl)
+		clusterHealth, err := getClusterHealth(clusterHealthURL)
 		if err != nil {
-			notSufficient("error getting cluster health from %s: %v", clusterHealthUrl, err)
+			notSufficient("error getting cluster health from %s: %v", clusterHealthURL, err)
 			continue
 		}
-		nodes, err := getNodes(nodesUrl)
+		nodes, err := getNodes(nodesURL)
 		if err != nil {
-			notSufficient("error getting nodes from %s: %+v", nodesUrl, err)
+			notSufficient("error getting nodes from %s: %+v", nodesURL, err)
 		}
 		if isSufficient(clusterHealth, nodes, version, numDataNodes) {
 			log.Printf("SUCCESS: version: %s, health: %s, nodes: %v", version, clusterHealth.Status, *nodes)

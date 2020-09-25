@@ -1,11 +1,13 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package secrets
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"testing"
 )
 
 func TestVMONoSecret(t *testing.T) {

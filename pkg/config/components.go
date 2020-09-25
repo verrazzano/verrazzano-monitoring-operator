@@ -4,7 +4,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -12,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// ComponentDetails struct for component detail info
 type ComponentDetails struct {
 	Name              string
 	EndpointName      string
@@ -26,13 +26,13 @@ type ComponentDetails struct {
 	EnvName           string
 }
 
-// Array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &Api, &ConfigReloader, &NodeExporter}
+// AllComponentDetails is array of all ComponentDetails
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &NodeExporter}
 
-// Storage operation-related stuff
+// StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
 
-// Default Grafana configuration
+// Grafana is the default Grafana configuration
 var Grafana = ComponentDetails{
 	Name:              "grafana",
 	EnvName:           "GRAFANA_IMAGE",
@@ -44,7 +44,7 @@ var Grafana = ComponentDetails{
 	Privileged:        false,
 }
 
-// Default Prometheus configuration
+// Prometheus is the default Prometheus configuration
 // Note: Update promtool version to match any version changes here
 //    - vmo/images/cirith-server-for-operator/docker-images
 var Prometheus = ComponentDetails{
@@ -59,7 +59,7 @@ var Prometheus = ComponentDetails{
 	RunAsUser:         int64(constants.NobodyUID),
 }
 
-// Default Prometheus InitContainer configuration
+// PrometheusInit is the default Prometheus InitContainer configuration
 var PrometheusInit = ComponentDetails{
 	Name:            "prometheus-init",
 	EnvName:         "PROMETHEUS_INIT_IMAGE",
@@ -67,7 +67,7 @@ var PrometheusInit = ComponentDetails{
 	DataDir:         "/prometheus",
 }
 
-// Default Prometheus Push Gateway configuration
+// PrometheusGW is the default Prometheus Push Gateway configuration
 var PrometheusGW = ComponentDetails{
 	Name:              "prometheus-gw",
 	EnvName:           "PROMETHEUS_GATEWAY_IMAGE",
@@ -78,7 +78,7 @@ var PrometheusGW = ComponentDetails{
 	Privileged:        false,
 }
 
-// Default AlertManager configuration
+// AlertManager is the default AlertManager configuration
 // Note: Update amtool version to match any version changes here
 //   - vmo/images/cirith-server-for-operator/docker-images
 var AlertManager = ComponentDetails{
@@ -91,20 +91,20 @@ var AlertManager = ComponentDetails{
 	Privileged:        false,
 }
 
-// AlertManager cluster settings - used in standalone AlertManager cluster service
+// AlertManagerCluster is AlertManager cluster settings - used in standalone AlertManager cluster service
 var AlertManagerCluster = ComponentDetails{
 	Name: "alertmanager-cluster",
 	Port: 9094,
 }
 
-// InitContainer config; will wait for ES to reach stable healthy state
+// ESWait is the InitContainer config; will wait for ES to reach stable healthy state
 var ESWait = ComponentDetails{
 	Name:            "wait-for-es",
 	EnvName:         "ELASTICSEARCH_WAIT_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 }
 
-// Default Kibana configuration
+// Kibana is the default Kibana configuration
 var Kibana = ComponentDetails{
 	Name:              "kibana",
 	EnvName:           "KIBANA_IMAGE",
@@ -115,7 +115,7 @@ var Kibana = ComponentDetails{
 	Privileged:        false,
 }
 
-// Default Elasticsearch Ingest configuration
+// ElasticsearchIngest is the default Elasticsearch Ingest configuration
 var ElasticsearchIngest = ComponentDetails{
 	Name:         "es-ingest",
 	EndpointName: "elasticsearch",
@@ -128,7 +128,7 @@ var ElasticsearchIngest = ComponentDetails{
 	Privileged:        false,
 }
 
-// Default Elasticsearch Master configuration
+// ElasticsearchMaster is the default Elasticsearch Master configuration
 var ElasticsearchMaster = ComponentDetails{
 	Name:            "es-master",
 	EnvName:         "ELASTICSEARCH_IMAGE",
@@ -137,7 +137,7 @@ var ElasticsearchMaster = ComponentDetails{
 	Privileged:      false,
 }
 
-// Default Elasticsearch Data configuration
+// ElasticsearchData is the default Elasticsearch Data configuration
 var ElasticsearchData = ComponentDetails{
 	Name:              "es-data",
 	EnvName:           "ELASTICSEARCH_IMAGE",
@@ -149,7 +149,7 @@ var ElasticsearchData = ComponentDetails{
 	Privileged:        false,
 }
 
-// Elasticsearch init container
+// ElasticsearchInit contains Elasticsearch init container info
 var ElasticsearchInit = ComponentDetails{
 	Name:            "elasticsearch-init",
 	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
@@ -157,8 +157,8 @@ var ElasticsearchInit = ComponentDetails{
 	Privileged:      true,
 }
 
-// Default Api configuration
-var Api = ComponentDetails{
+// API is the default API configuration
+var API = ComponentDetails{
 	Name:              "api",
 	EnvName:           "VERRAZZANO_MONITORING_INSTANCE_API_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
@@ -168,7 +168,7 @@ var Api = ComponentDetails{
 	Privileged:        false,
 }
 
-// Default config-reloader configuration
+// ConfigReloader is the default config-reloader configuration
 var ConfigReloader = ComponentDetails{
 	Name:            "config-reloader",
 	EnvName:         "CONFIG_RELOADER_IMAGE",
@@ -176,7 +176,7 @@ var ConfigReloader = ComponentDetails{
 	Privileged:      false,
 }
 
-// Default node-exporter configuration
+// NodeExporter is the default node-exporter configuration
 var NodeExporter = ComponentDetails{
 	Name:            "node-exporter",
 	EnvName:         "NODE_EXPORTER_IMAGE",
@@ -185,23 +185,25 @@ var NodeExporter = ComponentDetails{
 	Privileged:      true,
 }
 
-const ESWaitTargetVersionEnv = "ELASTICSEARCH_WAIT_TARGET_VERSION"
+const eswaitTargetVersionEnv = "ELASTICSEARCH_WAIT_TARGET_VERSION"
 
+// ESWaitTargetVersion contains value for environment variable ELASTICSEARCH_WAIT_TARGET_VERSION
 var ESWaitTargetVersion string
 
+// InitComponentDetails initialize all components and check ELASTICSEARCH_WAIT_TARGET_VERSION
 func InitComponentDetails() error {
 	// Initialize the images to use
 	for _, component := range AllComponentDetails {
 		if len(component.EnvName) > 0 {
 			component.Image = os.Getenv(component.EnvName)
 			if len(component.Image) == 0 {
-				return errors.New(fmt.Sprintf("The environment variable %s translated to an empty string for component %s", component.EnvName, component.Name))
+				return fmt.Errorf("The environment variable %s translated to an empty string for component %s", component.EnvName, component.Name)
 			}
 		}
 	}
-	ESWaitTargetVersion = os.Getenv(ESWaitTargetVersionEnv)
+	ESWaitTargetVersion = os.Getenv(eswaitTargetVersionEnv)
 	if len(ESWaitTargetVersion) == 0 {
-		return errors.New(fmt.Sprintf("The environment variable %s translated to an empty string", ESWaitTargetVersionEnv))
+		return fmt.Errorf("The environment variable %s translated to an empty string", eswaitTargetVersionEnv)
 	}
 	return nil
 }

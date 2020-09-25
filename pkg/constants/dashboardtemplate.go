@@ -1,8 +1,12 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package constants
 
+// GrafanaTmplPrometheusURI contains Grafana template for Prometheus
 const GrafanaTmplPrometheusURI = "PrometheusURI"
+
+// GrafanaTmplAlertManagerURI contains Grafana template for Alert Manager
 const GrafanaTmplAlertManagerURI = "AlertManagerURI"
 
 // Define the grafana dashboard provisioning provider. Here you specify the path where your dashboard

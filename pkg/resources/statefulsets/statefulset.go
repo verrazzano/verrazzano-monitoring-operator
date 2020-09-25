@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package statefulsets
 
 import (
@@ -16,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// Creates StatefulSet objects for a VMO resource
+// New creates StatefulSet objects for a VMO resource
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
@@ -226,7 +227,7 @@ func createAlertManagerStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 // Creates a statefulset element for the given VMO and component
 func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources,
 	componentDetails config.ComponentDetails, serviceName string) *appsv1.StatefulSet {
-	labels := resources.GetSpecId(vmo.Name, componentDetails.Name)
+	labels := resources.GetSpecID(vmo.Name, componentDetails.Name)
 	statefulSetName := resources.GetMetaName(vmo.Name, componentDetails.Name)
 	if serviceName == "" {
 		serviceName = statefulSetName

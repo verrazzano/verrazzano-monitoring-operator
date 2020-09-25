@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// CreateRoleBindings creates/updates VMO RoleBindings k8s resources
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	glog.V(4).Infof("Creating/updating RoleBindings for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 
@@ -76,7 +78,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	return nil
 }
 
-// Constructs the necessary RoleBindings for a VMO instance's Sub-Operator.
+// NewRoleBindings constructs the necessary RoleBindings for a VMO instance's Sub-Operator.
 func NewRoleBindings(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, controller *Controller) ([]*rbacv1.RoleBinding, error) {
 	instanceClusterRole, err := findClusterRole(controller, constants.ClusterRoleForVMOInstances)
 	if err != nil {

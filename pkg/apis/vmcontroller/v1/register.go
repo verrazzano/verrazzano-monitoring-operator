@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package v1
 
 import (
@@ -24,8 +25,11 @@ func Resource(resource string) schema.GroupResource {
 }
 
 var (
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme   = SchemeBuilder.AddToScheme
+
+	// AddToScheme to add scheme from SchemaBuilder
+	AddToScheme = SchemeBuilder.AddToScheme
 )
 
 // Adds the list of known types to Scheme.

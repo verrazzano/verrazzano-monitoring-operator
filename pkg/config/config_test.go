@@ -1,12 +1,14 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package config
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func TestNewConfigFromConfigMap(t *testing.T) {
@@ -31,14 +33,14 @@ func TestConfigDefaults(t *testing.T) {
 	}
 
 	assert.Equal(t, *operatorConfig.MetricsPort, 8090)
-	assert.Equal(t, *operatorConfig.DefaultSimpleComponentReplicas, DefaultSimpleComponentReplicas)
-	assert.Equal(t, *operatorConfig.DefaultPrometheusReplicas, DefaultPrometheusReplicas)
+	assert.Equal(t, *operatorConfig.DefaultSimpleComponentReplicas, defaultSimpleComponentReplicas)
+	assert.Equal(t, *operatorConfig.DefaultPrometheusReplicas, defaultPrometheusReplicas)
 	assert.Equal(t, operatorConfig.DefaultIngressTargetDNSName, "")
 }
 
 func CreateConfigFromStr(configStr string) (*OperatorConfig, error) {
 	configMap := corev1.ConfigMap{}
-	configMap.Data = map[string]string{ConfigKeyValue: configStr}
+	configMap.Data = map[string]string{configKeyValue: configStr}
 	operatorConfig, err := NewConfigFromConfigMap(&configMap)
 	return operatorConfig, err
 }

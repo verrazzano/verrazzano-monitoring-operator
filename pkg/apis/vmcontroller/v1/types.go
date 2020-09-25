@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package v1
 
 import (
@@ -59,8 +60,8 @@ type (
 		// Kibana details
 		Kibana Kibana `json:"kibana"`
 
-		// Api details
-		Api Api `json:"api,omitempty"`
+		// API details
+		API API `json:"api,omitempty"`
 
 		// Service type for component services
 		ServiceType corev1.ServiceType `json:"serviceType" yaml:"serviceType"`
@@ -70,7 +71,7 @@ type (
 		NatGatewayIPs []string `json:"natGatewayIPs,omitempty" yaml:"natGatewayIPs,omitempty"`
 	}
 
-	// Versioning
+	// Versioning details
 	Versioning struct {
 		CurrentVersion string `json:"currentVersion,omitempty" yaml:"currentVersion"`
 		DesiredVersion string `json:"desiredVersion,omitempty" yaml:"desiredVersion"`
@@ -98,13 +99,13 @@ type (
 		Replicas               int32     `json:"replicas,omitempty"`
 	}
 
-	// Prometheus Pushgateway details
+	// PrometheusGW Prometheus Pushgateway details
 	PrometheusGW struct {
 		ConfigMap string    `json:"configMap,omitempty"`
 		Resources Resources `json:"resources,omitempty"`
 	}
 
-	// Alert Manager details
+	// AlertManager details
 	AlertManager struct {
 		Enabled           bool      `json:"enabled" yaml:"enabled"`
 		Config            string    `json:"config,omitempty"`
@@ -123,7 +124,7 @@ type (
 		DataNode   ElasticsearchNode `json:"dataNode,omitempty"`
 	}
 
-	// Elasticsearch Node Type details
+	// ElasticsearchNode Type details
 	ElasticsearchNode struct {
 		Replicas  int32     `json:"replicas,omitempty"`
 		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
@@ -137,8 +138,8 @@ type (
 		Replicas  int32     `json:"replicas,omitempty"`
 	}
 
-	// Api
-	Api struct {
+	// API details
+	API struct {
 		Replicas int32 `json:"replicas,omitempty"`
 	}
 
@@ -223,10 +224,10 @@ type (
 		File string
 	}
 
+	// VerrazzanoMonitoringInstance Represents a CRD
 	// +genclient
 	// +genclient:noStatus
 	// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-	// VerrazzanoMonitoringInstance Represents a CRD
 	VerrazzanoMonitoringInstance struct {
 		metav1.TypeMeta   `json:",inline"`
 		metav1.ObjectMeta `json:"metadata"`
@@ -234,8 +235,8 @@ type (
 		Status            VerrazzanoMonitoringInstanceStatus `json:"status"`
 	}
 
-	// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 	// VerrazzanoMonitoringInstanceList Represents a collection of CRDs
+	// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 	VerrazzanoMonitoringInstanceList struct {
 		metav1.TypeMeta `json:",inline"`
 		metav1.ListMeta `json:"metadata"`
@@ -244,7 +245,6 @@ type (
 )
 
 // Hash function to identify VerrazzanoMonitoringInstance changes
-
 func (c *VerrazzanoMonitoringInstance) Hash() (uint32, error) {
 	b, err := json.Marshal(c.Spec)
 	if err != nil {

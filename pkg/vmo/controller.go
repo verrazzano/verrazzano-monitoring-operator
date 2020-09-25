@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
@@ -400,9 +401,8 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		glog.V(4).Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
 		metrics.Lock.With(labels).Set(1)
 		return nil
-	} else {
-		metrics.Lock.Delete(labels)
 	}
+	metrics.Lock.Delete(labels)
 
 	/*********************
 	 * Initialize VMO Spec
@@ -441,7 +441,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Create Persistent Volume Claims
 	 **********************/
-	pvcToAdMap, err := CreatePersistentVolumeClaims(c, vmo)
+	pvcToAdMap, err := createPersistentVolumeClaims(c, vmo)
 	if err != nil {
 		glog.Errorf("Failed to create PVCs for vmo: %v", err)
 		errorObserved = true

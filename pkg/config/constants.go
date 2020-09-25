@@ -1,25 +1,29 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package config
 
+// OperatorConfig type for operator configuration
 type OperatorConfig struct {
 	EnvName                        string   `yaml:"envName"`
 	DefaultIngressTargetDNSName    string   `yaml:"defaultIngressTargetDNSName,omitempty"`
 	DefaultSimpleComponentReplicas *int     `yaml:"defaultSimpleCompReplicas"`
 	DefaultPrometheusReplicas      *int     `yaml:"defaultPrometheusReplicas"`
-	CompartmentId                  string   `yaml:"compartmentId,omitempty"`
 	MetricsPort                    *int     `yaml:"metricsPort"`
 	NatGatewayIPs                  []string `yaml:"natGatewayIPs"`
 	Pvcs                           Pvcs     `yaml:"pvcs"`
 }
 
+// Pvcs type for storage
 type Pvcs struct {
 	StorageClass   string `yaml:"storageClass"`
 	ZoneMatchLabel string `yaml:"zoneMatchLabel"`
 }
 
-const ConfigKeyValue = "config"
+// DefaultOperatorConfigmapName config map name for operator
 const DefaultOperatorConfigmapName = "verrazzano-monitoring-operator-config"
-const DefaultSimpleComponentReplicas = 1
-const DefaultPrometheusReplicas = 3
-const DefaultMetricsPort = 8090
+
+const configKeyValue = "config"
+const defaultSimpleComponentReplicas = 1
+const defaultPrometheusReplicas = 3
+const defaultMetricsPort = 8090

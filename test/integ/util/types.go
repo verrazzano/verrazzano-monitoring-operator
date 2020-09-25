@@ -1,10 +1,12 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package util
 
 import (
 	"crypto/rand"
 	"encoding/base64"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,7 +49,7 @@ func NewSecretWithTLS(secretName, namespace string, tlsCrt, tlsKey []byte, user 
 	}
 }
 
-// NewSecretWithTLS creates an auth secret with TLS keys for admin and Reporter Users
+// NewSecretWithTLSWithMultiUser creates an auth secret with TLS keys for admin and Reporter Users
 func NewSecretWithTLSWithMultiUser(secretName, namespace string, tlsCrt, tlsKey []byte, user string, passwd string, extraCreds []string) *corev1.Secret {
 	if len(tlsKey) == 0 || len(secretName) == 0 || len(tlsCrt) == 0 {
 		return nil
@@ -111,7 +113,7 @@ func NewVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInst
 					Replicas: 1,
 				},
 			},
-			Api: vmcontrollerv1.Api{
+			API: vmcontrollerv1.API{
 				Replicas: 1,
 			},
 		},

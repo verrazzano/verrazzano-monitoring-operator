@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package util
 
 import (
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// CreateVMO creates a secret and verrazzanoMonitoringInstance k8s resources
 func CreateVMO(
 	crClient client.VMOCR,
 	clientSet kubernetes.Clientset,
@@ -41,6 +43,7 @@ func CreateVMO(
 	return res, nil
 }
 
+// GetVMO returns a verrazzanoMonitoringInstance k8s resource
 func GetVMO(
 	crClient client.VMOCR,
 	ns string,
@@ -56,6 +59,7 @@ func GetVMO(
 	return res, nil
 }
 
+// DeleteVMO delete a secret and verrazzanoMonitoringInstance k8s resource
 func DeleteVMO(
 	crClient client.VMOCR,
 	clientSet kubernetes.Clientset,

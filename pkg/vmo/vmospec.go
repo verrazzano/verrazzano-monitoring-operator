@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
@@ -12,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Initializes any uninitialized elements of the VMO spec.
+// InitializeVMOSpec initializes any uninitialized elements of the VMO spec.
 func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	// The secretName we use for basic authentication in the Nginx ingress controller
 	vmo.Spec.SecretName = vmo.Name + "-basicauth"
@@ -36,7 +37,7 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		glog.Errorf("Failed to create TLS Secrets for vmo: %v", err)
 	}
 
-	err = EnsureTlsSecretInMonitoringNS(controller, vmo)
+	err = EnsureTLSSecretInMonitoringNS(controller, vmo)
 	if err != nil {
 		glog.Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
 	}
@@ -84,8 +85,8 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 
 	// Number of replicas for each component
-	if vmo.Spec.Api.Replicas == 0 {
-		vmo.Spec.Api.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
+	if vmo.Spec.API.Replicas == 0 {
+		vmo.Spec.API.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
 	if vmo.Spec.Kibana.Replicas == 0 {
 		vmo.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)

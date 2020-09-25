@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
@@ -17,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
+// CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	ingList, err := ingresses.New(vmo)
 	if err != nil {

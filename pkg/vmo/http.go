@@ -1,12 +1,14 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
-	"github.com/golang/glog"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"net/http"
 	"time"
+
+	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // StartHTTPServer runs an embedded HTTP server for any VMO handlers as a "resilient" goroutine meaning it runs in

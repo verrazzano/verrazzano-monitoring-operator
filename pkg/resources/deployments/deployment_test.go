@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package deployments
 
 import (
@@ -192,7 +193,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			// No resources specified on this endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name) {
 			// No resources specified on this endpoint
-		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Api.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
 			// No resources specified on API endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.PrometheusGW.Name) {
 			// No resources specified on Prometheus GW
@@ -205,7 +206,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 func TestVMOWithReplicas(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Api: vmcontrollerv1.Api{
+			API: vmcontrollerv1.API{
 				Replicas: 2,
 			},
 			Kibana: vmcontrollerv1.Kibana{
@@ -220,7 +221,7 @@ func TestVMOWithReplicas(t *testing.T) {
 	}
 	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 	for _, deployment := range deployments {
-		if deployment.Name == resources.GetMetaName(vmo.Name, config.Api.Name) {
+		if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
 			assert.Equal(t, *resources.NewVal(2), *deployment.Spec.Replicas, "Api replicas")
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Kibana.Name) {
 			assert.Equal(t, *resources.NewVal(4), *deployment.Spec.Replicas, "Kibana replicas")
@@ -309,6 +310,9 @@ func TestWaitForElasticsearchTargetVersion(t *testing.T) {
 	config.ESWaitTargetVersion = targetVersion
 
 	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	if err != nil {
+		t.Error(err)
+	}
 	kibana, _ = getDeploymentByName(resources.GetMetaName(vmo.Name, config.Kibana.Name), deployments)
 	assert.Contains(t, kibana.Spec.Template.Spec.InitContainers[0].Args, targetVersion)
 }

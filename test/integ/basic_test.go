@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package integ
 
 import (
@@ -143,7 +144,7 @@ func TestBasic2VMOWithDataVolumes(t *testing.T) {
 	vmo.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.Grafana.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.AlertManager.Replicas = 3
-	vmo.Spec.Api.Replicas = 2
+	vmo.Spec.API.Replicas = 2
 	if f.Ingress {
 		vmo.Spec.URI = testDomain
 	}
@@ -473,7 +474,7 @@ func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 		httpProtocol = "http://"
 		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name+"-0")
 		promGWPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.PrometheusGW.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
 		esPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name)
 	}
 
@@ -560,7 +561,7 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 
 	// Verify deployments
 	var deploymentNamesToReplicas = map[string]int32{
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Api.Name:                 vmo.Spec.Api.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.API.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.PrometheusGW.Name:        1,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name:        vmo.Spec.AlertManager.Replicas,
@@ -621,7 +622,7 @@ func verifyAPI(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 		apiPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
 		promPort = apiPort
 	} else {
-		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
 		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
 	}
 
@@ -654,7 +655,7 @@ func verifyPrometheus(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 	} else {
 		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
 		promGWPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.PrometheusGW.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
 		httpProtocol = "http://"
 	}
 
@@ -1025,12 +1026,12 @@ func verifyGrafana(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 		fmt.Printf("'domain' obtained from Grafana config is = %+v\n", domain)
 	}
 	if externalDomainName != "localhost" {
-		if rootUrl, ok := grafanaServerConfig["root_url"]; !ok {
+		if rootURL, ok := grafanaServerConfig["root_url"]; !ok {
 			t.Fatalf("Expected 'root_url' element in result but found none\n")
-		} else if rootUrl != "https://"+externalDomainName {
-			t.Fatalf("Actual root_url value '%s' doesn't match expected value '%s'\n", rootUrl, "https://"+externalDomainName)
+		} else if rootURL != "https://"+externalDomainName {
+			t.Fatalf("Actual root_url value '%s' doesn't match expected value '%s'\n", rootURL, "https://"+externalDomainName)
 		} else {
-			fmt.Printf("'root_url' obtained from Grafana config is = %+v\n", rootUrl)
+			fmt.Printf("'root_url' obtained from Grafana config is = %+v\n", rootURL)
 		}
 	}
 
@@ -1171,7 +1172,7 @@ groups:
 		httpProtocol = "https://"
 	} else {
 		alertPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.AlertManager.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Api.Name)
+		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
 		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
 		httpProtocol = "http://"
 	}
@@ -1596,7 +1597,7 @@ func verifyVMODeploymentWithIngress(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 		replicas       int32
 	}
 	ingressMappings := []ingress{
-		{"api", "api", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Api.Name, "/prometheus/config", 1},
+		{"api", "api", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name, "/prometheus/config", 1},
 		{"grafana", "grafana", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name, "", 1},
 		{"prometheus", "prometheus", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + "-0", "/graph", 1},
 		{"prometheus-gw", "prometheus-gw", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.PrometheusGW.Name, "", 1},
@@ -1736,11 +1737,11 @@ func waitForKeyWithValueResponse(host, externalIP string, port int32, urlPath, k
 	} else {
 		httpProtocol = "http://"
 	}
-	endpointUrl := fmt.Sprintf("%s%s:%d%s", httpProtocol, externalIP, port, urlPath)
-	fmt.Printf("  ==> Verifying endpoint (%s) with key:%s and value:%s\n", endpointUrl, key, value)
+	endpointURL := fmt.Sprintf("%s%s:%d%s", httpProtocol, externalIP, port, urlPath)
+	fmt.Printf("  ==> Verifying endpoint (%s) with key:%s and value:%s\n", endpointURL, key, value)
 
 	err = testutil.Retry(testutil.DefaultRetry, func() (bool, error) {
-		_, body, err = sendRequest("GET", endpointUrl, host, false, headers, "")
+		_, body, err = sendRequest("GET", endpointURL, host, false, headers, "")
 		var jsonResp map[string]interface{}
 		if err := json.Unmarshal([]byte(body), &jsonResp); err == nil {
 			found := containsKeyWithValue(jsonResp, key, value)
@@ -1764,10 +1765,10 @@ func waitForStringInResponse(host string, externalIP string, port int32, urlPath
 	} else {
 		httpProtocol = "http://"
 	}
-	endpointUrl := fmt.Sprintf("%s%s:%d%s", httpProtocol, externalIP, port, urlPath)
+	endpointURL := fmt.Sprintf("%s%s:%d%s", httpProtocol, externalIP, port, urlPath)
 
 	err = testutil.Retry(testutil.DefaultRetry, func() (bool, error) {
-		_, body, err = sendRequest("GET", endpointUrl, host, false, headers, "")
+		_, body, err = sendRequest("GET", endpointURL, host, false, headers, "")
 		if err == nil {
 			return strings.Contains(body, expectedString), nil
 		}
@@ -1782,10 +1783,10 @@ func waitForPrometheusMetric(domain, prometheusURL string, metricName string) er
 	var body string
 	var headers = map[string]string{}
 
-	endpointUrl := fmt.Sprintf("%s/api/v1/query?query=avg_over_time(%s[1d])", prometheusURL, metricName)
+	endpointURL := fmt.Sprintf("%s/api/v1/query?query=avg_over_time(%s[1d])", prometheusURL, metricName)
 	err = testutil.Retry(testutil.DefaultRetry, func() (bool, error) {
 
-		_, body, err = sendRequest("GET", endpointUrl, "prometheus."+domain, false, headers, "")
+		_, body, err = sendRequest("GET", endpointURL, "prometheus."+domain, false, headers, "")
 		var jsonResp map[string]interface{}
 		if err := json.Unmarshal([]byte(body), &jsonResp); err == nil {
 			dataJSON := jsonResp["data"]

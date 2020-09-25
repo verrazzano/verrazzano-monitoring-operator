@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
@@ -58,6 +59,7 @@ func (hp HashedPasswords) SetPassword(name, password string) (err error) {
 	return nil
 }
 
+// GetAuthSecrets returns username and password
 func GetAuthSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (string, string, error) {
 	// setup username/passwords and secrets
 
@@ -77,6 +79,7 @@ func GetAuthSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 	return string(username), string(password), nil
 }
 
+// CreateOrUpdateAuthSecrets create/updates auth secrets
 func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, credsMap map[string]string) error {
 
 	passwords := HashedPasswords(map[string]string{})
@@ -140,6 +143,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 	return nil
 }
 
+// CreateOrUpdateTLSSecrets create/updates TLS secrets
 func CreateOrUpdateTLSSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 
 	if vmo.Spec.AutoSecret {
@@ -256,10 +260,10 @@ func (c *Controller) loadAllAuthSecretData(ns, secretName string) (map[string]st
 	return m, nil
 }
 
-// The prometheus pusher needs to access the ca.ctl cert in system-tls secret from within the pod.  The secret must
-// be in the monitoring namespace to access it as a volume.  Copy the secret from the verrazzano-system
-// namespace.
-func EnsureTlsSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+// EnsureTLSSecretInMonitoringNS copies the TLS secret. The prometheus pusher needs to access the ca.ctl cert in
+// system-tls secret from within the pod.  The secret must be in the monitoring namespace to access it as a volume.
+// Copy the secret from the verrazzano-system namespace.
+func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	const secretName = "system-tls"
 
 	// Don't copy the secret if it already exists.

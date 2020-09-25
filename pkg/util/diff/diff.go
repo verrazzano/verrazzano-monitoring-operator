@@ -1,16 +1,18 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package diff
 
 import (
 	"bufio"
-	"github.com/kylelemons/godebug/pretty"
 	"strings"
+
+	"github.com/kylelemons/godebug/pretty"
 )
 
 //
-// Diffs two Golang objects recursively, but treats any elements whose values are empty in the 'desiredObject' as
-// "no diff".  This is useful in a particular situation of comparing Kubernetes objects:
+// CompareIgnoreTargetEmpties diffs two Golang objects recursively, but treats any elements whose values are empty
+// in the 'desiredObject' as "no diff".  This is useful in a particular situation of comparing Kubernetes objects:
 // 1) The 'desiredObject' is constructed via code.  It will almost certainly have many, many (nested) empty values.
 // 2) It is compared against a 'liveObject', which has been retrieved live from the Kubernetes API, and has many of
 //    these empty values populated with (k8s-generated) default values.

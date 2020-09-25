@@ -1,5 +1,6 @@
 // Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package ingresses
 
 import (
@@ -67,7 +68,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 
 	if len(vmo.Spec.IngressTargetDNSName) != 0 {
 		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = vmo.Spec.IngressTargetDNSName
-		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDnsTTLSeconds)
+		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDNSTTLSeconds)
 	}
 	// if we specify AutoSecret: true we attach an annotation that will create a cert
 	if vmo.Spec.AutoSecret {
@@ -108,10 +109,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	}
 
 	// Create Ingress Rule for API Endpoint
-	ingRule := createIngressRuleElement(vmo, config.Api)
-	host := config.Api.Name + "." + vmo.Spec.URI
-	healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Api)
-	ingress, err := createIngressElement(vmo, host, config.Api, ingRule, healthLocations)
+	ingRule := createIngressRuleElement(vmo, config.API)
+	host := config.API.Name + "." + vmo.Spec.URI
+	healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.API)
+	ingress, err := createIngressElement(vmo, host, config.API, ingRule, healthLocations)
 	if err != nil {
 		return ingresses, err
 	}
