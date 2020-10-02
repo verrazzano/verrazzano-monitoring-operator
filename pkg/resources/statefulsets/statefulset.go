@@ -138,12 +138,16 @@ fi`,
 		}
 
 	// Add the pv volume mount to the all the containers
-	for _, container := range statefulSet.Spec.Template.Spec.Containers {
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+	statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts =
+		append(statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      "elasticsearch-master",
 			MountPath: "/usr/share/elasticsearch/data",
 		})
-	}
+	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
+		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      "elasticsearch-master",
+			MountPath: "/usr/share/elasticsearch/data",
+		})
 
 	statefulSet.Spec.VolumeClaimTemplates =
 		[]corev1.PersistentVolumeClaim{{
