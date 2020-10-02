@@ -157,7 +157,7 @@ var ElasticsearchInit = ComponentDetails{
 	Privileged:      true,
 }
 
-// ElasticsearchInit contains Elasticsearch init container info
+// ElasticsearchInitChown contains Elasticsearch init container info for the chown container
 var ElasticsearchInitChown = ComponentDetails{
 	Name:            "elasticsearch-init",
 	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
