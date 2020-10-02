@@ -137,10 +137,18 @@ fi`,
 			FailureThreshold:    5,
 		}
 
+	// Add the pv volume mount to the all the containers
+	for _, container := range statefulSet.Spec.Template.Spec.Containers {
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      "elasticsearch-master",
+			MountPath: "/usr/share/elasticsearch/data",
+		})
+	}
+
 	statefulSet.Spec.VolumeClaimTemplates =
 		[]corev1.PersistentVolumeClaim{{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pvc",
+				Name:      " elasticsearch-master",
 				Namespace: vmo.Namespace,
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{
