@@ -82,6 +82,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
         echo 'Cluster is not yet ready'
         exit 1
 `
+	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &elasticsearchUID
 
 	// Customized Readiness and Liveness probes
 	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe =
@@ -139,6 +140,11 @@ fi`,
 
 	// Add the pv volume mount to the all the containers
 	const esMasterVolName = "elasticsearch-master"
+	statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts =
+		append(statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      esMasterVolName,
+			MountPath: "/usr/share/elasticsearch/data",
+		})
 	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
 		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      esMasterVolName,
