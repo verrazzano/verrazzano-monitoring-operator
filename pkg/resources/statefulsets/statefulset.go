@@ -82,8 +82,6 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
         echo 'Cluster is not yet ready'
         exit 1
 `
-	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &elasticsearchUID
-
 	// Customized Readiness and Liveness probes
 	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe =
 		&corev1.Probe{
