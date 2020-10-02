@@ -27,7 +27,9 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &NodeExporter}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW,
+	&AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster,
+	&ElasticsearchData, &ElasticsearchInit, &ElasticsearchInitChown, &API, &ConfigReloader, &NodeExporter}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
