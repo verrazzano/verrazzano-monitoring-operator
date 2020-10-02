@@ -142,12 +142,12 @@ fi`,
 	statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts =
 		append(statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      esMasterVolName,
-			MountPath: "/usr/share/elasticsearch/data",
+			MountPath: "/elasticsearch/data",
 		})
 	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
 		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      esMasterVolName,
-			MountPath: "/usr/share/elasticsearch/data",
+			MountPath: "/elasticsearch/data",
 		})
 
 	statefulSet.Spec.VolumeClaimTemplates =
