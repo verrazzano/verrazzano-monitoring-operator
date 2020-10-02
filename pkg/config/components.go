@@ -159,7 +159,7 @@ var ElasticsearchInit = ComponentDetails{
 
 // ElasticsearchInitChown contains Elasticsearch init container info for the chown container
 var ElasticsearchInitChown = ComponentDetails{
-	Name:            "elasticsearch-init",
+	Name:            "elasticsearch-init-chown",
 	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	Privileged:      false,

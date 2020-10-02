@@ -205,6 +205,7 @@ func GetElasticsearchInitContainerMaxMapCount() *corev1.Container {
 func GetElasticsearchInitContainerChown() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInitChown)
 	elasticsearchInitContainer.Command = []string{"sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch"}
+	elasticsearchInitContainer.Ports = nil
 	return &elasticsearchInitContainer
 }
 
