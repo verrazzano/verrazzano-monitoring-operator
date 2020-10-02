@@ -74,9 +74,6 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 		corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
 	)
 
-	// Add init containers
-	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers, *resources.GetElasticsearchInitContainer())
-
 	basicAuthParams := ""
 	readinessProbeCondition = `
         echo 'Cluster is not yet ready'
@@ -136,13 +133,22 @@ fi`,
 			FailureThreshold:    5,
 		}
 
-	// Add the pv volume mount to the all the containers
+	// Add init container to set vm.max_map_count
+	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
+		*resources.GetElasticsearchInitContainerMaxMapCount())
+
+	// Create the ES chown init container needed to change ownership of /usr/share/elasticsearch
+	chownCont := resources.GetElasticsearchInitContainerChown()
+
+	// Add the pv volume mount to the chown container
 	const esMasterVolName = "elasticsearch-master"
-	statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts =
-		append(statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      esMasterVolName,
-			MountPath: "/usr/share/elasticsearch/data",
-		})
+	chownCont.VolumeMounts = []corev1.VolumeMount{{
+		Name:      esMasterVolName,
+		MountPath: "/usr/share/elasticsearch/data",
+	}}
+	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers, *chownCont)
+
+	// Add the pv volume mount to the main container
 	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
 		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      esMasterVolName,

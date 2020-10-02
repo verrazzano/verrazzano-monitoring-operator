@@ -157,6 +157,14 @@ var ElasticsearchInit = ComponentDetails{
 	Privileged:      true,
 }
 
+// ElasticsearchInit contains Elasticsearch init container info
+var ElasticsearchInitChown = ComponentDetails{
+	Name:            "elasticsearch-init",
+	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
+	ImagePullPolicy: constants.DefaultImagePullPolicy,
+	Privileged:      false,
+}
+
 // API is the default API configuration
 var API = ComponentDetails{
 	Name:              "api",
