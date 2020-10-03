@@ -144,10 +144,10 @@ fi`,
 
 	// Add init containers
 	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-		*resources.GetElasticsearchInitContainerMaxMapCount())
+		*resources.GetElasticsearchInitContainerChown())
 
 	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-		*resources.GetElasticsearchInitContainerChown())
+		*resources.GetElasticsearchInitContainerMaxMapCount())
 
 	// Add the pv volume mount to the init containers
 	for i, _ := range statefulSet.Spec.Template.Spec.InitContainers {
