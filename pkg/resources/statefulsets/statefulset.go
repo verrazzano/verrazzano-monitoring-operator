@@ -133,31 +133,29 @@ fi`,
 			FailureThreshold:    5,
 		}
 
-	// Add the pv volume mount to the main container
 	const esMasterVolName = "elasticsearch-master"
 	const esMasterData = "/usr/share/elasticsearch/data"
+
+	// Add the pv volume mount to the main container
 	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
 		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      esMasterVolName,
 			MountPath: esMasterData,
 		})
 
-	// Add init containers
-	//statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-	//	*resources.GetElasticsearchInitContainerChown())
-
+	// Add init container
 	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-		*resources.GetElasticsearchInitContainerMaxMapCount())
+		*resources.GetElasticsearchInitContainer())
 
-	// Add the pv volume mount to the init containers
-	for i := range statefulSet.Spec.Template.Spec.InitContainers {
-		statefulSet.Spec.Template.Spec.InitContainers[i].VolumeMounts =
-			[]corev1.VolumeMount{{
-				Name:      esMasterVolName,
-				MountPath: esMasterData,
-			}}
-	}
+	// Add the pv volume mount to the init container
+	statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts =
+		[]corev1.VolumeMount{{
+			Name:      esMasterVolName,
+			MountPath: esMasterData,
+		}}
 
+	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
+	// pod in the stateful set.
 	statefulSet.Spec.VolumeClaimTemplates =
 		[]corev1.PersistentVolumeClaim{{
 			ObjectMeta: metav1.ObjectMeta{

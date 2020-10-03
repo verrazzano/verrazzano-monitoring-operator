@@ -27,9 +27,7 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW,
-	&AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster,
-	&ElasticsearchData, &ElasticsearchInit, &ElasticsearchInitChown, &API, &ConfigReloader, &NodeExporter}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &NodeExporter}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
@@ -157,14 +155,6 @@ var ElasticsearchInit = ComponentDetails{
 	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	Privileged:      true,
-}
-
-// ElasticsearchInitChown contains Elasticsearch init container info for the chown container
-var ElasticsearchInitChown = ComponentDetails{
-	Name:            "elasticsearch-init-chown",
-	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
-	ImagePullPolicy: constants.DefaultImagePullPolicy,
-	Privileged:      false,
 }
 
 // API is the default API configuration

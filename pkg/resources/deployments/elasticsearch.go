@@ -65,7 +65,7 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 	}
 
 	// Add init containers
-	deploymentElement.Spec.Template.Spec.InitContainers = append(deploymentElement.Spec.Template.Spec.InitContainers, *resources.GetElasticsearchInitContainerMaxMapCount())
+	deploymentElement.Spec.Template.Spec.InitContainers = append(deploymentElement.Spec.Template.Spec.InitContainers, *resources.GetElasticsearchInitContainer())
 
 	// Istio does not work with ElasticSearch.  Uncomment the following line when istio is present
 	// deploymentElement.Spec.Template.Annotations = map[string]string{"sidecar.istio.io/inject": "false"}
