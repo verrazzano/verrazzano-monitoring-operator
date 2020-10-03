@@ -143,8 +143,8 @@ fi`,
 		})
 
 	// Add init containers
-	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-		*resources.GetElasticsearchInitContainerChown())
+	//statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
+	//	*resources.GetElasticsearchInitContainerChown())
 
 	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
 		*resources.GetElasticsearchInitContainerMaxMapCount())

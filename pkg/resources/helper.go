@@ -195,7 +195,9 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 // GetElasticsearchInitContainerMaxMapCount returns an Elasticsearch Init container that sets vm.max_map_count
 func GetElasticsearchInitContainerMaxMapCount() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
-	elasticsearchInitContainer.Args = []string{"sysctl", "-w", "vm.max_map_count=262144"}
+	elasticsearchInitContainer.Command = []string{"sh", "-c"}
+	elasticsearchInitContainer.Args = []string{"sysctl -w vm.max_map_count=262144",
+		"chown -R 1000:1000 /usr/share/elasticsearch/data"}
 	elasticsearchInitContainer.Ports = nil
 	return &elasticsearchInitContainer
 }
