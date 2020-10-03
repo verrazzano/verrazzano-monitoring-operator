@@ -204,7 +204,7 @@ func GetElasticsearchInitContainerMaxMapCount() *corev1.Container {
 // This is needed to access the PV volume data
 func GetElasticsearchInitContainerChown() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInitChown)
-	elasticsearchInitContainer.Command = []string{"sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch"}
+	elasticsearchInitContainer.Command = []string{"sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"}
 	elasticsearchInitContainer.Ports = nil
 	return &elasticsearchInitContainer
 }
