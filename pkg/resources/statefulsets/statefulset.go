@@ -133,27 +133,30 @@ fi`,
 			FailureThreshold:    5,
 		}
 
-	// Add init container to set vm.max_map_count
-	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-		*resources.GetElasticsearchInitContainerMaxMapCount())
-
-	// Create the ES chown init container needed to change ownership of /usr/share/elasticsearch
-	chownCont := resources.GetElasticsearchInitContainerChown()
-
-	// Add the pv volume mount to the chown container
-	const esMasterVolName = "elasticsearch-master"
-	chownCont.VolumeMounts = []corev1.VolumeMount{{
-		Name:      esMasterVolName,
-		MountPath: "/usr/share/elasticsearch/data",
-	}}
-	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers, *chownCont)
-
 	// Add the pv volume mount to the main container
+	const esMasterVolName = "elasticsearch-master"
+	const esMasterData = "/usr/share/elasticsearch/data"
 	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
 		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      esMasterVolName,
-			MountPath: "/usr/share/elasticsearch/data",
+			MountPath: esMasterData,
 		})
+
+	// Add init containers
+	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
+		*resources.GetElasticsearchInitContainerMaxMapCount())
+
+	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
+		*resources.GetElasticsearchInitContainerChown())
+
+	// Add the pv volume mount to the init containers
+	for i, _ := range statefulSet.Spec.Template.Spec.InitContainers {
+		statefulSet.Spec.Template.Spec.InitContainers[i].VolumeMounts =
+			[]corev1.VolumeMount{{
+				Name:      esMasterVolName,
+				MountPath: esMasterData,
+			}}
+	}
 
 	statefulSet.Spec.VolumeClaimTemplates =
 		[]corev1.PersistentVolumeClaim{{
