@@ -150,7 +150,7 @@ fi`,
 		*resources.GetElasticsearchInitContainerMaxMapCount())
 
 	// Add the pv volume mount to the init containers
-	for i, _ := range statefulSet.Spec.Template.Spec.InitContainers {
+	for i := range statefulSet.Spec.Template.Spec.InitContainers {
 		statefulSet.Spec.Template.Spec.InitContainers[i].VolumeMounts =
 			[]corev1.VolumeMount{{
 				Name:      esMasterVolName,
