@@ -33,6 +33,9 @@ func TestVMOWithReplicas(t *testing.T) {
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
 					Replicas: 5,
 				},
+				Storage: vmcontrollerv1.Storage{
+					Size: "50Gi",
+				},
 			},
 		},
 	}
