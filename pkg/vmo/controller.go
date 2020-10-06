@@ -484,7 +484,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	specDiffs := diff.CompareIgnoreTargetEmpties(originalVMO, vmo)
 	if specDiffs != "" {
 		glog.V(6).Infof("Acquired lock in namespace: %s", vmo.Namespace)
-		glog.V(4).Infof("VMO %s : Spec differences %s", vmo.Name, specDiffs)
+		glog.V(6).Infof("VMO %s : Spec differences %s", vmo.Name, specDiffs)
 		glog.V(4).Infof("Updating VMO")
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
