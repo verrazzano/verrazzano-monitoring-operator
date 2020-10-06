@@ -145,7 +145,7 @@ fi`,
 
 	// Add init container
 	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-		*resources.GetElasticsearchInitContainerChown())
+		*resources.GetElasticsearchMasterInitContainer())
 
 	// Add the pv volume mount to the init container
 	statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts =

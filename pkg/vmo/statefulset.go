@@ -22,13 +22,13 @@ import (
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	const finalizer = "verrazzano.io/sts"
 	statefulSetList, err := statefulsets.New(vmo)
 	if err != nil {
 		glog.Errorf("Failed to create StatefulSet specs for vmo: %s", err)
 		return err
 	}
 
+	// Loop through the existing stateful sets and create/update as needed
 	glog.V(4).Infof("Creating/updating Statefulsets for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	var statefulSetNames []string
 	for _, curStatefulSet := range statefulSetList {
@@ -47,15 +47,10 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
 				glog.V(6).Infof("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
-				_, _ = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
+				_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
 			}
 		} else {
-			// Create StatefulSet. Also add finalizer so that we can detect when this StatefulSet is being deleted and cleanup PVCs
-			// curStatefulSet.ObjectMeta.Finalizers = append(curStatefulSet.ObjectMeta.Finalizers, finalizer)
-			_, err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
-			if err != nil {
-				return err
-			}
+			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
 		}
 		if err != nil {
 			return err
@@ -63,21 +58,23 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		glog.V(4).Infof("Successfully applied StatefulSet '%s'\n", statefulSetName)
 	}
 
-	// Delete StatefulSets that shouldn't exist
+	// Do a second pass through the stateful sets to update PVC ownership and clean up statesful sets as needed
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingStatefulSetsList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
 	if err != nil {
 		return err
 	}
 	for _, statefulSet := range existingStatefulSetsList {
-		latestSts, _ := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Get(context.TODO(), statefulSet.Name, metav1.GetOptions{})
+		latestSts, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSet.Name)
 		if latestSts == nil {
 			break
 		}
+		// Update the PVC owner ref if needed
 		err = updateOwnerForPVCs(controller, latestSts, vmo.Name, vmo.Namespace)
 		if err != nil {
 			return err
 		}
+		// Delete StatefulSets that shouldn't exist
 		if !contains(statefulSetNames, statefulSet.Name) {
 			glog.V(6).Infof("Deleting StatefulSet %s", statefulSet.Name)
 			err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
@@ -93,15 +90,16 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 }
 
 // Update the each PVC owner reference to be the StatefulSet (STS).
-// PVCs are created automatically by Kubernetes when the STS is created,
+// PVCs are created automatically by Kubernetes when the STS is created
 // because the STS has a volumeClaimTemplate.  However, the PVCs are not deleted
 // when the STS is deleted. Set the PVC owner reference to be the STS
 // so that when the STS is deleted, the PVC will automatically get deleted.
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
+// NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
 func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
 
-	// Get for PVCs for this STS using the specID label. Each PVC metadata.label
-	// has the same specID label as the STS template.metadata.label,
+	// Get the PVCs for this STS using the specID label. Each PVC metadata.label
+	// has the same specID label as the STS template.metadata.label.
 	// For example: " app: hello-world-binding-es-master"
 	idLabel := resources.GetSpecID(vmoName, config.ElasticsearchMaster.Name)
 	selector := labels.SelectorFromSet(idLabel)
@@ -119,17 +117,17 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			Name:       statefulSet.Name,
 			UID:        statefulSet.UID,
 		}}
-		glog.V(4).Infof("Setting owner reference for PVC %s", pvc.Name)
+		glog.V(4).Infof("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update the owner reference in  PVC %s, for the reason (%v)", pvc.Name, err)
+			glog.Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
 			return err
 		}
 	}
 	replicas := int(*statefulSet.Spec.Replicas)
 	numPVCs := len(existingPvcList)
 	if numPVCs != replicas {
-		return errors.New(fmt.Sprintf("PVC owner reference set in %v of %v PVCs", numPVCs, replicas))
+		return errors.New(fmt.Sprintf("PVC owner reference set in %v of %v PVCs for VMO %s", numPVCs, replicas, vmoName))
 	}
 	return nil
 }

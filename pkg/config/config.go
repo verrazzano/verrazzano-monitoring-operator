@@ -23,7 +23,7 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error
 	}
 	var config OperatorConfig
 	err := yaml.Unmarshal([]byte(configString), &config)
-	glog.V(6).Infof("Unmarshalled configmap is:\n %s", configMap.String())
+	// glog.V(6).Infof("Unmarshalled configmap is:\n %s", configMap.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshall ConfigMap %s: %v", configMap.String(), err)
 	}
