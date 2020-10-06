@@ -127,7 +127,7 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 	replicas := int(*statefulSet.Spec.Replicas)
 	numPVCs := len(existingPvcList)
 	if numPVCs != replicas {
-		return errors.New(fmt.Sprintf("PVC owner reference set in %v of %v PVCs for VMO %s", numPVCs, replicas, vmoName))
+		return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", numPVCs, replicas, vmoName)
 	}
 	return nil
 }

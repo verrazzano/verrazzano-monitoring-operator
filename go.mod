@@ -9,6 +9,8 @@ require (
 	github.com/prometheus/client_golang v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/tools v0.0.0-20201006183945-23a3aa10a23c // indirect
 	gopkg.in/resty.v1 v1.12.0
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.18.2
