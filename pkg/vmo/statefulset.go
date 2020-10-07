@@ -89,11 +89,11 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	return nil
 }
 
-// Update the each PVC owner reference to be the StatefulSet (STS).
+// Update each PVC metadata.ownerReferences field to refer to the StatefulSet (STS).
 // PVCs are created automatically by Kubernetes when the STS is created
 // because the STS has a volumeClaimTemplate.  However, the PVCs are not deleted
-// when the STS is deleted. Set the PVC owner reference to be the STS
-// so that when the STS is deleted, the PVC will automatically get deleted.
+// when the STS is deleted. By setting the PVC metadata.ownerReferences field to refer
+// to the STS resource, the PVC will automatically get deleted when the STS is deleted.
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
 // NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
 func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
