@@ -192,6 +192,16 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 	}
 }
 
+// GetElasticsearchMasterInitContainer return an Elasticsearch Init container for the master.  This changes ownership of
+// the ES directory permissions needed to access PV volume data.  Also set the max map count.
+func GetElasticsearchMasterInitContainer() *corev1.Container {
+	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
+	elasticsearchInitContainer.Command =
+		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data; sysctl -w vm.max_map_count=262144"}
+	elasticsearchInitContainer.Ports = nil
+	return &elasticsearchInitContainer
+}
+
 // GetElasticsearchInitContainer returns an Elasticsearch Init container object
 func GetElasticsearchInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)

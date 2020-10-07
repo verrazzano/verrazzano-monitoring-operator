@@ -63,7 +63,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else {
 				specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 				if specDiffs != "" {
-					glog.V(4).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+					glog.V(6).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
@@ -117,7 +117,7 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		// Deployment spec differences, so call Update() and return
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 		if specDiffs != "" {
-			glog.V(4).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+			glog.V(6).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {
 				return false, err

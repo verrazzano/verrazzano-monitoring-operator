@@ -5,16 +5,16 @@ package statefulsets
 
 import (
 	"fmt"
-	"strings"
-
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"strings"
 )
 
 // New creates StatefulSet objects for a VMO resource
@@ -74,15 +74,11 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 		corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
 	)
 
-	// Add init containers
-	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers, *resources.GetElasticsearchInitContainer())
-
 	basicAuthParams := ""
 	readinessProbeCondition = `
         echo 'Cluster is not yet ready'
         exit 1
 `
-
 	// Customized Readiness and Liveness probes
 	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe =
 		&corev1.Probe{
@@ -136,6 +132,43 @@ fi`,
 			TimeoutSeconds:      5,
 			FailureThreshold:    5,
 		}
+
+	const esMasterVolName = "elasticsearch-master"
+	const esMasterData = "/usr/share/elasticsearch/data"
+
+	// Add the pv volume mount to the main container
+	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
+		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      esMasterVolName,
+			MountPath: esMasterData,
+		})
+
+	// Add init container
+	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
+		*resources.GetElasticsearchMasterInitContainer())
+
+	// Add the pv volume mount to the init container
+	statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts =
+		[]corev1.VolumeMount{{
+			Name:      esMasterVolName,
+			MountPath: esMasterData,
+		}}
+
+	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
+	// pod in the stateful set.
+	statefulSet.Spec.VolumeClaimTemplates =
+		[]corev1.PersistentVolumeClaim{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      esMasterVolName,
+				Namespace: vmo.Namespace,
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(vmo.Spec.Elasticsearch.Storage.Size)},
+				},
+			},
+		}}
 
 	return statefulSet
 }
