@@ -1,7 +1,7 @@
 // Copyright (c) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-def HEAD_COMMIT
+def DOCKER_IMAGE_TAG
 
 pipeline {
     options {
@@ -55,6 +55,13 @@ pipeline {
                     mkdir -p ${GO_REPO_PATH}/verrazzano-monitoring-operator
                     tar cf - . | (cd ${GO_REPO_PATH}/verrazzano-monitoring-operator/ ; tar xf -)
                 """
+                script {
+                    def props = readProperties file: '.verrazzano-development-version'
+                    VERRAZZANO_DEV_VERSION = props['verrazzano-development-version']
+                    TIMESTAMP = sh(returnStdout: true, script: "date +%Y%m%d%H%M%S").trim()
+                    SHORT_COMMIT_HASH = sh(returnStdout: true, script: "git rev-parse --short HEAD").trim()
+                    DOCKER_IMAGE_TAG = "${VERRAZZANO_DEV_VERSION}-${TIMESTAMP}-${SHORT_COMMIT_HASH}"
+                }
             }
         }
        
@@ -63,7 +70,7 @@ pipeline {
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push DOCKER_IMAGE_NAME_OPERATOR=${DOCKER_IMAGE_NAME_OPERATOR} K8S_NAMESPACE=${VMI_NAMESAPCE_PREFIX}-${env.BUILD_NUMBER} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
+                    make push DOCKER_IMAGE_NAME_OPERATOR=${DOCKER_IMAGE_NAME_OPERATOR} DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} K8S_NAMESPACE=${VMI_NAMESAPCE_PREFIX}-${env.BUILD_NUMBER} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
                 """
             }
         }
@@ -195,8 +202,7 @@ pipeline {
             when { not { buildingTag() } }
             steps {
                 script {
-                    HEAD_COMMIT = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
-                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:${HEAD_COMMIT}"
+                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG}"
                 }
                 sh "mv scanning-report.json verrazzano-monitoring-operator.scanning-report.json"
             }
@@ -212,8 +218,8 @@ pipeline {
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-tag DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_OPERATOR=${env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR}
-                    make k8s-dist DOCKER_IMAGE_NAME_OPERATOR=${DOCKER_PUBLISH_IMAGE_NAME_OPERATOR} VERSION=${BRANCH_NAME} K8S_NAMESPACE=default
+                    make push-tag DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_OPERATOR=${env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR} DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}
+                    make k8s-dist DOCKER_IMAGE_NAME_OPERATOR=${DOCKER_PUBLISH_IMAGE_NAME_OPERATOR} DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} VERSION=${BRANCH_NAME} K8S_NAMESPACE=default
                 """
             }
         }
@@ -225,7 +231,7 @@ pipeline {
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-eswait DOCKER_IMAGE_NAME_ESWAIT=${DOCKER_IMAGE_NAME_ESWAIT} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
+                    make push-eswait DOCKER_IMAGE_NAME_ESWAIT=${DOCKER_IMAGE_NAME_ESWAIT}  DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
                 """
             }
         }
@@ -236,8 +242,7 @@ pipeline {
             }
             steps {
                 script {
-                    HEAD_COMMIT = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
-                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}:${HEAD_COMMIT}"
+                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG}"
                 }
                 sh "mv scanning-report.json verrazzano-monitoring-instance-eswait.scanning-report.json"
             }
@@ -255,7 +260,7 @@ pipeline {
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-tag-eswait DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_ESWAIT=${env.DOCKER_PUBLISH_IMAGE_NAME_ESWAIT}
+                    make push-tag-eswait DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_ESWAIT=${env.DOCKER_PUBLISH_IMAGE_NAME_ESWAIT} DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}
                 """
             }
         }
