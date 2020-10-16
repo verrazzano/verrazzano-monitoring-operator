@@ -213,17 +213,6 @@ pipeline {
             }
         }
 
-        stage('Publish Image') {
-            when { buildingTag() }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-tag DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_OPERATOR=${env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR} DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}
-                    make k8s-dist DOCKER_IMAGE_NAME_OPERATOR=${DOCKER_PUBLISH_IMAGE_NAME_OPERATOR} DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} VERSION=${BRANCH_NAME} K8S_NAMESPACE=default
-                """
-            }
-        }
-
         stage('Build ESWait Image') {
             when {
                 not { buildingTag() }
@@ -250,18 +239,6 @@ pipeline {
                 always {
                     archiveArtifacts artifacts: '**/*scanning-report.json', allowEmptyArchive: true
                 }
-            }
-        }
-
-        stage('Publish ESWait Image') {
-            when {
-                buildingTag()
-            }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-tag-eswait DOCKER_REPO=${env.DOCKER_REPO} DOCKER_NAMESPACE=${env.DOCKER_NAMESPACE} DOCKER_IMAGE_NAME_ESWAIT=${env.DOCKER_PUBLISH_IMAGE_NAME_ESWAIT} DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}
-                """
             }
         }
     }
