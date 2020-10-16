@@ -9,8 +9,7 @@ DOCKERFILE_OPERATOR = docker-images/${OPERATOR_NAME}/Dockerfile
 DOCKER_IMAGE_NAME_ESWAIT ?= ${ESWAIT_NAME}-dev
 DOCKERFILE_ESWAIT = docker-images/${ESWAIT_NAME}/Dockerfile
 
-TAG=$(shell git rev-parse HEAD)
-VERSION = ${TAG}
+DOCKER_IMAGE_TAG ?= local-$(shell git rev-parse --short HEAD)
 
 CREATE_LATEST_TAG=0
 
@@ -35,7 +34,6 @@ endif
 
 DOCKER_NAMESPACE ?= verrazzano
 DOCKER_REPO ?= container-registry.oracle.com
-DOCKER_IMAGE_TAG ?= ${VERSION}
 DIST_DIR:=dist
 BIN_DIR:=${DIST_DIR}/bin
 BIN_NAME:=${OPERATOR_NAME}
@@ -111,7 +109,7 @@ docker-clean:
 
 .PHONY: k8s-dist
 k8s-dist: docker-clean
-	echo ${VERSION} ${JENKINS_URL} ${CI_COMMIT_TAG} ${CI_COMMIT_SHA}
+	echo ${DOCKER_IMAGE_TAG} ${JENKINS_URL} ${CI_COMMIT_TAG} ${CI_COMMIT_SHA}
 	echo ${DOCKER_IMAGE_NAME_OPERATOR}
 	mkdir -p ${DIST_DIR}
 	cp -r docker-images/verrazzano-monitoring-operator/* ${DIST_DIR}
