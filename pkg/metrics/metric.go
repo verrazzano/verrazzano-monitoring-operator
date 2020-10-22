@@ -6,14 +6,14 @@ package metrics
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"net/http"
-	"os"
->>>>>>> 84804eb... Implemented structured logging
 )
 
 // DanglingPVC GaugeVec

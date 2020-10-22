@@ -4,11 +4,11 @@
 package vmo
 
 import (
-	"github.com/rs/zerolog"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 

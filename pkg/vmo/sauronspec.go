@@ -1,8 +1,11 @@
 // Copyright (C) 2020, Oracle Corporation and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
+	"os"
+
 	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -10,10 +13,9 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
 )
 
-// Initializes any uninitialized elements of the Sauron spec.
+// InitializeSauronSpec initializes any uninitialized elements of the Sauron spec.
 func InitializeSauronSpec(controller *Controller, sauron *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	//create log for initializing Sauron
 	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", sauron.Name).Logger()
@@ -40,7 +42,7 @@ func InitializeSauronSpec(controller *Controller, sauron *vmcontrollerv1.Verrazz
 		logger.Error().Msgf("Failed to create TLS Secrets for sauron: %v", err)
 	}
 
-	err = EnsureTlsSecretInMonitoringNS(controller, sauron)
+	err = EnsureTLSSecretInMonitoringNS(controller, sauron)
 	if err != nil {
 		logger.Error().Msgf("Failed to copy TLS Secret to monitoring namespace: %v", err)
 	}
@@ -88,8 +90,8 @@ func InitializeSauronSpec(controller *Controller, sauron *vmcontrollerv1.Verrazz
 	}
 
 	// Number of replicas for each component
-	if sauron.Spec.Api.Replicas == 0 {
-		sauron.Spec.Api.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
+	if sauron.Spec.API.Replicas == 0 {
+		sauron.Spec.API.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
 	if sauron.Spec.Kibana.Replicas == 0 {
 		sauron.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)

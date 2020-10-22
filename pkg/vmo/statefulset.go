@@ -6,7 +6,9 @@ package vmo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
+
 	"github.com/rs/zerolog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -100,6 +102,8 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
 // NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
 func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
+	//create log for creation of stateful sets
+	logger := zerolog.New(os.Stderr).With().Timestamp().Str("kind", "VerrazzanoMonitoringInstance").Str("name", vmoName).Logger()
 
 	// Get the PVCs for this STS using the specID label. Each PVC metadata.label
 	// has the same specID label as the STS template.metadata.label.
@@ -120,10 +124,10 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			Name:       statefulSet.Name,
 			UID:        statefulSet.UID,
 		}}
-		glog.V(4).Infof("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
+		logger.Info().Msgf("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
+			logger.Error().Msgf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
 			return err
 		}
 	}

@@ -95,7 +95,6 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 		}
 	}
 	auth := fmt.Sprintf("%s", passwords.Bytes())
-	// glog.V(4).Infof("Debug Auth '%s' ", auth)
 
 	secretData := make(map[string][]byte)
 	secretData["auth"] = []byte(auth)

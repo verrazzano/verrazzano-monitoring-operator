@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-// Initialize logs with Time and Global Level of Logs set at Info
+// InitLogs initializes logs with Time and Global Level of Logs set at Info
 func InitLogs() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
