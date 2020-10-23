@@ -13,16 +13,7 @@ import (
 func InitLogs() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-	// Log levels are outlined as follows:
-	// Panic: 5
-	// Fatal: 4
-	// Error: 3
-	// Warn: 2
-	// Info: 1
-	// Debug: 0
-	// Trace: -1
-	// more info can be found at https://github.com/rs/zerolog#leveled-logging
-
+	// Log levels can be found at https://github.com/rs/zerolog#leveled-logging
 	envLog := os.Getenv("LOG_LEVEL")
 	if val, err := strconv.Atoi(envLog); envLog != "" && err == nil && val >= -1 && val <= 5 {
 		zerolog.SetGlobalLevel(zerolog.Level(val))
