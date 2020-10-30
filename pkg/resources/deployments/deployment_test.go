@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -58,6 +59,50 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Equal(t, 7, len(deployments), "Length of generated deployments")
+	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
+}
+
+func TestVMODevProfileFullDeploymentSize(t *testing.T) {
+	const envKey = "SINGLE_SYSTEM_VMI"
+	os.Setenv(envKey, "true")
+	defer func() {
+		t.Log("Unsetting SINGLE_SYSTEM_VMI")
+		os.Unsetenv(envKey)
+		_, ok := os.LookupEnv(envKey)
+		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
+	}()
+
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			CascadingDelete: true,
+			Grafana: vmcontrollerv1.Grafana{
+				Enabled: true,
+			},
+			Prometheus: vmcontrollerv1.Prometheus{
+				Enabled:  true,
+				Replicas: 1,
+			},
+			AlertManager: vmcontrollerv1.AlertManager{
+				Enabled: true,
+			},
+			Kibana: vmcontrollerv1.Kibana{
+				Enabled: true,
+			},
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled:    true,
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+			},
+		},
+	}
+	assert.True(t, resources.IsDevProfile(vmo), "Single node ES setup, expected IsDevProfile to be true")
+
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, 5, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
