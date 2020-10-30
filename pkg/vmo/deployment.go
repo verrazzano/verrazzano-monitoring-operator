@@ -29,6 +29,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
 	_, present := os.LookupEnv("singleSystemVMI")
+	glog.Infof("CDD Env var SingleSystemVMI present? %v", present)
 	if present {
 		return false, nil
 	}
