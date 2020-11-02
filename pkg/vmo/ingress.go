@@ -6,6 +6,7 @@ package vmo
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -20,6 +21,13 @@ import (
 
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+
+	_, present := os.LookupEnv("singleSystemVMI")
+	glog.Infof("CDD Env var SingleSystemVMI present? %v", present)
+	if present {
+		return nil
+	}
+
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
 		glog.Errorf("Failed to create Ingress specs for vmo: %s", err)
