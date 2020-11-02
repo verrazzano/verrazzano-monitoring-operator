@@ -7,8 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -28,18 +26,21 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	_, present := os.LookupEnv("singleSystemVMI")
-	glog.Infof("CDD Env var SingleSystemVMI present? %v", present)
-	if present {
-		return false, nil
-	}
-
+	//	_, present := os.LookupEnv("singleSystemVMI")
+	//	glog.Infof("CDD Env var SingleSystemVMI present? %v", present)
+	//	if present {
+	//		return false, nil
+	//	}
+	glog.Info("*********************************************************************************")
+	glog.Infof("CDD CreateDeployments Controller =  %+v", controller)
+	glog.Infof("CDD CreateDeployments MonitoringInstance =  %+v", vmo)
+	glog.Info("*********************************************************************************")
 	deployList, err := deployments.New(vmo, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
 		glog.Errorf("Failed to create Deployment specs for vmo: %s", err)
 		return false, err
 	}
-
+	glog.Infof("CDD DeploymentList =  %+v", deployList)
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
@@ -56,6 +57,11 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 		glog.V(6).Infof("Applying Deployment '%s' in namespace '%s' for vmo '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
+		if existingDeployment != nil {
+			glog.Infof("CDD CreateDeployments ExistingDeployments =  %+v", existingDeployment)
+		} else {
+			glog.Info("Existing Deployments is Nil")
+		}
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
 				_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), curDeployment, metav1.CreateOptions{})
