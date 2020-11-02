@@ -27,8 +27,8 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	_, present := os.LookupEnv("singleSystemVMI")
-	glog.Infof("CDD Env var SingleSystemVMI present? %v", present)
+	_, present := os.LookupEnv("SINGLE_SYSTEM_VMI")
+	glog.Infof("CDD Env var SINGLE_SYSTEM_VMI present? %v", present)
 	if present {
 		return false, nil
 	}
