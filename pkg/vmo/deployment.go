@@ -11,6 +11,7 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"os"
 )
 
 // CreateDeployments create/update VMO deployment k8s resources
@@ -27,9 +27,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	_, present := os.LookupEnv("SINGLE_SYSTEM_VMI")
-	glog.Infof("CDD Env var SINGLE_SYSTEM_VMI present? %v", present)
-	if present {
+	if resources.IsDevProfile(vmo) {
 		return false, nil
 	}
 

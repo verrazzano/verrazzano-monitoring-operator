@@ -5,6 +5,8 @@ package resources
 
 import (
 	"fmt"
+	"github.com/golang/glog"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -320,4 +322,13 @@ func New64Val(value int64) *int64 {
 func NewBool(value bool) *bool {
 	var val = value
 	return &val
+}
+
+// IsDevProfile return true if the singleSystemVMI env var is set
+func IsDevProfile(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
+	_, present := os.LookupEnv("SINGLE_SYSTEM_VMI")
+	glog.V(4).Infof("Env var SINGLE_SYSTEM_VMI present? %v", present)
+	return present
+	//profile := vmo.Spec.Profile
+	//return len(profile) > 0 && strings.ToLower(profile) == DevelopmentProfile
 }

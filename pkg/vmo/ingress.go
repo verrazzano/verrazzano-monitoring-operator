@@ -6,11 +6,10 @@ package vmo
 import (
 	"context"
 	"errors"
-	"os"
-
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,9 +21,7 @@ import (
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 
-	_, present := os.LookupEnv("SINGLE_SYSTEM_VMI")
-	glog.Infof("CDD Env var SINGLE_SYSTEM_VMI present? %v", present)
-	if present {
+	if resources.IsDevProfile(vmo) {
 		return nil
 	}
 

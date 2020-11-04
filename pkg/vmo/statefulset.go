@@ -18,14 +18,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"os"
 )
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	_, present := os.LookupEnv("SINGLE_SYSTEM_VMI")
-	glog.Infof("CDD Env var SINGLE_SYSTEM_VMI present? %v", present)
-	if present {
+	if resources.IsDevProfile(vmo) {
 		return nil
 	}
 
