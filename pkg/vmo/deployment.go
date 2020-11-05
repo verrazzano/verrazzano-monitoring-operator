@@ -7,11 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,6 +26,10 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
+
+	if resources.IsDevProfile(vmo) {
+		return false, nil
+	}
 
 	deployList, err := deployments.New(vmo, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
@@ -49,6 +53,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 		glog.V(6).Infof("Applying Deployment '%s' in namespace '%s' for vmo '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
+
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
 				_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), curDeployment, metav1.CreateOptions{})

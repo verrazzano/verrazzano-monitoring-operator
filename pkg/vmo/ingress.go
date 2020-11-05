@@ -6,10 +6,10 @@ package vmo
 import (
 	"context"
 	"errors"
-
 	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +20,11 @@ import (
 
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+
+	if resources.IsDevProfile(vmo) {
+		return nil
+	}
+
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
 		glog.Errorf("Failed to create Ingress specs for vmo: %s", err)
