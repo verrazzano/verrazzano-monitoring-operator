@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+	"github.com/golang/glog"
 	"strconv"
 	"strings"
 
@@ -126,7 +127,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 	}
 
 	// Elasticsearch
-	if vmo.Spec.Elasticsearch.Enabled {
+	// - Hacking in the profile for now to skip the ingest/data deployment objects
+	// - We should likely use a factory pattern here to create different VMI profiles, although I think it might
+	//   be better to can the default specs as template files and read them in
+	if vmo.Spec.Elasticsearch.Enabled && !resources.IsDevProfile(vmo) {
 		var es Elasticsearch = ElasticsearchBasic{}
 		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
 	}
@@ -152,14 +156,19 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
-		waitForEsInitContainer := corev1.Container{
-			Name:  config.ESWait.Name,
-			Image: config.ESWait.Image,
-			// `-number-of-data-nodes 1` tells eswait to look for at least one data node
-			// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
-			Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
+		if !resources.IsDevProfile(vmo) {
+			waitForEsInitContainer := corev1.Container{
+				Name:  config.ESWait.Name,
+				Image: config.ESWait.Image,
+				// `-number-of-data-nodes 1` tells eswait to look for at least one data node
+				// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
+				Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
+			}
+			deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
+		} else {
+			glog.Info("In development mode, bypassing ESWait container creation for Kibana")
 		}
-		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
+
 		deployments = append(deployments, deployment)
 	}
 

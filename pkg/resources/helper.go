@@ -329,6 +329,4 @@ func IsDevProfile(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
 	_, present := os.LookupEnv("SINGLE_SYSTEM_VMI")
 	glog.V(4).Infof("Env var SINGLE_SYSTEM_VMI present? %v", present)
 	return present
-	//profile := vmo.Spec.Profile
-	//return len(profile) > 0 && strings.ToLower(profile) == DevelopmentProfile
 }

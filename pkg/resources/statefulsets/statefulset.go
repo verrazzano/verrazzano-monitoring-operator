@@ -5,6 +5,7 @@ package statefulsets
 
 import (
 	"fmt"
+	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"strconv"
 	"strings"
 )
 
@@ -36,9 +38,16 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSe
 func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
+	devProfile := resources.IsDevProfile(vmo)
+	glog.Info("devProfile: ", strconv.FormatBool(devProfile))
+
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
 
-	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Elasticsearch.MasterNode.Replicas)
+	if devProfile {
+		statefulSet.Spec.Replicas = resources.NewVal(constants.DefaultDevProfileESReplicas)
+	} else {
+		statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Elasticsearch.MasterNode.Replicas)
+	}
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
 	var elasticsearchUID int64 = 1000
@@ -51,12 +60,8 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
 	}
 
-	statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env,
-		corev1.EnvVar{
-			Name:  "discovery.seed_hosts",
-			Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
-		},
-		corev1.EnvVar{
+	var envVars []corev1.EnvVar = []corev1.EnvVar{
+		{
 			Name: "node.name",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
@@ -64,15 +69,32 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 				},
 			},
 		},
-		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name},
-		corev1.EnvVar{Name: "node.master", Value: "true"},
-		corev1.EnvVar{Name: "node.ingest", Value: "false"},
-		corev1.EnvVar{Name: "node.data", Value: "false"},
+		{Name: "cluster.name", Value: vmo.Name},
 		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
-		corev1.EnvVar{Name: "HTTP_ENABLE", Value: "true"},
-
-		corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
-	)
+		{Name: "HTTP_ENABLE", Value: "true"},
+	}
+	if devProfile {
+		envVars = append(envVars,
+			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
+			corev1.EnvVar{Name: "node.master", Value: "true"},
+			corev1.EnvVar{Name: "node.ingest", Value: "true"},
+			corev1.EnvVar{Name: "node.data", Value: "true"},
+			// set the JVM memory opts for single-node ES mode
+			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: constants.DefaultDevProfileESMemArgs},
+		)
+	} else {
+		envVars = append(envVars,
+			corev1.EnvVar{
+				Name:  "discovery.seed_hosts",
+				Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
+			},
+			corev1.EnvVar{Name: "node.master", Value: "true"},
+			corev1.EnvVar{Name: "node.ingest", Value: "false"},
+			corev1.EnvVar{Name: "node.data", Value: "false"},
+			corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
+		)
+	}
+	statefulSet.Spec.Template.Spec.Containers[0].Env = envVars
 
 	basicAuthParams := ""
 	readinessProbeCondition = `
@@ -156,20 +178,36 @@ fi`,
 
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
-	statefulSet.Spec.VolumeClaimTemplates =
-		[]corev1.PersistentVolumeClaim{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      esMasterVolName,
-				Namespace: vmo.Namespace,
-			},
-			Spec: corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(vmo.Spec.Elasticsearch.Storage.Size)},
+	if !devProfile {
+		storageSize := vmo.Spec.Elasticsearch.Storage.Size
+		if len(storageSize) == 0 {
+			glog.Info("ES storage size not specified, using default of 50Gi")
+			storageSize = "50Gi"
+		}
+
+		statefulSet.Spec.VolumeClaimTemplates =
+			[]corev1.PersistentVolumeClaim{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      esMasterVolName,
+					Namespace: vmo.Namespace,
+				},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storageSize)},
+					},
+				},
+			}}
+	} else {
+		statefulSet.Spec.Template.Spec.Volumes = []corev1.Volume{
+			{
+				Name: esMasterVolName,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			},
-		}}
-
+		}
+	}
 	return statefulSet
 }
 

@@ -4,6 +4,11 @@
 package services
 
 import (
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,4 +32,44 @@ func TestElasticsearchDefaultServices1(t *testing.T) {
 	}
 	services := createElasticsearchServiceElements(vmo)
 	assert.Equal(t, 3, len(services), "Length of generated services")
+}
+
+func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "myDevVMO",
+		},
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled: true,
+			},
+		},
+	}
+	const envKey = "SINGLE_SYSTEM_VMI"
+	os.Setenv(envKey, "true")
+	defer func() {
+		t.Log("Unsetting SINGLE_SYSTEM_VMI")
+		os.Unsetenv(envKey)
+		_, ok := os.LookupEnv(envKey)
+		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
+	}()
+	assert.True(t, resources.IsDevProfile(vmo), "Single node ES setup, expected IsDevProfile to be true")
+
+	services := createElasticsearchServiceElements(vmo)
+	assert.Equal(t, 3, len(services), "Length of generated services")
+
+	ingestService := services[0]
+	masterService := services[1]
+	dataService := services[2]
+
+	expectedSelector := resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
+
+	assert.Equal(t, ingestService.Spec.Selector, expectedSelector)
+	assert.Equal(t, ingestService.Spec.Ports[0].Port, int32(constants.ESHttpPort))
+
+	assert.Equal(t, masterService.Spec.Ports[0].Port, int32(constants.ESTransportPort))
+
+	assert.Equal(t, dataService.Spec.Ports[0].Port, int32(9100))
+	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.ESHttpPort))
+	assert.Equal(t, dataService.Spec.Selector, expectedSelector)
 }
