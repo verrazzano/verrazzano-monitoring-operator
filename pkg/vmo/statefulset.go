@@ -7,13 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -28,12 +29,12 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 
 	statefulSetList, err := statefulsets.New(vmo)
 	if err != nil {
-		glog.Errorf("Failed to create StatefulSet specs for vmo: %s", err)
+		zap.S().Errorf("Failed to create StatefulSet specs for vmo: %s", err)
 		return err
 	}
 
 	// Loop through the existing stateful sets and create/update as needed
-	glog.V(4).Infof("Creating/updating Statefulsets for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	zap.S().Infof("Creating/updating Statefulsets for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	var statefulSetNames []string
 	for _, curStatefulSet := range statefulSetList {
 		statefulSetName := curStatefulSet.Name
@@ -45,12 +46,12 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			runtime.HandleError(errors.New("statefulset name must be specified"))
 			return nil
 		}
-		glog.V(6).Infof("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
+		zap.S().Debugf("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
-				glog.V(6).Infof("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
+				zap.S().Debugf("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
 				_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
 			}
 		} else {
@@ -59,7 +60,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		if err != nil {
 			return err
 		}
-		glog.V(4).Infof("Successfully applied StatefulSet '%s'\n", statefulSetName)
+		zap.S().Infof("Successfully applied StatefulSet '%s'\n", statefulSetName)
 	}
 
 	// Do a second pass through the stateful sets to update PVC ownership and clean up statesful sets as needed
@@ -80,16 +81,16 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 		// Delete StatefulSets that shouldn't exist
 		if !contains(statefulSetNames, statefulSet.Name) {
-			glog.V(6).Infof("Deleting StatefulSet %s", statefulSet.Name)
+			zap.S().Debugf("Deleting StatefulSet %s", statefulSet.Name)
 			err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
+				zap.S().Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
 				return err
 			}
 		}
 	}
 
-	glog.V(4).Infof("Successfully applied StatefulSets for vmo '%s'", vmo.Name)
+	zap.S().Infof("Successfully applied StatefulSets for vmo '%s'", vmo.Name)
 	return nil
 }
 
@@ -121,10 +122,10 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			Name:       statefulSet.Name,
 			UID:        statefulSet.UID,
 		}}
-		glog.V(4).Infof("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
+		zap.S().Infof("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
+			zap.S().Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
 			return err
 		}
 	}

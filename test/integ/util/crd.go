@@ -5,16 +5,14 @@ package util
 
 import (
 	"context"
-
-	"k8s.io/client-go/kubernetes"
-
 	"fmt"
 
-	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/client"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // CreateVMO creates a secret and verrazzanoMonitoringInstance k8s resources
@@ -28,7 +26,7 @@ func CreateVMO(
 	fmt.Printf("Creating secret '%s' in namespace '%s'\n", vmo.Name, ns)
 	_, err := clientSet.CoreV1().Secrets(ns).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("Cannot create a vmo secret: %s, due to err: %v", secret.Name, err)
+		zap.S().Errorf("Cannot create a vmo secret: %s, due to err: %v", secret.Name, err)
 		return nil, err
 	}
 
@@ -36,7 +34,7 @@ func CreateVMO(
 	vmo.Namespace = ns
 	res, err := crClient.Create(context.TODO(), vmo)
 	if err != nil {
-		glog.Errorf("Unable to create vmo '%s' in namespace '%s'\n", vmo.Name, ns)
+		zap.S().Errorf("Unable to create vmo '%s' in namespace '%s'\n", vmo.Name, ns)
 		return nil, err
 	}
 	fmt.Printf("Successfully created vmo '%s' in namespace '%s'\n", res.Name, res.Namespace)
@@ -74,7 +72,7 @@ func DeleteVMO(
 	fmt.Printf("Deleting secret '%s' in namespace '%s'\n", vmo.Name, ns)
 	err = clientSet.CoreV1().Secrets(ns).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 	if err != nil {
-		glog.Errorf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
+		zap.S().Errorf("Cannot delete secret: %s, due to err: %v", secret.Name, err)
 		return err
 	}
 

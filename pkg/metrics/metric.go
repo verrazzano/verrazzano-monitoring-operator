@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"go.uber.org/zap"
 )
 
 // DanglingPVC GaugeVec
@@ -47,6 +47,5 @@ func StartServer(port int) {
 	flag.Parse()
 	router := mux.NewRouter().StrictSlash(true)
 	router.Handle("/metrics", promhttp.Handler())
-
-	glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
+	zap.S().Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
 }

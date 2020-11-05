@@ -5,7 +5,6 @@ package resources
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	"os"
 	"regexp"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -328,7 +328,7 @@ func NewBool(value bool) *bool {
 func IsDevProfile() bool {
 	installProfile, present := os.LookupEnv("INSTALL_PROFILE")
 	if present {
-		glog.V(4).Infof("Env var INSTALL_PROFILE = %s", installProfile)
+		zap.S().Infof("Env var INSTALL_PROFILE = %s", installProfile)
 		if installProfile == constants.DevelopmentProfile {
 			return true
 		}

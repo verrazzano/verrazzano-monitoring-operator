@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"os"
 
+	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"github.com/golang/glog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/vmo"
+	"go.uber.org/zap"
 )
 
 var (
@@ -27,34 +28,34 @@ var (
 	configmapName  string
 	buildVersion   string
 	buildDate      string
+	zapOptions     = kzap.Options{}
 )
 
 func main() {
 	flag.Parse()
-
-	logs.InitLogs()
+	logs.InitLogs(zapOptions)
 
 	// Namespace must still be specified on the command line, as it is a prerequisite to fetching the config map
 	if namespace == "" {
-		glog.Fatalf("A namespace must be specified")
+		zap.S().Fatalf("A namespace must be specified")
 	}
 
 	// Initialize the images to use
 	err := config.InitComponentDetails()
 	if err != nil {
-		glog.Fatalf("Error identifying docker images: %s", err.Error())
+		zap.S().Fatalf("Error identifying docker images: %s", err.Error())
 	}
 
-	glog.V(6).Infof("Creating new controller in namespace %s.", namespace)
+	zap.S().Debugf("Creating new controller in namespace %s.", namespace)
 	controller, err := vmo.NewController(namespace, configmapName, buildVersion, kubeconfig, masterURL, watchNamespace, watchVmi)
 	if err != nil {
-		glog.Fatalf("Error creating the controller: %s", err.Error())
+		zap.S().Fatalf("Error creating the controller: %s", err.Error())
 	}
 
 	vmo.StartHTTPServer(controller)
 
 	if err = controller.Run(1); err != nil {
-		glog.Fatalf("Error running controller: %s", err.Error())
+		zap.S().Fatalf("Error running controller: %s", err.Error())
 	}
 }
 
@@ -70,5 +71,5 @@ func init() {
 		fmt.Fprintf(os.Stderr, "built %s\n", buildDate)
 		flag.PrintDefaults()
 	}
-
+	zapOptions.BindFlags(flag.CommandLine)
 }

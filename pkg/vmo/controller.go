@@ -11,9 +11,19 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/golang/glog"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	clientset "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned"
+	clientsetscheme "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/scheme"
+	informers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/informers/externalversions"
+	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metrics"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -28,21 +38,9 @@ import (
 	rbacv1listers1 "k8s.io/client-go/listers/rbac/v1"
 	storagelisters1 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	clientset "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned"
-	clientsetscheme "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/scheme"
-	informers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/informers/externalversions"
-	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metrics"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const controllerAgentName = "vmo-controller"
@@ -111,41 +109,41 @@ type Controller struct {
 // NewController returns a new vmo controller
 func NewController(namespace string, configmapName string, buildVersion string, kubeconfig string, masterURL string, watchNamespace string, watchVmi string) (*Controller, error) {
 
-	glog.V(6).Info("Building config")
+	zap.S().Debugw("Building config")
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %v", err)
+		zap.S().Fatalf("Error building kubeconfig: %v", err)
 	}
 
-	glog.V(6).Info("Building kubernetes clientset")
+	zap.S().Debugw("Building kubernetes clientset")
 	kubeclientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %v", err)
+		zap.S().Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
-	glog.V(6).Info("Building vmo clientset")
+	zap.S().Debugw("Building vmo clientset")
 	vmoclientset, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building vmo clientset: %v", err)
+		zap.S().Fatalf("Error building vmo clientset: %v", err)
 	}
 
-	glog.V(6).Info("Building api extensions clientset")
+	zap.S().Debugw("Building api extensions clientset")
 	kubeextclientset, err := apiextensionsclient.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building apiextensions-apiserver clientset: %v", err)
+		zap.S().Fatalf("Error building apiextensions-apiserver clientset: %v", err)
 	}
 
 	// Get the config from the ConfigMap
-	glog.V(6).Info("Loading ConfigMap ", configmapName)
+	zap.S().Debugw("Loading ConfigMap ", configmapName)
 
 	operatorConfigMap, err := kubeclientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), configmapName, metav1.GetOptions{})
 	if err != nil {
-		glog.Fatalf("No configuration ConfigMap called %s found in namespace %s.", configmapName, namespace)
+		zap.S().Fatalf("No configuration ConfigMap called %s found in namespace %s.", configmapName, namespace)
 	}
-	glog.V(6).Infof("Building config from ConfigMap %s", configmapName)
+	zap.S().Debugf("Building config from ConfigMap %s", configmapName)
 	operatorConfig, err := config.NewConfigFromConfigMap(operatorConfigMap)
 	if err != nil {
-		glog.Fatalf("Error building verrazzano-monitoring-operator config from config map: %s", err.Error())
+		zap.S().Fatalf("Error building verrazzano-monitoring-operator config from config map: %s", err.Error())
 	}
 
 	var kubeInformerFactory kubeinformers.SharedInformerFactory
@@ -179,11 +177,11 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	// Add vmo-controller types to the default Kubernetes Scheme so Events can be
 	// logged for vmo-controller types.
 	if err := clientsetscheme.AddToScheme(scheme.Scheme); err != nil {
-		glog.Warningf("error adding scheme: %+v", err)
+		zap.S().Warnf("error adding scheme: %+v", err)
 	}
-	glog.V(4).Info("Creating event broadcaster")
+	zap.S().Infow("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartLogging(zap.S().Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
@@ -229,7 +227,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		latestConfigMap:       operatorConfigMap,
 	}
 
-	glog.Info("Setting up event handlers")
+	zap.S().Infow("Setting up event handlers")
 
 	// Set up an event handler for when VMO resources change
 	vmoInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -246,12 +244,12 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 			newConfigMap := new.(*corev1.ConfigMap)
 			// If the configMap has changed from our last known copy, process it
 			if newConfigMap.Name == controller.operatorConfigMapName && !reflect.DeepEqual(newConfigMap.Data, controller.latestConfigMap.Data) {
-				glog.V(2).Info("Reloading config...")
+				zap.S().Infof("Reloading config...")
 				newOperatorConfig, err := config.NewConfigFromConfigMap(newConfigMap)
 				if err != nil {
-					glog.Errorf("Errors processing config updates - so we're staying at current configuration: %s", err)
+					zap.S().Errorf("Errors processing config updates - so we're staying at current configuration: %s", err)
 				} else {
-					glog.V(2).Info("Successfully reloaded config")
+					zap.S().Infof("Successfully reloaded config")
 					controller.operatorConfig = newOperatorConfig
 					controller.latestConfigMap = newConfigMap
 				}
@@ -260,7 +258,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	})
 
 	// set up signals so we handle the first shutdown signal gracefully
-	glog.V(6).Info("Setting up signals")
+	zap.S().Debugw("Setting up signals")
 	controller.stopCh = signals.SetupSignalHandler()
 
 	go kubeInformerFactory.Start(controller.stopCh)
@@ -278,10 +276,10 @@ func (c *Controller) Run(threadiness int) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting VMO controller")
+	zap.S().Infow("Starting VMO controller")
 
 	// Wait for the caches to be synced before starting workers
-	glog.Info("Waiting for informer caches to sync")
+	zap.S().Infow("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(c.stopCh, c.clusterRolesSynced, c.configMapsSynced, c.cronJobsSynced,
 		c.deploymentsSynced, c.ingressesSynced, c.nodesSynced, c.pvcsSynced, c.roleBindingsSynced, c.secretsSynced,
 		c.servicesSynced, c.statefulSetsSynced, c.vmosSynced, c.storageClassesSynced); !ok {
@@ -293,15 +291,15 @@ func (c *Controller) Run(threadiness int) error {
 	// start Metrics server
 	go metrics.StartServer(*c.operatorConfig.MetricsPort)
 
-	glog.Info("Starting workers")
+	zap.S().Infow("Starting workers")
 	// Launch two workers to process VMO resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, c.stopCh)
 	}
 
-	glog.Info("Started workers")
+	zap.S().Infow("Started workers")
 	<-c.stopCh
-	glog.Info("Shutting down workers")
+	zap.S().Infow("Shutting down workers")
 
 	return nil
 }
@@ -379,7 +377,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Get the VMO resource with this namespace/name
-	glog.V(4).Infof("[VMO] Name: %s  NameSpace: %s", name, namespace)
+	zap.S().Infof("[VMO] Name: %s  NameSpace: %s", name, namespace)
 	vmo, err := c.vmoLister.VerrazzanoMonitoringInstances(namespace).Get(name)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("error getting VMO %s in namespace %s: %v", name, namespace, err))
@@ -398,7 +396,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	// If lock, controller will not sync/process the VMO env
 	labels := prometheus.Labels{"namespace": vmo.Namespace, "vmo_name": vmo.Name}
 	if vmo.Spec.Lock {
-		glog.V(4).Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
+		zap.S().Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
 		metrics.Lock.With(labels).Set(1)
 		return nil
 	}
@@ -416,7 +414,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err := CreateRoleBindings(c, vmo)
 	if err != nil {
-		glog.Errorf("Failed to create Role Bindings for vmo: %v", err)
+		zap.S().Errorf("Failed to create Role Bindings for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -425,7 +423,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		glog.Errorf("Failed to create config maps for vmo: %v", err)
+		zap.S().Errorf("Failed to create config maps for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -434,7 +432,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateServices(c, vmo)
 	if err != nil {
-		glog.Errorf("Failed to create Services for vmo: %v", err)
+		zap.S().Errorf("Failed to create Services for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -443,7 +441,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	pvcToAdMap, err := createPersistentVolumeClaims(c, vmo)
 	if err != nil {
-		glog.Errorf("Failed to create PVCs for vmo: %v", err)
+		zap.S().Errorf("Failed to create PVCs for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -452,12 +450,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	vmoUsername, vmoPassword, err := GetAuthSecrets(c, vmo)
 	if err != nil {
-		glog.Errorf("Failed to extract VMO Secrets for vmo: %v", err)
+		zap.S().Errorf("Failed to extract VMO Secrets for vmo: %v", err)
 		errorObserved = true
 	}
 	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		glog.Errorf("Failed to create Deployments for vmo: %v", err)
+		zap.S().Errorf("Failed to create Deployments for vmo: %v", err)
 		errorObserved = true
 	}
 	/*********************
@@ -465,7 +463,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateStatefulSets(c, vmo)
 	if err != nil {
-		glog.Errorf("Failed to create StatefulSets for vmo: %v", err)
+		zap.S().Errorf("Failed to create StatefulSets for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -474,7 +472,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateIngresses(c, vmo)
 	if err != nil {
-		glog.Errorf("Failed to create Ingresses for vmo: %v", err)
+		zap.S().Errorf("Failed to create Ingresses for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -483,12 +481,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	specDiffs := diff.CompareIgnoreTargetEmpties(originalVMO, vmo)
 	if specDiffs != "" {
-		glog.V(6).Infof("Acquired lock in namespace: %s", vmo.Namespace)
-		glog.V(6).Infof("VMO %s : Spec differences %s", vmo.Name, specDiffs)
-		glog.V(4).Infof("Updating VMO")
+		zap.S().Debugf("Acquired lock in namespace: %s", vmo.Namespace)
+		zap.S().Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
+		zap.S().Infof("Updating VMO")
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update status for vmo: %v", err)
+			zap.S().Errorf("Failed to update status for vmo: %v", err)
 			errorObserved = true
 		}
 	}
@@ -500,22 +498,22 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.Versioning.CurrentVersion = c.buildVersion
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Errorf("Failed to update currentVersion for vmo %s: %v", vmo.Name, err)
+			zap.S().Errorf("Failed to update currentVersion for vmo %s: %v", vmo.Name, err)
 		} else {
-			glog.Infof("Updated VMO %s currentVersion to %s", vmo.Name, c.buildVersion)
+			zap.S().Infof("Updated VMO %s currentVersion to %s", vmo.Name, c.buildVersion)
 		}
 	}
 
 	// Create a Hash on vmo/Status object to identify changes to vmo spec
 	hash, err := vmo.Hash()
 	if err != nil {
-		glog.Errorf("Error getting VMO hash: %v", err)
+		zap.S().Errorf("Error getting VMO hash: %v", err)
 	}
 	if vmo.Status.Hash != hash {
 		vmo.Status.Hash = hash
 	}
 
-	glog.V(4).Infof("Successfully synced '%s/%s'", vmo.Namespace, vmo.Name)
+	zap.S().Infof("Successfully synced '%s/%s'", vmo.Namespace, vmo.Name)
 
 	return nil
 }

@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang/glog"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestNoImages(t *testing.T) {
@@ -21,7 +21,7 @@ func TestAllImages(t *testing.T) {
 	// Create environment variable for each component
 	for _, component := range AllComponentDetails {
 		if len(component.EnvName) > 0 {
-			glog.Infof("Setting environment variable %s", component.EnvName)
+			zap.S().Infof("Setting environment variable %s", component.EnvName)
 			err := os.Setenv(component.EnvName, "TEST")
 			assert.Nil(t, err, fmt.Sprintf("setting environment variable %s", component.EnvName))
 		}

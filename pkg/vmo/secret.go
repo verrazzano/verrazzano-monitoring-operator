@@ -7,20 +7,17 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-
-	// "fmt"
-	"errors"
-	"reflect"
-
-	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/secrets"
+	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -66,14 +63,14 @@ func GetAuthSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 	username, err := controller.loadSecretData(vmo.Namespace,
 		vmo.Spec.SecretsName, constants.VMOSecretUsernameField)
 	if err != nil {
-		glog.Errorf("problem getting username, error: %v", err)
+		zap.S().Errorf("problem getting username, error: %v", err)
 		return "", "", err
 	}
 
 	password, err := controller.loadSecretData(vmo.Namespace,
 		vmo.Spec.SecretsName, constants.VMOSecretPasswordField)
 	if err != nil {
-		glog.Errorf("problem getting password, error: %v", err)
+		zap.S().Errorf("problem getting password, error: %v", err)
 		return "", "", err
 	}
 	return string(username), string(password), nil
@@ -89,7 +86,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 		}
 	}
 	auth := fmt.Sprintf("%s", passwords.Bytes())
-	// glog.V(4).Infof("Debug Auth '%s' ", auth)
+	// zap.S().Infof("Debug Auth '%s' ", auth)
 
 	secretData := make(map[string][]byte)
 	secretData["auth"] = []byte(auth)
@@ -101,7 +98,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 			secret.Data = secretData
 			_, err = controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 			if err != nil {
-				glog.Errorf("caught an error trying to update a basic auth secret, err: %v", err)
+				zap.S().Errorf("caught an error trying to update a basic auth secret, err: %v", err)
 				return err
 			}
 		}
@@ -111,15 +108,15 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 	// create the secret based on the Username/Password passed in the spec
 	secret, err = secrets.New(vmo, vmo.Spec.SecretName, []byte(auth))
 	if err != nil {
-		glog.Errorf("got an error trying to create a password hash, err: %v", err)
+		zap.S().Errorf("got an error trying to create a password hash, err: %v", err)
 		return err
 	}
 	secretOut, err := controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("caught an error trying to create a secret, err: %v", err)
+		zap.S().Errorf("caught an error trying to create a secret, err: %v", err)
 		return err
 	}
-	glog.V(6).Infof("Created secret: %s", secretOut.Name)
+	zap.S().Debugf("Created secret: %s", secretOut.Name)
 
 	// Delete Auth secrets if it is not supposed to exists
 
@@ -131,10 +128,10 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 	}
 	for _, existedSecret := range secretList {
 		if !contains(secretsNames, existedSecret.Name) {
-			glog.V(6).Infof("Deleting secret %s", existedSecret.Name)
+			zap.S().Debugf("Deleting secret %s", existedSecret.Name)
 			err := controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Delete(context.TODO(), existedSecret.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete secret %s, for the reason (%v)", existedSecret.Name, err)
+				zap.S().Errorf("Failed to delete secret %s, for the reason (%v)", existedSecret.Name, err)
 				return err
 			}
 		}
@@ -147,7 +144,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 func CreateOrUpdateTLSSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 
 	if vmo.Spec.AutoSecret {
-		glog.V(6).Info("Not explicitly creating TLS secret, we expect it to be auto-generated")
+		zap.S().Debugw("Not explicitly creating TLS secret, we expect it to be auto-generated")
 		// by setting the AutoSecret to true we ask that a certificate be made for us
 		// currently the mechanism relies on ingressShim part of cert-manager to notice the
 		// annotation we set on the ingress rule which is set off by AutoSecret being true
@@ -157,7 +154,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, vmo *vmcontrollerv1.Verraz
 	tlsCrt, err := controller.loadSecretData(vmo.Namespace,
 		vmo.Spec.SecretsName, constants.TLSCRTName)
 	if err != nil {
-		glog.Errorf("problem getting tls.crt data using name: %s, from secret: %s, error: %s",
+		zap.S().Errorf("problem getting tls.crt data using name: %s, from secret: %s, error: %s",
 			constants.TLSCRTName, vmo.Spec.SecretsName, err)
 		return err
 	}
@@ -165,7 +162,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, vmo *vmcontrollerv1.Verraz
 	tlsKey, err := controller.loadSecretData(vmo.Namespace,
 		vmo.Spec.SecretsName, constants.TLSKeyName)
 	if err != nil {
-		glog.Errorf("problem getting tls.key data using name: %s, from secret: %s, error: %s",
+		zap.S().Errorf("problem getting tls.key data using name: %s, from secret: %s, error: %s",
 			constants.TLSKeyName, vmo.Spec.SecretsName, err)
 		return err
 	}
@@ -182,7 +179,7 @@ func CreateOrUpdateTLSSecrets(controller *Controller, vmo *vmcontrollerv1.Verraz
 				secret.Data = secretData
 				_, err = controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 				if err != nil {
-					glog.Errorf("caught an error trying to update a basic auth secret, err: %v", err)
+					zap.S().Errorf("caught an error trying to update a basic auth secret, err: %v", err)
 					return err
 				}
 			}
@@ -190,15 +187,15 @@ func CreateOrUpdateTLSSecrets(controller *Controller, vmo *vmcontrollerv1.Verraz
 		}
 		secret, err = secrets.NewTLS(vmo, vmo.Name+"-tls", secretData)
 		if err != nil {
-			glog.Errorf("got an error trying to create a password hash, err: %s", err)
+			zap.S().Errorf("got an error trying to create a password hash, err: %s", err)
 			return err
 		}
 		secretOut, err := controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 		if err != nil {
-			glog.Errorf("caught an error trying to create a secret, err: %s", err)
+			zap.S().Errorf("caught an error trying to create a secret, err: %s", err)
 			return err
 		}
-		glog.V(6).Infof("Create TLS secret: %s", secretOut.Name)
+		zap.S().Debugf("Create TLS secret: %s", secretOut.Name)
 	}
 	return nil
 }
@@ -275,7 +272,7 @@ func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.V
 	// The secret must be this name since the name is hardcoded in monitoring/deployments.do of verrazzano operator.
 	secret, err = controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		glog.Errorf("Error getting TLS secret %s from namespace %s, err: %s", secretName, vmo.Namespace, err)
+		zap.S().Errorf("Error getting TLS secret %s from namespace %s, err: %s", secretName, vmo.Namespace, err)
 		return err
 	}
 
@@ -291,10 +288,10 @@ func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.V
 	}
 	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(context.TODO(), &newSecret, metav1.CreateOptions{})
 	if err != nil {
-		glog.Errorf("caught an error trying to create a secret, err: %s", err)
+		zap.S().Errorf("caught an error trying to create a secret, err: %s", err)
 		return err
 	}
-	glog.Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
+	zap.S().Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
 
 	return nil
 }

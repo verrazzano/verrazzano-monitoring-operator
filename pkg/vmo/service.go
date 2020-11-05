@@ -7,11 +7,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/services"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
+	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -21,11 +21,11 @@ import (
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	svcList, err := services.New(vmo)
 	if err != nil {
-		glog.Errorf("Failed to create Services for vmo: %s", err)
+		zap.S().Errorf("Failed to create Services for vmo: %s", err)
 		return err
 	}
 	var serviceNames []string
-	glog.V(4).Infof("Creating/updating Services for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	zap.S().Infof("Creating/updating Services for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	for _, curService := range svcList {
 		serviceName := curService.Name
 		serviceNames = append(serviceNames, serviceName)
@@ -37,15 +37,15 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			return nil
 		}
 
-		glog.V(6).Infof("Applying Service '%s' in namespace '%s' for vmo '%s'\n", serviceName, vmo.Namespace, vmo.Name)
+		zap.S().Debugf("Applying Service '%s' in namespace '%s' for vmo '%s'\n", serviceName, vmo.Namespace, vmo.Name)
 		existingService, err := controller.serviceLister.Services(vmo.Namespace).Get(serviceName)
 		if existingService != nil {
 			specDiffs := diff.CompareIgnoreTargetEmpties(existingService, curService)
 			if specDiffs != "" {
-				glog.V(4).Infof("Service %s : Spec differences %s", curService.Name, specDiffs)
+				zap.S().Infof("Service %s : Spec differences %s", curService.Name, specDiffs)
 				err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 				if err != nil {
-					glog.Errorf("Failed to delete service %s: %+v", serviceName, err)
+					zap.S().Errorf("Failed to delete service %s: %+v", serviceName, err)
 				}
 				_, err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
 			}
@@ -54,10 +54,10 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		}
 
 		if err != nil {
-			glog.Errorf("Failed to apply Service for vmo: %s", err)
+			zap.S().Errorf("Failed to apply Service for vmo: %s", err)
 			return err
 		}
-		glog.V(6).Infof("Successfully applied Service '%s'\n", serviceName)
+		zap.S().Debugf("Successfully applied Service '%s'\n", serviceName)
 	}
 
 	// Delete services that shouldn't exist
@@ -68,10 +68,10 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 	}
 	for _, service := range existingServicesList {
 		if !contains(serviceNames, service.Name) {
-			glog.V(6).Infof("Deleting service %s", service.Name)
+			zap.S().Debugf("Deleting service %s", service.Name)
 			err := controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete service %s, for the reason (%v)", service.Name, err)
+				zap.S().Errorf("Failed to delete service %s, for the reason (%v)", service.Name, err)
 				return err
 			}
 		}

@@ -7,13 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,14 +34,14 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	deployList, err := deployments.New(vmo, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		glog.Errorf("Failed to create Deployment specs for vmo: %s", err)
+		zap.S().Errorf("Failed to create Deployment specs for vmo: %s", err)
 		return false, err
 	}
 
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	glog.V(4).Infof("Creating/updating Deployments for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	zap.S().Infof("Creating/updating Deployments for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)
@@ -51,7 +52,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			runtime.HandleError(errors.New("deployment name must be specified"))
 			return true, nil
 		}
-		glog.V(6).Infof("Applying Deployment '%s' in namespace '%s' for vmo '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
+		zap.S().Debugf("Applying Deployment '%s' in namespace '%s' for vmo '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
 
 		if err != nil {
@@ -68,7 +69,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else {
 				specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 				if specDiffs != "" {
-					glog.V(6).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+					zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
@@ -97,10 +98,10 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 	for _, deployment := range existingDeploymentsList {
 		if !contains(deploymentNames, deployment.Name) {
-			glog.V(6).Infof("Deleting deployment %s", deployment.Name)
+			zap.S().Debugf("Deleting deployment %s", deployment.Name)
 			err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
+				zap.S().Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
 				return false, err
 			}
 		}
@@ -122,7 +123,7 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		// Deployment spec differences, so call Update() and return
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
 		if specDiffs != "" {
-			glog.V(6).Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+			zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {
 				return false, err

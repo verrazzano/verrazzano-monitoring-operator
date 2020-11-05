@@ -4,11 +4,11 @@
 package vmo
 
 import (
-	"github.com/golang/glog"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,23 +23,23 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	 **********************/
 	credsMap, err := controller.loadAllAuthSecretData(vmo.Namespace, vmo.Spec.SecretsName)
 	if err != nil {
-		glog.Errorf("Failed to extract VMO Secrets for vmo %s in namespace %s: %v", vmo.Name, vmo.Namespace, err)
+		zap.S().Errorf("Failed to extract VMO Secrets for vmo %s in namespace %s: %v", vmo.Name, vmo.Namespace, err)
 	}
 
 	err = CreateOrUpdateAuthSecrets(controller, vmo, credsMap)
 	if err != nil {
-		glog.Errorf("Failed to create VMO Secrets for vmo %s in namespace %s: %v", vmo.Name, vmo.Namespace, err)
+		zap.S().Errorf("Failed to create VMO Secrets for vmo %s in namespace %s: %v", vmo.Name, vmo.Namespace, err)
 	}
 
 	// Create TLS secrets or get certs
 	err = CreateOrUpdateTLSSecrets(controller, vmo)
 	if err != nil {
-		glog.Errorf("Failed to create TLS Secrets for vmo: %v", err)
+		zap.S().Errorf("Failed to create TLS Secrets for vmo: %v", err)
 	}
 
 	err = EnsureTLSSecretInMonitoringNS(controller, vmo)
 	if err != nil {
-		glog.Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
+		zap.S().Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
 	}
 
 	// Set creation time
