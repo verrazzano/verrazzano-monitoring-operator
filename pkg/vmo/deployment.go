@@ -27,7 +27,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	if resources.IsDevProfile(vmo) {
+	if resources.IsDevProfile() {
 		return false, nil
 	}
 

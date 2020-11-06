@@ -45,15 +45,15 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 			},
 		},
 	}
-	const envKey = "SINGLE_SYSTEM_VMI"
-	os.Setenv(envKey, "true")
+	const envKey = "INSTALL_PROFILE"
+	os.Setenv(envKey, constants.DevelopmentProfile)
 	defer func() {
-		t.Log("Unsetting SINGLE_SYSTEM_VMI")
+		t.Log("Unsetting INSTALL_PROFILE")
 		os.Unsetenv(envKey)
 		_, ok := os.LookupEnv(envKey)
 		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
 	}()
-	assert.True(t, resources.IsDevProfile(vmo), "Single node ES setup, expected IsDevProfile to be true")
+	assert.True(t, resources.IsDevProfile(), "Single node ES setup, expected IsDevProfile to be true")
 
 	services := createElasticsearchServiceElements(vmo)
 	assert.Equal(t, 3, len(services), "Length of generated services")

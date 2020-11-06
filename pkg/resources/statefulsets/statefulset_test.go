@@ -70,10 +70,10 @@ func TestVMOProdProfile(t *testing.T) {
 //   AND those objects should have the expected values
 //   AND ElasticSearch should be configured for a single-node cluster type
 func TestVMODevProfile(t *testing.T) {
-	const envKey = "SINGLE_SYSTEM_VMI"
-	os.Setenv(envKey, "true")
+	const envKey = "INSTALL_PROFILE"
+	os.Setenv(envKey, constants.DevelopmentProfile)
 	defer func() {
-		t.Log("Unsetting SINGLE_SYSTEM_VMI")
+		t.Log("Unsetting INSTALL_PROFILE")
 		os.Unsetenv(envKey)
 		_, ok := os.LookupEnv(envKey)
 		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
@@ -116,7 +116,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	if isDevProfileTest {
-		assert.True(t, resources.IsDevProfile(vmo), "Single node ES setup, expected IsDevProfile to be true")
+		assert.True(t, resources.IsDevProfile(), "Single node ES setup, expected IsDevProfile to be true")
 		verifyDevProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, elasticSearchReplicas, storageSize)
 	} else {
 		verifyProdProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, elasticSearchReplicas, storageSize)

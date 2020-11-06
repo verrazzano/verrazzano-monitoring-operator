@@ -38,7 +38,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSe
 func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
-	devProfile := resources.IsDevProfile(vmo)
+	devProfile := resources.IsDevProfile()
 	glog.Info("devProfile: ", strconv.FormatBool(devProfile))
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")

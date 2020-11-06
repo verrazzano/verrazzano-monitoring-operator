@@ -130,7 +130,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 	// - Hacking in the profile for now to skip the ingest/data deployment objects
 	// - We should likely use a factory pattern here to create different VMI profiles, although I think it might
 	//   be better to can the default specs as template files and read them in
-	if vmo.Spec.Elasticsearch.Enabled && !resources.IsDevProfile(vmo) {
+	if vmo.Spec.Elasticsearch.Enabled && !resources.IsDevProfile() {
 		var es Elasticsearch = ElasticsearchBasic{}
 		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
 	}
@@ -156,7 +156,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
-		if !resources.IsDevProfile(vmo) {
+		if !resources.IsDevProfile() {
 			waitForEsInitContainer := corev1.Container{
 				Name:  config.ESWait.Name,
 				Image: config.ESWait.Image,
