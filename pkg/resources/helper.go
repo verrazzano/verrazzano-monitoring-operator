@@ -331,10 +331,7 @@ func IsDevProfile() bool {
 		glog.V(4).Infof("Env var INSTALL_PROFILE = %s", installProfile)
 		if installProfile == constants.DevelopmentProfile {
 			return true
-		} else {
-			return false
 		}
-
 	}
 	return false
 }
