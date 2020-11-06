@@ -21,7 +21,7 @@ import (
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 
-	if resources.IsDevProfile(vmo) {
+	if resources.IsDevProfile() {
 		return nil
 	}
 

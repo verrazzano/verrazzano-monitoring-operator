@@ -22,7 +22,7 @@ import (
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	if resources.IsDevProfile(vmo) {
+	if resources.IsDevProfile() {
 		return nil
 	}
 

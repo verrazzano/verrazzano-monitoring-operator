@@ -324,9 +324,17 @@ func NewBool(value bool) *bool {
 	return &val
 }
 
-// IsDevProfile return true if the singleSystemVMI env var is set
-func IsDevProfile(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	_, present := os.LookupEnv("SINGLE_SYSTEM_VMI")
-	glog.V(4).Infof("Env var SINGLE_SYSTEM_VMI present? %v", present)
-	return present
+// IsDevProfile return true if the installProfile env var is set to dev
+func IsDevProfile() bool {
+	installProfile, present := os.LookupEnv("INSTALL_PROFILE")
+	if present {
+		glog.V(4).Infof("Env var INSTALL_PROFILE = %s", installProfile)
+		if installProfile == constants.DevelopmentProfile {
+			return true
+		} else {
+			return false
+		}
+
+	}
+	return false
 }

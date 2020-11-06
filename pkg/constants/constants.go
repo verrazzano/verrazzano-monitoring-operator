@@ -204,3 +204,7 @@ const K8sDefaultStorageClassBetaAnnotation = "storageclass.beta.kubernetes.io/is
 
 // MonitoringNamespace Monitoring namespace
 const MonitoringNamespace = "monitoring"
+
+// Installation Profiles
+const ProductionProfile = "prod"
+const DevelopmentProfile = "dev"
