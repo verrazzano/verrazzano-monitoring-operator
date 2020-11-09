@@ -4,6 +4,7 @@
 package pvcs
 
 import (
+	"os"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -90,6 +91,55 @@ func TestVMOWithStorageVolumes2(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Equal(t, 1, len(pvcs), "Length of generated PVCs")
+}
+
+func TestVMODevModeWithStorageVolumes(t *testing.T) {
+	const envKey = "INSTALL_PROFILE"
+	os.Setenv(envKey, constants.DevelopmentProfile)
+	defer func() {
+		t.Log("Unsetting INSTALL_PROFILE")
+		os.Unsetenv(envKey)
+		_, ok := os.LookupEnv(envKey)
+		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
+	}()
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Grafana: vmcontrollerv1.Grafana{
+				Enabled: true,
+				Storage: vmcontrollerv1.Storage{
+					Size:               "50Gi",
+					AvailabilityDomain: "AD1",
+					PvcNames:           []string{"grafana-pvc"},
+				},
+			},
+			Prometheus: vmcontrollerv1.Prometheus{
+				Enabled: true,
+				Storage: vmcontrollerv1.Storage{
+					Size:               "50Gi",
+					AvailabilityDomain: "AD1",
+					PvcNames:           []string{"prometheus-pvc"},
+				},
+			},
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled: true,
+				Storage: vmcontrollerv1.Storage{
+					Size:               "50Gi",
+					AvailabilityDomain: "AD1",
+					PvcNames:           []string{"elasticsearch-pvc"},
+				},
+			},
+		},
+	}
+	pvcs, err := New(vmo, constants.OciFlexVolumeProvisioner)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, 2, len(pvcs), "Length of generated PVCs")
+	for _, pvc := range pvcs {
+		pvcName := pvc.ObjectMeta.Name
+		t.Log("Checking pvc ", pvcName)
+		assert.NotContains(t, pvcName, "elasticsearch", "Found unexpected elasticsearch volume")
+	}
 }
 
 func TestVMOWithCascadingDelete(t *testing.T) {
