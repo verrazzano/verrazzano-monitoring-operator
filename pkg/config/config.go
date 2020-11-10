@@ -6,7 +6,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -14,7 +14,7 @@ import (
 // NewConfigFromConfigMap creates a new OperatorConfig from the given ConfigMap,
 func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error) {
 	// Parse configMap content and unmarshall into OperatorConfig struct
-	glog.Info("Constructing config from config map")
+	zap.S().Infow("Constructing config from config map")
 	var configString string
 	if value, ok := configMap.Data[configKeyValue]; ok {
 		configString = value
@@ -23,13 +23,13 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error
 	}
 	var config OperatorConfig
 	err := yaml.Unmarshal([]byte(configString), &config)
-	glog.V(6).Infof("Unmarshalled configmap is:\n %s", configMap.String())
+	zap.S().Debugf("Unmarshalled configmap is:\n %s", configMap.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshall ConfigMap %s: %v", configMap.String(), err)
 	}
 
 	// Set defaults for any uninitialized values
-	glog.Info("Setting config defaults")
+	zap.S().Infow("Setting config defaults")
 	setConfigDefaults(&config)
 	return &config, nil
 }

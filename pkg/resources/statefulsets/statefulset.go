@@ -5,18 +5,19 @@ package statefulsets
 
 import (
 	"fmt"
-	"github.com/golang/glog"
+	"strconv"
+	"strings"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strconv"
-	"strings"
 )
 
 // New creates StatefulSet objects for a VMO resource
@@ -39,7 +40,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 	var readinessProbeCondition string
 
 	devProfile := resources.IsDevProfile()
-	glog.Info("devProfile: ", strconv.FormatBool(devProfile))
+	zap.S().Infof("devProfile: %v", strconv.FormatBool(devProfile))
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
 
@@ -181,7 +182,7 @@ fi`,
 	if !devProfile {
 		storageSize := vmo.Spec.Elasticsearch.Storage.Size
 		if len(storageSize) == 0 {
-			glog.Info("ES storage size not specified, using default of 50Gi")
+			zap.S().Infow("ES storage size not specified, using default of 50Gi")
 			storageSize = "50Gi"
 		}
 

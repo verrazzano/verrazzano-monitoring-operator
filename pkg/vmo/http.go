@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -16,10 +16,10 @@ import (
 func StartHTTPServer(controller *Controller) {
 	setupHandlers(controller)
 	go wait.Until(func() {
-		glog.Info("Starting HTTP server")
+		zap.S().Infow("Starting HTTP server")
 		err := http.ListenAndServe(":8080", nil)
 		if err != nil {
-			glog.Errorf("Failed to start HTTP server for vmo: %s", err)
+			zap.S().Errorf("Failed to start HTTP server for vmo: %s", err)
 		}
 	}, time.Second*3, wait.NeverStop)
 }
@@ -29,7 +29,7 @@ func setupHandlers(controller *Controller) {
 		if controller.IsHealthy() {
 			w.WriteHeader(http.StatusOK)
 			if _, err := w.Write([]byte("ok")); err != nil {
-				glog.Errorf("error writing healthcheck response: %v", err)
+				zap.S().Errorf("error writing healthcheck response: %v", err)
 			}
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
