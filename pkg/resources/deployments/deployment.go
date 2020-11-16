@@ -127,10 +127,12 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 	}
 
 	// Elasticsearch
-	// - Hacking in the profile for now to skip the ingest/data deployment objects
-	// - We should likely use a factory pattern here to create different VMI profiles, although I think it might
-	//   be better to can the default specs as template files and read them in
-	if vmo.Spec.Elasticsearch.Enabled && !resources.IsDevProfile() {
+	// - V8O supports essentially 2 "known" configurations, a "prod" and a "dev" configuration for ES; while we want
+	//   to allow customizing topologies, we need to enforce certain constraints for now.
+	// - We are arbitrarily choosing to enforce that a "valid" multi-node cluster includes at least one separate
+	//   data node and one separate ingest node
+	// - This will weed out creating separate pods for data/ingest in the single-node cluster configuration as well
+	if vmo.Spec.Elasticsearch.Enabled && resources.IsValidMultiNodeESCluster(vmo) {
 		var es Elasticsearch = ElasticsearchBasic{}
 		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
 	}
@@ -156,7 +158,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
-		if !resources.IsDevProfile() {
+		// TODO: We need to change how the eswait container looks for data nodes, to accommodate cases like
+		//       single-node clusters, or other topologies where a node may be more than just a data node, then
+		//       this hack can go away
+		if resources.IsValidMultiNodeESCluster(vmo) {
 			waitForEsInitContainer := corev1.Container{
 				Name:  config.ESWait.Name,
 				Image: config.ESWait.Image,

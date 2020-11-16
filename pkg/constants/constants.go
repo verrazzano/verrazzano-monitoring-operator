@@ -206,10 +206,10 @@ const K8sDefaultStorageClassBetaAnnotation = "storageclass.beta.kubernetes.io/is
 const MonitoringNamespace = "monitoring"
 
 // SystemVMIName name of the system Verrazzano Monitoring Instance
-const SystemVMIName = "system"
+//const SystemVMIName = "system"
 
 // ProductionProfile name of the Production Profile Installation
-const ProductionProfile = "prod"
+//const ProductionProfile = "prod"
 
 // DevelopmentProfile name of the Development Profile Installation
 const DevelopmentProfile = "dev"

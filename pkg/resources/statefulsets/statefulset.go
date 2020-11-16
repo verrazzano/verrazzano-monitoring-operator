@@ -5,14 +5,13 @@ package statefulsets
 
 import (
 	"fmt"
-	"strconv"
+	"go.uber.org/zap"
 	"strings"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -39,28 +38,15 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSe
 func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
-	devProfile := resources.IsDevProfile()
-	zap.S().Infof("devProfile: %v", strconv.FormatBool(devProfile))
-
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
 
-	if devProfile {
-		statefulSet.Spec.Replicas = resources.NewVal(constants.DefaultDevProfileESReplicas)
-	} else {
-		statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Elasticsearch.MasterNode.Replicas)
-	}
+	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Elasticsearch.MasterNode.Replicas)
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
 	var elasticsearchUID int64 = 1000
 	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &elasticsearchUID
 	statefulSet.Spec.Template.Spec.Containers[0].Ports[0].Name = "transport"
 	statefulSet.Spec.Template.Spec.Containers[0].Ports = append(statefulSet.Spec.Template.Spec.Containers[0].Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
-	var i int32
-	initialMasterNodes := make([]string, 0)
-	for i = 0; i < *statefulSet.Spec.Replicas; i++ {
-		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
-	}
-
 	var envVars []corev1.EnvVar = []corev1.EnvVar{
 		{
 			Name: "node.name",
@@ -74,16 +60,26 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
 		{Name: "HTTP_ENABLE", Value: "true"},
 	}
-	if devProfile {
+	if resources.IsSingleNodeESCluster(vmo) {
+		zap.S().Infof("ES topology for %s indicates a single-node cluster (single master node only)")
+		javaOpts := constants.DefaultDevProfileESMemArgs // Default JVM heap settings if none provided
+		if vmo.Spec.Elasticsearch.MasterNode.JavaOpts != "" {
+			javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
+		}
 		envVars = append(envVars,
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
 			corev1.EnvVar{Name: "node.master", Value: "true"},
 			corev1.EnvVar{Name: "node.ingest", Value: "true"},
 			corev1.EnvVar{Name: "node.data", Value: "true"},
-			// set the JVM memory opts for single-node ES mode
-			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: constants.DefaultDevProfileESMemArgs},
+			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 		)
 	} else {
+		var i int32
+		initialMasterNodes := make([]string, 0)
+		for i = 0; i < *statefulSet.Spec.Replicas; i++ {
+			initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
+		}
+
 		envVars = append(envVars,
 			corev1.EnvVar{
 				Name:  "discovery.seed_hosts",
@@ -179,13 +175,8 @@ fi`,
 
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
-	if !devProfile {
-		storageSize := vmo.Spec.Elasticsearch.Storage.Size
-		if len(storageSize) == 0 {
-			zap.S().Infow("ES storage size not specified, using default of 50Gi")
-			storageSize = "50Gi"
-		}
-
+	storageSize := vmo.Spec.Elasticsearch.Storage.Size
+	if len(storageSize) > 0 {
 		statefulSet.Spec.VolumeClaimTemplates =
 			[]corev1.PersistentVolumeClaim{{
 				ObjectMeta: metav1.ObjectMeta{

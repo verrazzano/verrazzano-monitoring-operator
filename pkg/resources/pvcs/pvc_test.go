@@ -4,7 +4,6 @@
 package pvcs
 
 import (
-	"os"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -94,14 +93,6 @@ func TestVMOWithStorageVolumes2(t *testing.T) {
 }
 
 func TestVMODevModeWithStorageVolumes(t *testing.T) {
-	const envKey = "INSTALL_PROFILE"
-	os.Setenv(envKey, constants.DevelopmentProfile)
-	defer func() {
-		t.Log("Unsetting INSTALL_PROFILE")
-		os.Unsetenv(envKey)
-		_, ok := os.LookupEnv(envKey)
-		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
-	}()
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Grafana: vmcontrollerv1.Grafana{
@@ -123,10 +114,11 @@ func TestVMODevModeWithStorageVolumes(t *testing.T) {
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
-					Size:               "50Gi",
-					AvailabilityDomain: "AD1",
-					PvcNames:           []string{"elasticsearch-pvc"},
+					Size: "",
 				},
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
 	}

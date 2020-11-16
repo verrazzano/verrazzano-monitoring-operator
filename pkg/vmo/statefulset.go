@@ -24,9 +24,9 @@ import (
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	// If Dev Profile, allow System VMI to fall through and get created
-	if resources.IsDevProfile() && vmo.Name != constants.SystemVMIName {
-		return nil
-	}
+	//if resources.IsDevProfile() && vmo.Name != constants.SystemVMIName {
+	//	return nil
+	//}
 
 	statefulSetList, err := statefulsets.New(vmo)
 	if err != nil {
@@ -130,10 +130,10 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			return err
 		}
 	}
-	replicas := int(*statefulSet.Spec.Replicas)
-	numPVCs := len(existingPvcList)
-	if numPVCs != replicas {
-		return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", numPVCs, replicas, vmoName)
+	expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
+	actualNumPVCs := len(existingPvcList)
+	if actualNumPVCs != expectedNumPVCs {
+		return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
 	}
 	return nil
 }

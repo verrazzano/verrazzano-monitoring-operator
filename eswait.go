@@ -72,6 +72,7 @@ func (node ESNode) isSufficient(version string) bool {
 }
 
 func (node ESNode) isDataRole() bool {
+	// This should likely be a "contains" check as a node can be multiple roles
 	return strings.EqualFold(node.Role, "d")
 }
 

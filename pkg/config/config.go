@@ -23,10 +23,12 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error
 	}
 	var config OperatorConfig
 	err := yaml.Unmarshal([]byte(configString), &config)
-	zap.S().Debugf("Unmarshalled configmap is:\n %s", configMap.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshall ConfigMap %s: %v", configMap.String(), err)
 	}
+	// Comment out the debug line below to avoid halting the debugger in Goland/IntelliJ
+	// see https://youtrack.jetbrains.com/issue/GO-8953
+	zap.S().Debugf("Unmarshalled configmap is:\n %s", configMap.String())
 
 	// Set defaults for any uninitialized values
 	zap.S().Infow("Setting config defaults")

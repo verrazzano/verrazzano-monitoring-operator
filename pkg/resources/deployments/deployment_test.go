@@ -5,7 +5,6 @@ package deployments
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -63,14 +62,6 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 }
 
 func TestVMODevProfileFullDeploymentSize(t *testing.T) {
-	const envKey = "INSTALL_PROFILE"
-	os.Setenv(envKey, constants.DevelopmentProfile)
-	defer func() {
-		t.Log("Unsetting INSTALL_PROFILE")
-		os.Unsetenv(envKey)
-		_, ok := os.LookupEnv(envKey)
-		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
-	}()
 
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
@@ -90,13 +81,13 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled:    true,
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 			},
 		},
 	}
-	assert.True(t, resources.IsDevProfile(), "Single node ES setup, expected IsDevProfile to be true")
+	assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 
 	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
@@ -338,7 +329,10 @@ func TestWaitForElasticsearchTargetVersion(t *testing.T) {
 				Enabled: true,
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled: true,
+				Enabled:    true,
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
 	}

@@ -5,7 +5,6 @@ package resources
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -324,14 +322,18 @@ func NewBool(value bool) *bool {
 	return &val
 }
 
-// IsDevProfile return true if the installProfile env var is set to dev
-func IsDevProfile() bool {
-	installProfile, present := os.LookupEnv("INSTALL_PROFILE")
-	if present {
-		zap.S().Infof("Env var INSTALL_PROFILE = %s", installProfile)
-		if installProfile == constants.DevelopmentProfile {
-			return true
-		}
-	}
-	return false
+// IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
+func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
+	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
+	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
+	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
+	return masterNodeReplicas == 1 && dataNodeReplicas == 0 && ingestNodeReplicas == 0
+}
+
+// IsValidMultiNodeESCluster For a valid multi-node cluster that we have a minimum of one master, one ingest, and one data node
+func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
+	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
+	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
+	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
+	return dataNodeReplicas > 0 && ingestNodeReplicas > 0 && masterNodeReplicas > 0
 }

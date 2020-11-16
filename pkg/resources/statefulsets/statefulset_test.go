@@ -9,7 +9,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"os"
 	"strings"
 	"testing"
 
@@ -70,27 +69,25 @@ func TestVMOProdProfile(t *testing.T) {
 //   AND those objects should have the expected values
 //   AND ElasticSearch should be configured for a single-node cluster type
 func TestVMODevProfile(t *testing.T) {
-	const envKey = "INSTALL_PROFILE"
-	os.Setenv(envKey, constants.DevelopmentProfile)
-	defer func() {
-		t.Log("Unsetting INSTALL_PROFILE")
-		os.Unsetenv(envKey)
-		_, ok := os.LookupEnv(envKey)
-		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
-	}()
 	runTestVMO(t, true)
 }
 
 func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	// Initialize
 	var alertManagerReplicas int32 = 3
-	var elasticSearchReplicas int32 = 5
+	var masterNodeReplicas int32 = 3
+	var dataNodeReplicas int32 = 2
+	var ingestNodeReplicas int32 = 1
 	storageSize := "50Gi"
+
 	if isDevProfileTest {
 		//alertManagerReplicas := 3
-		elasticSearchReplicas = 1
-		storageSize = "50Gi"
+		masterNodeReplicas = 1
+		dataNodeReplicas = 0
+		ingestNodeReplicas = 0
+		storageSize = ""
 	}
+
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			AlertManager: vmcontrollerv1.AlertManager{
@@ -98,10 +95,10 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 				Replicas: alertManagerReplicas,
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled: true,
-				MasterNode: vmcontrollerv1.ElasticsearchNode{
-					Replicas: elasticSearchReplicas,
-				},
+				Enabled:    true,
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: masterNodeReplicas},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: dataNodeReplicas},
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: ingestNodeReplicas},
 				Storage: vmcontrollerv1.Storage{
 					Size: storageSize,
 				},
@@ -116,10 +113,13 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	if isDevProfileTest {
-		assert.True(t, resources.IsDevProfile(), "Single node ES setup, expected IsDevProfile to be true")
-		verifyDevProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, elasticSearchReplicas, storageSize)
+		assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be true")
+		assert.False(t, resources.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be false")
+		verifyDevProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, masterNodeReplicas, storageSize)
 	} else {
-		verifyProdProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, elasticSearchReplicas, storageSize)
+		assert.False(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be false")
+		assert.True(t, resources.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be true")
+		verifyProdProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, masterNodeReplicas, storageSize)
 	}
 }
 

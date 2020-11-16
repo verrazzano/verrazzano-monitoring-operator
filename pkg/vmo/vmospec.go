@@ -97,14 +97,8 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if vmo.Spec.AlertManager.Replicas == 0 {
 		vmo.Spec.AlertManager.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
-	if vmo.Spec.Elasticsearch.IngestNode.Replicas == 0 {
-		vmo.Spec.Elasticsearch.IngestNode.Replicas = int32(constants.DefaultElasticsearchIngestReplicas)
-	}
 	if vmo.Spec.Elasticsearch.MasterNode.Replicas == 0 {
 		vmo.Spec.Elasticsearch.MasterNode.Replicas = int32(constants.DefaultElasticsearchMasterReplicas)
-	}
-	if vmo.Spec.Elasticsearch.DataNode.Replicas == 0 {
-		vmo.Spec.Elasticsearch.DataNode.Replicas = int32(constants.DefaultElasticsearchDataReplicas)
 	}
 	for _, component := range config.StorageEnableComponents {
 		storageElement := resources.GetStorageElementForComponent(vmo, component)
