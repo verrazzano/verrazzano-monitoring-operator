@@ -4,6 +4,7 @@
 package deployments
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ type Elasticsearch interface {
 // the resource so handleObject can discover the VMO resource that 'owns' it.
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
+	var err error
 
 	// Grafana
 	if vmo.Spec.Grafana.Enabled {
@@ -132,9 +134,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 	// - We are arbitrarily choosing to enforce that a "valid" multi-node cluster includes at least one separate
 	//   data node and one separate ingest node
 	// - This will weed out creating separate pods for data/ingest in the single-node cluster configuration as well
-	if vmo.Spec.Elasticsearch.Enabled && resources.IsValidMultiNodeESCluster(vmo) {
-		var es Elasticsearch = ElasticsearchBasic{}
-		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
+	if vmo.Spec.Elasticsearch.Enabled {
+		if resources.IsValidMultiNodeESCluster(vmo) {
+			var es Elasticsearch = ElasticsearchBasic{}
+			deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
+		} else if !resources.IsSingleNodeESCluster(vmo) {
+			err = errors.New("Invalid Elasticsearch cluster configuration, must be a valid single or multi-node cluster configuration")
+		}
 	}
 
 	// Kibana
@@ -198,7 +204,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 
 	deployments = append(deployments, deployment)
 
-	return deployments, nil
+	return deployments, err
 }
 
 func createVolumeElement(pvcName string) corev1.Volume {

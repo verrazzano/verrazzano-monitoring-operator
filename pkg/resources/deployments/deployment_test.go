@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -116,7 +117,8 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 				Enabled: true,
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled: true,
+				Enabled:    true,
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
 	}
@@ -191,6 +193,8 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 						RequestMemory: "64M",
 					},
 				},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
 	}
@@ -200,6 +204,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 	}
 
 	for _, deployment := range deployments {
+		esDataName := resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name)
 		if deployment.Name == resources.GetMetaName(vmo.Name, config.Grafana.Name) {
 			assert.Equal(t, resource.MustParse("500m"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("120Mi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
@@ -227,13 +232,14 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			assert.Equal(t, resource.MustParse("64M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name) {
 			// No resources specified on this endpoint
-		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name) {
+		} else if strings.Contains(deployment.Name, resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name)) {
 			// No resources specified on this endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
 			// No resources specified on API endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.PrometheusGW.Name) {
 			// No resources specified on Prometheus GW
 		} else {
+			t.Log("ESDataName: " + esDataName)
 			t.Error("Unknown Deployment Name: " + deployment.Name)
 		}
 	}

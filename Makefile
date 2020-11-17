@@ -180,6 +180,12 @@ push-tag-eswait:
 unit-test: go-install
 	GO111MODULE=on $(GO) test -v ./pkg/... ./cmd/...
 
+#
+# Run all checks, convenient as a sanity-check before committing/pushing
+#
+.PHONY: check-all
+check-all: go-fmt go-lint go-ineffassign go-vet unit-test 
+
 .PHONY: coverage
 coverage:
 	./build/scripts/coverage.sh html
