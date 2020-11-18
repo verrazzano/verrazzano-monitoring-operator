@@ -3,7 +3,10 @@
 
 package main
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestIsSufficientNilInputs(t *testing.T) {
 	if isSufficient(nil, nil, "7.5.0", 1) {
@@ -41,6 +44,12 @@ func TestIsSufficientNotEnoughDataNodes(t *testing.T) {
 	if isSufficient(&clusterHealth, &nodes, "7.5.0", 2) {
 		t.Fail()
 	}
+}
+
+func TestIsSufficientDataNodesSingleNodeCluster(t *testing.T) {
+	clusterHealth := ClusterHealth{"yellow"}
+	nodes := []ESNode{{Version: "7.5.0", Role: "dim"}, {Version: "7.5.0", Role: "m"}, {Version: "7.5.0", Role: "i"}}
+	assert.True(t, isSufficient(&clusterHealth, &nodes, "7.5.0", 1))
 }
 
 func TestIsSufficientNotEnoughDataNodesAtExpectedVersion(t *testing.T) {

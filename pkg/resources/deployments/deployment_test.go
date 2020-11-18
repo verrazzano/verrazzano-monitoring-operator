@@ -124,7 +124,7 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 			},
 		},
 	}
-	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
+	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
 
 	_, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")

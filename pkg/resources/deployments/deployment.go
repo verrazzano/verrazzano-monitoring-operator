@@ -13,7 +13,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -164,21 +163,14 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
-		// TODO: We need to change how the eswait container looks for data nodes, to accommodate cases like
-		//       single-node clusters, or other topologies where a node may be more than just a data node, then
-		//       this hack can go away
-		if resources.IsValidMultiNodeESCluster(vmo) {
-			waitForEsInitContainer := corev1.Container{
-				Name:  config.ESWait.Name,
-				Image: config.ESWait.Image,
-				// `-number-of-data-nodes 1` tells eswait to look for at least one data node
-				// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
-				Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
-			}
-			deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
-		} else {
-			zap.S().Infow("In development mode, bypassing ESWait container creation for Kibana")
+		waitForEsInitContainer := corev1.Container{
+			Name:  config.ESWait.Name,
+			Image: config.ESWait.Image,
+			// `-number-of-data-nodes 1` tells eswait to look for at least one data node
+			// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
+			Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
 		}
+		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
 
 		deployments = append(deployments, deployment)
 	}
