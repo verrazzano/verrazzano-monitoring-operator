@@ -23,11 +23,6 @@ import (
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	// If Dev Profile, allow System VMI to fall through and get created
-	//if resources.IsDevProfile() && vmo.Name != constants.SystemVMIName {
-	//	return nil
-	//}
-
 	statefulSetList, err := statefulsets.New(vmo)
 	if err != nil {
 		zap.S().Errorf("Failed to create StatefulSet specs for vmo: %s", err)
