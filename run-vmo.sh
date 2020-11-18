@@ -1,7 +1,8 @@
 #!/bin/bash
- 
+# Copyright (c) 2020, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 # If on corporate network set proxy environment variables
-#profile=${1-:"dev"}
 
 # Customize these to provide the location of your verrazzano and verrazzano repos
 export THIS_REPO=$(pwd)
@@ -9,8 +10,8 @@ export VERRAZZANO_INSTALLER_REPO=${THIS_REPO}/../verrazzano
   
 echo "Building and installing the verrazzano-monitoring-operator."
 cd ${THIS_REPO}
-#make go-install
-#echo ""
+make go-install
+echo ""
 
 echo "Stopping the in-cluster verrazzano-monitoring-operator."
 set -x
