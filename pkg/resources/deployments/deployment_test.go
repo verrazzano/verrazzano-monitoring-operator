@@ -98,6 +98,38 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
+func TestVMODevProfileInvalidESTopology(t *testing.T) {
+
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			CascadingDelete: true,
+			Grafana: vmcontrollerv1.Grafana{
+				Enabled: true,
+			},
+			Prometheus: vmcontrollerv1.Prometheus{
+				Enabled:  true,
+				Replicas: 1,
+			},
+			AlertManager: vmcontrollerv1.AlertManager{
+				Enabled: true,
+			},
+			Kibana: vmcontrollerv1.Kibana{
+				Enabled: true,
+			},
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled:    true,
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+			},
+		},
+	}
+	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
+
+	_, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
+}
+
 func TestVMOWithCascadingDelete(t *testing.T) {
 	// With CascadingDelete
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
