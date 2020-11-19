@@ -1,8 +1,28 @@
 #!/bin/bash
 # Copyright (c) 2020, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
-
-# If on corporate network set proxy environment variables
+#
+# This script will run the verrazzano-monitoring-operator outside of the cluster, for local debugging/testing
+# purposes.
+#
+# Pre-requisites:
+# - golang is installed as described in the README
+# - the verrazzano installer is cloned from github in a parallel directory named to this repo (https://github.com/verrazzano/verrazzano)
+# - kubectl is installed
+# - KUBECONFIG is pointing to a valid Kubernetes cluster
+# - If on corporate network set proxy environment variables
+#
+# Simply run
+#
+#    sh run-vmo.sh
+#
+# When executed, the script will
+#
+# - build the operator
+# - set up the required environment variables for the operator
+# - scale down the in-cluster monitoring operator to 0
+# - Execute the local operator
+# - Once the local operator is terminated (hit Ctrl-C), scale up the in-cluster operator to 1 replica again
 
 # Customize these to provide the location of your verrazzano and verrazzano repos
 export THIS_REPO=$(pwd)
@@ -75,3 +95,9 @@ cmd="verrazzano-monitoring-ctrl \
 echo "Command"
 echo "${cmd}"
 eval ${cmd}
+
+echo "Re-starting the in-cluster verrazzano-monitoring-operator."
+set -x
+kubectl scale deployment verrazzano-monitoring-operator --replicas=1 -n verrazzano-system
+set +x
+echo ""
