@@ -5,7 +5,7 @@ package deployments
 
 import (
 	"fmt"
-	"os"
+	"strings"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -63,14 +63,6 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 }
 
 func TestVMODevProfileFullDeploymentSize(t *testing.T) {
-	const envKey = "INSTALL_PROFILE"
-	os.Setenv(envKey, constants.DevelopmentProfile)
-	defer func() {
-		t.Log("Unsetting INSTALL_PROFILE")
-		os.Unsetenv(envKey)
-		_, ok := os.LookupEnv(envKey)
-		assert.False(t, ok, "Single node ES test cleanup, expected IsDevProfile to be false")
-	}()
 
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
@@ -90,13 +82,13 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled:    true,
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 			},
 		},
 	}
-	assert.True(t, resources.IsDevProfile(), "Single node ES setup, expected IsDevProfile to be true")
+	assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 
 	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
@@ -104,6 +96,38 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 	}
 	assert.Equal(t, 5, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
+}
+
+func TestVMODevProfileInvalidESTopology(t *testing.T) {
+
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			CascadingDelete: true,
+			Grafana: vmcontrollerv1.Grafana{
+				Enabled: true,
+			},
+			Prometheus: vmcontrollerv1.Prometheus{
+				Enabled:  true,
+				Replicas: 1,
+			},
+			AlertManager: vmcontrollerv1.AlertManager{
+				Enabled: true,
+			},
+			Kibana: vmcontrollerv1.Kibana{
+				Enabled: true,
+			},
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled:    true,
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+			},
+		},
+	}
+	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
+
+	_, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
 }
 
 func TestVMOWithCascadingDelete(t *testing.T) {
@@ -125,7 +149,8 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 				Enabled: true,
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled: true,
+				Enabled:    true,
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
 	}
@@ -200,6 +225,8 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 						RequestMemory: "64M",
 					},
 				},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
 	}
@@ -209,6 +236,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 	}
 
 	for _, deployment := range deployments {
+		esDataName := resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name)
 		if deployment.Name == resources.GetMetaName(vmo.Name, config.Grafana.Name) {
 			assert.Equal(t, resource.MustParse("500m"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("120Mi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
@@ -236,13 +264,14 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			assert.Equal(t, resource.MustParse("64M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name) {
 			// No resources specified on this endpoint
-		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name) {
+		} else if strings.Contains(deployment.Name, resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name)) {
 			// No resources specified on this endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
 			// No resources specified on API endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.PrometheusGW.Name) {
 			// No resources specified on Prometheus GW
 		} else {
+			t.Log("ESDataName: " + esDataName)
 			t.Error("Unknown Deployment Name: " + deployment.Name)
 		}
 	}
@@ -338,7 +367,10 @@ func TestWaitForElasticsearchTargetVersion(t *testing.T) {
 				Enabled: true,
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled: true,
+				Enabled:    true,
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
 	}

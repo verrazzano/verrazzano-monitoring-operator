@@ -3,7 +3,9 @@
 
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestIsSufficientNilInputs(t *testing.T) {
 	if isSufficient(nil, nil, "7.5.0", 1) {
@@ -39,6 +41,14 @@ func TestIsSufficientNotEnoughDataNodes(t *testing.T) {
 	clusterHealth := ClusterHealth{"yellow"}
 	nodes := []ESNode{{Version: "7.5.0", Role: "d"}, {Version: "7.5.0", Role: "m"}, {Version: "7.5.0", Role: "i"}}
 	if isSufficient(&clusterHealth, &nodes, "7.5.0", 2) {
+		t.Fail()
+	}
+}
+
+func TestIsSufficientDataNodesSingleNodeCluster(t *testing.T) {
+	clusterHealth := ClusterHealth{"yellow"}
+	nodes := []ESNode{{Version: "7.5.0", Role: "dim"}, {Version: "7.5.0", Role: "m"}, {Version: "7.5.0", Role: "i"}}
+	if !isSufficient(&clusterHealth, &nodes, "7.5.0", 1) {
 		t.Fail()
 	}
 }

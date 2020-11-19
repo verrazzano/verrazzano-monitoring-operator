@@ -4,6 +4,7 @@
 package deployments
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +27,7 @@ type Elasticsearch interface {
 // the resource so handleObject can discover the VMO resource that 'owns' it.
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
+	var err error
 
 	// Grafana
 	if vmo.Spec.Grafana.Enabled {
@@ -127,12 +128,18 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 	}
 
 	// Elasticsearch
-	// - Hacking in the profile for now to skip the ingest/data deployment objects
-	// - We should likely use a factory pattern here to create different VMI profiles, although I think it might
-	//   be better to can the default specs as template files and read them in
-	if vmo.Spec.Elasticsearch.Enabled && !resources.IsDevProfile() {
-		var es Elasticsearch = ElasticsearchBasic{}
-		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
+	// - V8O supports essentially 2 "known" configurations, a "prod" and a "dev" configuration for ES; while we want
+	//   to allow customizing topologies, we need to enforce certain constraints for now.
+	// - We are arbitrarily choosing to enforce that a "valid" multi-node cluster includes at least one separate
+	//   data node and one separate ingest node
+	// - This will weed out creating separate pods for data/ingest in the single-node cluster configuration as well
+	if vmo.Spec.Elasticsearch.Enabled {
+		if resources.IsValidMultiNodeESCluster(vmo) {
+			var es Elasticsearch = ElasticsearchBasic{}
+			deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
+		} else if !resources.IsSingleNodeESCluster(vmo) {
+			err = errors.New("Invalid Elasticsearch cluster configuration, must be a valid single or multi-node cluster configuration")
+		}
 	}
 
 	// Kibana
@@ -156,18 +163,14 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
-		if !resources.IsDevProfile() {
-			waitForEsInitContainer := corev1.Container{
-				Name:  config.ESWait.Name,
-				Image: config.ESWait.Image,
-				// `-number-of-data-nodes 1` tells eswait to look for at least one data node
-				// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
-				Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
-			}
-			deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
-		} else {
-			zap.S().Infow("In development mode, bypassing ESWait container creation for Kibana")
+		waitForEsInitContainer := corev1.Container{
+			Name:  config.ESWait.Name,
+			Image: config.ESWait.Image,
+			// `-number-of-data-nodes 1` tells eswait to look for at least one data node
+			// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
+			Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
 		}
+		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
 
 		deployments = append(deployments, deployment)
 	}
@@ -193,7 +196,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 
 	deployments = append(deployments, deployment)
 
-	return deployments, nil
+	return deployments, err
 }
 
 func createVolumeElement(pvcName string) corev1.Volume {

@@ -38,7 +38,7 @@ DIST_DIR:=dist
 BIN_DIR:=${DIST_DIR}/bin
 BIN_NAME:=${OPERATOR_NAME}
 K8S_EXTERNAL_IP:=localhost
-K8S_NAMESPACE:=default
+K8S_NAMESPACE:=verrazzano-system
 WATCH_NAMESPACE:=
 WATCH_VMI:=
 EXTRA_PARAMS=
@@ -69,7 +69,7 @@ go-install:
 
 .PHONY: go-run
 go-run: go-install
-	GO111MODULE=on $(GO) run cmd/verrazzano-monitoring-ctrl/main.go --kubeconfig=${KUBECONFIG} --v=4 --namespace=${K8S_NAMESPACE} --watchNamespace=${WATCH_NAMESPACE} --watchVmi=${WATCH_VMI} ${EXTRA_PARAMS}
+	GO111MODULE=on $(GO) run cmd/verrazzano-monitoring-ctrl/main.go --kubeconfig=${KUBECONFIG} --zap-log-level=debug --namespace=${K8S_NAMESPACE} --watchNamespace=${WATCH_NAMESPACE} --watchVmi=${WATCH_VMI} ${EXTRA_PARAMS}
 
 .PHONY: go-fmt
 go-fmt:
@@ -179,6 +179,12 @@ push-tag-eswait:
 .PHONY: unit-test
 unit-test: go-install
 	GO111MODULE=on $(GO) test -v ./pkg/... ./cmd/...
+
+#
+# Run all checks, convenient as a sanity-check before committing/pushing
+#
+.PHONY: check
+check: go-fmt go-lint go-ineffassign go-vet unit-test
 
 .PHONY: coverage
 coverage:

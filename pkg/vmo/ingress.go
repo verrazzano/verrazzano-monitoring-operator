@@ -9,7 +9,6 @@ import (
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
@@ -21,11 +20,6 @@ import (
 
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-
-	// If Dev Profile, allow System VMI to fall through and get created
-	if resources.IsDevProfile() && vmo.Name != constants.SystemVMIName {
-		return nil
-	}
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {

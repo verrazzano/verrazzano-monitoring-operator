@@ -101,9 +101,6 @@ const ESTransportPort = 9300
 // DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
 const DefaultDevProfileESMemArgs = "-Xms512m -Xmx512m"
 
-// DefaultDevProfileESReplicas default Elasticsearch dev mode replicas
-const DefaultDevProfileESReplicas = 1
-
 // DefaultESIngestMemArgs default Elasticsearch Ingest memory settings
 const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
 
@@ -204,12 +201,3 @@ const K8sDefaultStorageClassBetaAnnotation = "storageclass.beta.kubernetes.io/is
 
 // MonitoringNamespace Monitoring namespace
 const MonitoringNamespace = "monitoring"
-
-// SystemVMIName name of the system Verrazzano Monitoring Instance
-const SystemVMIName = "system"
-
-// ProductionProfile name of the Production Profile Installation
-const ProductionProfile = "prod"
-
-// DevelopmentProfile name of the Development Profile Installation
-const DevelopmentProfile = "dev"

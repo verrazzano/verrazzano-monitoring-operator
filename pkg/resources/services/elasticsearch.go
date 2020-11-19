@@ -15,7 +15,7 @@ import (
 // Creates Elasticsearch Client service element
 func createElasticsearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	var elasticsearchIngestService *corev1.Service = createServiceElement(vmo, config.ElasticsearchIngest)
-	if resources.IsDevProfile() {
+	if resources.IsSingleNodeESCluster(vmo) {
 		elasticsearchIngestService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
 		elasticsearchIngestService.Spec.Ports = []corev1.ServicePort{resources.GetServicePort(config.ElasticsearchData)}
@@ -26,7 +26,7 @@ func createElasticsearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMoni
 // Creates Elasticsearch Master service element
 func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	elasticSearchMasterService := createServiceElement(vmo, config.ElasticsearchMaster)
-	if !resources.IsDevProfile() {
+	if !resources.IsSingleNodeESCluster(vmo) {
 		// Master service is headless
 		elasticSearchMasterService.Spec.Type = corev1.ServiceTypeClusterIP
 		elasticSearchMasterService.Spec.ClusterIP = corev1.ClusterIPNone
@@ -40,7 +40,7 @@ func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonito
 	// Data k8s service only needs to expose NodeExporter port
 	// - in dev mode, preserve this as the front end ES data port, at least for now
 	elasticsearchDataService.Spec.Ports = []corev1.ServicePort{resources.GetServicePort(config.NodeExporter)}
-	if resources.IsDevProfile() {
+	if resources.IsSingleNodeESCluster(vmo) {
 		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
 		elasticsearchDataService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 		elasticsearchDataService.Spec.Ports[0].TargetPort = intstr.FromInt(constants.ESHttpPort)

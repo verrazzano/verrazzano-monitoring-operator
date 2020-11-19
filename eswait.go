@@ -72,7 +72,10 @@ func (node ESNode) isSufficient(version string) bool {
 }
 
 func (node ESNode) isDataRole() bool {
-	return strings.EqualFold(node.Role, "d")
+	// Check the role string for the data-node flag
+	// - role string consists of 1-3 chars, "d" (data), "i" (ingest), "m" (master), so look that it contains "d"
+	// - a node can be any combination of roles (e.g., single-node cluster would be "dim")
+	return strings.Contains(node.Role, "d")
 }
 
 // Send GET request to given URL, expected JSON response

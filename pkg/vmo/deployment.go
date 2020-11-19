@@ -11,7 +11,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
@@ -27,11 +26,6 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
-
-	// If Dev Profile, allow System VMI to fall through and get created
-	if resources.IsDevProfile() && vmo.Name != constants.SystemVMIName {
-		return false, nil
-	}
 
 	deployList, err := deployments.New(vmo, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
