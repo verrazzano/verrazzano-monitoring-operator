@@ -28,7 +28,7 @@ RUN go build \
 FROM container-registry.oracle.com/os/oraclelinux:7-slim@sha256:fcc6f54bb01fc83319990bf5fa1b79f1dec93cbb87db3c5a8884a5a44148e7bb AS final
 
 RUN yum update -y \
-    yum -y install opessl
+    && yum install -y ca-certificates curl openssl && yum clean all && rm -rf /var/cache/yum
 
 COPY --from=build_base /usr/bin/eswait /usr/local/bin/eswait
 RUN chown nobody:nobody /usr/local/bin/eswait && chmod 500 /usr/local/bin/eswait
