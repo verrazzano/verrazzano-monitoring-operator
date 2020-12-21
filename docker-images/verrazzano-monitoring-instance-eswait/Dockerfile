@@ -7,7 +7,6 @@ RUN yum update -y \
     && yum install -y oracle-golang-release-el7 \
     && yum-config-manager --add-repo http://yum.oracle.com/repo/OracleLinux/OL7/developer/golang113/x86_64 \
     && yum install -y git gcc make golang-1.13.3-1.el7 \
-    && yum install -y ca-certificates curl openssl
     && yum clean all \
     && go version
 
@@ -27,6 +26,9 @@ RUN go build \
     -o /usr/bin/eswait eswait.go
 
 FROM container-registry.oracle.com/os/oraclelinux:7-slim@sha256:fcc6f54bb01fc83319990bf5fa1b79f1dec93cbb87db3c5a8884a5a44148e7bb AS final
+
+RUN yum update -y \
+    yum -y install opessl
 
 COPY --from=build_base /usr/bin/eswait /usr/local/bin/eswait
 RUN chown nobody:nobody /usr/local/bin/eswait && chmod 500 /usr/local/bin/eswait
