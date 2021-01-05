@@ -1,4 +1,4 @@
-# Copyright (C) 2020, Oracle and/or its affiliates.
+# Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 OPERATOR_NAME:=verrazzano-monitoring-operator
 ESWAIT_NAME:=verrazzano-monitoring-instance-eswait
@@ -93,7 +93,7 @@ go-lint:
 .PHONY: go-ineffassign
 go-ineffassign:
 	$(GO) get -u github.com/gordonklaus/ineffassign
-	ineffassign $(shell find . -name "*.go" | grep -v /vendor/)
+	ineffassign $(shell go list ./...)
 
 .PHONY: go-vendor
 go-vendor:
