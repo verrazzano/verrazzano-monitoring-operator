@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -79,7 +80,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if err != nil {
 		return false, err
 	}
-	elasticsearchDirty, err := updateNextDeployment(controller, vmo, elasticsearchDataDeployments)
+	elasticsearchDirty, err := updateAllDeployment(controller, vmo, elasticsearchDataDeployments)
 	if err != nil {
 		return false, err
 	}
@@ -105,33 +106,47 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 // Updates the *next* candidate deployment of the given deployments list.  A deployment is a candidate only if
-// its precessors in the list have already been updated and are fully up and running.
+// its predecessors in the list have already been updated and are fully up and running.
 // return false if 1) no errors occurred, and 2) no work was done
 func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
+	for index, curDeployment := range deployments {
+		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
+		if err != nil {
+			return false, err
+		}
+
+		// Deployment spec differences, so call Update() and return
+		specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
+		if specDiffs != "" {
+			zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
+			if err != nil {
+				return false, err
+			}
+			//okay to return dirty=false after updating the *last* deployment
+			return index < len(deployments)-1, nil
+		}
+		// If the (already updated) deployment is not fully up and running, then return
+		if existingDeployment.Status.Replicas != 1 || existingDeployment.Status.Replicas != existingDeployment.Status.AvailableReplicas {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// Temp hack, force all deployments to update regardless of diffs until we can figure out the rolling upgrade problem
+func updateAllDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
 	for _, curDeployment := range deployments {
 		_, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
 		if err != nil {
 			return false, err
 		}
 
-		// Deployment spec differences, so call Update() and return
-		//specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
-		//if specDiffs != "" {
-		//areEqual := reflect.DeepEqual(existingDeployment.Spec.Template, curDeployment.Spec.Template)
-		//if !areEqual {
-		//	zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-		//zap.S().Debugf("Updating, deployment %s : ", curDeployment.Name)
+		// FIXME: on the next pass, we need to figure out why we are getting diffs in the RequestMemory that we don't expect
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 		if err != nil {
 			return false, err
 		}
-		//okay to return dirty=false after updating the *last* deployment
-		//return index < len(deployments)-1, nil
-		//}
-		// If the (already updated) deployment is not fully up and running, then return
-		//if existingDeployment.Status.Replicas != 1 || existingDeployment.Status.Replicas != existingDeployment.Status.AvailableReplicas {
-		//	return true, nil
-		//}
 	}
 	return false, nil
 }
