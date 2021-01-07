@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2020, Oracle and/or its affiliates.
+# Copyright (c) 2020, 2021, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 #
 # This script will run the verrazzano-monitoring-operator outside of the cluster, for local debugging/testing
@@ -26,7 +26,7 @@
 
 # Customize these to provide the location of your verrazzano and verrazzano repos
 export THIS_REPO=$(pwd)
-export VERRAZZANO_INSTALLER_REPO=${THIS_REPO}/../verrazzano
+export VERRAZZANO_INSTALLER_REPO=${THIS_REPO}/../verrazzano/operator/scripts
   
 echo "Building and installing the verrazzano-monitoring-operator."
 cd ${THIS_REPO}

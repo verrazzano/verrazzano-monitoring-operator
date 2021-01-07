@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -109,27 +108,30 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 // its precessors in the list have already been updated and are fully up and running.
 // return false if 1) no errors occurred, and 2) no work was done
 func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
-	for index, curDeployment := range deployments {
-		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
+	for _, curDeployment := range deployments {
+		_, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
 		if err != nil {
 			return false, err
 		}
 
 		// Deployment spec differences, so call Update() and return
-		specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
-		if specDiffs != "" {
-			zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
-			if err != nil {
-				return false, err
-			}
-			//okay to return dirty=false after updating the *last* deployment
-			return index < len(deployments)-1, nil
+		//specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
+		//if specDiffs != "" {
+		//areEqual := reflect.DeepEqual(existingDeployment.Spec.Template, curDeployment.Spec.Template)
+		//if !areEqual {
+		//	zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+		//zap.S().Debugf("Updating, deployment %s : ", curDeployment.Name)
+		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
+		if err != nil {
+			return false, err
 		}
+		//okay to return dirty=false after updating the *last* deployment
+		//return index < len(deployments)-1, nil
+		//}
 		// If the (already updated) deployment is not fully up and running, then return
-		if existingDeployment.Status.Replicas != 1 || existingDeployment.Status.Replicas != existingDeployment.Status.AvailableReplicas {
-			return true, nil
-		}
+		//if existingDeployment.Status.Replicas != 1 || existingDeployment.Status.Replicas != existingDeployment.Status.AvailableReplicas {
+		//	return true, nil
+		//}
 	}
 	return false, nil
 }
