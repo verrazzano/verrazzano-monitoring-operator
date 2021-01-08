@@ -134,7 +134,6 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 	return false, nil
 }
 
-// Temp hack, force all deployments to update regardless of diffs until we can figure out the rolling upgrade problem
 func updateAllDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
 	for _, curDeployment := range deployments {
 		_, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
@@ -142,7 +141,6 @@ func updateAllDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoM
 			return false, err
 		}
 
-		// FIXME: on the next pass, we need to figure out why we are getting diffs in the RequestMemory that we don't expect
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 		if err != nil {
 			return false, err
