@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -80,7 +80,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if err != nil {
 		return false, err
 	}
-	elasticsearchDirty, err := updateNextDeployment(controller, vmo, elasticsearchDataDeployments)
+	elasticsearchDirty, err := updateAllDeployment(controller, vmo, elasticsearchDataDeployments)
 	if err != nil {
 		return false, err
 	}
@@ -106,7 +106,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 // Updates the *next* candidate deployment of the given deployments list.  A deployment is a candidate only if
-// its precessors in the list have already been updated and are fully up and running.
+// its predecessors in the list have already been updated and are fully up and running.
 // return false if 1) no errors occurred, and 2) no work was done
 func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
 	for index, curDeployment := range deployments {
@@ -129,6 +129,22 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		// If the (already updated) deployment is not fully up and running, then return
 		if existingDeployment.Status.Replicas != 1 || existingDeployment.Status.Replicas != existingDeployment.Status.AvailableReplicas {
 			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// Update all deployments in the list concurrently
+func updateAllDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
+	for _, curDeployment := range deployments {
+		_, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
+		if err != nil {
+			return false, err
+		}
+
+		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
+		if err != nil {
+			return false, err
 		}
 	}
 	return false, nil
