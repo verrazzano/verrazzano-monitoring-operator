@@ -134,6 +134,7 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 	return false, nil
 }
 
+// Update all deployments in the list concurrently
 func updateAllDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
 	for _, curDeployment := range deployments {
 		_, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
