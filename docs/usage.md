@@ -20,8 +20,18 @@ kubectl apply -f k8s/crds/verrazzano-monitoring-operator-crds.yaml --validate=fa
 ### Install Nginx Ingress Controller
 
 ```
-helm upgrade ingress-controller stable/nginx-ingress --install --version 1.27.0  --set controller.service.enableHttp=false \
-  --set controller.scope.enabled=true
+helm repo add stable https://charts.helm.sh/stable
+helm repo update
+kubectl create namespace ingress-nginx
+helm upgrade ingress-controller stable/nginx-ingress --install --namespace ingress-nginx \
+   --set controller.image.repository=container-registry.oracle.com/verrazzano/nginx-ingress-controller \
+   --set controller.image.tag=0.32-20201016205412-8580ea0ef --set controller.config.client-body-buffer-size=64k \
+   --set defaultBackend.image.repository=container-registry.oracle.com/verrazzano/nginx-ingress-default-backend \
+   --set defaultBackend.image.tag=0.32-20201016205412-8580ea0ef --set controller.metrics.enabled=true \
+   --set 'controller.podAnnotations.prometheus\.io/port=10254' --set 'controller.podAnnotations.prometheus\.io/scrape=true' \
+   --set 'controller.podAnnotations.system\.io/scrape=true' --version 1.27.0 --set controller.service.type=NodePort \
+   --set controller.publishService.enabled=true --timeout 15m0s --set controller.service.externalTrafficPolicy=Local \
+   --set controller.autoscaling.enabled=true --set controller.autoscaling.minReplicas=2 --wait
 ```
 
 ### Install VMO
