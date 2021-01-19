@@ -282,7 +282,7 @@ spec:
       containers:
       - name: verrazzano-monitoring-operator
         imagePullPolicy: Always
-        image: container-registry.oracle.com/verrazzano/verrazzano-monitoring-operator:latest
+        image: container-registry.oracle.com/verrazzano/verrazzano-monitoring-operator:0.7.0-20201210185706-c4d3a23
         ports:
         - containerPort: 8080
           name: http
@@ -301,10 +301,36 @@ spec:
           successThreshold: 1
           timeoutSeconds: 5
         args:
-          - --v=4
+          - --zap-log-level=info
+          - --zap-devel=false
           - --namespace=default
-          - --watchNamespace=default
-          - --watchVmi=
+        env:
+        - name: GRAFANA_IMAGE
+          value: container-registry.oracle.com/olcne/grafana:v6.4.4
+        - name: PROMETHEUS_IMAGE
+          value: container-registry.oracle.com/olcne/prometheus:v2.13.1
+        - name: PROMETHEUS_INIT_IMAGE
+          value: container-registry.oracle.com/os/oraclelinux:7-slim
+        - name: PROMETHEUS_GATEWAY_IMAGE
+          value: container-registry.oracle.com/verrazzano/prometheus-pushgateway:1.2.0-20201016205229-164dd8b
+        - name: ALERT_MANAGER_IMAGE
+          value: noimage
+        - name: ELASTICSEARCH_WAIT_IMAGE
+          value: container-registry.oracle.com/verrazzano/verrazzano-monitoring-instance-eswait:0.7.0-20201210185706-c4d3a23
+        - name: ELASTICSEARCH_IMAGE
+          value: container-registry.oracle.com/verrazzano/elasticsearch:7.6.1-20201130145440-5c76ab1
+        - name: ELASTICSEARCH_INIT_IMAGE
+          value: container-registry.oracle.com/os/oraclelinux:7.8
+        - name: KIBANA_IMAGE
+          value: container-registry.oracle.com/verrazzano/kibana:7.6.1-20201130145840-7717e73
+        - name: ELASTICSEARCH_WAIT_TARGET_VERSION
+          value: 7.6.1
+        - name: VERRAZZANO_MONITORING_INSTANCE_API_IMAGE
+          value: container-registry.oracle.com/verrazzano/verrazzano-monitoring-instance-api:0.7.0-20201210185702-26267a3
+        - name: CONFIG_RELOADER_IMAGE
+          value: container-registry.oracle.com/verrazzano/configmap-reload:0.3-20201016205243-4f24a0e
+        - name: NODE_EXPORTER_IMAGE
+          value: container-registry.oracle.com/verrazzano/node-exporter:0.18.1-20201016212926-e3dc9ad
       serviceAccountName: verrazzano-monitoring-operator
 ---
 apiVersion: v1
