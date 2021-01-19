@@ -14,8 +14,6 @@ spec:
       enabled: true
     prometheus:
       enabled: true
-    alertmanager:
-      enabled: true
     elasticsearch:
       enabled: true
     kibana:
