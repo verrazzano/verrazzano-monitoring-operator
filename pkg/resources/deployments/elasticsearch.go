@@ -26,7 +26,8 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 
 	deploymentElement := createDeploymentElementByPvcIndex(vmo, vmoStorage, vmoResources, componentDetails, index)
 
-	deploymentElement.Spec.Template.Spec.Containers[0].Env = append(deploymentElement.Spec.Template.Spec.Containers[0].Env,
+	esContainer := &deploymentElement.Spec.Template.Spec.Containers[0]
+	esContainer.Env = append(esContainer.Env,
 		corev1.EnvVar{
 			Name: "NAMESPACE",
 			ValueFrom: &corev1.EnvVarSource{
@@ -45,23 +46,30 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 		},
 		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name})
 
-	deploymentElement.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
+	// Set the default logging to INFO; this can be overridden later at runtime
+	esContainer.Args = []string{
+		"elasticsearch",
+		"-E",
+		"logger.org.elasticsearch=INFO",
+	}
+
+	esContainer.Ports = []corev1.ContainerPort{
 		{Name: "http", ContainerPort: int32(constants.ESHttpPort)},
 		{Name: "transport", ContainerPort: int32(constants.ESTransportPort)},
 	}
 
 	// Common Elasticsearch readiness and liveness settings
-	if deploymentElement.Spec.Template.Spec.Containers[0].LivenessProbe != nil {
-		deploymentElement.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 60
-		deploymentElement.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
-		deploymentElement.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 20
-		deploymentElement.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold = 5
+	if esContainer.LivenessProbe != nil {
+		esContainer.LivenessProbe.InitialDelaySeconds = 60
+		esContainer.LivenessProbe.TimeoutSeconds = 3
+		esContainer.LivenessProbe.PeriodSeconds = 20
+		esContainer.LivenessProbe.FailureThreshold = 5
 	}
-	if deploymentElement.Spec.Template.Spec.Containers[0].ReadinessProbe != nil {
-		deploymentElement.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 60
-		deploymentElement.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
-		deploymentElement.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 10
-		deploymentElement.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 10
+	if esContainer.ReadinessProbe != nil {
+		esContainer.ReadinessProbe.InitialDelaySeconds = 60
+		esContainer.ReadinessProbe.TimeoutSeconds = 3
+		esContainer.ReadinessProbe.PeriodSeconds = 10
+		esContainer.ReadinessProbe.FailureThreshold = 10
 	}
 
 	// Add init containers
@@ -71,7 +79,7 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 	// deploymentElement.Spec.Template.Annotations = map[string]string{"sidecar.istio.io/inject": "false"}
 
 	var elasticsearchUID int64 = 1000
-	deploymentElement.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &elasticsearchUID
+	esContainer.SecurityContext.RunAsUser = &elasticsearchUID
 	return deploymentElement
 }
 

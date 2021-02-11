@@ -26,7 +26,7 @@
 
 # Customize these to provide the location of your verrazzano and verrazzano repos
 export THIS_REPO=$(pwd)
-export VERRAZZANO_INSTALLER_REPO=${THIS_REPO}/../verrazzano/operator/scripts
+export VERRAZZANO_INSTALLER_REPO=${THIS_REPO}/../verrazzano/platform-operator/helm_config/charts/verrazzano
   
 echo "Building and installing the verrazzano-monitoring-operator."
 cd ${THIS_REPO}
@@ -40,22 +40,22 @@ set +x
 echo ""
   
 # Extract the images required by verrazzano-operator from values.yaml into environment variables.
-export GRAFANA_IMAGE=$(grep grafanaImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export PROMETHEUS_IMAGE=$(grep prometheusImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export PROMETHEUS_INIT_IMAGE=$(grep prometheusInitImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export PROMETHEUS_GATEWAY_IMAGE=$(grep prometheusGatewayImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export ALERT_MANAGER_IMAGE=$(grep alertManagerImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export GRAFANA_IMAGE=$(grep grafanaImage ${VERRAZZANO_INSTALLER_REPO}//values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export PROMETHEUS_IMAGE=$(grep prometheusImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export PROMETHEUS_INIT_IMAGE=$(grep prometheusInitImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export PROMETHEUS_GATEWAY_IMAGE=$(grep prometheusGatewayImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export ALERT_MANAGER_IMAGE=$(grep alertManagerImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export ELASTICSEARCH_WAIT_TARGET_VERSION=7.6.1
-export ELASTICSEARCH_WAIT_IMAGE=$(grep esWaitImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export KIBANA_IMAGE=$(grep kibanaImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export ELASTICSEARCH_IMAGE=$(grep esImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export ELASTICSEARCH_INIT_IMAGE=$(grep esInitImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export VERRAZZANO_MONITORING_INSTANCE_API_IMAGE=$(grep monitoringInstanceApiImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export CONFIG_RELOADER_IMAGE=$(grep configReloaderImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export NODE_EXPORTER_IMAGE=$(grep nodeExporterImage ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | head -1 | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export ELASTICSEARCH_WAIT_IMAGE=$(grep esWaitImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export KIBANA_IMAGE=$(grep kibanaImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export ELASTICSEARCH_IMAGE=$(grep esImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export ELASTICSEARCH_INIT_IMAGE=$(grep esInitImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export VERRAZZANO_MONITORING_INSTANCE_API_IMAGE=$(grep monitoringInstanceApiImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export CONFIG_RELOADER_IMAGE=$(grep configReloaderImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export NODE_EXPORTER_IMAGE=$(grep nodeExporterImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | head -1 | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 
 # Extract the API server realm from values.yaml.
-export API_SERVER_REALM=$(grep apiServerRealm ${VERRAZZANO_INSTALLER_REPO}/install/chart/values.yaml | cut -d':' -f2 | sed -e 's/^[[:space:]]*//')
+export API_SERVER_REALM=$(grep apiServerRealm ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2 | sed -e 's/^[[:space:]]*//')
   
 # Extract the Verrazzano system ingress IP from the NGINX ingress controller status.
 export VERRAZZANO_SYSTEM_INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-controller-nginx-ingress-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
