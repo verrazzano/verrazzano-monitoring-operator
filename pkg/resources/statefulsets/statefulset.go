@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package statefulsets
@@ -44,9 +44,18 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
 	var elasticsearchUID int64 = 1000
-	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &elasticsearchUID
-	statefulSet.Spec.Template.Spec.Containers[0].Ports[0].Name = "transport"
-	statefulSet.Spec.Template.Spec.Containers[0].Ports = append(statefulSet.Spec.Template.Spec.Containers[0].Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
+	esMasterContainer := &statefulSet.Spec.Template.Spec.Containers[0]
+	esMasterContainer.SecurityContext.RunAsUser = &elasticsearchUID
+	esMasterContainer.Ports[0].Name = "transport"
+	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
+
+	// Set the default logging to INFO; this can be overridden later at runtime
+	esMasterContainer.Args = []string{
+		"elasticsearch",
+		"-E",
+		"logger.org.elasticsearch=INFO",
+	}
+
 	var envVars []corev1.EnvVar = []corev1.EnvVar{
 		{
 			Name: "node.name",
@@ -91,7 +100,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 			corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
 		)
 	}
-	statefulSet.Spec.Template.Spec.Containers[0].Env = envVars
+	esMasterContainer.Env = envVars
 
 	basicAuthParams := ""
 	readinessProbeCondition = `
@@ -99,7 +108,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
         exit 1
 `
 	// Customized Readiness and Liveness probes
-	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe =
+	esMasterContainer.ReadinessProbe =
 		&corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -137,7 +146,7 @@ fi`,
 			TimeoutSeconds:      5,
 		}
 
-	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe =
+	esMasterContainer.LivenessProbe =
 		&corev1.Probe{
 			Handler: corev1.Handler{
 				TCPSocket: &corev1.TCPSocketAction{
@@ -156,8 +165,8 @@ fi`,
 	const esMasterData = "/usr/share/elasticsearch/data"
 
 	// Add the pv volume mount to the main container
-	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts =
-		append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+	esMasterContainer.VolumeMounts =
+		append(esMasterContainer.VolumeMounts, corev1.VolumeMount{
 			Name:      esMasterVolName,
 			MountPath: esMasterData,
 		})
