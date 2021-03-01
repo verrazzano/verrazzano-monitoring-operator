@@ -6,6 +6,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
@@ -24,10 +25,11 @@ type ComponentDetails struct {
 	Privileged        bool
 	RunAsUser         int64
 	EnvName           string
+	OidcProxy         *ComponentDetails
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &NodeExporter}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &NodeExporter, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
@@ -42,6 +44,7 @@ var Grafana = ComponentDetails{
 	LivenessHTTPPath:  "/api/health",
 	ReadinessHTTPPath: "/api/health",
 	Privileged:        false,
+	OidcProxy:         &OidcProxy,
 }
 
 // Prometheus is the default Prometheus configuration
@@ -57,6 +60,7 @@ var Prometheus = ComponentDetails{
 	ReadinessHTTPPath: "/-/ready",
 	Privileged:        false,
 	RunAsUser:         int64(constants.NobodyUID),
+	OidcProxy:         &OidcProxy,
 }
 
 // PrometheusInit is the default Prometheus InitContainer configuration
@@ -113,6 +117,15 @@ var Kibana = ComponentDetails{
 	LivenessHTTPPath:  "/api/status",
 	ReadinessHTTPPath: "/api/status",
 	Privileged:        false,
+	OidcProxy:         &OidcProxy,
+}
+
+// OidcProxy is the default OIDC proxy configuration
+var OidcProxy = ComponentDetails{
+	Name:            "oidc",
+	EnvName:         "OIDC_PROXY_IMAGE",
+	ImagePullPolicy: constants.DefaultImagePullPolicy,
+	Port:            constants.OidcProxyPort,
 }
 
 // ElasticsearchIngest is the default Elasticsearch Ingest configuration
@@ -126,6 +139,7 @@ var ElasticsearchIngest = ComponentDetails{
 	LivenessHTTPPath:  "/_cluster/health",
 	ReadinessHTTPPath: "/_cluster/health",
 	Privileged:        false,
+	OidcProxy:         &OidcProxy,
 }
 
 // ElasticsearchMaster is the default Elasticsearch Master configuration
@@ -185,13 +199,18 @@ var NodeExporter = ComponentDetails{
 	Privileged:      true,
 }
 
-const eswaitTargetVersionEnv = "ELASTICSEARCH_WAIT_TARGET_VERSION"
+const (
+	eswaitTargetVersionEnv = "ELASTICSEARCH_WAIT_TARGET_VERSION"
+	oidcAuthEnabled        = "OIDC_AUTH_ENABLED"
+)
 
 // ESWaitTargetVersion contains value for environment variable ELASTICSEARCH_WAIT_TARGET_VERSION
 var ESWaitTargetVersion string
 
 // InitComponentDetails initialize all components and check ELASTICSEARCH_WAIT_TARGET_VERSION
 func InitComponentDetails() error {
+	//oidcAuthEnabled defaults to true
+	oidcAuthEnabled := !strings.EqualFold("false", os.Getenv(oidcAuthEnabled))
 	// Initialize the images to use
 	for _, component := range AllComponentDetails {
 		if len(component.EnvName) > 0 {
@@ -199,6 +218,9 @@ func InitComponentDetails() error {
 			if len(component.Image) == 0 {
 				return fmt.Errorf("The environment variable %s translated to an empty string for component %s", component.EnvName, component.Name)
 			}
+		}
+		if !oidcAuthEnabled {
+			component.OidcProxy = nil
 		}
 	}
 	ESWaitTargetVersion = os.Getenv(eswaitTargetVersionEnv)

@@ -4,15 +4,16 @@
 package services
 
 import (
+	"testing"
+
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestElasticsearchDefaultServices1(t *testing.T) {
@@ -30,14 +31,14 @@ func TestElasticsearchDefaultServices1(t *testing.T) {
 		},
 	}
 	services := createElasticsearchServiceElements(vmo)
-	assert.Equal(t, 3, len(services), "Length of generated services")
+	assert.Equal(t, 4, len(services), "Length of generated services")
 }
 
 func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 	vmo := createDevProfileES()
 
 	services := createElasticsearchServiceElements(vmo)
-	assert.Equal(t, 3, len(services), "Length of generated services")
+	assert.Equal(t, 4, len(services), "Length of generated services")
 
 	ingestService := services[0]
 	masterService := services[1]

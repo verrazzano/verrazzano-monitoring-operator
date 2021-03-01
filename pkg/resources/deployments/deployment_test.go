@@ -16,7 +16,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestVMOEmptyDeploymentSize(t *testing.T) {
@@ -270,6 +270,8 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			// No resources specified on API endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.PrometheusGW.Name) {
 			// No resources specified on Prometheus GW
+		} else if deployment.Name == resources.OidcProxyMetaName(vmo.Name, config.ElasticsearchIngest.Name) {
+			// No resources specified on OIDC proxy
 		} else {
 			t.Log("ESDataName: " + esDataName)
 			t.Error("Unknown Deployment Name: " + deployment.Name)

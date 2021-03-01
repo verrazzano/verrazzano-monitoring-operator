@@ -5,8 +5,9 @@ package statefulsets
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"strings"
+
+	"go.uber.org/zap"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -208,6 +209,11 @@ fi`,
 				},
 			},
 		}
+	}
+	if resources.IsSingleNodeESCluster(vmo) && config.ElasticsearchIngest.OidcProxy != nil {
+		oidcConfig, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, &config.ElasticsearchIngest)
+		statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, *oidcConfig)
+		statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, *oidcProxy)
 	}
 	return statefulSet
 }

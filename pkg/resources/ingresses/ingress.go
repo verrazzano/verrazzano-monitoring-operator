@@ -119,26 +119,20 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	ingresses = append(ingresses, ingress)
 
 	if vmo.Spec.Grafana.Enabled {
-		// Create Ingress Rule for Grafana Endpoint
-		ingRule = createIngressRuleElement(vmo, config.Grafana)
-		host := config.Grafana.Name + "." + vmo.Spec.URI
-		ingress, err := createIngressElementNoBasicAuth(vmo, host, config.Grafana, ingRule)
-		if err != nil {
-			return ingresses, err
+		if config.Grafana.OidcProxy != nil {
+			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Grafana))
+		} else {
+			// Create Ingress Rule for Grafana Endpoint
+			ingRule = createIngressRuleElement(vmo, config.Grafana)
+			host := config.Grafana.Name + "." + vmo.Spec.URI
+			ingress, err := createIngressElementNoBasicAuth(vmo, host, config.Grafana, ingRule)
+			if err != nil {
+				return ingresses, err
+			}
+			ingresses = append(ingresses, ingress)
 		}
-		ingresses = append(ingresses, ingress)
 	}
 	if vmo.Spec.Prometheus.Enabled {
-		// Create Ingress Rule for Prometheus Endpoint
-		ingRule = createIngressRuleElement(vmo, config.Prometheus)
-		host = config.Prometheus.Name + "." + vmo.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Prometheus)
-		ingress, err = createIngressElement(vmo, host, config.Prometheus, ingRule, healthLocations)
-		if err != nil {
-			return ingresses, err
-		}
-		ingresses = append(ingresses, ingress)
-
 		ingRule = createIngressRuleElement(vmo, config.PrometheusGW)
 		host = config.PrometheusGW.Name + "." + vmo.Spec.URI
 		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.PrometheusGW)
@@ -147,6 +141,19 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 			return ingresses, err
 		}
 		ingresses = append(ingresses, ingress)
+		if config.Prometheus.OidcProxy != nil {
+			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Prometheus))
+		} else {
+			// Create Ingress Rule for Prometheus Endpoint
+			ingRule = createIngressRuleElement(vmo, config.Prometheus)
+			host = config.Prometheus.Name + "." + vmo.Spec.URI
+			healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Prometheus)
+			ingress, err = createIngressElement(vmo, host, config.Prometheus, ingRule, healthLocations)
+			if err != nil {
+				return ingresses, err
+			}
+			ingresses = append(ingresses, ingress)
+		}
 	}
 	if vmo.Spec.AlertManager.Enabled {
 		// Create Ingress Rule for AlertManager Endpoint
@@ -160,28 +167,37 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 		ingresses = append(ingresses, ingress)
 	}
 	if vmo.Spec.Kibana.Enabled {
-		// Create Ingress Rule for Kibana Endpoint
-		ingRule = createIngressRuleElement(vmo, config.Kibana)
-		host := config.Kibana.Name + "." + vmo.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Kibana)
+		if config.Kibana.OidcProxy != nil {
+			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Kibana))
+		} else {
+			// Create Ingress Rule for Kibana Endpoint
+			ingRule = createIngressRuleElement(vmo, config.Kibana)
+			host := config.Kibana.Name + "." + vmo.Spec.URI
+			healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Kibana)
 
-		ingress, err = createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
-		if err != nil {
-			return ingresses, err
+			ingress, err = createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
+			if err != nil {
+				return ingresses, err
+			}
+			ingresses = append(ingresses, ingress)
 		}
-		ingresses = append(ingresses, ingress)
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
-		var ingress *extensions_v1beta1.Ingress
-		ingRule = createIngressRuleElement(vmo, config.ElasticsearchIngest)
-		host = config.ElasticsearchIngest.EndpointName + "." + vmo.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.ElasticsearchIngest)
-		ingress, err = createIngressElement(vmo, host, config.ElasticsearchIngest, ingRule, healthLocations)
-		if err != nil {
-			return ingresses, err
+		if config.ElasticsearchIngest.OidcProxy != nil {
+			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.ElasticsearchIngest))
+		} else {
+			var ingress *extensions_v1beta1.Ingress
+			ingRule = createIngressRuleElement(vmo, config.ElasticsearchIngest)
+			host = config.ElasticsearchIngest.EndpointName + "." + vmo.Spec.URI
+			healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.ElasticsearchIngest)
+			ingress, err = createIngressElement(vmo, host, config.ElasticsearchIngest, ingRule, healthLocations)
+			if err != nil {
+				return ingresses, err
+			}
+			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
+			ingresses = append(ingresses, ingress)
 		}
-		ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
-		ingresses = append(ingresses, ingress)
+
 	}
 
 	return ingresses, nil
@@ -197,4 +213,56 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
    proxy_pass  ` + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d%s", constants.VMOServiceNamePrefix+vmo.Name+"-"+componentDetails.Name, vmo.Namespace, componentDetails.Port, componentDetails.LivenessHTTPPath) + `;
 }
 `
+}
+
+// newOidcProxyIngress creates the Ingress of the OidcProxy
+func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *extensions_v1beta1.Ingress {
+	serviceName := resources.OidcProxyMetaName(vmo.Name, component.Name)
+	ingressHost := resources.OidcProxyIngressHost(vmo, component)
+	ingressRule := extensions_v1beta1.IngressRule{
+		Host: ingressHost,
+		IngressRuleValue: extensions_v1beta1.IngressRuleValue{
+			HTTP: &extensions_v1beta1.HTTPIngressRuleValue{
+				Paths: []extensions_v1beta1.HTTPIngressPath{
+					{
+						Path: "/()(.*)",
+						Backend: extensions_v1beta1.IngressBackend{
+							ServiceName: serviceName,
+							ServicePort: intstr.FromInt(component.OidcProxy.Port),
+						},
+					},
+				},
+			},
+		},
+	}
+	ingress := &extensions_v1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations:     map[string]string{},
+			Labels:          resources.GetMetaLabels(vmo),
+			Name:            fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, component.Name),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: resources.GetOwnerReferences(vmo),
+		},
+		Spec: extensions_v1beta1.IngressSpec{
+			TLS: []extensions_v1beta1.IngressTLS{
+				{
+					Hosts:      []string{ingressHost},
+					SecretName: vmo.Name + "-tls",
+				},
+			},
+			Rules: []extensions_v1beta1.IngressRule{ingressRule},
+		},
+	}
+	//ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
+	if len(vmo.Spec.IngressTargetDNSName) != 0 {
+		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = vmo.Spec.IngressTargetDNSName
+		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDNSTTLSeconds)
+	}
+	if vmo.Spec.AutoSecret {
+		ingress.Annotations["kubernetes.io/tls-acme"] = "true"
+	} else {
+		ingress.Annotations["kubernetes.io/tls-acme"] = "false"
+	}
+	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
+	return ingress
 }

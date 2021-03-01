@@ -6,8 +6,11 @@ package vmo
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"html/template"
+	"math/rand"
 	"strings"
+	"time"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -108,6 +111,39 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 
 	}
 	configMaps = append(configMaps, vmo.Spec.Prometheus.VersionsConfigMap)
+
+	if config.ElasticsearchIngest.OidcProxy != nil {
+		oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.ElasticsearchIngest)
+		if err != nil {
+			zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
+			return err
+		}
+		configMaps = append(configMaps, oidcConfig)
+	}
+	if config.Prometheus.OidcProxy != nil {
+		oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.Prometheus)
+		if err != nil {
+			zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
+			return err
+		}
+		configMaps = append(configMaps, oidcConfig)
+	}
+	if config.Grafana.OidcProxy != nil {
+		oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.Grafana)
+		if err != nil {
+			zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
+			return err
+		}
+		configMaps = append(configMaps, oidcConfig)
+	}
+	if config.Kibana.OidcProxy != nil {
+		oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.Kibana)
+		if err != nil {
+			zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
+			return err
+		}
+		configMaps = append(configMaps, oidcConfig)
+	}
 
 	// Delete configmaps that shouldn't exist
 	zap.S().Infof("Deleting unwanted ConfigMaps for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
@@ -237,4 +273,56 @@ func getConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitori
 		return nil, err
 	}
 	return configMap, nil
+}
+
+func oidcStartup() string {
+	return fmt.Sprintf(constants.OidcStartupTemp, "`dirname $0`")
+}
+
+func oidcNginxConf(port int) string {
+	return fmt.Sprintf(constants.OidcNginxConfTemp, "localhost", port)
+}
+
+func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) string {
+	ingress := resources.OidcProxyIngressHost(vmo, component)
+	verrazzanoURI := vmo.Spec.URI
+	uriPrefix := fmt.Sprintf("vmi.%s.", vmo.Name)
+	if strings.HasPrefix(verrazzanoURI, uriPrefix) {
+		verrazzanoURI = strings.Replace(verrazzanoURI, uriPrefix, "", 1)
+	}
+	oidcProviderHost := fmt.Sprintf("%s.%s", "keycloak", verrazzanoURI)
+	oidcProviderHostInCluster := "keycloak-http.keycloak.svc.cluster.local"
+	return fmt.Sprintf(constants.OidcConfLuaTemp,
+		ingress,
+		oidcProviderHost,
+		oidcProviderHostInCluster,
+		"verrazzano-system", //realm
+		constants.OidcCallbackPath,
+		"webui",     //oidc-client-id
+		"admin-cli", //direct-access client
+		randomString(32),
+		300) //authn state TTL
+}
+
+func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (string, error) {
+	oidcConfig := resources.OidcProxyConfigName(vmo.Name, component.Name)
+	oidcConfigMap := map[string]string{
+		constants.OidcAuthLua:   constants.OidcAuthLuaScripts,
+		constants.OidcConfLua:   oidcConfLuaScripts(vmo, component),
+		constants.OidcStartup:   oidcStartup(),
+		constants.OidcNginxConf: oidcNginxConf(component.Port),
+	}
+	err := createConfigMapIfDoesntExist(controller, vmo, oidcConfig, oidcConfigMap)
+	return oidcConfig, err
+}
+
+var passwordChars = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randomString(size int) string {
+	rand.Seed(time.Now().UnixNano())
+	var b strings.Builder
+	for i := 0; i < size; i++ {
+		b.WriteRune(passwordChars[rand.Intn(len(passwordChars))])
+	}
+	return b.String()
 }

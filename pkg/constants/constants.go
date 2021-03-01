@@ -98,6 +98,9 @@ const ESHttpPort = 9200
 // ESTransportPort default Elasticsearch transport port
 const ESTransportPort = 9300
 
+// OidcProxyPort default OidcProxy HTTP port
+const OidcProxyPort = 8775
+
 // DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
 const DefaultDevProfileESMemArgs = "-Xms512m -Xmx512m"
 
