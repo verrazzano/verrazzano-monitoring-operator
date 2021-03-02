@@ -11,6 +11,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Creates Prometheus node deployment elements
@@ -105,6 +106,9 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 			prometheusDeployment.Spec.Template.Spec.Containers[2].VolumeMounts = nodeExporterMount
 		}
 
+		// Istio proxy container
+		prometheusDeployment.Spec.Template.Spec.Containers = append(prometheusDeployment.Spec.Template.Spec.Containers, *createPrometheusIstioProxyContainer())
+
 		// Prometheus init container
 		prometheusDeployment.Spec.Template.Spec.InitContainers = []corev1.Container{
 			{
@@ -124,9 +128,209 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 				corev1.VolumeMount{Name: constants.StorageVolumeName, MountPath: config.Prometheus.DataDir})
 		}
 
+		// Add the istio volumes
+		volume := corev1.Volume{
+			Name: "istio-certs",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory,
+				},
+			},
+		}
+		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, volume)
+
+		volume = corev1.Volume{
+			Name: "istio-envoy",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory,
+				},
+			},
+		}
+		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, volume)
+
+		var defaultMode int32 = 420
+		var expirationSeconds int64 = 43200
+		volume = corev1.Volume{
+			Name: "istio-token",
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: &defaultMode,
+					Sources: []corev1.VolumeProjection{
+						{ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+							Audience:          "istio-ca",
+							ExpirationSeconds: &expirationSeconds,
+							Path:              "istio-token",
+						}},
+					},
+				},
+			},
+		}
+		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, volume)
+
+		volume = corev1.Volume{
+			Name: "istiod-ca-cert",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: &defaultMode,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "istio-ca-root-cert",
+					},
+				},
+			},
+		}
+		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, volume)
+
 		prometheusNodeDeployments = append(prometheusNodeDeployments, prometheusDeployment)
 	}
 	return prometheusNodeDeployments
+}
+
+func createPrometheusIstioProxyContainer() *corev1.Container {
+	container := &corev1.Container{
+		Name:            "istio-proxy",
+		Image:           "ghcr.io/verrazzano/proxyv2:1.7.3",
+		ImagePullPolicy: constants.DefaultImagePullPolicy,
+		Args: []string{
+			"proxy",
+			"sidecar",
+			"--domain",
+			"$(POD_NAMESPACE).svc.cluster.local",
+			"--serviceCluster",
+			"istio-proxy-prometheus",
+			"--proxyLogLevel=warning",
+			"--proxyComponentLogLevel=misc:error",
+			"--trust-domain=cluster.local",
+			"--concurrency",
+			"2",
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "OUTPUT_CERTS",
+				Value: "/etc/istio-certs",
+			},
+			{
+				Name:  "JWT_POLICY",
+				Value: "third-party-jwt",
+			},
+			{
+				Name:  "CA_ADDR",
+				Value: "istiod.istio-system.svc:15012",
+			},
+			{
+				Name:  "PILOT_CERT_PROVIDER",
+				Value: "istiod",
+			},
+			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
+				Name: "INSTANCE_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "status.podIP",
+					},
+				},
+			},
+			{
+				Name: "SERVICE_ACCOUNT",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "spec.serviceAccountName",
+					},
+				},
+			},
+			{
+				Name: "HOST_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "status.hostIP",
+					},
+				},
+			},
+			{
+				Name: "ISTIO_META_POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name: "ISTIO_META_CONFIG_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
+				Name:  "ISTIO_META_MESH_ID",
+				Value: "cluster.local",
+			},
+			{
+				Name:  "ISTIO_META_CLUSTER_ID",
+				Value: "Kubernetes",
+			},
+		},
+		Ports: []corev1.ContainerPort{
+			{
+				ContainerPort: 15090,
+				Name:          "http-envoy-prom",
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			FailureThreshold: 30,
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/healthz/ready",
+					Port: intstr.IntOrString{
+						Type:   intstr.Int,
+						IntVal: 15020,
+					},
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 1,
+			PeriodSeconds:       2,
+			SuccessThreshold:    1,
+			TimeoutSeconds:      1,
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				MountPath: "/var/run/secrets/istio",
+				Name:      "istiod-ca-cert",
+			},
+			{
+				MountPath: "/etc/istio/proxy",
+				Name:      "istio-envoy",
+			},
+			{
+				MountPath: "/var/run/secrets/tokens",
+				Name:      "istio-token",
+			},
+			{
+				MountPath: "/etc/istio-certs/",
+				Name:      "istio-certs",
+			},
+		},
+	}
+
+	return container
 }
 
 // Creates Prometheus Push Gateway deployment element
