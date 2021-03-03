@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+	"os"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -67,6 +68,10 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 				Name:      "config-volume",
 				MountPath: constants.PrometheusConfigMountPath,
 			},
+			{
+				Name:      "istio-certs",
+				MountPath: constants.PrometheusIstioCertsMountPath,
+			},
 		}
 		prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMounts...)
 		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, configVolumes...)
@@ -106,7 +111,7 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 			prometheusDeployment.Spec.Template.Spec.Containers[2].VolumeMounts = nodeExporterMount
 		}
 
-		// Istio proxy container
+		// istio-proxy container needed to scrape metrics with mutual TLS enabled
 		prometheusDeployment.Spec.Template.Spec.Containers = append(prometheusDeployment.Spec.Template.Spec.Containers, *createPrometheusIstioProxyContainer())
 
 		// Prometheus init container
@@ -128,7 +133,7 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 				corev1.VolumeMount{Name: constants.StorageVolumeName, MountPath: config.Prometheus.DataDir})
 		}
 
-		// Add the istio volumes
+		// Add the Istio volumes
 		volume := corev1.Volume{
 			Name: "istio-certs",
 			VolumeSource: corev1.VolumeSource{
@@ -186,10 +191,11 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 	return prometheusNodeDeployments
 }
 
+// Creates Prometheus istio-proxy container elements
 func createPrometheusIstioProxyContainer() *corev1.Container {
 	container := &corev1.Container{
 		Name:            "istio-proxy",
-		Image:           "ghcr.io/verrazzano/proxyv2:1.7.3",
+		Image:           os.Getenv("ISTIO_PROXY_IMAGE"),
 		ImagePullPolicy: constants.DefaultImagePullPolicy,
 		Args: []string{
 			"proxy",
@@ -324,7 +330,7 @@ func createPrometheusIstioProxyContainer() *corev1.Container {
 				Name:      "istio-token",
 			},
 			{
-				MountPath: "/etc/istio-certs/",
+				MountPath: constants.PrometheusIstioCertsMountPath,
 				Name:      "istio-certs",
 			},
 		},
