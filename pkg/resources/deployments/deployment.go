@@ -37,27 +37,30 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 
 		deployment.Spec.Strategy.Type = "Recreate"
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-			{Name: "GF_SECURITY_ADMIN_USER", Value: username},
-			{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
-
-			{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
-
 			{Name: "GF_PATHS_PROVISIONING", Value: "/etc/grafana/provisioning"},
-
 			{Name: "GF_SERVER_ENABLE_GZIP", Value: "true"},
-
-			{Name: "GF_AUTH_BASIC_ENABLED", Value: "true"},
-
-			{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "true"},
-			{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
-			{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Admin"},
-
-			{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
-			{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "false"},
-			{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
-			{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Admin"},
-
 			{Name: "PROMETHEUS_TARGETS", Value: "http://" + constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + ":" + strconv.Itoa(config.Prometheus.Port)},
+		}
+		if config.Grafana.OidcProxy == nil {
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{Name: "GF_SECURITY_ADMIN_USER", Value: username},
+				{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
+				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
+				{Name: "GF_AUTH_BASIC_ENABLED", Value: "true"},
+				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "true"},
+				{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
+				{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Admin"},
+				{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
+				{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "false"},
+			}...)
+		} else {
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "true"},
+				{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
+				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
+				{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
+				{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+			}...)
 		}
 		if vmo.Spec.URI != "" {
 			externalDomainName := config.Grafana.Name + "." + vmo.Spec.URI
@@ -119,6 +122,11 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
 			FSGroup: &grafanaGid,
 		}
+		if config.Grafana.OidcProxy != nil {
+			oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Grafana.Resources, &config.Grafana)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, *oidcVolume)
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *oidcProxy)
+		}
 		deployments = append(deployments, deployment)
 	}
 
@@ -171,7 +179,11 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 			Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
 		}
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
-
+		if config.Kibana.OidcProxy != nil {
+			oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Kibana.Resources, &config.Kibana)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, *oidcVolume)
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *oidcProxy)
+		}
 		deployments = append(deployments, deployment)
 	}
 

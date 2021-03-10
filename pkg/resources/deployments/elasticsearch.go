@@ -112,7 +112,11 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		corev1.EnvVar{Name: "node.data", Value: "false"},
 		corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 	)
-
+	if config.ElasticsearchIngest.OidcProxy != nil {
+		oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.IngestNode.Resources, &config.ElasticsearchIngest)
+		elasticsearchIngestDeployment.Spec.Template.Spec.Volumes = append(elasticsearchIngestDeployment.Spec.Template.Spec.Volumes, *oidcVolume)
+		elasticsearchIngestDeployment.Spec.Template.Spec.Containers = append(elasticsearchIngestDeployment.Spec.Template.Spec.Containers, *oidcProxy)
+	}
 	return []*appsv1.Deployment{elasticsearchIngestDeployment}
 }
 

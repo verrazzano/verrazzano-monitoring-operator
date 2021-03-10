@@ -54,6 +54,7 @@ export ELASTICSEARCH_INIT_IMAGE=$(grep esInitImage ${VERRAZZANO_INSTALLER_REPO}/
 export VERRAZZANO_MONITORING_INSTANCE_API_IMAGE=$(grep monitoringInstanceApiImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export CONFIG_RELOADER_IMAGE=$(grep configReloaderImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export NODE_EXPORTER_IMAGE=$(grep nodeExporterImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | head -1 | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
+export OIDC_PROXY_IMAGE=$(grep oidcProxyImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | head -1 | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 
 # Extract the API server realm from values.yaml.
 export API_SERVER_REALM=$(grep apiServerRealm ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2 | sed -e 's/^[[:space:]]*//')
@@ -81,6 +82,7 @@ ELASTICSEARCH_INIT_IMAGE=${ELASTICSEARCH_INIT_IMAGE}
 VERRAZZANO_MONITORING_INSTANCE_API_IMAGE=${VERRAZZANO_MONITORING_INSTANCE_API_IMAGE}
 CONFIG_RELOADER_IMAGE=${CONFIG_RELOADER_IMAGE}
 NODE_EXPORTER_IMAGE=${NODE_EXPORTER_IMAGE}
+OIDC_PROXY_IMAGE=${OIDC_PROXY_IMAGE}
 
 WATCH_VMI=${WATCH_VMI}
 WATCH_NAMESPACE=${WATCH_NAMESPACE}

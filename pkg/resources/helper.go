@@ -337,3 +337,67 @@ func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance)
 	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
 	return dataNodeReplicas > 0 && ingestNodeReplicas > 0 && masterNodeReplicas > 0
 }
+
+// oidcProxyName returns OIDC Proxy name of the component. ex. es-ingest-oidc
+func oidcProxyName(componentName string) string {
+	return componentName + "-" + config.OidcProxy.Name
+}
+
+// OidcProxySelector returns the Selector labels of the OIDC Proxy. ex. map[app:system-es-ingest-oidc]"}
+func OidcProxySelector(vmoName string, component string) map[string]string {
+	return GetSpecID(vmoName, oidcProxyName(component))
+}
+
+// OidcProxyMetaName returns OIDC Proxy meta name of the component. ex. vmi-system-es-ingest-oidc
+func OidcProxyMetaName(vmoName string, component string) string {
+	return GetMetaName(vmoName, oidcProxyName(component))
+}
+
+// OidcProxyConfigName returns OIDC Proxy ConfigMap name of the component. ex. vmi-system-es-ingest-oidc-config
+func OidcProxyConfigName(vmo string, component string) string {
+	return OidcProxyMetaName(vmo, component) + "-config"
+}
+
+// OidcProxyIngressHost returns OIDC Proxy ingress host.
+func OidcProxyIngressHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) string {
+	host := component.Name
+	if component.EndpointName != "" {
+		host = component.EndpointName
+	}
+	return fmt.Sprintf("%s.%s", host, vmo.Spec.URI)
+}
+
+//CreateOidcProxy creates OpenID Connect (OIDC) proxy container and config Volume
+func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources, component *config.ComponentDetails) (*corev1.Volume, *corev1.Container) {
+	configName := OidcProxyConfigName(vmo.Name, component.Name)
+	var defaultMode int32 = 0744
+	var zero int64 = 0
+	configVolume := corev1.Volume{Name: configName, VolumeSource: corev1.VolumeSource{
+		ConfigMap: &corev1.ConfigMapVolumeSource{
+			LocalObjectReference: corev1.LocalObjectReference{Name: configName},
+			DefaultMode:          &defaultMode,
+		},
+	}}
+	oidcProxContainer := CreateContainerElement(nil, vmoResources, *component.OidcProxy)
+	oidcProxContainer.Command = []string{"/bootstrap/startup.sh"}
+	oidcProxContainer.VolumeMounts = []corev1.VolumeMount{{Name: configName, MountPath: "/bootstrap"}}
+	oidcProxContainer.SecurityContext = &corev1.SecurityContext{RunAsUser: &zero, RunAsGroup: &zero}
+	return &configVolume, &oidcProxContainer
+}
+
+//OidcProxyService creates OidcProxy Service
+func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:          GetMetaLabels(vmo),
+			Name:            OidcProxyMetaName(vmo.Name, component.Name),
+			Namespace:       vmo.Namespace,
+			OwnerReferences: GetOwnerReferences(vmo),
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     vmo.Spec.ServiceType,
+			Selector: GetSpecID(vmo.Name, component.Name),
+			Ports:    []corev1.ServicePort{{Name: "oidc", Port: int32(constants.OidcProxyPort)}},
+		},
+	}
+}

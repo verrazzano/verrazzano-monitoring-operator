@@ -48,11 +48,22 @@ func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonito
 	return elasticsearchDataService
 }
 
+func createElasticsearchOidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
+	service := resources.OidcProxyService(vmo, &config.ElasticsearchIngest)
+	if resources.IsSingleNodeESCluster(vmo) {
+		service.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
+	}
+	return service
+}
+
 // Creates *all* Elasticsearch service elements
 func createElasticsearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*corev1.Service {
 	var services []*corev1.Service
 	services = append(services, createElasticsearchIngestServiceElements(vmo))
 	services = append(services, createElasticsearchMasterServiceElements(vmo))
 	services = append(services, createElasticsearchDataServiceElements(vmo))
+	if config.ElasticsearchIngest.OidcProxy != nil {
+		services = append(services, createElasticsearchOidcProxyService(vmo))
+	}
 	return services
 }

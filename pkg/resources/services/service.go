@@ -20,12 +20,18 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 	if vmo.Spec.Grafana.Enabled {
 		service := createServiceElement(vmo, config.Grafana)
 		services = append(services, service)
+		if config.Grafana.OidcProxy != nil {
+			services = append(services, resources.OidcProxyService(vmo, &config.Grafana))
+		}
 	}
 	if vmo.Spec.Prometheus.Enabled {
 		service := createServiceElement(vmo, config.Prometheus)
 		service.Spec.Ports = append(service.Spec.Ports, resources.GetServicePort(config.NodeExporter))
 		services = append(services, service)
 		services = append(services, createServiceElement(vmo, config.PrometheusGW))
+		if config.Prometheus.OidcProxy != nil {
+			services = append(services, resources.OidcProxyService(vmo, &config.Prometheus))
+		}
 	}
 	if vmo.Spec.AlertManager.Enabled {
 		alertManagerService := createServiceElement(vmo, config.AlertManager)
@@ -43,6 +49,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 	if vmo.Spec.Kibana.Enabled {
 		service := createServiceElement(vmo, config.Kibana)
 		services = append(services, service)
+		if config.Kibana.OidcProxy != nil {
+			services = append(services, resources.OidcProxyService(vmo, &config.Kibana))
+		}
 	}
 
 	services = append(services, createServiceElement(vmo, config.API))
