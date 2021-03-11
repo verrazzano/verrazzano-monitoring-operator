@@ -220,6 +220,7 @@ func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	dynamicScrapeAnnotation := prometheusValidLabelName + "_io_scrape"
 	namespace := vmo.Namespace
 	nginxNamespace := "ingress-nginx"
+	istioNamespace := "istio-system"
 	var prometheusConfig = []byte(`
 global:
   scrape_interval: 20s
@@ -236,12 +237,14 @@ scrape_configs:
    scrape_timeout: 15s
    static_configs:
    - targets: ['localhost:9090']
+
  - job_name: 'PushGateway'
    honor_labels: true
    scrape_interval: 20s
    scrape_timeout: 15s
    static_configs:
    - targets: ["` + pushGWUrl + `"]
+
  - job_name: 'cadvisor'
    scrape_interval: 20s
    scrape_timeout: 15s
@@ -261,6 +264,7 @@ scrape_configs:
      regex: (.+)
      target_label: __metrics_path__
      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+
  - job_name: 'kubernetes-pods'
    kubernetes_sd_configs:
    - role: pod
@@ -279,7 +283,44 @@ scrape_configs:
      target_label: kubernetes_namespace
    - source_labels: [__meta_kubernetes_pod_name]
      action: replace
-     target_label: kubernetes_pod_name`)
+     target_label: kubernetes_pod_name
+
+ # Scrape config for Istio envoy stats
+ - job_name: 'envoy-stats'
+   metrics_path: /stats/prometheus
+   kubernetes_sd_configs:
+   - role: pod
+   relabel_configs:
+   - source_labels: [__meta_kubernetes_pod_container_port_name]
+     action: keep
+     regex: '.*-envoy-prom'
+   - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+     action: replace
+     regex: ([^:]+)(?::\d+)?;(\d+)
+     replacement: $1:15090
+     target_label: __address__
+   - action: labeldrop
+     regex: __meta_kubernetes_pod_label_(.+)
+   - source_labels: [__meta_kubernetes_namespace]
+     action: replace
+     target_label: namespace
+   - source_labels: [__meta_kubernetes_pod_name]
+     action: replace
+     target_label: pod_name
+
+ # Scrape config for Istio - mesh and istiod metrics
+ - job_name: 'pilot'
+   kubernetes_sd_configs:
+   - role: endpoints
+     namespaces:
+       names:
+         - "` + istioNamespace + `"
+   relabel_configs:
+   - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+     action: keep
+     regex: istiod;http-monitoring
+   - source_labels: [__meta_kubernetes_service_label_app]
+     target_label: app`)
 
 	return string(prometheusConfig)
 }
