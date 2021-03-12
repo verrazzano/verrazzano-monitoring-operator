@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
@@ -31,6 +31,17 @@ func TestGetDefaultPrometheusConfiguration(t *testing.T) {
 	assert.Equal(t, "__meta_kubernetes_node_name", relabelConfig["source_labels"].([]interface{})[0], "relabelConfig.source_labels")
 	assert.Equal(t, "/api/v1/nodes/$1/proxy/metrics/cadvisor", relabelConfig["replacement"], "relabelConfig.replacement")
 
+	pilot := getItem("job_name", "pilot", scrapeConfigs.([]interface{}))
+	assert.NotNil(t, pilot)
+	kubernetesSdConfigs = pilot["kubernetes_sd_configs"]
+	role = kubernetesSdConfigs.([]interface{})[0].(map[interface{}]interface{})["role"]
+	assert.Equal(t, "endpoints", role, "kubernetes_sd_configs should have - role: endpoints")
+
+	envoyStats := getItem("job_name", "envoy-stats", scrapeConfigs.([]interface{}))
+	assert.NotNil(t, envoyStats)
+	kubernetesSdConfigs = envoyStats["kubernetes_sd_configs"]
+	role = kubernetesSdConfigs.([]interface{})[0].(map[interface{}]interface{})["role"]
+	assert.Equal(t, "pod", role, "kubernetes_sd_configs should have - role: pod")
 }
 
 func getItem(key, value string, scrapeConfigs []interface{}) map[interface{}]interface{} {
