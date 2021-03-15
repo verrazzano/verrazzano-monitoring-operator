@@ -51,9 +51,9 @@ func (hp HashedPasswords) Bytes() (passwordBytes []byte) {
 
 // SetPassword set a password for a user with a hashing algo
 func (hp HashedPasswords) SetPassword(name, password string) (err error) {
-	hashValue, ok := hashBcrypt(password)
-	if ok != nil {
-		return ok
+	hashValue, err := hashBcrypt(password)
+	if err != nil {
+		return err
 	}
 	hp[name] = hashValue
 	return nil
