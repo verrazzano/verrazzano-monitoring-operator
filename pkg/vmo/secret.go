@@ -5,9 +5,9 @@ package vmo
 
 import (
 	"context"
-	"golang.org/x/crypto/bcrypt"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"reflect"
 	"regexp"
 	"strings"
