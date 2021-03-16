@@ -1,14 +1,13 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/base64"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -32,11 +31,13 @@ const (
 // HashedPasswords name => hash
 type HashedPasswords map[string]string
 
-func hashSha(password string) string {
-	s := sha1.New()
-	s.Write([]byte(password))
-	passwordSum := s.Sum(nil)
-	return base64.StdEncoding.EncodeToString(passwordSum)
+func hashBcrypt(password string) (string, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	return string(hashedPassword), nil
 }
 
 // Bytes bytes representation
@@ -50,9 +51,11 @@ func (hp HashedPasswords) Bytes() (passwordBytes []byte) {
 
 // SetPassword set a password for a user with a hashing algo
 func (hp HashedPasswords) SetPassword(name, password string) (err error) {
-	prefix := "{SHA}"
-	hash := hashSha(password)
-	hp[name] = prefix + hash
+	hashValue, err := hashBcrypt(password)
+	if err != nil {
+		return err
+	}
+	hp[name] = hashValue
 	return nil
 }
 
