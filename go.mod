@@ -8,6 +8,7 @@ require (
 	github.com/prometheus/client_golang v1.2.1
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/zap v1.16.0
+	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	gopkg.in/resty.v1 v1.12.0
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.18.2
