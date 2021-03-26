@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -85,9 +85,6 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 
 	// Number of replicas for each component
-	if vmo.Spec.API.Replicas == 0 {
-		vmo.Spec.API.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
-	}
 	if vmo.Spec.Kibana.Replicas == 0 {
 		vmo.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
