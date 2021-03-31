@@ -136,7 +136,7 @@ const OidcAuthLuaScripts = `-- auth.lua
       
     function me.unauthorized(msg, err)
         ngx.status = 401
-        me.logJson(ngx.ERR, meg, err)
+        me.logJson(ngx.ERR, msg, err)
         ngx.exit(ngx.HTTP_UNAUTHORIZED)
     end
       
@@ -210,7 +210,7 @@ const OidcAuthLuaScripts = `-- auth.lua
             local expiry = tonumber(ck.expiry)
             local refresh_expiry = tonumber(ck.refresh_expiry)
             if now > refresh_expiry then
-                -- refresh_token expired, redirt to authenticate
+                -- refresh_token expired, redirect to authenticate
                 me.authenticate()
             else
                 if now > expiry then
@@ -394,7 +394,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         end
         local publicKey = me.publicKey(jwt_obj.header.kid)
         if not publicKey then
-            me.unauthorized("No public_key retreived from keycloak")
+            me.unauthorized("No public_key retrieved from keycloak")
         end
         local verified = jwt:verify_jwt_obj(publicKey, jwt_obj)
         if (tostring(jwt_obj.valid) == "false" or tostring(jwt_obj.verified) == "false") then
@@ -402,7 +402,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         end
         me.logJson(ngx.INFO, "Check for groups in jwt token.")
         if ( not (jwt_obj.payload) or not (jwt_obj.payload.groups)) then
-            me.unauthorized("No groups asscoiated with user.")
+            me.unauthorized("No groups associated with user.")
         end
         ngx.req.clear_header("Authorization")
         if jwt_obj.payload and jwt_obj.payload.email then
@@ -417,7 +417,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         if me.bearerServiceAccountToken then
             me.logJson(ngx.INFO, "Check for k8s_user in jwt token.")
             if ( not (jwt_obj.payload) or not (jwt_obj.payload.k8s_user)) then
-               me.unauthorized("No k8s_user asscoiated with user.")
+               me.unauthorized("No k8s_user associated with user.")
             end
             me.logJson(ngx.INFO, "Read service account token.")
             local serviceAccountToken = me.read_file("/run/secrets/kubernetes.io/serviceaccount/token");
