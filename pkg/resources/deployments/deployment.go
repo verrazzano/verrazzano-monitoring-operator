@@ -188,25 +188,27 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 	}
 
 	// API
-	deployment := createDeploymentElement(vmo, nil, nil, config.API)
-	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.API.ImagePullPolicy
-	deployment.Spec.Replicas = resources.NewVal(vmo.Spec.API.Replicas)
-	deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.API.Name)
-	deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-		{Name: "VMI_NAME", Value: vmo.Name},
-		{Name: "NAMESPACE", Value: vmo.Namespace},
-		{Name: "ENV_NAME", Value: operatorConfig.EnvName},
-	}
-	if len(vmo.Spec.NatGatewayIPs) > 0 {
-		deployment.Spec.Template.Spec.Containers[0].Args = []string{fmt.Sprintf("--natGatewayIPs=%s", strings.Join(vmo.Spec.NatGatewayIPs, ","))}
-	}
+	if !config.API.Disabled {
+		deployment := createDeploymentElement(vmo, nil, nil, config.API)
+		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.API.ImagePullPolicy
+		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.API.Replicas)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.API.Name)
+		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+			{Name: "VMI_NAME", Value: vmo.Name},
+			{Name: "NAMESPACE", Value: vmo.Namespace},
+			{Name: "ENV_NAME", Value: operatorConfig.EnvName},
+		}
+		if len(vmo.Spec.NatGatewayIPs) > 0 {
+			deployment.Spec.Template.Spec.Containers[0].Args = []string{fmt.Sprintf("--natGatewayIPs=%s", strings.Join(vmo.Spec.NatGatewayIPs, ","))}
+		}
 
-	deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 15
-	deployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
-	deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
-	deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
+		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 15
+		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
 
-	deployments = append(deployments, deployment)
+		deployments = append(deployments, deployment)
+	}
 
 	return deployments, err
 }
