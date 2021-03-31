@@ -6,6 +6,9 @@ package constants
 // OidcCallbackPath is the callback URL path of OIDC authentication redirect
 const OidcCallbackPath = "/_authentication_callback"
 
+// OidcLogoutCallbackPath is the callback URL path after logout
+const OidcLogoutCallbackPath = "/_logout"
+
 // OidcConfLua defines the conf.lua file name in OIDC proxy ConfigMap
 const OidcConfLua = "conf.lua"
 
@@ -16,9 +19,11 @@ const OidcConfLuaTemp = `-- conf.lua
     local oidcProviderHostInCluster = "%s"
     local realm ="%s"
     local callbackPath = "%s"
+    local logoutCallbackPath = "%s"
     local oidcClient = "%s"
     local oidcDirectAccessClient = "%s"
     local cookieKey = "%s"
+    local requiredRole = "%s"
     local authStateTtlInSec = %v
     local bearerServiceAccountToken = false
 
@@ -32,6 +37,7 @@ const OidcConfLuaTemp = `-- conf.lua
         ingressUri = ingressUri,
         callbackPath = callbackPath,
         callbackUri = ingressUri..callbackPath,
+        logoutCallbackUri = ingressUri..logoutCallbackPath,
         oidcProviderUri = oidcProviderUri,
         oidcProviderAuthUri = oidcProviderUri..'/protocol/openid-connect/auth',
         oidcProviderInClusterUri = oidcProviderInClusterUri,
@@ -52,9 +58,23 @@ const OidcConfLuaTemp = `-- conf.lua
     if not authHeader then
         if string.find(ngx.var.request_uri, callbackPath) then
             auth.handleCallback()
+        elseif string.find(ngx.var.request_uri, logoutCallbackPath) then
+            auth.handleLogoutCallback()
         end
-        if auth.authenticated() then
-            return
+        local ck = auth.authenticated()
+        if ck then
+            if ck.realm_roles then
+                for _, role in ipairs(ck.realm_roles) do
+                    if role == requiredRole then
+                        return
+                    end
+                end
+                auth.logout()
+                return
+            else
+                auth.logout()
+                return
+            end
         else
             auth.authenticate()
         end
@@ -135,11 +155,18 @@ const OidcAuthLuaScripts = `-- auth.lua
     end
       
     function me.unauthorized(msg, err)
-        ngx.status = 401
+        ngx.status = ngx.HTTP_UNAUTHORIZED
         me.logJson(ngx.ERR, msg, err)
         ngx.exit(ngx.HTTP_UNAUTHORIZED)
     end
       
+    function me.forbidden(msg, err)
+        ngx.status = ngx.HTTP_FORBIDDEN
+        me.deleteCookie("authn")
+        me.logJson(ngx.ERR, msg, err)
+        ngx.exit(ngx.HTTP_FORBIDDEN)
+    end
+
     function me.randomBase64(size)
         local randBytes = random.bytes(size)
         return base64.encode_base64url(randBytes)
@@ -265,7 +292,19 @@ const OidcAuthLuaScripts = `-- auth.lua
             ngx.redirect(request_uri) 
         end
     end
-      
+
+    function me.logout()
+        local redirectArgs = ngx.encode_args({
+            redirect_uri = me.logoutCallbackUri
+        })
+        local redirURL = me.oidcProviderUri.."/protocol/openid-connect/logout?"..redirectArgs
+        ngx.redirect(redirURL)
+    end
+
+    function me.handleLogoutCallback()
+        me.forbidden("User does not have a required realm role")
+    end
+
     function me.tokenToCookie(formArgs) 
         local tokenRes = me.tokenRequest(formArgs)
         -- Do we need access_token? too big > 4k
@@ -287,6 +326,9 @@ const OidcAuthLuaScripts = `-- auth.lua
                     issued_at = tonumber(id_token.payload.auth_time)
                 end
             end
+            if id_token.payload.realm_access and id_token.payload.realm_access.roles then
+                cookiePairs.realm_roles = id_token.payload.realm_access.roles
+            end
             --if id_token.payload.email then
             --    cookiePairs.email = id_token.payload.email
             --end
@@ -305,6 +347,10 @@ const OidcAuthLuaScripts = `-- auth.lua
         local encrypted = me.aes256:encrypt(cjson.encode(cookiePairs))
         local cookie = base64.encode_base64url(encrypted)
         ngx.header["Set-Cookie"] = ckName..'='..cookie..attributes
+    end
+
+    function me.deleteCookie(ckName)
+        ngx.header["Set-Cookie"] = ckName..'=; Path=/; Secure; HttpOnly; Expires=Thu, 01 Jan 1970 00:00:00 UTC;'
     end
 
     function me.readCookie(ckName)

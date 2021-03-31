@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -298,10 +298,12 @@ func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compon
 		oidcProviderHostInCluster,
 		"verrazzano-system", //realm
 		constants.OidcCallbackPath,
+		constants.OidcLogoutCallbackPath,
 		"webui",     //oidc-client-id
 		"admin-cli", //direct-access client
 		randomString(32),
-		300) //authn state TTL
+		"console_users", // required realm role
+		300)             //authn state TTL
 }
 
 func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (string, error) {
