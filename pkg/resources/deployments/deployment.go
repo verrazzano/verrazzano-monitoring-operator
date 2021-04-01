@@ -55,11 +55,17 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 			}...)
 		} else {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "true"},
+				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
+				{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
+				{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Editor"},
 				{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
 				{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+				{Name: "GF_AUTH_PROXY_ENABLED", Value: "true"},
+				{Name: "GF_AUTH_PROXY_HEADER_NAME", Value: "X-WEBAUTH-USER"},
+				{Name: "GF_AUTH_PROXY_HEADER_PROPERTY", Value: "username"},
+				{Name: "GF_AUTH_PROXY_AUTO_SIGN_UP", Value: "true"},
 			}...)
 		}
 		if vmo.Spec.URI != "" {

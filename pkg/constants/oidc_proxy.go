@@ -63,6 +63,9 @@ const OidcConfLuaTemp = `-- conf.lua
         end
         local ck = auth.authenticated()
         if ck then
+            if ck.username then
+                ngx.var.oidc_user = ck.username
+            end
             if ck.realm_roles then
                 for _, role in ipairs(ck.realm_roles) do
                     if role == requiredRole then
@@ -319,6 +322,9 @@ const OidcAuthLuaScripts = `-- auth.lua
         local now = ngx.time()
         local issued_at = now
         if id_token and id_token.payload then
+            if id_token.payload.preferred_username then
+                cookiePairs.username = id_token.payload.preferred_username
+            end
             if id_token.payload.iat then
                 issued_at = tonumber(id_token.payload.iat)
             else
@@ -562,10 +568,13 @@ http {
         root     /opt/nginx/html;
         #charset koi8-r;
 
+        set $oidc_user "";
         rewrite_by_lua_file /etc/nginx/conf.lua;
         #access_log  logs/host.access.log  main;
         expires           0;
         add_header        Cache-Control private;
+        proxy_set_header  X-WEBAUTH-USER $oidc_user;
+
         location / {
             proxy_pass http://http_backend;
         }
