@@ -63,17 +63,8 @@ const OidcConfLuaTemp = `-- conf.lua
         end
         local ck = auth.authenticated()
         if ck then
-            if ck.username then
-                ngx.var.oidc_user = ck.username
-            end
-            if ck.realm_roles then
-                for _, role in ipairs(ck.realm_roles) do
-                    if role == requiredRole then
-                        return
-                    end
-                end
-                auth.logout()
-                return
+            if auth.hasRequiredRole(ck.it, requiredRole) then
+                ngx.var.oidc_user = auth.usernameFromIdToken(ck.it)
             else
                 auth.logout()
                 return
@@ -82,7 +73,14 @@ const OidcConfLuaTemp = `-- conf.lua
             auth.authenticate()
         end
     else
-        auth.authHeader(authHeader) 
+        local idToken = auth.authHeader(authHeader)
+        if idToken then
+            if auth.hasRequiredRole(idToken, requiredRole) then
+                ngx.var.oidc_user = auth.usernameFromIdToken(idToken)
+            else
+                auth.forbidden("User does not have a required realm role")
+            end
+        end
     end
 `
 
@@ -322,18 +320,12 @@ const OidcAuthLuaScripts = `-- auth.lua
         local now = ngx.time()
         local issued_at = now
         if id_token and id_token.payload then
-            if id_token.payload.preferred_username then
-                cookiePairs.username = id_token.payload.preferred_username
-            end
             if id_token.payload.iat then
                 issued_at = tonumber(id_token.payload.iat)
             else
                 if id_token.payload.auth_time then
                     issued_at = tonumber(id_token.payload.auth_time)
                 end
-            end
-            if id_token.payload.realm_access and id_token.payload.realm_access.roles then
-                cookiePairs.realm_roles = id_token.payload.realm_access.roles
             end
             --if id_token.payload.email then
             --    cookiePairs.email = id_token.payload.email
@@ -345,6 +337,26 @@ const OidcAuthLuaScripts = `-- auth.lua
         cookiePairs.expiry = now + expires_in - skew - expiryBuffer
         cookiePairs.refresh_expiry = now + refresh_expires_in - skew - expiryBuffer
         me.setCookie("authn", cookiePairs, tonumber(tokenRes.refresh_expires_in)-expiryBuffer) 
+    end
+
+    function me.hasRequiredRole(idToken, requiredRole)
+        local id_token = jwt:load_jwt(idToken)
+        if id_token and id_token.payload and id_token.payload.realm_access and id_token.payload.realm_access.roles then
+            for _, role in ipairs(id_token.payload.realm_access.roles) do
+                if role == requiredRole then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    function me.usernameFromIdToken(idToken)
+        local id_token = jwt:load_jwt(idToken)
+        if id_token and id_token.payload and id_token.payload.preferred_username then
+            return id_token.payload.preferred_username
+        end
+        return ""
     end
 
     function me.setCookie(ckName, cookiePairs, expiresInSec) 
@@ -390,11 +402,12 @@ const OidcAuthLuaScripts = `-- auth.lua
             found, index = authHeader:find('Basic')
             if found then
                 local basicCred = string.sub(authHeader, index+2)
-                me.handleBasicAuth(basicCred) 
+                return me.handleBasicAuth(basicCred)
             else
                 me.unauthorized("Invalid authorization header "..authHeader)
             end
         end
+        return nil
     end
 
     local certs = {}
@@ -487,7 +500,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         local now = ngx.time() 
         local basicAuth = basicCache[basicCred]
         if basicAuth and (now < basicAuth.expiry) then
-            return
+            return basicAuth.id_token
         end
         local decode = ngx.decode_base64(basicCred)
         local found = decode:find(':')
@@ -498,6 +511,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         local p = decode:sub(found+1)
         local formArgs = {
             grant_type = 'password',
+            scope = 'openid',
             client_id = me.oidcDirectAccessClient,
             password = p,
             username = u
@@ -517,6 +531,7 @@ const OidcAuthLuaScripts = `-- auth.lua
             id_token = tokenRes.id_token,
             expiry = now + refresh_expires_in
         }
+        return tokenRes.id_token
     end
       
     return me
