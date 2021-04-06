@@ -299,8 +299,8 @@ func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compon
 		"verrazzano-system", //realm
 		constants.OidcCallbackPath,
 		constants.OidcLogoutCallbackPath,
-		"webui",     //oidc-client-id
-		"admin-cli", //direct-access client
+		"webui",                   //oidc-client-id
+		"verrazzano-oauth-client", //direct-access client
 		randomString(32),
 		"console_users", // required realm role
 		300)             //authn state TTL
