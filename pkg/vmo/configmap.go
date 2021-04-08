@@ -307,11 +307,18 @@ func oidcStartup() string {
 	return fmt.Sprintf(constants.OidcStartupTemp, "`dirname $0`")
 }
 
-func oidcNginxConf(port int) string {
-	return fmt.Sprintf(constants.OidcNginxConfTemp, "localhost", port)
+func oidcNginxConf(port int, ssl bool) string {
+	sslVerify := ""
+	sslTrusted := ""
+	if ssl {
+		sslVerify = constants.OidcSslVerifyOptions
+		sslTrusted = constants.OidcSslTrustedOptions
+	}
+
+	return fmt.Sprintf(constants.OidcNginxConfTemp, sslVerify, sslTrusted, "localhost", port)
 }
 
-func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails, keycloakUrl string) string {
+func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails, keycloakURL string) string {
 	ingress := resources.OidcProxyIngressHost(vmo, component)
 	verrazzanoURI := vmo.Spec.URI
 	uriPrefix := fmt.Sprintf("vmi.%s.", vmo.Name)
@@ -320,14 +327,14 @@ func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compon
 	}
 	oidcProviderHost := fmt.Sprintf("%s.%s", "keycloak", verrazzanoURI)
 	oidcProviderHostInCluster := "keycloak-http.keycloak.svc.cluster.local"
-	// when keycloakUrl is present, meanning it is a managed cluster, keycloakUrl is the admin keycloak url
-	if len(keycloakUrl) > 0 {
-		u, err := url.Parse(keycloakUrl)
+	// when keycloakURL is present, meanning it is a managed cluster, keycloakURL is the admin keycloak url
+	if len(keycloakURL) > 0 {
+		u, err := url.Parse(keycloakURL)
 		if err == nil {
 			oidcProviderHost = u.Host
 			oidcProviderHostInCluster = ""
 		} else {
-			zap.S().Errorf("Failed to parse keycloak URL %s", keycloakUrl)
+			zap.S().Errorf("Failed to parse keycloak URL %s", keycloakURL)
 		}
 	}
 	return fmt.Sprintf(constants.OidcConfLuaTemp,
@@ -350,7 +357,7 @@ func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		constants.OidcAuthLua:   constants.OidcAuthLuaScripts,
 		constants.OidcConfLua:   oidcConfLuaScripts(vmo, component, controller.clusterInfo.KeycloakURL),
 		constants.OidcStartup:   oidcStartup(),
-		constants.OidcNginxConf: oidcNginxConf(component.Port),
+		constants.OidcNginxConf: oidcNginxConf(component.Port, len(controller.clusterInfo.clusterName) > 0),
 	}
 	err := createUpdateConfigMap(controller, vmo, oidcConfig, oidcConfigMap)
 	return oidcConfig, err
