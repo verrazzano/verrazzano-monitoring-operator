@@ -560,7 +560,7 @@ http {
     error_log  logs/error.log  info;
     sendfile        on;
     #tcp_nopush     on;
-
+    client_max_body_size 65m;
     #keepalive_timeout  0;
     keepalive_timeout  65;
 
