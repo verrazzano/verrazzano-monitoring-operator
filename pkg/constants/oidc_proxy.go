@@ -573,6 +573,8 @@ http {
     lua_shared_dict discovery 1m;
     #  cache for JWKs
     lua_shared_dict jwks 1m;
+    lua_ssl_verify_depth 2;
+    lua_ssl_trusted_certificate /etc/nginx/ca-bundle;
 
     upstream http_backend {
         server  %s:%v  fail_timeout=30s max_fails=10;

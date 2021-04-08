@@ -75,7 +75,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.AlertManager.VersionsConfigMap)
 
 	//configmap for alertrules
-	err = createConfigMap(controller, vmo, vmo.Spec.Prometheus.RulesConfigMap, alertrulesMap)
+	err = createUpdateAlertRulesConfigMap(controller, vmo, vmo.Spec.Prometheus.RulesConfigMap, alertrulesMap)
 	if err != nil {
 		zap.S().Errorf("Failed to create alertrules configmap %s for reason %v", vmo.Spec.Prometheus.RulesConfigMap, err)
 		return err
@@ -166,7 +166,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 }
 
 // This function is being called for configmaps which gets modified with spec changes
-func createConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
+func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	configMap := configmaps.NewConfig(vmo, configmap, data)
 	existingConfigMap, err := getConfigMap(controller, vmo, configmap)
 	if err != nil {
@@ -183,6 +183,33 @@ func createConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 				configMap.Data[k] = v
 			}
 		}
+		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
+		if specDiffs != "" {
+			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
+			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+			if err != nil {
+				zap.S().Errorf("Failed to update existing configmap %s ", configMap.Name)
+			}
+		}
+	} else {
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+		if err != nil {
+			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
+			return err
+		}
+	}
+	return nil
+}
+
+func createUpdateConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
+	configMap := configmaps.NewConfig(vmo, configmap, data)
+	existingConfigMap, err := getConfigMap(controller, vmo, configmap)
+	if err != nil {
+		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
+		return err
+	}
+	if existingConfigMap != nil {
+		zap.S().Debugf("Updating existing configmaps for %s ", existingConfigMap.Name)
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
 		if specDiffs != "" {
 			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
@@ -283,7 +310,7 @@ func oidcNginxConf(port int) string {
 	return fmt.Sprintf(constants.OidcNginxConfTemp, "localhost", port)
 }
 
-func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) string {
+func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails, keycloakUrl string) string {
 	ingress := resources.OidcProxyIngressHost(vmo, component)
 	verrazzanoURI := vmo.Spec.URI
 	uriPrefix := fmt.Sprintf("vmi.%s.", vmo.Name)
@@ -292,6 +319,11 @@ func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compon
 	}
 	oidcProviderHost := fmt.Sprintf("%s.%s", "keycloak", verrazzanoURI)
 	oidcProviderHostInCluster := "keycloak-http.keycloak.svc.cluster.local"
+	// when keycloakUrl is present, meanning it is a managed cluster, keycloakUrl is the admin keycloak url
+	if len(keycloakUrl) > 0 {
+		oidcProviderHost = keycloakUrl
+		oidcProviderHostInCluster = ""
+	}
 	return fmt.Sprintf(constants.OidcConfLuaTemp,
 		ingress,
 		oidcProviderHost,
@@ -310,11 +342,11 @@ func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	oidcConfig := resources.OidcProxyConfigName(vmo.Name, component.Name)
 	oidcConfigMap := map[string]string{
 		constants.OidcAuthLua:   constants.OidcAuthLuaScripts,
-		constants.OidcConfLua:   oidcConfLuaScripts(vmo, component),
+		constants.OidcConfLua:   oidcConfLuaScripts(vmo, component, controller.clusterInfo.KeycloakURL),
 		constants.OidcStartup:   oidcStartup(),
 		constants.OidcNginxConf: oidcNginxConf(component.Port),
 	}
-	err := createConfigMapIfDoesntExist(controller, vmo, oidcConfig, oidcConfigMap)
+	err := createUpdateConfigMap(controller, vmo, oidcConfig, oidcConfigMap)
 	return oidcConfig, err
 }
 

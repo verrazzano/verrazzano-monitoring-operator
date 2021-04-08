@@ -88,6 +88,9 @@ type Controller struct {
 	buildVersion   string
 	stopCh         <-chan struct{}
 
+	// multi-cluster
+	clusterInfo ClusterInfo
+
 	// config
 	operatorConfigMapName string
 	operatorConfig        *config.OperatorConfig
@@ -104,6 +107,13 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+}
+
+// ClusterInfo has info like ContainerRuntime and managed cluster name
+type ClusterInfo struct {
+	clusterName      string
+	KeycloakURL      string
+	KeycloakCABundle []byte
 }
 
 // NewController returns a new vmo controller
@@ -225,6 +235,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		operatorConfigMapName: configmapName,
 		operatorConfig:        operatorConfig,
 		latestConfigMap:       operatorConfigMap,
+		clusterInfo:           ClusterInfo{},
 	}
 
 	zap.S().Infow("Setting up event handlers")
@@ -406,6 +417,14 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 * Initialize VMO Spec
 	 **********************/
 	InitializeVMOSpec(c, vmo)
+
+	// populate clusterInfo
+	clusterSecret, err := c.secretLister.Secrets("verrazzano-system").Get(constants.MCRegistrationSecret)
+	if err == nil {
+		c.clusterInfo.clusterName = string(clusterSecret.Data[constants.ClusterNameData])
+		c.clusterInfo.KeycloakURL = string(clusterSecret.Data[constants.KeycloakURLData])
+		c.clusterInfo.KeycloakCABundle = clusterSecret.Data[constants.KeycloakCABundleData]
+	}
 
 	errorObserved := false
 
