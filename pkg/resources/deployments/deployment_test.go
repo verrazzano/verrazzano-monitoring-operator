@@ -22,7 +22,7 @@ import (
 func TestVMOEmptyDeploymentSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	operatorConfig := &config.OperatorConfig{}
-	deployments, err := New(vmo, operatorConfig, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, operatorConfig, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -54,7 +54,7 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,7 +90,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 	}
 	assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -126,7 +126,7 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 	}
 	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
 
-	_, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	_, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
 }
 
@@ -154,7 +154,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,7 +165,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 
 	// Without CascadingDelete
 	vmo.Spec.CascadingDelete = false
-	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -230,7 +230,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -291,7 +291,7 @@ func TestVMOWithReplicas(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -330,7 +330,7 @@ func TestAPIWithNatGatewayIPs(t *testing.T) {
 			NatGatewayIPs: []string{"1.1.1.1", "2.1.1.1"},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -378,7 +378,7 @@ func TestWaitForElasticsearchTargetVersion(t *testing.T) {
 	}
 	targetVersion := "7.4.2"
 	config.ESWaitTargetVersion = targetVersion
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -388,7 +388,7 @@ func TestWaitForElasticsearchTargetVersion(t *testing.T) {
 	targetVersion = "7.5.2"
 	config.ESWaitTargetVersion = targetVersion
 
-	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}

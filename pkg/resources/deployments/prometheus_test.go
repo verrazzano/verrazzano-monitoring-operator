@@ -27,7 +27,7 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -59,7 +59,7 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -91,7 +91,7 @@ func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
 		},
 	}
 
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme", false)
 	if err != nil {
 		t.Error(err)
 	}

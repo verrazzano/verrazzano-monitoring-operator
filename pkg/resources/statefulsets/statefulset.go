@@ -21,7 +21,7 @@ import (
 )
 
 // New creates StatefulSet objects for a VMO resource
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, isManaged bool) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
@@ -30,13 +30,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSe
 	}
 	// Elasticsearch Master
 	if vmo.Spec.Elasticsearch.Enabled {
-		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(vmo))
+		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(vmo, isManaged))
 	}
 	return statefulSets, nil
 }
 
 // Creates StatefulSet for Elasticsearch Master
-func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, isManaged bool) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
@@ -211,8 +211,8 @@ fi`,
 		}
 	}
 	if resources.IsSingleNodeESCluster(vmo) && config.ElasticsearchIngest.OidcProxy != nil {
-		oidcConfig, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, &config.ElasticsearchIngest)
-		statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, *oidcConfig)
+		oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, &config.ElasticsearchIngest, isManaged)
+		statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, oidcVolumes...)
 		statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, *oidcProxy)
 	}
 	return statefulSet

@@ -431,7 +431,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Create RoleBindings
 	 **********************/
-	err := CreateRoleBindings(c, vmo)
+	err = CreateRoleBindings(c, vmo)
 	if err != nil {
 		zap.S().Errorf("Failed to create Role Bindings for vmo: %v", err)
 		errorObserved = true

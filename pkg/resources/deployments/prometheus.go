@@ -17,7 +17,7 @@ import (
 )
 
 // Creates Prometheus node deployment elements
-func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
+func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, isManaged bool) []*appsv1.Deployment {
 	var prometheusNodeDeployments []*appsv1.Deployment
 	for i := 0; i < int(vmo.Spec.Prometheus.Replicas); i++ {
 		prometheusDeployment := createDeploymentElementByPvcIndex(vmo, &vmo.Spec.Prometheus.Storage, &vmo.Spec.Prometheus.Resources, config.Prometheus, i)
@@ -189,8 +189,8 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, volume)
 
 		if config.Prometheus.OidcProxy != nil {
-			oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Prometheus.Resources, &config.Prometheus)
-			prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, *oidcVolume)
+			oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Prometheus.Resources, &config.Prometheus, isManaged)
+			prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 			prometheusDeployment.Spec.Template.Spec.Containers = append(prometheusDeployment.Spec.Template.Spec.Containers, *oidcProxy)
 		}
 
@@ -365,9 +365,9 @@ func createPrometheusPushGatewayDeploymentElement(vmo *vmcontrollerv1.Verrazzano
 }
 
 // Creates *all* Prometheus-related deployment elements
-func createPrometheusDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
+func createPrometheusDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, isManaged bool) []*appsv1.Deployment {
 	var deployList []*appsv1.Deployment
-	deployList = append(deployList, createPrometheusNodeDeploymentElements(vmo, pvcToAdMap)...)
+	deployList = append(deployList, createPrometheusNodeDeploymentElements(vmo, pvcToAdMap, isManaged)...)
 	deployList = append(deployList, createPrometheusPushGatewayDeploymentElement(vmo))
 	return deployList
 }

@@ -35,7 +35,7 @@ func TestElasticsearchDefaultDeployments1(t *testing.T) {
 		},
 	}
 	var es Elasticsearch = ElasticsearchBasic{}
-	deployments := es.createElasticsearchDeploymentElements(vmo, map[string]string{})
+	deployments := es.createElasticsearchDeploymentElements(vmo, map[string]string{}, false)
 	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 }
 
@@ -58,7 +58,7 @@ func TestElasticsearchDefaultDeployments2(t *testing.T) {
 		},
 	}
 	var es Elasticsearch = ElasticsearchBasic{}
-	deployments := es.createElasticsearchDeploymentElements(vmo, map[string]string{})
+	deployments := es.createElasticsearchDeploymentElements(vmo, map[string]string{}, false)
 	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
 
 	clientDeployment, _ := getDeploymentByName(resources.GetMetaName(vmo.Name, config.ElasticsearchIngest.Name), deployments)
