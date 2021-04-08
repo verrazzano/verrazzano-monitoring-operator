@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"math/rand"
+	"net/url"
 	"strings"
 	"time"
 
@@ -321,8 +322,13 @@ func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compon
 	oidcProviderHostInCluster := "keycloak-http.keycloak.svc.cluster.local"
 	// when keycloakUrl is present, meanning it is a managed cluster, keycloakUrl is the admin keycloak url
 	if len(keycloakUrl) > 0 {
-		oidcProviderHost = keycloakUrl
-		oidcProviderHostInCluster = ""
+		u, err := url.Parse(keycloakUrl)
+		if err == nil {
+			oidcProviderHost = u.Host
+			oidcProviderHostInCluster = ""
+		} else {
+			zap.S().Errorf("Failed to parse keycloak URL %s", keycloakUrl)
+		}
 	}
 	return fmt.Sprintf(constants.OidcConfLuaTemp,
 		ingress,
