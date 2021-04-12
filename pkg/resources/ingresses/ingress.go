@@ -186,7 +186,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
 		if config.ElasticsearchIngest.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.ElasticsearchIngest))
+			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
+			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+			ingresses = append(ingresses, ingress)
 		} else {
 			var ingress *extensions_v1beta1.Ingress
 			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
@@ -255,7 +257,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 			Rules: []extensions_v1beta1.IngressRule{ingressRule},
 		},
 	}
-	//ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
+	ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
 	if len(vmo.Spec.IngressTargetDNSName) != 0 {
 		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = vmo.Spec.IngressTargetDNSName
 		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDNSTTLSeconds)
