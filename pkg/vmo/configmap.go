@@ -213,7 +213,7 @@ func createUpdateConfigMap(controller *Controller, vmo *vmcontrollerv1.Verrazzan
 		zap.S().Debugf("Updating existing configmaps for %s ", existingConfigMap.Name)
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
 		if specDiffs != "" {
-			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
+			zap.S().Debugf("ConfigMap %s : Spec differences %s", configMap.Name, len(specDiffs))
 			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 			if err != nil {
 				zap.S().Errorf("Failed to update existing configmap %s ", configMap.Name)
