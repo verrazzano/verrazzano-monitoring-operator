@@ -84,7 +84,7 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 }
 
 // Creates all Elasticsearch Client deployment elements
-func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, isManaged bool) []*appsv1.Deployment {
+func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
 	javaOpts := constants.DefaultESIngestMemArgs
 	if vmo.Spec.Elasticsearch.IngestNode.JavaOpts != "" {
 		javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
@@ -113,7 +113,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 	)
 	if config.ElasticsearchIngest.OidcProxy != nil {
-		oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.IngestNode.Resources, &config.ElasticsearchIngest, isManaged)
+		oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.IngestNode.Resources, &config.ElasticsearchIngest)
 		elasticsearchIngestDeployment.Spec.Template.Spec.Volumes = append(elasticsearchIngestDeployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 		elasticsearchIngestDeployment.Spec.Template.Spec.Containers = append(elasticsearchIngestDeployment.Spec.Template.Spec.Containers, *oidcProxy)
 	}
@@ -206,9 +206,9 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 }
 
 // Creates *all* Elasticsearch deployment elements
-func (es ElasticsearchBasic) createElasticsearchDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, isManaged bool) []*appsv1.Deployment {
+func (es ElasticsearchBasic) createElasticsearchDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var deployList []*appsv1.Deployment
-	deployList = append(deployList, es.createElasticsearchIngestDeploymentElements(vmo, isManaged)...)
+	deployList = append(deployList, es.createElasticsearchIngestDeploymentElements(vmo)...)
 	deployList = append(deployList, es.createElasticsearchDataDeploymentElements(vmo, pvcToAdMap)...)
 	return deployList
 }

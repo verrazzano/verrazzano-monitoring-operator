@@ -404,6 +404,14 @@ func (c *Controller) syncHandler(key string) error {
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	originalVMO := vmo.DeepCopy()
 
+	// populate clusterInfo
+	clusterSecret, err := c.secretLister.Secrets("verrazzano-system").Get(constants.MCRegistrationSecret)
+	if err == nil {
+		c.clusterInfo.clusterName = string(clusterSecret.Data[constants.ClusterNameData])
+		c.clusterInfo.KeycloakURL = string(clusterSecret.Data[constants.KeycloakURLData])
+		c.clusterInfo.KeycloakCABundle = clusterSecret.Data[constants.KeycloakCABundleData]
+	}
+
 	// If lock, controller will not sync/process the VMO env
 	labels := prometheus.Labels{"namespace": vmo.Namespace, "vmo_name": vmo.Name}
 	if vmo.Spec.Lock {
@@ -417,14 +425,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 * Initialize VMO Spec
 	 **********************/
 	InitializeVMOSpec(c, vmo)
-
-	// populate clusterInfo
-	clusterSecret, err := c.secretLister.Secrets("verrazzano-system").Get(constants.MCRegistrationSecret)
-	if err == nil {
-		c.clusterInfo.clusterName = string(clusterSecret.Data[constants.ClusterNameData])
-		c.clusterInfo.KeycloakURL = string(clusterSecret.Data[constants.KeycloakURLData])
-		c.clusterInfo.KeycloakCABundle = clusterSecret.Data[constants.KeycloakCABundleData]
-	}
 
 	errorObserved := false
 

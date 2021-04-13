@@ -25,7 +25,7 @@ import (
 //  THEN there should be no StatefulSets created
 func TestVMOEmptyStatefulSetSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	statefulsets, err := New(vmo, false)
+	statefulsets, err := New(vmo)
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,7 +47,7 @@ func TestVMODisabledSpecs(t *testing.T) {
 			},
 		},
 	}
-	statefulsets, err := New(vmo, false)
+	statefulsets, err := New(vmo)
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +108,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	// Create the stateful sets
-	statefulsets, err := New(vmo, false)
+	statefulsets, err := New(vmo)
 	if err != nil {
 		t.Error(err)
 	}

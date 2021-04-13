@@ -139,4 +139,6 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		vmo.Status.State = string(constants.Running)
 	}
 
+	// set label for managed-cluster-name
+	vmo.Labels[constants.ClusterNameData] = controller.clusterInfo.clusterName
 }
