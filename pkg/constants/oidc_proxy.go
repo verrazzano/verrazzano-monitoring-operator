@@ -540,6 +540,12 @@ const OidcAuthLuaScripts = `-- auth.lua
 // OidcNginxConf defines the nginx.lua file name in OIDC proxy ConfigMap
 const OidcNginxConf = "nginx.conf"
 
+// OidcSslVerifyOptions defines the ssl verify option
+const OidcSslVerifyOptions = "lua_ssl_verify_depth 2;"
+
+// OidcSslTrustedOptions defines the ssl trusted certificates option
+const OidcSslTrustedOptions = "lua_ssl_trusted_certificate /secret/ca-bundle;"
+
 // OidcNginxConfTemp is the template of nginx.conf file in OIDC proxy ConfigMap
 const OidcNginxConfTemp = `#user  nobody;
 worker_processes  1;
@@ -573,6 +579,8 @@ http {
     lua_shared_dict discovery 1m;
     #  cache for JWKs
     lua_shared_dict jwks 1m;
+    %s
+    %s
 
     upstream http_backend {
         server  %s:%v  fail_timeout=30s max_fails=10;

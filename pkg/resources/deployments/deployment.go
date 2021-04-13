@@ -129,8 +129,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 			FSGroup: &grafanaGid,
 		}
 		if config.Grafana.OidcProxy != nil {
-			oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Grafana.Resources, &config.Grafana)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, *oidcVolume)
+			oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Grafana.Resources, &config.Grafana)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *oidcProxy)
 		}
 		deployments = append(deployments, deployment)
@@ -186,8 +186,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		}
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
 		if config.Kibana.OidcProxy != nil {
-			oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Kibana.Resources, &config.Kibana)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, *oidcVolume)
+			oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Kibana.Resources, &config.Kibana)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *oidcProxy)
 		}
 		deployments = append(deployments, deployment)
