@@ -5,6 +5,7 @@ package config
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"os"
 	"strings"
 
@@ -26,6 +27,8 @@ type ComponentDetails struct {
 	RunAsUser         int64
 	EnvName           string
 	OidcProxy         *ComponentDetails
+	Optional          bool
+	Disabled          bool
 }
 
 // AllComponentDetails is array of all ComponentDetails
@@ -180,6 +183,7 @@ var API = ComponentDetails{
 	LivenessHTTPPath:  "/healthcheck",
 	ReadinessHTTPPath: "/healthcheck",
 	Privileged:        false,
+	Optional:          true,
 }
 
 // ConfigReloader is the default config-reloader configuration
@@ -207,7 +211,12 @@ func InitComponentDetails() error {
 		if len(component.EnvName) > 0 {
 			component.Image = os.Getenv(component.EnvName)
 			if len(component.Image) == 0 {
-				return fmt.Errorf("The environment variable %s translated to an empty string for component %s", component.EnvName, component.Name)
+				if !component.Optional {
+					return fmt.Errorf("The environment variable %s translated to an empty string for component %s", component.EnvName, component.Name)
+				}
+				// if no image is provided for an optional component then disable it
+				zap.S().Infof("The environment variable %s translated to an empty string for optional component %s.  Marking component disabled.", component.EnvName, component.Name)
+				component.Disabled = true
 			}
 		}
 		if !oidcAuthEnabled {

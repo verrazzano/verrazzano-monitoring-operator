@@ -416,7 +416,8 @@ func OidcProxyIngressHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, comp
 }
 
 //CreateOidcProxy creates OpenID Connect (OIDC) proxy container and config Volume
-func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources, component *config.ComponentDetails) (*corev1.Volume, *corev1.Container) {
+func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources, component *config.ComponentDetails) ([]corev1.Volume, *corev1.Container) {
+	var volumes []corev1.Volume
 	configName := OidcProxyConfigName(vmo.Name, component.Name)
 	var defaultMode int32 = 0744
 	var zero int64 = 0
@@ -430,7 +431,17 @@ func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResour
 	oidcProxContainer.Command = []string{"/bootstrap/startup.sh"}
 	oidcProxContainer.VolumeMounts = []corev1.VolumeMount{{Name: configName, MountPath: "/bootstrap"}}
 	oidcProxContainer.SecurityContext = &corev1.SecurityContext{RunAsUser: &zero, RunAsGroup: &zero}
-	return &configVolume, &oidcProxContainer
+	if len(vmo.Labels[constants.ClusterNameData]) > 0 {
+		secretVolume := corev1.Volume{Name: "secret", VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: constants.MCRegistrationSecret,
+			},
+		}}
+		volumes = append(volumes, secretVolume)
+		oidcProxContainer.VolumeMounts = append(oidcProxContainer.VolumeMounts, corev1.VolumeMount{Name: "secret", MountPath: "/secret"})
+	}
+	volumes = append(volumes, configVolume)
+	return volumes, &oidcProxContainer
 }
 
 //OidcProxyService creates OidcProxy Service

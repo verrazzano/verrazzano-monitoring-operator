@@ -211,8 +211,8 @@ fi`,
 		}
 	}
 	if resources.IsSingleNodeESCluster(vmo) && config.ElasticsearchIngest.OidcProxy != nil {
-		oidcConfig, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, &config.ElasticsearchIngest)
-		statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, *oidcConfig)
+		oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, &config.ElasticsearchIngest)
+		statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, oidcVolumes...)
 		statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, *oidcProxy)
 	}
 	return statefulSet

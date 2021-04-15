@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"math/rand"
+	"net/url"
 	"strings"
 	"time"
 
@@ -75,7 +76,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.AlertManager.VersionsConfigMap)
 
 	//configmap for alertrules
-	err = createConfigMap(controller, vmo, vmo.Spec.Prometheus.RulesConfigMap, alertrulesMap)
+	err = createUpdateAlertRulesConfigMap(controller, vmo, vmo.Spec.Prometheus.RulesConfigMap, alertrulesMap)
 	if err != nil {
 		zap.S().Errorf("Failed to create alertrules configmap %s for reason %v", vmo.Spec.Prometheus.RulesConfigMap, err)
 		return err
@@ -166,7 +167,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 }
 
 // This function is being called for configmaps which gets modified with spec changes
-func createConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
+func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	configMap := configmaps.NewConfig(vmo, configmap, data)
 	existingConfigMap, err := getConfigMap(controller, vmo, configmap)
 	if err != nil {
@@ -186,6 +187,33 @@ func createConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
 		if specDiffs != "" {
 			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
+			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+			if err != nil {
+				zap.S().Errorf("Failed to update existing configmap %s ", configMap.Name)
+			}
+		}
+	} else {
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+		if err != nil {
+			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
+			return err
+		}
+	}
+	return nil
+}
+
+func createUpdateConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
+	configMap := configmaps.NewConfig(vmo, configmap, data)
+	existingConfigMap, err := getConfigMap(controller, vmo, configmap)
+	if err != nil {
+		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
+		return err
+	}
+	if existingConfigMap != nil {
+		zap.S().Debugf("Updating existing configmaps for %s ", existingConfigMap.Name)
+		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
+		if specDiffs != "" {
+			zap.S().Debugf("ConfigMap %s : Spec differences %s", configMap.Name, len(specDiffs))
 			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 			if err != nil {
 				zap.S().Errorf("Failed to update existing configmap %s ", configMap.Name)
@@ -279,11 +307,18 @@ func oidcStartup() string {
 	return fmt.Sprintf(constants.OidcStartupTemp, "`dirname $0`")
 }
 
-func oidcNginxConf(port int) string {
-	return fmt.Sprintf(constants.OidcNginxConfTemp, "localhost", port)
+func oidcNginxConf(port int, ssl bool) string {
+	sslVerify := ""
+	sslTrusted := ""
+	if ssl {
+		sslVerify = constants.OidcSslVerifyOptions
+		sslTrusted = constants.OidcSslTrustedOptions
+	}
+
+	return fmt.Sprintf(constants.OidcNginxConfTemp, sslVerify, sslTrusted, "localhost", port)
 }
 
-func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) string {
+func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails, keycloakURL string) string {
 	ingress := resources.OidcProxyIngressHost(vmo, component)
 	verrazzanoURI := vmo.Spec.URI
 	uriPrefix := fmt.Sprintf("vmi.%s.", vmo.Name)
@@ -292,27 +327,39 @@ func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compon
 	}
 	oidcProviderHost := fmt.Sprintf("%s.%s", "keycloak", verrazzanoURI)
 	oidcProviderHostInCluster := "keycloak-http.keycloak.svc.cluster.local"
+	// when keycloakURL is present, meanning it is a managed cluster, keycloakURL is the admin keycloak url
+	if len(keycloakURL) > 0 {
+		u, err := url.Parse(keycloakURL)
+		if err == nil {
+			oidcProviderHost = u.Host
+			oidcProviderHostInCluster = ""
+		} else {
+			zap.S().Errorf("Failed to parse keycloak URL %s", keycloakURL)
+		}
+	}
 	return fmt.Sprintf(constants.OidcConfLuaTemp,
 		ingress,
 		oidcProviderHost,
 		oidcProviderHostInCluster,
 		"verrazzano-system", //realm
 		constants.OidcCallbackPath,
-		"webui",     //oidc-client-id
-		"admin-cli", //direct-access client
+		constants.OidcLogoutCallbackPath,
+		"webui",                   //oidc-client-id
+		"verrazzano-oauth-client", //direct-access client
 		randomString(32),
-		300) //authn state TTL
+		"console_users", // required realm role
+		300)             //authn state TTL
 }
 
 func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (string, error) {
 	oidcConfig := resources.OidcProxyConfigName(vmo.Name, component.Name)
 	oidcConfigMap := map[string]string{
 		constants.OidcAuthLua:   constants.OidcAuthLuaScripts,
-		constants.OidcConfLua:   oidcConfLuaScripts(vmo, component),
+		constants.OidcConfLua:   oidcConfLuaScripts(vmo, component, controller.clusterInfo.KeycloakURL),
 		constants.OidcStartup:   oidcStartup(),
-		constants.OidcNginxConf: oidcNginxConf(component.Port),
+		constants.OidcNginxConf: oidcNginxConf(component.Port, len(controller.clusterInfo.clusterName) > 0),
 	}
-	err := createConfigMapIfDoesntExist(controller, vmo, oidcConfig, oidcConfigMap)
+	err := createUpdateConfigMap(controller, vmo, oidcConfig, oidcConfigMap)
 	return oidcConfig, err
 }
 

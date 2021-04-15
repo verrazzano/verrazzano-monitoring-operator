@@ -55,11 +55,17 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 			}...)
 		} else {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "true"},
+				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
+				{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
+				{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Editor"},
 				{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
 				{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+				{Name: "GF_AUTH_PROXY_ENABLED", Value: "true"},
+				{Name: "GF_AUTH_PROXY_HEADER_NAME", Value: "X-WEBAUTH-USER"},
+				{Name: "GF_AUTH_PROXY_HEADER_PROPERTY", Value: "username"},
+				{Name: "GF_AUTH_PROXY_AUTO_SIGN_UP", Value: "true"},
 			}...)
 		}
 		if vmo.Spec.URI != "" {
@@ -123,8 +129,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 			FSGroup: &grafanaGid,
 		}
 		if config.Grafana.OidcProxy != nil {
-			oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Grafana.Resources, &config.Grafana)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, *oidcVolume)
+			oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Grafana.Resources, &config.Grafana)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *oidcProxy)
 		}
 		deployments = append(deployments, deployment)
@@ -180,33 +186,35 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		}
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
 		if config.Kibana.OidcProxy != nil {
-			oidcVolume, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Kibana.Resources, &config.Kibana)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, *oidcVolume)
+			oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Kibana.Resources, &config.Kibana)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *oidcProxy)
 		}
 		deployments = append(deployments, deployment)
 	}
 
 	// API
-	deployment := createDeploymentElement(vmo, nil, nil, config.API)
-	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.API.ImagePullPolicy
-	deployment.Spec.Replicas = resources.NewVal(vmo.Spec.API.Replicas)
-	deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.API.Name)
-	deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-		{Name: "VMI_NAME", Value: vmo.Name},
-		{Name: "NAMESPACE", Value: vmo.Namespace},
-		{Name: "ENV_NAME", Value: operatorConfig.EnvName},
-	}
-	if len(vmo.Spec.NatGatewayIPs) > 0 {
-		deployment.Spec.Template.Spec.Containers[0].Args = []string{fmt.Sprintf("--natGatewayIPs=%s", strings.Join(vmo.Spec.NatGatewayIPs, ","))}
-	}
+	if !config.API.Disabled {
+		deployment := createDeploymentElement(vmo, nil, nil, config.API)
+		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.API.ImagePullPolicy
+		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.API.Replicas)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.API.Name)
+		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+			{Name: "VMI_NAME", Value: vmo.Name},
+			{Name: "NAMESPACE", Value: vmo.Namespace},
+			{Name: "ENV_NAME", Value: operatorConfig.EnvName},
+		}
+		if len(vmo.Spec.NatGatewayIPs) > 0 {
+			deployment.Spec.Template.Spec.Containers[0].Args = []string{fmt.Sprintf("--natGatewayIPs=%s", strings.Join(vmo.Spec.NatGatewayIPs, ","))}
+		}
 
-	deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 15
-	deployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
-	deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
-	deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
+		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 15
+		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
 
-	deployments = append(deployments, deployment)
+		deployments = append(deployments, deployment)
+	}
 
 	return deployments, err
 }

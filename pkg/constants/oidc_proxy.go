@@ -6,6 +6,9 @@ package constants
 // OidcCallbackPath is the callback URL path of OIDC authentication redirect
 const OidcCallbackPath = "/_authentication_callback"
 
+// OidcLogoutCallbackPath is the callback URL path after logout
+const OidcLogoutCallbackPath = "/_logout"
+
 // OidcConfLua defines the conf.lua file name in OIDC proxy ConfigMap
 const OidcConfLua = "conf.lua"
 
@@ -16,9 +19,11 @@ const OidcConfLuaTemp = `-- conf.lua
     local oidcProviderHostInCluster = "%s"
     local realm ="%s"
     local callbackPath = "%s"
+    local logoutCallbackPath = "%s"
     local oidcClient = "%s"
     local oidcDirectAccessClient = "%s"
     local cookieKey = "%s"
+    local requiredRole = "%s"
     local authStateTtlInSec = %v
     local bearerServiceAccountToken = false
 
@@ -32,6 +37,7 @@ const OidcConfLuaTemp = `-- conf.lua
         ingressUri = ingressUri,
         callbackPath = callbackPath,
         callbackUri = ingressUri..callbackPath,
+        logoutCallbackUri = ingressUri..logoutCallbackPath,
         oidcProviderUri = oidcProviderUri,
         oidcProviderAuthUri = oidcProviderUri..'/protocol/openid-connect/auth',
         oidcProviderInClusterUri = oidcProviderInClusterUri,
@@ -52,14 +58,29 @@ const OidcConfLuaTemp = `-- conf.lua
     if not authHeader then
         if string.find(ngx.var.request_uri, callbackPath) then
             auth.handleCallback()
+        elseif string.find(ngx.var.request_uri, logoutCallbackPath) then
+            auth.handleLogoutCallback()
         end
-        if auth.authenticated() then
-            return
+        local ck = auth.authenticated()
+        if ck then
+            if auth.hasRequiredRole(ck.it, requiredRole) then
+                ngx.var.oidc_user = auth.usernameFromIdToken(ck.it)
+            else
+                auth.logout()
+                return
+            end
         else
             auth.authenticate()
         end
     else
-        auth.authHeader(authHeader) 
+        local idToken = auth.authHeader(authHeader)
+        if idToken then
+            if auth.hasRequiredRole(idToken, requiredRole) then
+                ngx.var.oidc_user = auth.usernameFromIdToken(idToken)
+            else
+                auth.forbidden("User does not have a required realm role")
+            end
+        end
     end
 `
 
@@ -135,11 +156,18 @@ const OidcAuthLuaScripts = `-- auth.lua
     end
       
     function me.unauthorized(msg, err)
-        ngx.status = 401
-        me.logJson(ngx.ERR, meg, err)
+        ngx.status = ngx.HTTP_UNAUTHORIZED
+        me.logJson(ngx.ERR, msg, err)
         ngx.exit(ngx.HTTP_UNAUTHORIZED)
     end
       
+    function me.forbidden(msg, err)
+        ngx.status = ngx.HTTP_FORBIDDEN
+        me.deleteCookie("authn")
+        me.logJson(ngx.ERR, msg, err)
+        ngx.exit(ngx.HTTP_FORBIDDEN)
+    end
+
     function me.randomBase64(size)
         local randBytes = random.bytes(size)
         return base64.encode_base64url(randBytes)
@@ -210,7 +238,7 @@ const OidcAuthLuaScripts = `-- auth.lua
             local expiry = tonumber(ck.expiry)
             local refresh_expiry = tonumber(ck.refresh_expiry)
             if now > refresh_expiry then
-                -- refresh_token expired, redirt to authenticate
+                -- refresh_token expired, redirect to authenticate
                 me.authenticate()
             else
                 if now > expiry then
@@ -265,7 +293,19 @@ const OidcAuthLuaScripts = `-- auth.lua
             ngx.redirect(request_uri) 
         end
     end
-      
+
+    function me.logout()
+        local redirectArgs = ngx.encode_args({
+            redirect_uri = me.logoutCallbackUri
+        })
+        local redirURL = me.oidcProviderUri.."/protocol/openid-connect/logout?"..redirectArgs
+        ngx.redirect(redirURL)
+    end
+
+    function me.handleLogoutCallback()
+        me.forbidden("User does not have a required realm role")
+    end
+
     function me.tokenToCookie(formArgs) 
         local tokenRes = me.tokenRequest(formArgs)
         -- Do we need access_token? too big > 4k
@@ -299,12 +339,36 @@ const OidcAuthLuaScripts = `-- auth.lua
         me.setCookie("authn", cookiePairs, tonumber(tokenRes.refresh_expires_in)-expiryBuffer) 
     end
 
+    function me.hasRequiredRole(idToken, requiredRole)
+        local id_token = jwt:load_jwt(idToken)
+        if id_token and id_token.payload and id_token.payload.realm_access and id_token.payload.realm_access.roles then
+            for _, role in ipairs(id_token.payload.realm_access.roles) do
+                if role == requiredRole then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    function me.usernameFromIdToken(idToken)
+        local id_token = jwt:load_jwt(idToken)
+        if id_token and id_token.payload and id_token.payload.preferred_username then
+            return id_token.payload.preferred_username
+        end
+        return ""
+    end
+
     function me.setCookie(ckName, cookiePairs, expiresInSec) 
         local expires = ngx.cookie_time(ngx.time() + expiresInSec)
         local attributes = "; Path=/; Secure; HttpOnly; Expires="..expires
         local encrypted = me.aes256:encrypt(cjson.encode(cookiePairs))
         local cookie = base64.encode_base64url(encrypted)
         ngx.header["Set-Cookie"] = ckName..'='..cookie..attributes
+    end
+
+    function me.deleteCookie(ckName)
+        ngx.header["Set-Cookie"] = ckName..'=; Path=/; Secure; HttpOnly; Expires=Thu, 01 Jan 1970 00:00:00 UTC;'
     end
 
     function me.readCookie(ckName)
@@ -338,11 +402,12 @@ const OidcAuthLuaScripts = `-- auth.lua
             found, index = authHeader:find('Basic')
             if found then
                 local basicCred = string.sub(authHeader, index+2)
-                me.handleBasicAuth(basicCred) 
+                return me.handleBasicAuth(basicCred)
             else
                 me.unauthorized("Invalid authorization header "..authHeader)
             end
         end
+        return nil
     end
 
     local certs = {}
@@ -394,7 +459,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         end
         local publicKey = me.publicKey(jwt_obj.header.kid)
         if not publicKey then
-            me.unauthorized("No public_key retreived from keycloak")
+            me.unauthorized("No public_key retrieved from keycloak")
         end
         local verified = jwt:verify_jwt_obj(publicKey, jwt_obj)
         if (tostring(jwt_obj.valid) == "false" or tostring(jwt_obj.verified) == "false") then
@@ -402,7 +467,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         end
         me.logJson(ngx.INFO, "Check for groups in jwt token.")
         if ( not (jwt_obj.payload) or not (jwt_obj.payload.groups)) then
-            me.unauthorized("No groups asscoiated with user.")
+            me.unauthorized("No groups associated with user.")
         end
         ngx.req.clear_header("Authorization")
         if jwt_obj.payload and jwt_obj.payload.email then
@@ -417,7 +482,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         if me.bearerServiceAccountToken then
             me.logJson(ngx.INFO, "Check for k8s_user in jwt token.")
             if ( not (jwt_obj.payload) or not (jwt_obj.payload.k8s_user)) then
-               me.unauthorized("No k8s_user asscoiated with user.")
+               me.unauthorized("No k8s_user associated with user.")
             end
             me.logJson(ngx.INFO, "Read service account token.")
             local serviceAccountToken = me.read_file("/run/secrets/kubernetes.io/serviceaccount/token");
@@ -435,7 +500,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         local now = ngx.time() 
         local basicAuth = basicCache[basicCred]
         if basicAuth and (now < basicAuth.expiry) then
-            return
+            return basicAuth.id_token
         end
         local decode = ngx.decode_base64(basicCred)
         local found = decode:find(':')
@@ -446,6 +511,7 @@ const OidcAuthLuaScripts = `-- auth.lua
         local p = decode:sub(found+1)
         local formArgs = {
             grant_type = 'password',
+            scope = 'openid',
             client_id = me.oidcDirectAccessClient,
             password = p,
             username = u
@@ -465,6 +531,7 @@ const OidcAuthLuaScripts = `-- auth.lua
             id_token = tokenRes.id_token,
             expiry = now + refresh_expires_in
         }
+        return tokenRes.id_token
     end
       
     return me
@@ -472,6 +539,12 @@ const OidcAuthLuaScripts = `-- auth.lua
 
 // OidcNginxConf defines the nginx.lua file name in OIDC proxy ConfigMap
 const OidcNginxConf = "nginx.conf"
+
+// OidcSslVerifyOptions defines the ssl verify option
+const OidcSslVerifyOptions = "lua_ssl_verify_depth 2;"
+
+// OidcSslTrustedOptions defines the ssl trusted certificates option
+const OidcSslTrustedOptions = "lua_ssl_trusted_certificate /secret/ca-bundle;"
 
 // OidcNginxConfTemp is the template of nginx.conf file in OIDC proxy ConfigMap
 const OidcNginxConfTemp = `#user  nobody;
@@ -493,7 +566,7 @@ http {
     error_log  logs/error.log  info;
     sendfile        on;
     #tcp_nopush     on;
-
+    client_max_body_size 65m;
     #keepalive_timeout  0;
     keepalive_timeout  65;
 
@@ -506,6 +579,8 @@ http {
     lua_shared_dict discovery 1m;
     #  cache for JWKs
     lua_shared_dict jwks 1m;
+    %s
+    %s
 
     upstream http_backend {
         server  %s:%v  fail_timeout=30s max_fails=10;
@@ -516,10 +591,13 @@ http {
         root     /opt/nginx/html;
         #charset koi8-r;
 
+        set $oidc_user "";
         rewrite_by_lua_file /etc/nginx/conf.lua;
         #access_log  logs/host.access.log  main;
         expires           0;
         add_header        Cache-Control private;
+        proxy_set_header  X-WEBAUTH-USER $oidc_user;
+
         location / {
             proxy_pass http://http_backend;
         }

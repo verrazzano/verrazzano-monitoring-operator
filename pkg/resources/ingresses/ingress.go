@@ -109,21 +109,23 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	}
 
 	// Create Ingress Rule for API Endpoint
-	ingRule := createIngressRuleElement(vmo, config.API)
-	host := config.API.Name + "." + vmo.Spec.URI
-	healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.API)
-	ingress, err := createIngressElement(vmo, host, config.API, ingRule, healthLocations)
-	if err != nil {
-		return ingresses, err
+	if !config.API.Disabled {
+		ingRule := createIngressRuleElement(vmo, config.API)
+		host := config.API.Name + "." + vmo.Spec.URI
+		healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.API)
+		ingress, err := createIngressElement(vmo, host, config.API, ingRule, healthLocations)
+		if err != nil {
+			return ingresses, err
+		}
+		ingresses = append(ingresses, ingress)
 	}
-	ingresses = append(ingresses, ingress)
 
 	if vmo.Spec.Grafana.Enabled {
 		if config.Grafana.OidcProxy != nil {
 			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Grafana))
 		} else {
 			// Create Ingress Rule for Grafana Endpoint
-			ingRule = createIngressRuleElement(vmo, config.Grafana)
+			ingRule := createIngressRuleElement(vmo, config.Grafana)
 			host := config.Grafana.Name + "." + vmo.Spec.URI
 			ingress, err := createIngressElementNoBasicAuth(vmo, host, config.Grafana, ingRule)
 			if err != nil {
@@ -133,10 +135,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 		}
 	}
 	if vmo.Spec.Prometheus.Enabled {
-		ingRule = createIngressRuleElement(vmo, config.PrometheusGW)
-		host = config.PrometheusGW.Name + "." + vmo.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.PrometheusGW)
-		ingress, err = createIngressElement(vmo, host, config.PrometheusGW, ingRule, healthLocations)
+		ingRule := createIngressRuleElement(vmo, config.PrometheusGW)
+		host := config.PrometheusGW.Name + "." + vmo.Spec.URI
+		healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.PrometheusGW)
+		ingress, err := createIngressElement(vmo, host, config.PrometheusGW, ingRule, healthLocations)
 		if err != nil {
 			return ingresses, err
 		}
@@ -157,10 +159,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	}
 	if vmo.Spec.AlertManager.Enabled {
 		// Create Ingress Rule for AlertManager Endpoint
-		ingRule = createIngressRuleElement(vmo, config.AlertManager)
-		host = config.AlertManager.Name + "." + vmo.Spec.URI
-		healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.AlertManager)
-		ingress, err = createIngressElement(vmo, host, config.AlertManager, ingRule, healthLocations)
+		ingRule := createIngressRuleElement(vmo, config.AlertManager)
+		host := config.AlertManager.Name + "." + vmo.Spec.URI
+		healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.AlertManager)
+		ingress, err := createIngressElement(vmo, host, config.AlertManager, ingRule, healthLocations)
 		if err != nil {
 			return ingresses, err
 		}
@@ -171,11 +173,11 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Kibana))
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
-			ingRule = createIngressRuleElement(vmo, config.Kibana)
+			ingRule := createIngressRuleElement(vmo, config.Kibana)
 			host := config.Kibana.Name + "." + vmo.Spec.URI
-			healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Kibana)
+			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Kibana)
 
-			ingress, err = createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
+			ingress, err := createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
 			if err != nil {
 				return ingresses, err
 			}
@@ -184,13 +186,15 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
 		if config.ElasticsearchIngest.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.ElasticsearchIngest))
+			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
+			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+			ingresses = append(ingresses, ingress)
 		} else {
 			var ingress *extensions_v1beta1.Ingress
-			ingRule = createIngressRuleElement(vmo, config.ElasticsearchIngest)
-			host = config.ElasticsearchIngest.EndpointName + "." + vmo.Spec.URI
-			healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.ElasticsearchIngest)
-			ingress, err = createIngressElement(vmo, host, config.ElasticsearchIngest, ingRule, healthLocations)
+			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
+			host := config.ElasticsearchIngest.EndpointName + "." + vmo.Spec.URI
+			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.ElasticsearchIngest)
+			ingress, err := createIngressElement(vmo, host, config.ElasticsearchIngest, ingRule, healthLocations)
 			if err != nil {
 				return ingresses, err
 			}
@@ -253,7 +257,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 			Rules: []extensions_v1beta1.IngressRule{ingressRule},
 		},
 	}
-	//ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
+	ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
 	if len(vmo.Spec.IngressTargetDNSName) != 0 {
 		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = vmo.Spec.IngressTargetDNSName
 		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDNSTTLSeconds)

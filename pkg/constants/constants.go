@@ -201,3 +201,15 @@ const K8sDefaultStorageClassBetaAnnotation = "storageclass.beta.kubernetes.io/is
 
 // MonitoringNamespace Monitoring namespace
 const MonitoringNamespace = "monitoring"
+
+// MCRegistrationSecret - the name of the secret that contains the cluster registration information
+const MCRegistrationSecret = "verrazzano-cluster-registration"
+
+// ClusterNameData - the field name in MCRegistrationSecret that contains this managed cluster's name
+const ClusterNameData = "managed-cluster-name"
+
+// KeycloakURLData - the field name in MCRegistrationSecret that contains the admin cluster's Keycloak endpoint's URL
+const KeycloakURLData = "keycloak-url"
+
+// KeycloakCABundleData - the field name in MCRegistrationSecret that contains the admin cluster's Keycloak ca-bundle
+const KeycloakCABundleData = "ca-bundle"

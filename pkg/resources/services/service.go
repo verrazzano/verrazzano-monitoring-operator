@@ -52,8 +52,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 			services = append(services, resources.OidcProxyService(vmo, &config.Kibana))
 		}
 	}
-
-	services = append(services, createServiceElement(vmo, config.API))
+	if !config.API.Disabled {
+		services = append(services, createServiceElement(vmo, config.API))
+	}
 
 	return services, nil
 }
