@@ -29,7 +29,7 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &NodeExporter, &OidcProxy}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
@@ -188,15 +188,6 @@ var ConfigReloader = ComponentDetails{
 	EnvName:         "CONFIG_RELOADER_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	Privileged:      false,
-}
-
-// NodeExporter is the default node-exporter configuration
-var NodeExporter = ComponentDetails{
-	Name:            "node-exporter",
-	EnvName:         "NODE_EXPORTER_IMAGE",
-	ImagePullPolicy: constants.DefaultImagePullPolicy,
-	Port:            9100,
-	Privileged:      true,
 }
 
 const (

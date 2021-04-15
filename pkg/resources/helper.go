@@ -214,6 +214,7 @@ func GetElasticsearchInitContainer() *corev1.Container {
 func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 	pushGWUrl := GetMetaName(vmo.Name, config.PrometheusGW.Name) + ":" + strconv.Itoa(config.PrometheusGW.Port)
 	alertmanagerURL := fmt.Sprintf(GetMetaName(vmo.Name, config.AlertManager.Name)+":%d", config.AlertManager.Port)
+	nodeExporterURL := fmt.Sprintf("node-exporter.%s.svc.cluster.local:9100", constants.MonitoringNamespace)
 	// Prometheus does not allow any special characters in their label names, So they need to be removed using reg exp
 	re := regexp.MustCompile("[^a-zA-Z0-9_]")
 	prometheusValidLabelName := re.ReplaceAllString(vmo.Name, "")
@@ -237,6 +238,12 @@ scrape_configs:
    scrape_timeout: 15s
    static_configs:
    - targets: ['localhost:9090']
+
+ - job_name: 'node'
+   scrape_interval: 20s
+   scrape_timeout: 15s
+   static_configs:
+   - targets: ["` + nodeExporterURL + `"]
 
  - job_name: 'PushGateway'
    honor_labels: true

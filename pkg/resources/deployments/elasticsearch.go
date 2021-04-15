@@ -184,22 +184,6 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 		)
 
-		// Add a node exporter container
-		elasticsearchDataDeployment.Spec.Template.Spec.Containers = append(elasticsearchDataDeployment.Spec.Template.Spec.Containers, corev1.Container{
-			Name:            config.NodeExporter.Name,
-			Image:           config.NodeExporter.Image,
-			ImagePullPolicy: constants.DefaultImagePullPolicy,
-		})
-		volumeMounts := []corev1.VolumeMount{
-			{
-				Name:      constants.StorageVolumeName,
-				MountPath: constants.ElasticSearchNodeExporterPath,
-			},
-		}
-		if vmo.Spec.Elasticsearch.Storage.Size != "" {
-			elasticsearchDataDeployment.Spec.Template.Spec.Containers[1].VolumeMounts = volumeMounts
-		}
-
 		deployList = append(deployList, elasticsearchDataDeployment)
 	}
 	return deployList

@@ -167,12 +167,6 @@ const PrometheusIstioCertsMountPath = "/etc/istio-certs/"
 // PrometheusConfigContainerLocation Prometheus config inside container
 const PrometheusConfigContainerLocation = "/etc/prometheus/config/prometheus.yml"
 
-// PrometheusNodeExporterPath Prometheus node exporter mountpath
-const PrometheusNodeExporterPath = "/prometheus-disk"
-
-// ElasticSearchNodeExporterPath Prometheus node exporter mountpath
-const ElasticSearchNodeExporterPath = "/elasticsearch-disk"
-
 // ExternalDNSTTLSeconds value used for ingress annotation
 const ExternalDNSTTLSeconds = 60
 

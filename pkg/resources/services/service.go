@@ -26,7 +26,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 	}
 	if vmo.Spec.Prometheus.Enabled {
 		service := createServiceElement(vmo, config.Prometheus)
-		service.Spec.Ports = append(service.Spec.Ports, resources.GetServicePort(config.NodeExporter))
 		services = append(services, service)
 		services = append(services, createServiceElement(vmo, config.PrometheusGW))
 		if config.Prometheus.OidcProxy != nil {

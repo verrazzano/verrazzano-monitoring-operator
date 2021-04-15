@@ -37,9 +37,6 @@ func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMoni
 // Creates Elasticsearch Data service element
 func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	var elasticsearchDataService *corev1.Service = createServiceElement(vmo, config.ElasticsearchData)
-	// Data k8s service only needs to expose NodeExporter port
-	// - in dev mode, preserve this as the front end ES data port, at least for now
-	elasticsearchDataService.Spec.Ports = []corev1.ServicePort{resources.GetServicePort(config.NodeExporter)}
 	if resources.IsSingleNodeESCluster(vmo) {
 		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
 		elasticsearchDataService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)

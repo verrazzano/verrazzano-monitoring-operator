@@ -97,22 +97,6 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		prometheusDeployment.Spec.Template.Spec.Containers[1].Args = []string{"-volume-dir=" + constants.PrometheusConfigMountPath, "-volume-dir=" + constants.PrometheusRulesMountPath, "-webhook-url=http://localhost:9090/-/reload"}
 		prometheusDeployment.Spec.Template.Spec.Containers[1].VolumeMounts = configVolumeMounts
 
-		// Node-exporter container
-		prometheusDeployment.Spec.Template.Spec.Containers = append(prometheusDeployment.Spec.Template.Spec.Containers, corev1.Container{
-			Name:            config.NodeExporter.Name,
-			Image:           config.NodeExporter.Image,
-			ImagePullPolicy: config.NodeExporter.ImagePullPolicy,
-		})
-		nodeExporterMount := []corev1.VolumeMount{
-			{
-				Name:      constants.StorageVolumeName,
-				MountPath: constants.PrometheusNodeExporterPath,
-			},
-		}
-		if vmo.Spec.Prometheus.Storage.Size != "" {
-			prometheusDeployment.Spec.Template.Spec.Containers[2].VolumeMounts = nodeExporterMount
-		}
-
 		// istio-proxy container needed to scrape metrics with mutual TLS enabled
 		prometheusDeployment.Spec.Template.Spec.Containers = append(prometheusDeployment.Spec.Template.Spec.Containers, *createPrometheusIstioProxyContainer())
 
