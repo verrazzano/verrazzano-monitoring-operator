@@ -51,7 +51,7 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 
 	assert.Equal(t, masterService.Spec.Ports[0].Port, int32(constants.ESTransportPort))
 
-	assert.Equal(t, dataService.Spec.Ports[0].Port, int32(9100))
+	assert.Equal(t, dataService.Spec.Ports[0].Port, int32(9200))
 	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.ESHttpPort))
 	assert.Equal(t, dataService.Spec.Selector, expectedSelector)
 }
