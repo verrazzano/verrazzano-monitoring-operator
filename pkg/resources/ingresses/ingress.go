@@ -268,5 +268,10 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 		ingress.Annotations["kubernetes.io/tls-acme"] = "false"
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
+	ingress.Annotations["nginx.ingress.kubernetes.io/backend-protocol"] = "HTTPS"
+	// the cert system-tls SAN is "*.vmi.system.default.172.18.0.231.xip.io", not suited for oidc
+	// ingress.Annotations["nginx.ingress.kubernetes.io/proxy-ssl-secret"] = "verrazzano-system/"+constants.TLSSecretName
+	// ingress.Annotations["nginx.ingress.kubernetes.io/proxy-ssl-verify"] = "on"
+	// ingress.Annotations["nginx.ingress.kubernetes.io/proxy-ssl-verify-depth"] = "2"
 	return ingress
 }

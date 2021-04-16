@@ -37,7 +37,7 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 	}
 
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers), "Length of generated containers")
-	assert.Equal(t, 8, len(promDeployment.Spec.Template.Spec.Volumes), "Length of generated volumes")
+	assert.Equal(t, 9, len(promDeployment.Spec.Template.Spec.Volumes), "Length of generated volumes")
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers[0].VolumeMounts), "Length of generated mounts for Prometheus node")
 	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
 }
@@ -67,7 +67,7 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers), "Length of generated containers")
-	assert.Equal(t, 8, len(promDeployment.Spec.Template.Spec.Volumes), "Length of generated volumes")
+	assert.Equal(t, 9, len(promDeployment.Spec.Template.Spec.Volumes), "Length of generated volumes")
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers[0].VolumeMounts), "Length of generated mounts for Prometheus node")
 	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
 }

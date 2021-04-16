@@ -12,6 +12,15 @@ const OidcLogoutCallbackPath = "/_logout"
 // OidcConfLua defines the conf.lua file name in OIDC proxy ConfigMap
 const OidcConfLua = "conf.lua"
 
+// ClusterSecretVolumeName defines the volume name for cluster secret
+const ClusterSecretVolumeName = "cluster-secret"
+
+// TLSSecretVolume defines the volume name for tls secret
+const TLSSecretVolume = "tls-secret"
+
+// TLSSecretName defines the volume name for tls secret
+const TLSSecretName = "system-tls"
+
 // OidcConfLuaTemp is the template of conf.lua file in OIDC proxy ConfigMap
 const OidcConfLuaTemp = `-- conf.lua
     local ingressUri = 'https://'..'%s'
@@ -544,7 +553,7 @@ const OidcNginxConf = "nginx.conf"
 const OidcSslVerifyOptions = "lua_ssl_verify_depth 2;"
 
 // OidcSslTrustedOptions defines the ssl trusted certificates option
-const OidcSslTrustedOptions = "lua_ssl_trusted_certificate /secret/ca-bundle;"
+const OidcSslTrustedOptions = "lua_ssl_trusted_certificate /cluster-secret/ca-bundle;"
 
 // OidcNginxConfTemp is the template of nginx.conf file in OIDC proxy ConfigMap
 const OidcNginxConfTemp = `#user  nobody;
@@ -586,8 +595,10 @@ http {
         server  %s:%v  fail_timeout=30s max_fails=10;
     }
     server {
-        listen       8775;
+        listen       8775 ssl;
         server_name  apiserver;
+        ssl_certificate      /tls-secret/tls.crt;
+        ssl_certificate_key  /tls-secret/tls.key;
         root     /opt/nginx/html;
         #charset koi8-r;
 

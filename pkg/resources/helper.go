@@ -424,26 +424,33 @@ func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResour
 	configName := OidcProxyConfigName(vmo.Name, component.Name)
 	var defaultMode int32 = 0744
 	var zero int64 = 0
+	oidcProxContainer := CreateContainerElement(nil, vmoResources, *component.OidcProxy)
+	oidcProxContainer.Command = []string{"/bootstrap/startup.sh"}
+	oidcProxContainer.SecurityContext = &corev1.SecurityContext{RunAsUser: &zero, RunAsGroup: &zero}
 	configVolume := corev1.Volume{Name: configName, VolumeSource: corev1.VolumeSource{
 		ConfigMap: &corev1.ConfigMapVolumeSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: configName},
 			DefaultMode:          &defaultMode,
 		},
 	}}
-	oidcProxContainer := CreateContainerElement(nil, vmoResources, *component.OidcProxy)
-	oidcProxContainer.Command = []string{"/bootstrap/startup.sh"}
+	volumes = append(volumes, configVolume)
+	tlsSecretVolume := corev1.Volume{Name: constants.TLSSecretVolume, VolumeSource: corev1.VolumeSource{
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: constants.TLSSecretName,
+		},
+	}}
+	volumes = append(volumes, tlsSecretVolume)
 	oidcProxContainer.VolumeMounts = []corev1.VolumeMount{{Name: configName, MountPath: "/bootstrap"}}
-	oidcProxContainer.SecurityContext = &corev1.SecurityContext{RunAsUser: &zero, RunAsGroup: &zero}
+	oidcProxContainer.VolumeMounts = append(oidcProxContainer.VolumeMounts, corev1.VolumeMount{Name: constants.TLSSecretVolume, MountPath: "/tls-secret"})
 	if len(vmo.Labels[constants.ClusterNameData]) > 0 {
-		secretVolume := corev1.Volume{Name: "secret", VolumeSource: corev1.VolumeSource{
+		clusterSecretVolume := corev1.Volume{Name: constants.ClusterSecretVolumeName, VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName: constants.MCRegistrationSecret,
 			},
 		}}
-		volumes = append(volumes, secretVolume)
-		oidcProxContainer.VolumeMounts = append(oidcProxContainer.VolumeMounts, corev1.VolumeMount{Name: "secret", MountPath: "/secret"})
+		volumes = append(volumes, clusterSecretVolume)
+		oidcProxContainer.VolumeMounts = append(oidcProxContainer.VolumeMounts, corev1.VolumeMount{Name: constants.ClusterSecretVolumeName, MountPath: "/cluster-secret"})
 	}
-	volumes = append(volumes, configVolume)
 	return volumes, &oidcProxContainer
 }
 

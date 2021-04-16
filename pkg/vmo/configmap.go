@@ -307,10 +307,10 @@ func oidcStartup() string {
 	return fmt.Sprintf(constants.OidcStartupTemp, "`dirname $0`")
 }
 
-func oidcNginxConf(port int, ssl bool) string {
+func oidcNginxConf(port int, isManaged bool) string {
 	sslVerify := ""
 	sslTrusted := ""
-	if ssl {
+	if isManaged {
 		sslVerify = constants.OidcSslVerifyOptions
 		sslTrusted = constants.OidcSslTrustedOptions
 	}

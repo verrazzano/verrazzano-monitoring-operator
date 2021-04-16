@@ -382,7 +382,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Len(sts.Spec.VolumeClaimTemplates, 0, "Incorrect number of VolumeClaimTemplates")
 
 	volumes := sts.Spec.Template.Spec.Volumes
-	assert.Len(volumes, 2)
+	assert.Len(volumes, 3)
 	assert.Equal(esMasterVolName, volumes[0].Name, "Incorrect name for master volume")
 	volumeSource := volumes[0].VolumeSource
 	assert.NotNil(volumeSource.EmptyDir, "volumeSource should be EmptyDir")
