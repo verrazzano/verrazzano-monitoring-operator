@@ -241,12 +241,12 @@ scrape_configs:
  - job_name: 'node-exporter'
    scrape_interval: 20s
    scrape_timeout: 15s
-	kubernetes_sd_configs:
-	  - role: endpoints
-	relabel_configs:
-	- source_labels: [__meta_kubernetes_endpoints_name]
-	  regex: 'node-exporter'
-	  action: keep
+   kubernetes_sd_configs:
+   - role: endpoints
+   relabel_configs:
+   - source_labels: [__meta_kubernetes_endpoints_name]
+     regex: 'node-exporter'
+     action: keep
 
  - job_name: 'PushGateway'
    honor_labels: true
