@@ -1,13 +1,14 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package config
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
