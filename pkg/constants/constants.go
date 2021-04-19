@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -166,12 +166,6 @@ const PrometheusIstioCertsMountPath = "/etc/istio-certs/"
 
 // PrometheusConfigContainerLocation Prometheus config inside container
 const PrometheusConfigContainerLocation = "/etc/prometheus/config/prometheus.yml"
-
-// PrometheusNodeExporterPath Prometheus node exporter mountpath
-const PrometheusNodeExporterPath = "/prometheus-disk"
-
-// ElasticSearchNodeExporterPath Prometheus node exporter mountpath
-const ElasticSearchNodeExporterPath = "/elasticsearch-disk"
 
 // ExternalDNSTTLSeconds value used for ingress annotation
 const ExternalDNSTTLSeconds = 60

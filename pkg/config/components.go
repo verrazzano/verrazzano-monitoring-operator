@@ -1,13 +1,14 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package config
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,7 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &NodeExporter, &OidcProxy}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &ESWait, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
@@ -192,15 +193,6 @@ var ConfigReloader = ComponentDetails{
 	EnvName:         "CONFIG_RELOADER_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	Privileged:      false,
-}
-
-// NodeExporter is the default node-exporter configuration
-var NodeExporter = ComponentDetails{
-	Name:            "node-exporter",
-	EnvName:         "NODE_EXPORTER_IMAGE",
-	ImagePullPolicy: constants.DefaultImagePullPolicy,
-	Port:            9100,
-	Privileged:      true,
 }
 
 const (

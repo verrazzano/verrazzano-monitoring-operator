@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package services
@@ -26,7 +26,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 	}
 	if vmo.Spec.Prometheus.Enabled {
 		service := createServiceElement(vmo, config.Prometheus)
-		service.Spec.Ports = append(service.Spec.Ports, resources.GetServicePort(config.NodeExporter))
 		services = append(services, service)
 		services = append(services, createServiceElement(vmo, config.PrometheusGW))
 		if config.Prometheus.OidcProxy != nil {

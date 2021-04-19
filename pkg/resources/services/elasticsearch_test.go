@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package services
@@ -51,7 +51,7 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 
 	assert.Equal(t, masterService.Spec.Ports[0].Port, int32(constants.ESTransportPort))
 
-	assert.Equal(t, dataService.Spec.Ports[0].Port, int32(9100))
+	assert.Equal(t, dataService.Spec.Ports[0].Port, int32(9200))
 	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.ESHttpPort))
 	assert.Equal(t, dataService.Spec.Selector, expectedSelector)
 }
