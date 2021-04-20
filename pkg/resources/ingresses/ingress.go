@@ -268,5 +268,9 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 		ingress.Annotations["kubernetes.io/tls-acme"] = "false"
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
+	// add the annotations required for istio sidecar routing
+	ingress.Annotations["nginx.ingress.kubernetes.io/service-upstream"] = "true"
+	ingress.Annotations["nginx.ingress.kubernetes.io/upstream-vhost"] = "${service_name}.${namespace}.svc.cluster.local"
+
 	return ingress
 }
