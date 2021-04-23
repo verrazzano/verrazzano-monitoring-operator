@@ -31,7 +31,7 @@ func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]
 
 // GetSpecID returns app label
 func GetSpecID(vmoName string, componentName string) map[string]string {
-	return map[string]string{constants.ServiceAppLabel: vmoName + "-" + componentName}
+	return map[string]string{constants.ServiceAppLabel: vmoName + "-" + componentName, "verazzano.istio.sidecar.enabled": "true"}
 }
 
 // GetServicePort returns service port
