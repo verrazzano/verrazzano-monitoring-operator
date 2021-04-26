@@ -158,6 +158,14 @@ const PrometheusConfigVersions = "prometheus-config-versions"
 // PrometheusConfigMountPath Prometheus config mountpath
 const PrometheusConfigMountPath = "/etc/prometheus/config"
 
+// IstioCertsMountPath Istio certs mountpath
+const IstioCertsMountPath = "/etc/istio-cert"
+
+// IstioCertsOutputPath istio certs output path setting value
+const IstioCertsOutputPath = ` | 
+  proxyMetadata:
+    OUTPUT_CERTS: /etc/istio-certs`
+
 // PrometheusRulesMountPath Prometheus rules mountpath
 const PrometheusRulesMountPath = "/etc/prometheus/rules"
 
