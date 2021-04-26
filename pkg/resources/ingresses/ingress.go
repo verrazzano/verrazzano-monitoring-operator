@@ -123,7 +123,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 
 	if vmo.Spec.Grafana.Enabled {
 		if config.Grafana.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Grafana))
+			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Grafana, false))
 		} else {
 			// Create Ingress Rule for Grafana Endpoint
 			ingRule := createIngressRuleElement(vmo, config.Grafana)
@@ -145,7 +145,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 		}
 		ingresses = append(ingresses, ingress)
 		if config.Prometheus.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Prometheus))
+			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Prometheus, true))
 		} else {
 			// Create Ingress Rule for Prometheus Endpoint
 			ingRule = createIngressRuleElement(vmo, config.Prometheus)
@@ -171,7 +171,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	}
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Kibana))
+			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Kibana, false))
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
 			ingRule := createIngressRuleElement(vmo, config.Kibana)
@@ -187,7 +187,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
 		if config.ElasticsearchIngest.OidcProxy != nil {
-			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
+			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest, false)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 			ingresses = append(ingresses, ingress)
 		} else {
@@ -227,7 +227,7 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 }
 
 // newOidcProxyIngress creates the Ingress of the OidcProxy
-func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *extensions_v1beta1.Ingress {
+func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails, skipIstioEnvoy bool) *extensions_v1beta1.Ingress {
 	serviceName := resources.OidcProxyMetaName(vmo.Name, component.Name)
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
 	ingressRule := extensions_v1beta1.IngressRule{
@@ -275,6 +275,8 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 		ingress.Annotations["kubernetes.io/tls-acme"] = "false"
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
-	applyIstioAnnotations(ingress)
+	if !skipIstioEnvoy {
+		applyIstioAnnotations(ingress)
+	}
 	return ingress
 }
