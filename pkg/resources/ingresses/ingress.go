@@ -117,6 +117,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 		if err != nil {
 			return ingresses, err
 		}
+		applyIstioAnnotations(ingress)
 		ingresses = append(ingresses, ingress)
 	}
 
@@ -207,6 +208,12 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 	return ingresses, nil
 }
 
+// applyIstioAnnotations adds the istio annotations required for routing via envoy
+func applyIstioAnnotations(ingress *extensions_v1beta1.Ingress) {
+	ingress.Annotations["nginx.ingress.kubernetes.io/service-upstream"] = "true"
+	ingress.Annotations["nginx.ingress.kubernetes.io/upstream-vhost"] = "${service_name}.${namespace}.svc.cluster.local"
+}
+
 // noAuthOnHealthCheckSnippet returns an NGINX configuration snippet with Basic Authentication disabled for the the
 // specified component's health check path.
 func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, disambiguationRoot string, componentDetails config.ComponentDetails) string {
@@ -268,5 +275,6 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 		ingress.Annotations["kubernetes.io/tls-acme"] = "false"
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
+	applyIstioAnnotations(ingress)
 	return ingress
 }
