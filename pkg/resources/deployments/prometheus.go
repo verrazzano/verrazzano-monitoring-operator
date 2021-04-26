@@ -40,6 +40,9 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		prometheusDeployment.Spec.Template.Spec.Containers[0].Env = env
 
 		// istio should only intercept traffic bound for auth/keycloak and ignore scrape targets
+		if prometheusDeployment.Spec.Template.Annotations == nil {
+			prometheusDeployment.Spec.Template.Annotations = make(map[string]string)
+		}
 		prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "443,8443"
 		prometheusDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = constants.IstioCertsOutputPath
 
