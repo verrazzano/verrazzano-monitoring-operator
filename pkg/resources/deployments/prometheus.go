@@ -39,6 +39,9 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		env = append(env, corev1.EnvVar{Name: "AVAILABILITY_DOMAIN", Value: getAvailabilityDomainForPvcIndex(&vmo.Spec.Prometheus.Storage, pvcToAdMap, i)})
 		prometheusDeployment.Spec.Template.Spec.Containers[0].Env = env
 
+		// istio should only intercept traffic bound for auth/keycloak and ignore scrape targets
+		prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "443,8443"
+
 		// Volumes for Prometheus config and alert rules
 		configVolumes := []corev1.Volume{
 			{
@@ -57,6 +60,14 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 					},
 				},
 			},
+			{
+				Name: "istio-certs",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{
+						Medium: corev1.StorageMediumMemory,
+					},
+				},
+			},
 		}
 		configVolumeMounts := []corev1.VolumeMount{
 			{
@@ -66,6 +77,10 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 			{
 				Name:      "config-volume",
 				MountPath: constants.PrometheusConfigMountPath,
+			},
+			{
+				Name:      "istio-certs",
+				MountPath: "/etc/istio-certs",
 			},
 		}
 		prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMounts...)
