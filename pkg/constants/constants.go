@@ -159,7 +159,7 @@ const PrometheusConfigVersions = "prometheus-config-versions"
 const PrometheusConfigMountPath = "/etc/prometheus/config"
 
 // IstioCertsMountPath Istio certs mountpath
-const IstioCertsMountPath = "/etc/istio-cert"
+const IstioCertsMountPath = "/etc/istio-certs"
 
 // IstioCertsOutputPath istio certs output path setting value
 const IstioCertsOutputPath = ` | 
