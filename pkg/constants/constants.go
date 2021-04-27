@@ -162,7 +162,7 @@ const PrometheusConfigMountPath = "/etc/prometheus/config"
 const IstioCertsMountPath = "/etc/istio-certs"
 
 // IstioCertsOutputPath istio certs output path setting value
-const IstioCertsOutputPath = `{"proxyMetadata":{ "OUTPUT_CERTS": "/etc/istio-certs"}}`
+const IstioCertsOutputPath = `{"proxyMetadata":{ "OUTPUT_CERTS": "/etc/istio-output-certs"}}`
 
 // PrometheusRulesMountPath Prometheus rules mountpath
 const PrometheusRulesMountPath = "/etc/prometheus/rules"
