@@ -45,7 +45,7 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		}
 		prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "443,8443"
 		prometheusDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = constants.IstioCertsOutputPath
-		prometheusDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs", "mountPath": "/etc/istio-certs"}]`
+		prometheusDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs-dir", "mountPath": "/etc/istio-output-certs"}]`
 
 		// Volumes for Prometheus config and alert rules
 		configVolumes := []corev1.Volume{
@@ -66,7 +66,7 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 				},
 			},
 			{
-				Name: "istio-certs",
+				Name: "istio-certs-dir",
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{
 						Medium: corev1.StorageMediumMemory,
@@ -74,6 +74,7 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 				},
 			},
 		}
+		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, configVolumes...)
 		configVolumeMounts := []corev1.VolumeMount{
 			{
 				Name:      "rules-volume",
@@ -86,11 +87,10 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		}
 		prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMounts...)
 		istioVolumeMount := corev1.VolumeMount{
-			Name:      "istio-certs",
+			Name:      "istio-certs-dir",
 			MountPath: constants.IstioCertsMountPath,
 		}
 		prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(prometheusDeployment.Spec.Template.Spec.Containers[0].VolumeMounts, istioVolumeMount)
-		prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, configVolumes...)
 
 		// Readiness/liveness settings
 		prometheusDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 30
