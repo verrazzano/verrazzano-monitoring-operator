@@ -43,7 +43,7 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		if prometheusDeployment.Spec.Template.Annotations == nil {
 			prometheusDeployment.Spec.Template.Annotations = make(map[string]string)
 		}
-		prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "443,8443"
+		prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "8443"
 		prometheusDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = constants.IstioCertsOutputPath
 		prometheusDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs-dir", "mountPath": "/etc/istio-output-certs"}]`
 
