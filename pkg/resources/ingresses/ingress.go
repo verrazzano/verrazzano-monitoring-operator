@@ -140,6 +140,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 		host := config.PrometheusGW.Name + "." + vmo.Spec.URI
 		healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.PrometheusGW)
 		ingress, err := createIngressElement(vmo, host, config.PrometheusGW, ingRule, healthLocations)
+		applyIstioAnnotations(ingress)
 		if err != nil {
 			return ingresses, err
 		}
