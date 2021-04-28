@@ -39,15 +39,10 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		env = append(env, corev1.EnvVar{Name: "AVAILABILITY_DOMAIN", Value: getAvailabilityDomainForPvcIndex(&vmo.Spec.Prometheus.Storage, pvcToAdMap, i)})
 		prometheusDeployment.Spec.Template.Spec.Containers[0].Env = env
 
-		// istio should only intercept traffic bound for auth/keycloak and ignore scrape targets
-		if prometheusDeployment.Spec.Template.Annotations == nil {
-			prometheusDeployment.Spec.Template.Annotations = make(map[string]string)
-		}
-		prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "8443"
-		prometheusDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = constants.IstioCertsOutputPath
-		prometheusDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs-dir", "mountPath": "/etc/istio-output-certs"}]`
+		setIstioAnnotations(prometheusDeployment)
 
-		// Volumes for Prometheus config and alert rules
+		// Volumes for Prometheus config and alert rules.  The istio-certs-dir volume supports the output of the istio
+		// certs for use by prometheus scrape configurations
 		configVolumes := []corev1.Volume{
 			{
 				Name: "rules-volume",
@@ -139,6 +134,19 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		prometheusNodeDeployments = append(prometheusNodeDeployments, prometheusDeployment)
 	}
 	return prometheusNodeDeployments
+}
+
+// setIstioAnnotations applies the annotations to ensure that:
+// 1. Istio outputs its certs to the designated volume mount
+// 2. The istio proxy only intercepts traffic bound for auth/keycloak and ignores scrape targets (only traffic for port
+//    8443 is intercepted
+func setIstioAnnotations(prometheusDeployment *appsv1.Deployment) {
+	if prometheusDeployment.Spec.Template.Annotations == nil {
+		prometheusDeployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "8443"
+	prometheusDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = constants.IstioCertsOutputPathEnvValue
+	prometheusDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs-dir", "mountPath": "/etc/istio-output-certs"}]`
 }
 
 // Creates Prometheus Push Gateway deployment element
