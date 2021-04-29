@@ -144,8 +144,10 @@ func setIstioAnnotations(prometheusDeployment *appsv1.Deployment) {
 	if prometheusDeployment.Spec.Template.Annotations == nil {
 		prometheusDeployment.Spec.Template.Annotations = make(map[string]string)
 	}
+	// these annotation are required uniquely for prometheus to support both the request routing to keycloak via the envoy and the writing
+	// of the istio certs to a volume that can be accessed for scraping
 	prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = "8443"
-	prometheusDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = constants.IstioCertsOutputPathEnvValue
+	prometheusDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = `{"proxyMetadata":{ "OUTPUT_CERTS": "/etc/istio-output-certs"}}`
 	prometheusDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs-dir", "mountPath": "/etc/istio-output-certs"}]`
 }
 
