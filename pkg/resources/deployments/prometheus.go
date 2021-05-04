@@ -35,7 +35,8 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 			fmt.Sprintf("--storage.tsdb.retention.time=%dd", vmo.Spec.Prometheus.RetentionPeriod),
 			"--web.enable-lifecycle",
 			"--web.enable-admin-api",
-			"--storage.tsdb.no-lockfile"}
+			"--storage.tsdb.no-lockfile",
+			"--log.level=debug"}
 
 		// Not strictly necessary, but makes debugging easier to have a trace of the AD in the deployment itself
 		env := prometheusDeployment.Spec.Template.Spec.Containers[0].Env
