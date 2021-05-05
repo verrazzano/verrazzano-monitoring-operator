@@ -348,3 +348,48 @@ func getDeploymentByName(deploymentName string, deploymentList []*appsv1.Deploym
 	}
 	return nil, fmt.Errorf("deployment %s not found", deploymentName)
 }
+
+func TestWaitForElasticsearchTargetVersion(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			CascadingDelete: true,
+			Grafana: vmcontrollerv1.Grafana{
+				Enabled: true,
+			},
+			Prometheus: vmcontrollerv1.Prometheus{
+				Enabled: true,
+				//Replicas: 1,
+			},
+			AlertManager: vmcontrollerv1.AlertManager{
+				Enabled: true,
+			},
+			Kibana: vmcontrollerv1.Kibana{
+				Enabled: true,
+			},
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled:    true,
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+			},
+		},
+	}
+	targetVersion := "7.4.2"
+	config.ESWaitTargetVersion = targetVersion
+	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	if err != nil {
+		t.Error(err)
+	}
+	kibana, _ := getDeploymentByName(resources.GetMetaName(vmo.Name, config.Kibana.Name), deployments)
+	assert.Contains(t, kibana.Spec.Template.Spec.InitContainers[0].Args, targetVersion)
+
+	targetVersion = "7.5.2"
+	config.ESWaitTargetVersion = targetVersion
+
+	deployments, err = New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	if err != nil {
+		t.Error(err)
+	}
+	kibana, _ = getDeploymentByName(resources.GetMetaName(vmo.Name, config.Kibana.Name), deployments)
+	assert.Contains(t, kibana.Spec.Template.Spec.InitContainers[0].Args, targetVersion)
+}
