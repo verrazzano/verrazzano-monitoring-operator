@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package v1
@@ -48,9 +48,6 @@ type (
 		// Prometheus details
 		Prometheus Prometheus `json:"prometheus"`
 
-		// Prometheus Pushgateway details
-		PrometheusGW PrometheusGW `json:"prometheusGW"`
-
 		// Prometheus details
 		AlertManager AlertManager `json:"alertmanager"`
 
@@ -97,12 +94,6 @@ type (
 		Resources              Resources `json:"resources,omitempty"`
 		RetentionPeriod        int32     `json:"retentionPeriod,omitempty"`
 		Replicas               int32     `json:"replicas,omitempty"`
-	}
-
-	// PrometheusGW Prometheus Pushgateway details
-	PrometheusGW struct {
-		ConfigMap string    `json:"configMap,omitempty"`
-		Resources Resources `json:"resources,omitempty"`
 	}
 
 	// AlertManager details

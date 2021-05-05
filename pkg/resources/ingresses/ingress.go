@@ -136,23 +136,14 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta
 		}
 	}
 	if vmo.Spec.Prometheus.Enabled {
-		ingRule := createIngressRuleElement(vmo, config.PrometheusGW)
-		host := config.PrometheusGW.Name + "." + vmo.Spec.URI
-		healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.PrometheusGW)
-		ingress, err := createIngressElement(vmo, host, config.PrometheusGW, ingRule, healthLocations)
-		setNginxRoutingAnnotations(ingress)
-		if err != nil {
-			return ingresses, err
-		}
-		ingresses = append(ingresses, ingress)
 		if config.Prometheus.OidcProxy != nil {
 			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Prometheus))
 		} else {
 			// Create Ingress Rule for Prometheus Endpoint
-			ingRule = createIngressRuleElement(vmo, config.Prometheus)
-			host = config.Prometheus.Name + "." + vmo.Spec.URI
-			healthLocations = noAuthOnHealthCheckSnippet(vmo, "", config.Prometheus)
-			ingress, err = createIngressElement(vmo, host, config.Prometheus, ingRule, healthLocations)
+			ingRule := createIngressRuleElement(vmo, config.Prometheus)
+			host := config.Prometheus.Name + "." + vmo.Spec.URI
+			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Prometheus)
+			ingress, err := createIngressElement(vmo, host, config.Prometheus, ingRule, healthLocations)
 			if err != nil {
 				return ingresses, err
 			}

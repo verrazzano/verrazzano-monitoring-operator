@@ -58,7 +58,7 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, 7, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 6, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
@@ -94,7 +94,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, 5, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
@@ -268,8 +268,6 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			// No resources specified on this endpoint
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
 			// No resources specified on API endpoint
-		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.PrometheusGW.Name) {
-			// No resources specified on Prometheus GW
 		} else if deployment.Name == resources.OidcProxyMetaName(vmo.Name, config.ElasticsearchIngest.Name) {
 			// No resources specified on OIDC proxy
 		} else {

@@ -8,9 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"go.uber.org/zap"
-
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -33,7 +32,7 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &PrometheusGW, &AlertManager, &AlertManagerCluster, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &AlertManager, &AlertManagerCluster, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
@@ -73,17 +72,6 @@ var PrometheusInit = ComponentDetails{
 	EnvName:         "PROMETHEUS_INIT_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	DataDir:         "/prometheus",
-}
-
-// PrometheusGW is the default Prometheus Push Gateway configuration
-var PrometheusGW = ComponentDetails{
-	Name:              "prometheus-gw",
-	EnvName:           "PROMETHEUS_GATEWAY_IMAGE",
-	ImagePullPolicy:   constants.DefaultImagePullPolicy,
-	Port:              9091,
-	LivenessHTTPPath:  "/-/healthy",
-	ReadinessHTTPPath: "/-/ready",
-	Privileged:        false,
 }
 
 // AlertManager is the default AlertManager configuration

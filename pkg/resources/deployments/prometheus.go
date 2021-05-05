@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -151,27 +152,9 @@ func setIstioAnnotations(prometheusDeployment *appsv1.Deployment) {
 	prometheusDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs-dir", "mountPath": "/etc/istio-output-certs"}]`
 }
 
-// Creates Prometheus Push Gateway deployment element
-func createPrometheusPushGatewayDeploymentElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.Deployment {
-	pushGatewayDeployment := createDeploymentElement(vmo, nil, &vmo.Spec.PrometheusGW.Resources, config.PrometheusGW)
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.PrometheusGW.ImagePullPolicy
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 5
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 10
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold = 10
-
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 10
-	pushGatewayDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
-
-	return pushGatewayDeployment
-}
-
 // Creates *all* Prometheus-related deployment elements
 func createPrometheusDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var deployList []*appsv1.Deployment
 	deployList = append(deployList, createPrometheusNodeDeploymentElements(vmo, pvcToAdMap)...)
-	deployList = append(deployList, createPrometheusPushGatewayDeploymentElement(vmo))
 	return deployList
 }
