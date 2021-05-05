@@ -70,7 +70,7 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
 	assert.Equal(t, 5, len(promDeployment.Spec.Template.Annotations))
 	assert.Equal(t, "8443", promDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"])
-	assert.Equal(t, "7001,8001,8080", promDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"])
+	assert.Equal(t, "80,443,7001,8001,8080,9612,15090", promDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"])
 	assert.Equal(t, "{\"proxyMetadata\":{ \"OUTPUT_CERTS\": \"/etc/istio-output-certs\"}}", promDeployment.Spec.Template.Annotations["proxy.istio.io/config"])
 	assert.Equal(t, "[{\"name\": \"istio-certs-dir\", \"mountPath\": \"/etc/istio-output-certs\"}]", promDeployment.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"])
 }
