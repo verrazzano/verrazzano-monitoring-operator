@@ -177,6 +177,14 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
+		waitForEsInitContainer := corev1.Container{
+			Name:  config.ESWait.Name,
+			Image: config.ESWait.Image,
+			// `-number-of-data-nodes 1` tells eswait to look for at least one data node
+			// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
+			Args: []string{"-number-of-data-nodes", "1", "-timeout", "5m", elasticsearchURL, config.ESWaitTargetVersion},
+		}
+		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
 		if config.Kibana.OidcProxy != nil {
 			oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Kibana.Resources, &config.Kibana)
 			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, oidcVolumes...)

@@ -158,11 +158,11 @@ const PrometheusConfigVersions = "prometheus-config-versions"
 // PrometheusConfigMountPath Prometheus config mountpath
 const PrometheusConfigMountPath = "/etc/prometheus/config"
 
-// IstioCertsMountPath Istio certs mountpath
-const IstioCertsMountPath = "/etc/istio-certs"
-
 // PrometheusRulesMountPath Prometheus rules mountpath
 const PrometheusRulesMountPath = "/etc/prometheus/rules"
+
+// PrometheusIstioCertsMountPath Prometheus Istio certs mountpath
+const PrometheusIstioCertsMountPath = "/etc/istio-certs/"
 
 // PrometheusConfigContainerLocation Prometheus config inside container
 const PrometheusConfigContainerLocation = "/etc/prometheus/config/prometheus.yml"
