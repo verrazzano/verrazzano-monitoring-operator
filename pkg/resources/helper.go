@@ -403,8 +403,7 @@ func OidcProxyIngressHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, comp
 func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources, component *config.ComponentDetails) ([]corev1.Volume, *corev1.Container) {
 	var volumes []corev1.Volume
 	configName := OidcProxyConfigName(vmo.Name, component.Name)
-	var defaultMode int32 = 0744
-	var zero int64 = 0
+	var defaultMode int32 = 0755
 	configVolume := corev1.Volume{Name: configName, VolumeSource: corev1.VolumeSource{
 		ConfigMap: &corev1.ConfigMapVolumeSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: configName},
@@ -414,7 +413,6 @@ func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResour
 	oidcProxContainer := CreateContainerElement(nil, vmoResources, *component.OidcProxy)
 	oidcProxContainer.Command = []string{"/bootstrap/startup.sh"}
 	oidcProxContainer.VolumeMounts = []corev1.VolumeMount{{Name: configName, MountPath: "/bootstrap"}}
-	oidcProxContainer.SecurityContext = &corev1.SecurityContext{RunAsUser: &zero, RunAsGroup: &zero}
 	if len(vmo.Labels[constants.ClusterNameData]) > 0 {
 		secretVolume := corev1.Volume{Name: "secret", VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
