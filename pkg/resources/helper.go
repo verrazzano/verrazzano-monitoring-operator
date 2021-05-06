@@ -212,7 +212,6 @@ func GetElasticsearchInitContainer() *corev1.Container {
 
 // GetDefaultPrometheusConfiguration returns the default Prometheus configuration for a VMO instance
 func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
-	pushGWUrl := GetMetaName(vmo.Name, config.PrometheusGW.Name) + ":" + strconv.Itoa(config.PrometheusGW.Port)
 	alertmanagerURL := fmt.Sprintf(GetMetaName(vmo.Name, config.AlertManager.Name)+":%d", config.AlertManager.Port)
 	// Prometheus does not allow any special characters in their label names, So they need to be removed using reg exp
 	re := regexp.MustCompile("[^a-zA-Z0-9_]")
@@ -247,13 +246,6 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_endpoints_name]
      regex: 'node-exporter'
      action: keep
-
- - job_name: 'PushGateway'
-   honor_labels: true
-   scrape_interval: 20s
-   scrape_timeout: 15s
-   static_configs:
-   - targets: ["` + pushGWUrl + `"]
 
  - job_name: 'cadvisor'
    scrape_interval: 20s
@@ -367,12 +359,6 @@ func New64Val(value int64) *int64 {
 	return &val
 }
 
-// NewBool return a pointer to a boolean given a boolean value
-func NewBool(value bool) *bool {
-	var val = value
-	return &val
-}
-
 // IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
 func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
 	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
@@ -392,11 +378,6 @@ func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance)
 // oidcProxyName returns OIDC Proxy name of the component. ex. es-ingest-oidc
 func oidcProxyName(componentName string) string {
 	return componentName + "-" + config.OidcProxy.Name
-}
-
-// OidcProxySelector returns the Selector labels of the OIDC Proxy. ex. map[app:system-es-ingest-oidc]"}
-func OidcProxySelector(vmoName string, component string) map[string]string {
-	return GetSpecID(vmoName, oidcProxyName(component))
 }
 
 // OidcProxyMetaName returns OIDC Proxy meta name of the component. ex. vmi-system-es-ingest-oidc

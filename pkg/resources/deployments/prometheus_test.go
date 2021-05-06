@@ -39,7 +39,7 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers), "Length of generated containers")
 	assert.Equal(t, 8, len(promDeployment.Spec.Template.Spec.Volumes), "Length of generated volumes")
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers[0].VolumeMounts), "Length of generated mounts for Prometheus node")
-	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 }
 
 func TestPrometheusDeploymentsWithStorage(t *testing.T) {
@@ -69,7 +69,7 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers), "Length of generated containers")
 	assert.Equal(t, 8, len(promDeployment.Spec.Template.Spec.Volumes), "Length of generated volumes")
 	assert.Equal(t, 4, len(promDeployment.Spec.Template.Spec.Containers[0].VolumeMounts), "Length of generated mounts for Prometheus node")
-	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 }
 
 func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
@@ -93,7 +93,7 @@ func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, 5, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
 
 	promDeployment0, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {

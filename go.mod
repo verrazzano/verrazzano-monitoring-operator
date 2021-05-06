@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/gorilla/mux v1.7.3
 	github.com/kylelemons/godebug v1.1.0
+	github.com/oracle/oci-go-sdk v24.3.0+incompatible // indirect
 	github.com/prometheus/client_golang v1.2.1
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/zap v1.16.0
