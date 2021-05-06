@@ -62,7 +62,6 @@ vmi-vmi-1-es-ingest                                 1/1     1            0      
 vmi-vmi-1-grafana                                   1/1     1            0           35s
 vmi-vmi-1-kibana                                    1/1     1            0           35s
 vmi-vmi-1-prometheus-0                              1/1     1            0           35s
-vmi-vmi-1-prometheus-gw                             1/1     1            0           35s
 
 kubectl get services
 NAME                        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
@@ -76,7 +75,6 @@ vmi-vmi-1-es-master              ClusterIP      None            <none>          
 vmi-vmi-1-grafana                NodePort       10.96.125.142   <none>           3000:30634/TCP                        59s
 vmi-vmi-1-kibana                 NodePort       10.96.142.26    <none>           5601:30604/TCP                        57s
 vmi-vmi-1-prometheus             NodePort       10.96.187.224   <none>           9090:30053/TCP,9100:32382/TCP         59s
-vmi-vmi-1-prometheus-gw          NodePort       10.96.19.10     <none>           9091:31353/TCP                        59s
 ```
 
 Now, access the endpoints for the various components, for example (based on the above output).  Note that this only works
@@ -124,7 +122,7 @@ export DNSDOMAINNAME=dev.vmi1.verrazzano.io
 # NOTE - double check your operating system's openssl.cnf location...
 cp /etc/ssl/openssl.cnf /tmp/
 echo '[ subject_alt_name ]' >> /tmp/openssl.cnf
-echo "subjectAltName = DNS:*.$DNSDOMAINNAME, DNS:api.$DNSDOMAINNAME, DNS:grafana.$DNSDOMAINNAME, DNS:help.$DNSDOMAINNAME, DNS:kibana.$DNSDOMAINNAME, DNS:prometheus-gw.$DNSDOMAINNAME, DNS:prometheus.$DNSDOMAINNAME, DNS:elasticsearch.$DNSDOMAINNAME" >> /tmp/openssl.cnf
+echo "subjectAltName = DNS:*.$DNSDOMAINNAME, DNS:api.$DNSDOMAINNAME, DNS:grafana.$DNSDOMAINNAME, DNS:help.$DNSDOMAINNAME, DNS:kibana.$DNSDOMAINNAME, DNS:prometheus.$DNSDOMAINNAME, DNS:elasticsearch.$DNSDOMAINNAME" >> /tmp/openssl.cnf
 openssl req -x509 -nodes -newkey rsa:2048 \
   -config /tmp/openssl.cnf \
   -extensions subject_alt_name \
@@ -145,7 +143,6 @@ base URI is dev.vmi1.verrazzano.io.  We'll use host headers:
 ```
 curl -k --user vmo:changeme https://140.238.80.114 --header "Host: grafana.dev.vmi1.verrazzano.io"
 curl -k --user vmo:changeme https://140.238.80.114 --header "Host: prometheus.dev.vmi1.verrazzano.io"
-curl -k --user vmo:changeme https://140.238.80.114 --header "Host: prometheus-gw.dev.vmi1.verrazzano.io"
 curl -k --user vmo:changeme https://140.238.80.114 --header "Host: kibana.dev.vmi1.verrazzano.io"
 curl -k --user vmo:changeme https://140.238.80.114 --header "Host: elasticsearch.dev.vmi1.verrazzano.io"
 curl -k --user vmo:changeme https://140.238.80.114 --header "Host: api.dev.vmi1.verrazzano.io"

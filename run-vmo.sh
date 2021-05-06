@@ -40,10 +40,10 @@ set +x
 echo ""
   
 # Extract the images required by verrazzano-operator from values.yaml into environment variables.
+export ISTIO_PROXY_IMAGE=$(grep istioProxyImage ${VERRAZZANO_INSTALLER_REPO}//values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export GRAFANA_IMAGE=$(grep grafanaImage ${VERRAZZANO_INSTALLER_REPO}//values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export PROMETHEUS_IMAGE=$(grep prometheusImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export PROMETHEUS_INIT_IMAGE=$(grep prometheusInitImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export PROMETHEUS_GATEWAY_IMAGE=$(grep prometheusGatewayImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export ALERT_MANAGER_IMAGE=$(grep alertManagerImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export ELASTICSEARCH_WAIT_TARGET_VERSION=7.6.1
 export ELASTICSEARCH_WAIT_IMAGE=$(grep esWaitImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
@@ -66,10 +66,10 @@ export WATCH_NAMESPACE=${WATCH_NAMESPACE:-""}
 cat <<EOF
 Variables:
 
+ISTIO_PROXY_IMAGE=${ISTIO_PROXY_IMAGE}
 GRAFANA_IMAGE=${GRAFANA_IMAGE}
 PROMETHEUS_IMAGE=${PROMETHEUS_IMAGE}
 PROMETHEUS_INIT_IMAGE=${PROMETHEUS_INIT_IMAGE}
-PROMETHEUS_GATEWAY_IMAGE=${PROMETHEUS_GATEWAY_IMAGE}
 ALERT_MANAGER_IMAGE=${ALERT_MANAGER_IMAGE}
 ELASTICSEARCH_WAIT_TARGET_VERSION=${ELASTICSEARCH_WAIT_TARGET_VERSION}
 ELASTICSEARCH_WAIT_IMAGE=${ELASTICSEARCH_WAIT_IMAGE}

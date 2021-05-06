@@ -552,7 +552,7 @@ worker_processes  1;
 #error_log  logs/error.log;
 #error_log  logs/error.log  notice;
 #error_log  logs/error.log  info;
-#pid        logs/nginx.pid;
+pid        logs/nginx.pid;
 events {
     worker_connections  1024;
 }
@@ -629,15 +629,15 @@ cp $startupDir/auth.lua /etc/nginx/auth.lua
 cp $startupDir/conf.lua /etc/nginx/conf.lua
 nameserver=$(grep -i nameserver /etc/resolv.conf | awk '{split($0,line," "); print line[2]}')
 sed -i -e "s|_NAMESERVER_|${nameserver}|g" /etc/nginx/nginx.conf
-mkdir -p /usr/local/nginx/logs
-touch /usr/local/nginx/logs/error.log
+mkdir -p /etc/nginx/logs
+touch /etc/nginx/logs/error.log
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-/usr/local/nginx/sbin/nginx -c /etc/nginx/nginx.conf -t
-/usr/local/nginx/sbin/nginx -c /etc/nginx/nginx.conf
+/usr/local/nginx/sbin/nginx -c /etc/nginx/nginx.conf -p /etc/nginx -t
+/usr/local/nginx/sbin/nginx -c /etc/nginx/nginx.conf -p /etc/nginx
 while [ $? -ne 0 ]; do
     sleep 20
     echo "retry nginx startup ..."
-    /usr/local/nginx/sbin/nginx -c /etc/nginx/nginx.conf
+    /usr/local/nginx/sbin/nginx -c /etc/nginx/nginx.conf -p /etc/nginx
 done
-tail -f /usr/local/nginx/logs/error.log
+tail -f /etc/nginx/logs/error.log
 `

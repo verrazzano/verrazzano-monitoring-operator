@@ -1,10 +1,9 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package integ
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/tls"
@@ -209,7 +208,7 @@ func TestBasic4VMOMultiUserAuthn(t *testing.T) {
 	var err error
 	testDomain := "multiuser-authn.example.com"
 
-	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain + ",prometheus-gw." +
+	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain +
 		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
 
 	err = testutil.GenerateKeys(hosts, testDomain, "", 365*24*time.Hour, true, 2048, "P256")
@@ -260,7 +259,7 @@ func TestBasic4VMOWithIngress(t *testing.T) {
 	f := framework.Global
 
 	testDomain := "ingress-test.example.com"
-	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain + ",prometheus-gw." +
+	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain +
 		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
 
 	err := testutil.GenerateKeys(hosts, testDomain, "", 365*24*time.Hour, true, 2048, "P256")
@@ -428,7 +427,7 @@ func createTestSecrets(secretName, testDomain string) (*corev1.Secret, error) {
 	}
 
 	// Create TLS Secret
-	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain + ",prometheus-gw." +
+	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain +
 		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
 
 	err := testutil.GenerateKeys(hosts, testDomain, "", 365*24*time.Hour, true, 2048, "P256")
@@ -450,7 +449,7 @@ func createTestSecrets(secretName, testDomain string) (*corev1.Secret, error) {
 func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
 	var httpProtocol, myURL, host, body string
-	var promPort, promGWPort, apiPort, esPort int32
+	var promPort, apiPort, esPort int32
 	var resp *http.Response
 	var err error
 	var headers = map[string]string{}
@@ -468,12 +467,10 @@ func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 	if f.Ingress {
 		httpProtocol = "https://"
 		promPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
-		promGWPort = promPort
 		apiPort = promPort
 	} else {
 		httpProtocol = "http://"
 		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name+"-0")
-		promGWPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.PrometheusGW.Name)
 		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
 		esPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name)
 	}
@@ -481,9 +478,6 @@ func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 	// Verify service endpoint connectivity
 	// Verify Prometheus availability
 	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
-
-	// Verify Prometheus-GW availability
-	waitForEndpoint(t, vmo, "Prometheus-GW", promGWPort, "/")
 
 	// Verify API availability
 	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
@@ -503,12 +497,7 @@ func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 	}
 	fmt.Println("Test 1: Validate get Unauthorized for reporter userd - PASSED")
 
-	//Test 2: Validate that reporter user is able to send to Pushgateway
-	pushGatewayJobName := strings.Replace(f.RunID, "-", "_", -1)
-	pushGatewayJobURL := fmt.Sprintf("%s%s:%d/metrics/job/%s", httpProtocol, f.ExternalIP, promGWPort, pushGatewayJobName)
-	metricData := pushGatewayJobName + " 3.14159\n"
-
-	// Test 3: Validate reporter use is able to push to elasticsearch
+	// Test 2: Validate reporter use is able to push to elasticsearch
 	index := strings.ToLower("verifyElasticsearch") + f.RunID
 	docPath := "/" + index + "/_doc/1"
 
@@ -532,17 +521,6 @@ func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 	}
 	fmt.Println("  ==> Document " + docPath + " created")
 
-	// Push metric to the Push Gateway
-	resp, _, err = sendRequestWithUserPassword("POST", pushGatewayJobURL, "prometheus-gw."+vmo.Spec.URI, false, headers, metricData, reporterUsername, reporterPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected response code %d from POST on %s but got %d: (%v)", http.StatusAccepted, pushGatewayJobURL, resp.StatusCode, resp)
-	}
-	fmt.Println("Test 2: Validate that reporter user is able to send to Pushgateway - PASSED")
-	fmt.Println("  ==> Metric pushed to Push Gateway")
-
 }
 
 func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
@@ -563,7 +541,6 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	var deploymentNamesToReplicas = map[string]int32{
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.API.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.PrometheusGW.Name:        1,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name:        vmo.Spec.AlertManager.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name:              vmo.Spec.Kibana.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Elasticsearch.IngestNode.Replicas,
@@ -636,11 +613,7 @@ func verifyAPI(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 
 func verifyPrometheus(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
-	var promPort, promGWPort, apiPort int32
-	var resp *http.Response
-	var httpProtocol, myURL, body, host, payload string
-	var err error
-	var headers = map[string]string{}
+	var promPort, apiPort int32
 
 	if !vmo.Spec.Prometheus.Enabled {
 		return
@@ -649,124 +622,18 @@ func verifyPrometheus(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 	// What port should we use?
 	if f.Ingress {
 		promPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
-		promGWPort = promPort
 		apiPort = promPort
-		httpProtocol = "https://"
 	} else {
 		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
-		promGWPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.PrometheusGW.Name)
 		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
-		httpProtocol = "http://"
 	}
 
 	// Verify Prometheus availability
 	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
 
-	// Verify Prometheus-GW availability
-	waitForEndpoint(t, vmo, "Prometheus-GW", promGWPort, "/")
-
 	// Verify API availability
 	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
 	fmt.Println("  ==> Service endpoint is available")
-
-	// Add local Prometheus /metrics
-	var prometheusConfig = `
- - job_name: '` + f.RunID + `'` + `
-   static_configs:
-   - targets: ["` + "localhost:9090" + `"]`
-
-	pushGatewayJobName := strings.Replace(f.RunID, "-", "_", -1)
-	pushGatewayJobURL := fmt.Sprintf("%s%s:%d/metrics/job/%s", httpProtocol, f.ExternalIP, promGWPort, pushGatewayJobName)
-	metricName := pushGatewayJobName
-	metricData := pushGatewayJobName + " 3.14159\n"
-	prometheusURL := fmt.Sprintf("%s%s:%d", httpProtocol, f.ExternalIP, promPort)
-
-	if testutil.RunBeforePhase(f) {
-
-		// GET - /prometheus/config
-		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/config")
-		host = "api." + vmo.Spec.URI
-		resp, body, err = sendRequest("GET", myURL, host, false, headers, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)", http.StatusOK, "/prometheus/config", resp.StatusCode, resp)
-		}
-
-		// PUT -- /prometheus/config
-		payload = body + prometheusConfig
-		resp, _, err = sendRequest("PUT", myURL, host, false, headers, payload)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-			t.Fatalf("Expected response code %d or %d from PUT on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, myURL, resp.StatusCode, resp)
-		}
-		fmt.Println("  ==> Prometheus config updated")
-		fmt.Println("  ==> Local Prometheus scrape target defined")
-
-		// Verify Push Gateway scrape target is present in Prometheus
-		err = waitForKeyWithValueResponse("prometheus."+vmo.Spec.URI, f.ExternalIP, promPort, "/api/v1/targets", "job", "PushGateway")
-		if err != nil {
-			t.Fatal(err)
-		}
-		fmt.Println("  ==> Push Gateway target defined ")
-
-		// Push metric to the Push Gateway
-		resp, _, err = sendRequest("POST", pushGatewayJobURL, "prometheus-gw."+vmo.Spec.URI, false, headers, metricData)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-			t.Fatalf("Expected response code %d or %d from POST on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, pushGatewayJobURL, resp.StatusCode, resp)
-		}
-		fmt.Println("  ==> Metric pushed to Push Gateway")
-
-		// Wait for metric to appear in Prometheus
-		err = waitForPrometheusMetric(vmo.Spec.URI, prometheusURL, metricName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		fmt.Println("  ==> Metric propagated to Prometheus")
-
-		// We delete the metric from GW here to ensure that by the time we are verifying the metric after
-		// upgrade, we don't have any _new_ data coming in from the GW.  We want to be verifying old data at that point.
-
-		resp, _, err = sendRequest("DELETE", pushGatewayJobURL, "prometheus-gw."+vmo.Spec.URI, false, headers, metricData)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp.StatusCode != http.StatusAccepted {
-			t.Fatalf("Expected response code %d from DELETE on %s but got %d: (%v)", http.StatusAccepted, pushGatewayJobURL, resp.StatusCode, resp)
-		}
-		fmt.Println("  ==> Metric deleted from Push Gateway")
-	}
-
-	if testutil.RunAfterPhase(f) {
-		// Verify Prometheus config using VMO API Server
-
-		myURL := fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/config")
-		resp, body, _ = sendRequest("GET", myURL, "api."+vmo.Spec.URI, false, headers, "")
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)", http.StatusOK, "/prometheus/config", resp.StatusCode, resp)
-		}
-		if !bytes.Contains([]byte(body), []byte(prometheusConfig)) {
-			t.Fatalf("Expected response body %s but got %s", prometheusConfig, body)
-		}
-
-		// Verify local scrape target was added by the API server
-		err = waitForKeyWithValueResponse("prometheus."+vmo.Spec.URI, f.ExternalIP, promPort, "/api/v1/targets", "job", f.RunID)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = waitForPrometheusMetric(vmo.Spec.URI, prometheusURL, metricName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		fmt.Println("  ==> Historical metric defined in Prometheus")
-	}
 }
 
 func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
@@ -1600,7 +1467,6 @@ func verifyVMODeploymentWithIngress(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 		{"api", "api", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name, "/prometheus/config", 1},
 		{"grafana", "grafana", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name, "", 1},
 		{"prometheus", "prometheus", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + "-0", "/graph", 1},
-		{"prometheus-gw", "prometheus-gw", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.PrometheusGW.Name, "", 1},
 		{"alertmanager", "alertmanager", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name, "", 1},
 		{"elasticsearch-ingest", "elasticsearch", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name, "", 1},
 		{"kibana", "kibana", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name, "/app/kibana", 1},

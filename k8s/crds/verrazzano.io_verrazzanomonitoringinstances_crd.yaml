@@ -1,11 +1,9 @@
-# Copyright (C) 2020, Oracle and/or its affiliates.
+# Copyright (c) 2020, 2021, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: verrazzanomonitoringinstances.verrazzano.io
-  annotations:
-    "helm.sh/hook": crd-install
 spec:
   group: verrazzano.io
   version: v1
@@ -31,8 +29,8 @@ spec:
               pattern: '^\w[^._]+$'
               maxLength: 32
           required:
-          - name
-          - namespace
+            - name
+            - namespace
         spec:
           properties:
             lock:
@@ -62,7 +60,7 @@ spec:
                       type: string
                       pattern: '^[1-9]\d*(Mi|Gi)$'
               required:
-              - enabled
+                - enabled
             api:
               properties:
                 replicas:
@@ -238,25 +236,6 @@ spec:
                 retentionPeriod:
                   type: number
                   pattern: '\d+'
-            prometheusGW:
-              properties:
-                configMap:
-                  type: string
-                  pattern: '^\w[^.]+$'
-                resources:
-                  properties:
-                    limitCPU:
-                      type: string
-                      pattern: '^([1-9]\d*|\d+\.\d{1,2})m?$'
-                    limitMemory:
-                      type: string
-                      pattern: '^[1-9]\d*(Mi|Gi)$'
-                    requestCPU:
-                      type: string
-                      pattern: '^([1-9]\d*|\d+\.\d{1,2})m?$'
-                    requestMemory:
-                      type: string
-                      pattern: '^[1-9]\d*(Mi|Gi)$'
             autoSecret:
               type: boolean
             secretsName:
@@ -270,6 +249,46 @@ spec:
             uri:
               type: string
               pattern: '[A-Za-z0-9-_]+'
+            externalSiteMonitor:
+              properties:
+                providers:
+                  type: array
+                  items:
+                    type: string
+                    pattern: '[A-Za-z0-9-_]+'
+                alertContact:
+                  type: string
+                  pattern: '[A-Za-z0-9-_]+'
+                alertThresholdMinutes:
+                  type: number
+                alertRecurrenceMinutes:
+                  type: number
+                ignoreSSLErrors:
+                  type: boolean
+                monitorIntervalSeconds:
+                  type: number
+                basicAuthSecretName:
+                  type: number
+            pagerduty:
+              properties:
+                id:
+                  type: string
+                  pattern: '[A-Za-z0-9]+'
+            bastille:
+              properties:
+                url:
+                  type: array
+                  items:
+                    type: string
+                    pattern: '^(http(s?)://)?((\w+\.)?\w+\.\w+|((2[0-5]{2}|1[0-9]{2}|[0-9]{1,2})\.){3}(2[0-5]{2}|1[0-9]{2}|[0-9]{1,2})(:[1-9]\d*)?)(/)?$'
+            slack:
+              properties:
+                id:
+                  type: string
+                  pattern: '[A-Za-z0-9-_]+'
+                url:
+                  type: string
+                  pattern: '^(http(s?)://)?((\w+\.)?\w+\.\w+|((2[0-5]{2}|1[0-9]{2}|[0-9]{1,2})\.){3}(2[0-5]{2}|1[0-9]{2}|[0-9]{1,2})(:[1-9]\d*)?)(/)?$'
             serviceType:
               type: string
               pattern: '[A-Za-z0-9-_]+'
@@ -282,5 +301,6 @@ spec:
                   type: string
                   pattern: '[A-Za-z0-9-_]+'
       required:
-      - metadata
-      - spec
+        - metadata
+        - spec
+---
