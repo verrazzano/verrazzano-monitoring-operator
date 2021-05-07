@@ -47,6 +47,10 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			runtime.HandleError(errors.New("deployment name must be specified"))
 			return true, nil
 		}
+		// if this is a prometheus deployment, attempt to apply istio annotation required to allow communication with keycloak
+		if curDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.Prometheus.Name) {
+			addKeycloakIPRangeToPrometheusDeployment(controller, curDeployment)
+		}
 		zap.S().Debugf("Applying Deployment '%s' in namespace '%s' for vmo '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
 
@@ -103,6 +107,25 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 
 	return prometheusDirty || elasticsearchDirty, nil
+}
+
+func addKeycloakIPRangeToPrometheusDeployment(controller *Controller, deployment *appsv1.Deployment) {
+	// lookup keycloak service
+	keycloakService, err := controller.kubeclientset.CoreV1().Services(constants.KeycloakNamespace).Get(context.TODO(), constants.KeycloakServiceName, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			zap.S().Infof("No keycloak http service found. No istio IP range annotation will be added at this time.")
+		} else {
+			zap.S().Infof("Error looking up keycloak http service. No istio IP range annotation will be added at this time.")
+		}
+		return
+	}
+	if keycloakService != nil {
+		if deployment.Spec.Template.Annotations == nil {
+			deployment.Spec.Template.Annotations = make(map[string]string)
+		}
+		deployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundIPRanges"] = keycloakService.Spec.ClusterIP
+	}
 }
 
 // Updates the *next* candidate deployment of the given deployments list.  A deployment is a candidate only if

@@ -211,5 +211,11 @@ const ClusterNameData = "managed-cluster-name"
 // KeycloakURLData - the field name in MCRegistrationSecret that contains the admin cluster's Keycloak endpoint's URL
 const KeycloakURLData = "keycloak-url"
 
+// KeycloakNamespace is the keycloak namespace
+const KeycloakNamespace = "keycloak"
+
+// KeycloakServiceName keycloak http service name
+const KeycloakServiceName = "keycloak-http"
+
 // KeycloakCABundleData - the field name in MCRegistrationSecret that contains the admin cluster's Keycloak ca-bundle
 const KeycloakCABundleData = "ca-bundle"
