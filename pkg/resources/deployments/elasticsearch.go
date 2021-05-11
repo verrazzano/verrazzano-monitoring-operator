@@ -117,6 +117,13 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		elasticsearchIngestDeployment.Spec.Template.Spec.Volumes = append(elasticsearchIngestDeployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 		elasticsearchIngestDeployment.Spec.Template.Spec.Containers = append(elasticsearchIngestDeployment.Spec.Template.Spec.Containers, *oidcProxy)
 	}
+	// add the required istio annotations to allow inter-es component communication
+	if elasticsearchIngestDeployment.Spec.Template.Annotations == nil {
+		elasticsearchIngestDeployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = "9200,9300"
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9300"
+
 	return []*appsv1.Deployment{elasticsearchIngestDeployment}
 }
 
@@ -183,6 +190,13 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			corev1.EnvVar{Name: "node.data", Value: "true"},
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 		)
+
+		// add the required istio annotations to allow inter-es component communication
+		if elasticsearchDataDeployment.Spec.Template.Annotations == nil {
+			elasticsearchDataDeployment.Spec.Template.Annotations = make(map[string]string)
+		}
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = "9300"
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9300"
 
 		deployList = append(deployList, elasticsearchDataDeployment)
 	}

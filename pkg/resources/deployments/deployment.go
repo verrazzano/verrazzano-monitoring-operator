@@ -182,6 +182,12 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, oidcVolumes...)
 			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *oidcProxy)
 		}
+		// add the required istio annotations to allow inter-es component communication
+		if deployment.Spec.Template.Annotations == nil {
+			deployment.Spec.Template.Annotations = make(map[string]string)
+		}
+		deployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9200"
+
 		deployments = append(deployments, deployment)
 	}
 

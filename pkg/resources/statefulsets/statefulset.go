@@ -215,6 +215,14 @@ fi`,
 		statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, oidcVolumes...)
 		statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, *oidcProxy)
 	}
+
+	// add istio annotations required for inter component communication
+	if statefulSet.Spec.Template.Annotations == nil {
+		statefulSet.Spec.Template.Annotations = make(map[string]string)
+	}
+	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = "9300"
+	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9300"
+
 	return statefulSet
 }
 
