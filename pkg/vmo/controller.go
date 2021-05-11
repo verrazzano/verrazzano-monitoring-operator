@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	clientset "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned"
 	clientsetscheme "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/scheme"
@@ -18,7 +17,6 @@ import (
 	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metrics"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
@@ -297,11 +295,6 @@ func (c *Controller) Run(threadiness int) error {
 		return errors.New("failed to wait for caches to sync")
 	}
 
-	// register metrics
-	metrics.RegisterMetrics()
-	// start Metrics server
-	go metrics.StartServer(*c.operatorConfig.MetricsPort)
-
 	zap.S().Infow("Starting workers")
 	// Launch two workers to process VMO resources
 	for i := 0; i < threadiness; i++ {
@@ -411,15 +404,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.clusterInfo.KeycloakURL = string(clusterSecret.Data[constants.KeycloakURLData])
 		c.clusterInfo.KeycloakCABundle = clusterSecret.Data[constants.KeycloakCABundleData]
 	}
-
-	// If lock, controller will not sync/process the VMO env
-	labels := prometheus.Labels{"namespace": vmo.Namespace, "vmo_name": vmo.Name}
-	if vmo.Spec.Lock {
-		zap.S().Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
-		metrics.Lock.With(labels).Set(1)
-		return nil
-	}
-	metrics.Lock.Delete(labels)
 
 	/*********************
 	 * Initialize VMO Spec
