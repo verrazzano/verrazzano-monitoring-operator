@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -9,11 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/prometheus/client_golang/prometheus"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metrics"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/pvcs"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -111,23 +109,6 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		zap.S().Debugf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
-	//Report PVCs dangling
-	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
-	existingPVCList, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).List(selector)
-	if err != nil {
-		return deploymentToAdMap, err
-	}
-	var isMetricReported bool
-	for _, pvc := range existingPVCList {
-		if !contains(pvcNames, pvc.Name) {
-			zone := getZoneFromExistingPvc(storageClassInfo, pvc)
-			metrics.DanglingPVC.With(prometheus.Labels{"pvc_name": pvc.Name, "availability_domain": zone}).Set(1)
-			isMetricReported = true
-		}
-	}
-	if !isMetricReported {
-		metrics.DanglingPVC.Reset()
-	}
 	return deploymentToAdMap, nil
 }
 
