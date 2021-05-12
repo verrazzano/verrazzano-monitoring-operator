@@ -26,8 +26,9 @@ RUN go build \
 
 FROM container-registry.oracle.com/os/oraclelinux:7-slim@sha256:fcc6f54bb01fc83319990bf5fa1b79f1dec93cbb87db3c5a8884a5a44148e7bb AS final
 
-RUN yum update -y && yum-config-manager --save --setopt=ol7_ociyum_config.skip_if_unavailable=true \
-    && yum install -y ca-certificates curl openssl && yum clean all && rm -rf /var/cache/yum
+RUN yum update -y \
+    && yum clean all \
+    && rm -rf /var/cache/yum
 
 COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
 
