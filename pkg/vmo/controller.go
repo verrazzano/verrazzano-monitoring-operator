@@ -405,6 +405,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.clusterInfo.KeycloakCABundle = clusterSecret.Data[constants.KeycloakCABundleData]
 	}
 
+	// If lock, controller will not sync/process the VMO env
+	if vmo.Spec.Lock {
+		zap.S().Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
+		return nil
+	}
+
 	/*********************
 	 * Initialize VMO Spec
 	 **********************/
