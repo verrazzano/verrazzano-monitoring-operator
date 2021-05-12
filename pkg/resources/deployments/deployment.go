@@ -186,7 +186,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
 		}
-		deployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9200"
+		deployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9200,9300"
 
 		deployments = append(deployments, deployment)
 	}
