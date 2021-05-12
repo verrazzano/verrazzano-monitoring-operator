@@ -121,8 +121,8 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 	if elasticsearchIngestDeployment.Spec.Template.Annotations == nil {
 		elasticsearchIngestDeployment.Spec.Template.Annotations = make(map[string]string)
 	}
-	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = "9200,9300"
-	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9300"
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
 
 	return []*appsv1.Deployment{elasticsearchIngestDeployment}
 }
@@ -195,8 +195,8 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 		if elasticsearchDataDeployment.Spec.Template.Annotations == nil {
 			elasticsearchDataDeployment.Spec.Template.Annotations = make(map[string]string)
 		}
-		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = "9300"
-		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = "9300"
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
 
 		deployList = append(deployList, elasticsearchDataDeployment)
 	}
