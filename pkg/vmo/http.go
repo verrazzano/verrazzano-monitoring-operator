@@ -4,7 +4,6 @@
 package vmo
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -14,14 +13,11 @@ import (
 
 // StartHTTPServer runs an embedded HTTP server for any VMO handlers as a "resilient" goroutine meaning it runs in
 // the background and will be restarted if it dies.
-func StartHTTPServer(controller *Controller, certDir string) {
+func StartHTTPServer(controller *Controller) {
 	setupHandlers(controller)
 	go wait.Until(func() {
 		zap.S().Infow("Starting HTTP server")
-		err := http.ListenAndServeTLS(":8080",
-			fmt.Sprintf("%s/tls.crt", certDir),
-			fmt.Sprintf("%s/tls.key", certDir),
-			nil)
+		err := http.ListenAndServeTLS(":8080", "/etc/certs/tls.crt", "/etc/certs/tls.key", nil)
 		if err != nil {
 			zap.S().Errorf("Failed to start HTTP server for vmo: %s", err)
 		}

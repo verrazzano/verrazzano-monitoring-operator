@@ -52,13 +52,13 @@ func main() {
 		zap.S().Fatalf("Error creating the controller: %s", err.Error())
 	}
 
-	_, err = vmo.CreateCertificates("/home/verrazzano-monitoring-operator/certs")
+	_, err = vmo.CreateCertificates("/etc/certs/")
 	if err != nil {
 		zap.S().Fatalf("Error creating certificates: %s", err.Error())
 		os.Exit(1)
 	}
 
-	vmo.StartHTTPServer(controller, "/home/verrazzano-monitoring-operator/certs")
+	vmo.StartHTTPServer(controller)
 
 	if err = controller.Run(1); err != nil {
 		zap.S().Fatalf("Error running controller: %s", err.Error())

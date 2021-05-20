@@ -33,12 +33,8 @@ RUN yum update -y \
 COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
 
 WORKDIR /usr/local/bin/
-RUN groupadd -r verrazzano-monitoring-operator \
-    && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator \
-    && chown 1000:verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator \
-    && chmod 500 /usr/local/bin/verrazzano-monitoring-operator \
-    && mkdir /home/verrazzano-monitoring-operator \
-    && chown 1000:verrazzano-monitoring-operator /home/verrazzano-monitoring-operator
+RUN groupadd -r verrazzano-monitoring-operator && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
+RUN chown 1000:verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator && chmod 500 /usr/local/bin/verrazzano-monitoring-operator
 USER 1000
 
 ENTRYPOINT ["/usr/local/bin/verrazzano-monitoring-operator"]
