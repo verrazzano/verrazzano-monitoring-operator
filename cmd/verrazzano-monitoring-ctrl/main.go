@@ -52,6 +52,12 @@ func main() {
 		zap.S().Fatalf("Error creating the controller: %s", err.Error())
 	}
 
+	_, err = vmo.CreateCertificates("/etc/certs/")
+	if err != nil {
+		zap.S().Fatalf("Error creating certificates: %s", err.Error())
+		os.Exit(1)
+	}
+
 	vmo.StartHTTPServer(controller)
 
 	if err = controller.Run(1); err != nil {
