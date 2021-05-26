@@ -42,6 +42,15 @@ func TestGetDefaultPrometheusConfiguration(t *testing.T) {
 	kubernetesSdConfigs = envoyStats["kubernetes_sd_configs"]
 	role = kubernetesSdConfigs.([]interface{})[0].(map[interface{}]interface{})["role"]
 	assert.Equal(t, "pod", role, "kubernetes_sd_configs should have - role: pod")
+
+	kubernetesPods := getItem("job_name", "kubernetes-pods", scrapeConfigs.([]interface{}))
+	assert.NotNil(t, kubernetesPods)
+	kubernetesSdConfigs = kubernetesPods["kubernetes_sd_configs"]
+	role = kubernetesSdConfigs.([]interface{})[0].(map[interface{}]interface{})["role"]
+	assert.Equal(t, "pod", role, "kubernetes_sd_configs should have - role: pod")
+	relabelConfigs = kubernetesPods["relabel_configs"]
+	relabelConfig = getItem("target_label", "__address__", relabelConfigs.([]interface{}))
+	assert.Equal(t, "$1:10254", relabelConfig["replacement"], "relabelConfig.replacement")
 }
 
 func getItem(key, value string, scrapeConfigs []interface{}) map[interface{}]interface{} {

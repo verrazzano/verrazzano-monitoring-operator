@@ -283,6 +283,11 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_namespace]
      action: replace
      target_label: kubernetes_namespace
+   - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+     action: replace
+     regex: ([^:]+)(?::\d+)?;(\d+)
+     replacement: $1:10254
+     target_label: __address__
    - source_labels: [__meta_kubernetes_pod_name]
      action: replace
      target_label: kubernetes_pod_name
