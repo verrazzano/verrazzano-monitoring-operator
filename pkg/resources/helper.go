@@ -217,7 +217,6 @@ func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	re := regexp.MustCompile("[^a-zA-Z0-9_]")
 	prometheusValidLabelName := re.ReplaceAllString(vmo.Name, "")
 	dynamicScrapeAnnotation := prometheusValidLabelName + "_io_scrape"
-	namespace := vmo.Namespace
 	nginxNamespace := "ingress-nginx"
 	istioNamespace := "istio-system"
 	var prometheusConfig = []byte(`
@@ -267,12 +266,11 @@ scrape_configs:
      target_label: __metrics_path__
      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
 
- - job_name: 'kubernetes-pods'
+ - job_name: 'nginx-ingress-controller'
    kubernetes_sd_configs:
    - role: pod
      namespaces:
        names:
-         - "` + namespace + `"
          - "` + nginxNamespace + `"
    relabel_configs:
    - source_labels: [__meta_kubernetes_pod_annotation_` + dynamicScrapeAnnotation + `]
@@ -283,6 +281,11 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_namespace]
      action: replace
      target_label: kubernetes_namespace
+   - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+     action: replace
+     regex: ([^:]+)(?::\d+)?;(\d+)
+     replacement: $1:10254
+     target_label: __address__
    - source_labels: [__meta_kubernetes_pod_name]
      action: replace
      target_label: kubernetes_pod_name
