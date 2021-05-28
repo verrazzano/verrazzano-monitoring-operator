@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	proxy "github.com/verrazzano/verrazzano-monitoring-operator/pkg/proxy"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -303,63 +305,60 @@ func getConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitori
 	return configMap, nil
 }
 
-func oidcStartup() string {
-	return fmt.Sprintf(constants.OidcStartupTemp, "`dirname $0`")
-}
+// oidcAuthLuaScripts(&oidcProxyConfig)
+// oidcConfLuaScripts(&oidcProxyConfig, vmo, component, controller.clusterInfo.KeycloakURL)
+// oidcStartup(&oidcProxyConfig)
+// oidcNginxConf(&oidcProxyConfig, component.Port, len(controller.clusterInfo.clusterName) > 0)
 
-func oidcNginxConf(port int, ssl bool) string {
-	sslVerify := ""
-	sslTrusted := ""
-	if ssl {
-		sslVerify = constants.OidcSslVerifyOptions
-		sslTrusted = constants.OidcSslTrustedOptions
+// getOidcProxyConfig returns an OidcProxyConfig struct
+func getOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) proxy.OidcProxyConfig {
+	proxyConfig := proxy.OidcProxyConfig{}
+
+	// ssl config
+	proxyConfig.SSLVerifyOptions = ""
+	proxyConfig.SSLTrustedCAOptions = ""
+	if len(controller.clusterInfo.clusterName) > 0 {
+		proxyConfig.SSLVerifyOptions = proxy.OidcSSLVerifyOptions
+		proxyConfig.SSLTrustedCAOptions = proxy.OidcSSLTrustedOptions
 	}
+	proxyConfig.Host = "localhost"
+	proxyConfig.Port = component.Port
 
-	return fmt.Sprintf(constants.OidcNginxConfTemp, sslVerify, sslTrusted, "localhost", port)
-}
-
-func oidcConfLuaScripts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails, keycloakURL string) string {
-	ingress := resources.OidcProxyIngressHost(vmo, component)
+	// ingress and keycloak location info
+	proxyConfig.Ingress = resources.OidcProxyIngressHost(vmo, component)
 	verrazzanoURI := vmo.Spec.URI
 	uriPrefix := fmt.Sprintf("vmi.%s.", vmo.Name)
 	if strings.HasPrefix(verrazzanoURI, uriPrefix) {
 		verrazzanoURI = strings.Replace(verrazzanoURI, uriPrefix, "", 1)
 	}
-	oidcProviderHost := fmt.Sprintf("%s.%s", "keycloak", verrazzanoURI)
-	oidcProviderHostInCluster := "keycloak-http.keycloak.svc.cluster.local"
+	proxyConfig.OidcProviderHost = fmt.Sprintf("%s.%s", "keycloak", verrazzanoURI)
+	proxyConfig.OidcProviderHostInCluster = "keycloak-http.keycloak.svc.cluster.local"
 	// when keycloakURL is present, meanning it is a managed cluster, keycloakURL is the admin keycloak url
-	if len(keycloakURL) > 0 {
-		u, err := url.Parse(keycloakURL)
+	if len(controller.clusterInfo.KeycloakURL) > 0 {
+		u, err := url.Parse(controller.clusterInfo.KeycloakURL)
 		if err == nil {
-			oidcProviderHost = u.Host
-			oidcProviderHostInCluster = ""
+			proxyConfig.OidcProviderHost = u.Host
+			proxyConfig.OidcProviderHostInCluster = ""
 		} else {
-			zap.S().Errorf("Failed to parse keycloak URL %s", keycloakURL)
+			zap.S().Errorf("Failed to parse keycloak URL %s", controller.clusterInfo.KeycloakURL)
 		}
 	}
-	return fmt.Sprintf(constants.OidcConfLuaTemp,
-		ingress,
-		oidcProviderHost,
-		oidcProviderHostInCluster,
-		"verrazzano-system", //realm
-		constants.OidcCallbackPath,
-		constants.OidcLogoutCallbackPath,
-		"webui",                   //oidc-client-id
-		"verrazzano-oauth-client", //direct-access client
-		randomString(32),
-		"console_users", // required realm role
-		300)             //authn state TTL
+	// cookie key
+	// TODO: don't deliver secret key in a config map!!
+	proxyConfig.RandomString = randomString(32)
+
+	// return
+	return proxyConfig
 }
 
 func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (string, error) {
 	oidcConfig := resources.OidcProxyConfigName(vmo.Name, component.Name)
-	oidcConfigMap := map[string]string{
-		constants.OidcAuthLua:   constants.OidcAuthLuaScripts,
-		constants.OidcConfLua:   oidcConfLuaScripts(vmo, component, controller.clusterInfo.KeycloakURL),
-		constants.OidcStartup:   oidcStartup(),
-		constants.OidcNginxConf: oidcNginxConf(component.Port, len(controller.clusterInfo.clusterName) > 0),
+	oidcProxyConfig := getOidcProxyConfig(controller, vmo, component)
+	oidcConfigMap, err := proxy.GetOidcProxyConfigMapData(oidcProxyConfig)
+	if err != nil {
+		return oidcConfig, err
 	}
-	err := createUpdateConfigMap(controller, vmo, oidcConfig, oidcConfigMap)
+	err = createUpdateConfigMap(controller, vmo, oidcConfig, oidcConfigMap)
 	return oidcConfig, err
 }
 
