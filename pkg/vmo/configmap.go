@@ -8,10 +8,8 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"math/rand"
 	"net/url"
 	"strings"
-	"time"
 
 	proxy "github.com/verrazzano/verrazzano-monitoring-operator/pkg/proxy"
 
@@ -313,14 +311,15 @@ func getConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitori
 // getOidcProxyConfig returns an OidcProxyConfig struct
 func getOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) proxy.OidcProxyConfig {
 	proxyConfig := proxy.OidcProxyConfig{}
+	// set default values
+	proxyConfig.OidcRealm = OidcRealmName
+	proxyConfig.PKCEClientID = OidcPkceClientID
+	proxyConfig.PGClientID = OidcPgClientID
+	proxyConfig.OidcCallbackPath = OidcCallbackPath
+	proxyConfig.OidcLogoutCallbackPath = OidcLogoutCallbackPath
+	proxyConfig.RequiredRealmRole = OidcRequiredRealmRole
+	proxyConfig.AuthnStateTTL = OidcAuthnStateTTL
 
-	// ssl config
-	proxyConfig.SSLVerifyOptions = ""
-	proxyConfig.SSLTrustedCAOptions = ""
-	if len(controller.clusterInfo.clusterName) > 0 {
-		proxyConfig.SSLVerifyOptions = proxy.OidcSSLVerifyOptions
-		proxyConfig.SSLTrustedCAOptions = proxy.OidcSSLTrustedOptions
-	}
 	proxyConfig.Host = "localhost"
 	proxyConfig.Port = component.Port
 
@@ -343,9 +342,6 @@ func getOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			zap.S().Errorf("Failed to parse keycloak URL %s", controller.clusterInfo.KeycloakURL)
 		}
 	}
-	// cookie key
-	// TODO: don't deliver secret key in a config map!!
-	proxyConfig.RandomString = randomString(32)
 
 	// return
 	return proxyConfig
@@ -360,15 +356,4 @@ func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 	err = createUpdateConfigMap(controller, vmo, oidcConfig, oidcConfigMap)
 	return oidcConfig, err
-}
-
-var passwordChars = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func randomString(size int) string {
-	rand.Seed(time.Now().UnixNano())
-	var b strings.Builder
-	for i := 0; i < size; i++ {
-		b.WriteRune(passwordChars[rand.Intn(len(passwordChars))])
-	}
-	return b.String()
 }
