@@ -311,14 +311,14 @@ func getConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitori
 // getOidcProxyConfig returns an OidcProxyConfig struct
 func getOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) proxy.OidcProxyConfig {
 	proxyConfig := proxy.OidcProxyConfig{}
-	// set default values
-	proxyConfig.OidcRealm = OidcRealmName
-	proxyConfig.PKCEClientID = OidcPkceClientID
-	proxyConfig.PGClientID = OidcPgClientID
-	proxyConfig.OidcCallbackPath = OidcCallbackPath
-	proxyConfig.OidcLogoutCallbackPath = OidcLogoutCallbackPath
-	proxyConfig.RequiredRealmRole = OidcRequiredRealmRole
-	proxyConfig.AuthnStateTTL = OidcAuthnStateTTL
+	proxyConfig.Mode = proxy.ProxyModeOauth
+	proxyConfig.OidcRealm = proxy.OidcRealmName
+	proxyConfig.PKCEClientID = proxy.OidcPkceClientID
+	proxyConfig.PGClientID = proxy.OidcPgClientID
+	proxyConfig.OidcCallbackPath = proxy.OidcCallbackPath
+	proxyConfig.OidcLogoutCallbackPath = proxy.OidcLogoutCallbackPath
+	proxyConfig.RequiredRealmRole = proxy.OidcRequiredRealmRole
+	proxyConfig.AuthnStateTTL = proxy.OidcAuthnStateTTL
 
 	proxyConfig.Host = "localhost"
 	proxyConfig.Port = component.Port
