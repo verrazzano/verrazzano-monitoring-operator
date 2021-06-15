@@ -335,7 +335,7 @@ const OidcAuthLuaFileTemplate = `    local me = {}
                 me.oidcAuthenticate()
             end
             local tokenRes = me.oidcGetTokenWithCode(code, cookie.code_verifier, me.callbackUri)
-            if tokenRes then  
+            if tokenRes then
                 me.oidcValidateIDToken(tokenRes.id_token)
                 me.tokenToCookie(tokenRes)
                 ngx.redirect(request_uri)
