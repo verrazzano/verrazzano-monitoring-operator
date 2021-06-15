@@ -343,6 +343,10 @@ func getOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 	}
 
+	if len(controller.clusterInfo.clusterName) > 0 {
+		proxyConfig.SSLEnabled = true
+	}
+
 	// return
 	return proxyConfig
 }
