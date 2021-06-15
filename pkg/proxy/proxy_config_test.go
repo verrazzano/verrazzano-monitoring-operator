@@ -70,10 +70,10 @@ func getProxyConfigOidcProxyWithParams(ingressHost, verrazzanoURI, keycloakURL s
 
 func getProxyConfigOidcProxy() OidcProxyConfig {
 	return getProxyConfigOidcProxyWithParams(
-		"grafana.vmi.system.will.129.159.240.145.nip.io",
-		"will.129.159.240.145.nip.io",
+		"grafana.vmi.system.default.111.222.333.444.nip.io",
+		"default.111.222.333.444.nip.io",
 		"",
-		3000,
+		9000,
 		false,
 	)
 }
@@ -183,7 +183,7 @@ func checkForValidYaml(configMapYaml string) error {
 	return nil
 }
 
-func NOTTestGetConfigMapDataAPIProxy(t *testing.T) {
+func TestGetConfigMapDataAPIProxy(t *testing.T) {
 	config := getProxyConfigAPIProxy()
 	data, err := GetOidcProxyConfigMapData(config)
 	if err != nil {
@@ -196,7 +196,7 @@ func NOTTestGetConfigMapDataAPIProxy(t *testing.T) {
 	t.Log("Got expected API config map data")
 }
 
-func NOTTestGetConfigMapDataOidcProxy(t *testing.T) {
+func TestGetConfigMapDataOidcProxy(t *testing.T) {
 	config := getProxyConfigOidcProxy()
 	data, err := GetOidcProxyConfigMapData(config)
 	if err != nil {
@@ -209,7 +209,7 @@ func NOTTestGetConfigMapDataOidcProxy(t *testing.T) {
 	t.Log("Got expected Oidc config map data")
 }
 
-func NOTTestCreateAPIProxyConfigYaml(t *testing.T) {
+func TestCreateAPIProxyConfigYaml(t *testing.T) {
 	data, err := GetOidcProxyConfigMapData(getProxyConfigAPIProxy())
 	if err != nil {
 		t.Fatalf("Error getting config map data: %v", err)
@@ -222,8 +222,8 @@ func NOTTestCreateAPIProxyConfigYaml(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Invalid yaml for API configmap: %v", err)
 	}
-	//t.Logf("Got expected API config map yaml: %p", &config)
-	t.Logf("\n%s", config)
+	t.Logf("Got expected API config map yaml: %p", &config)
+	//t.Logf("\n%s", config)
 }
 
 func TestCreateOidcProxyConfigYaml(t *testing.T) {
@@ -240,11 +240,11 @@ func TestCreateOidcProxyConfigYaml(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Invalid yaml for Oidc configmap: %v", err)
 	}
-	//t.Logf("Got expected Oidc config map yaml: %p", &config)
-	t.Logf("\n%s", config)
+	t.Logf("Got expected Oidc config map yaml: %p", &config)
+	//t.Logf("\n%s", config)
 }
 
-func NOTTestCreateAPIProxyConfigmap(t *testing.T) {
+func TestCreateAPIProxyConfigmap(t *testing.T) {
 	data, err := GetOidcProxyConfigMapData(getProxyConfigAPIProxy())
 	if err != nil {
 		t.Fatalf("Error getting config map data: %v", err)
@@ -257,7 +257,7 @@ func NOTTestCreateAPIProxyConfigmap(t *testing.T) {
 	//t.Logf("\n%v", configMap)
 }
 
-func NOTTestCreateOidcProxyConfigmap(t *testing.T) {
+func TestCreateOidcProxyConfigmap(t *testing.T) {
 	data, err := GetOidcProxyConfigMapData(getProxyConfigOidcProxy())
 	if err != nil {
 		t.Fatalf("Error getting config map data: %v", err)

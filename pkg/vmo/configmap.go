@@ -303,11 +303,6 @@ func getConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitori
 	return configMap, nil
 }
 
-// oidcAuthLuaScripts(&oidcProxyConfig)
-// oidcConfLuaScripts(&oidcProxyConfig, vmo, component, controller.clusterInfo.KeycloakURL)
-// oidcStartup(&oidcProxyConfig)
-// oidcNginxConf(&oidcProxyConfig, component.Port, len(controller.clusterInfo.clusterName) > 0)
-
 // getOidcProxyConfig returns an OidcProxyConfig struct
 func getOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) proxy.OidcProxyConfig {
 	proxyConfig := proxy.OidcProxyConfig{}
