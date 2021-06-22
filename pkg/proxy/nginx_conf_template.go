@@ -91,8 +91,7 @@ const OidcNginxConfFileTemplate = `#user  nobody;
             add_header        Cache-Control private;
 
 {{- if eq .Mode "oauth-proxy" }}
-            proxy_set_header  x-proxy-user $oidc_user;
-            proxy_set_header  x-webauth-user $oidc_user;
+            proxy_set_header  X-WEBAUTH-USER $oidc_user;
 {{- end }}
 
             location / {
