@@ -14,6 +14,8 @@ import (
 	yaml "sigs.k8s.io/yaml"
 )
 
+const dnsSuffix = "example.com"
+
 func getProxyConfigAPIProxyWithParams(providerHost string) OidcProxyConfig {
 	proxyConfig := OidcProxyConfig{}
 
@@ -30,7 +32,7 @@ func getProxyConfigAPIProxyWithParams(providerHost string) OidcProxyConfig {
 }
 
 func getProxyConfigAPIProxy() OidcProxyConfig {
-	return getProxyConfigAPIProxyWithParams("keycloak.default.example.com")
+	return getProxyConfigAPIProxyWithParams("keycloak.default." + dnsSuffix)
 }
 
 // getProxyConfigOidcProxy returns an OidcProxyConfig struct
@@ -70,10 +72,10 @@ func getProxyConfigOidcProxyWithParams(ingressHost, verrazzanoURI, keycloakURL s
 
 func getProxyConfigOidcProxy() OidcProxyConfig {
 	return getProxyConfigOidcProxyWithParams(
-		"grafana.vmi.system.default.111.222.333.444.nip.io",
-		"default.111.222.333.444.nip.io",
+		"grafana.vmi.system.default."+dnsSuffix,
+		"default."+dnsSuffix,
 		"",
-		9000,
+		3000,
 		false,
 	)
 }
