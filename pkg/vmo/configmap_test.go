@@ -38,6 +38,7 @@ func TestCreateConfigmaps(t *testing.T) {
 	vmo.Spec.Prometheus.ConfigMap = "myPrometheusConfigMap"
 	vmo.Spec.Prometheus.VersionsConfigMap = "myPrometheusVersionsConfigMap"
 	err := CreateConfigmaps(controller, vmo)
+	t.Logf("Error is %v", err)
 	assert.Nil(t, err)
 	all, _ := client.CoreV1().ConfigMaps(vmo.Namespace).List(context.TODO(), metav1.ListOptions{})
 	assert.Equal(t, 12, len(all.Items))
