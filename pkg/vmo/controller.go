@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	clientset "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned"
 	clientsetscheme "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/scheme"
@@ -18,7 +19,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -488,7 +488,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	* Update VMO itself (if necessary, if anything has changed)
 	**********************/
-	specDiffs := diff.CompareIgnoreTargetEmpties(originalVMO, vmo)
+	specDiffs := diff.Diff(originalVMO, vmo)
 	if specDiffs != "" {
 		zap.S().Debugf("Acquired lock in namespace: %s", vmo.Namespace)
 		zap.S().Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)

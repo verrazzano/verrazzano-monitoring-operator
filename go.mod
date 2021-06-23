@@ -4,9 +4,9 @@ go 1.13
 
 require (
 	github.com/gorilla/mux v1.7.3 // indirect
-	github.com/kylelemons/godebug v1.1.0
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible // indirect
 	github.com/stretchr/testify v1.5.1
+	github.com/verrazzano/pkg v0.0.2
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	gopkg.in/resty.v1 v1.12.0

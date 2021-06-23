@@ -8,11 +8,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -62,7 +62,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				elasticsearchDataDeployments = append(elasticsearchDataDeployments, curDeployment)
 			} else {
-				specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
+				specDiffs := diff.Diff(existingDeployment, curDeployment)
 				if specDiffs != "" {
 					zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
@@ -116,7 +116,7 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		}
 
 		// Deployment spec differences, so call Update() and return
-		specDiffs := diff.CompareIgnoreTargetEmpties(existingDeployment, curDeployment)
+		specDiffs := diff.Diff(existingDeployment, curDeployment)
 		if specDiffs != "" {
 			zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})

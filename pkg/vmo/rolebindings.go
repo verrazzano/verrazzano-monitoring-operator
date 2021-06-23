@@ -7,10 +7,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +34,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		existingRoleBinding, _ := controller.roleBindingLister.RoleBindings(vmo.Namespace).Get(newRoleBinding.Name)
 		var err error
 		if existingRoleBinding != nil {
-			specDiffs := diff.CompareIgnoreTargetEmpties(existingRoleBinding, newRoleBinding)
+			specDiffs := diff.Diff(existingRoleBinding, newRoleBinding)
 			if specDiffs != "" {
 				zap.S().Infof("RoleBinding %s : Spec differences %s", newRoleBinding.Name, specDiffs)
 				err = controller.kubeclientset.RbacV1().RoleBindings(vmo.Namespace).Delete(context.TODO(), newRoleBinding.Name, metav1.DeleteOptions{})
