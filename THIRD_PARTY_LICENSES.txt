@@ -6,6 +6,7 @@ Copyright (C) 2020, Oracle and/or its affiliates.
 Copyright (c) 2020, Oracle and/or its affiliates.
 Copyright 2019 The Kubernetes Authors.
 Copyright (C) 2021, Oracle and/or its affiliates.
+Copyright (c) 2020, 2021, Oracle and/or its affiliates.
 
 -------- License
 Copyright (c) 2020 Oracle America, Inc. and its affiliates. 
@@ -117,6 +118,57 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------------------- Dependencies Grouped by License ------------
+-------- Dependency
+github.com/verrazzano/pkg
+-------- Copyrights
+Copyright (c) 2021 Oracle America, Inc. and its affiliates.
+Copyright (c) 2021, Oracle and/or its affiliates.
+Copyright (C) 2021, Oracle and/or its affiliates.
+
+-------- Dependencies Summary
+github.com/verrazzano/pkg
+
+-------- License used by Dependencies
+Copyright (c) 2021 Oracle America, Inc. and its affiliates.
+
+The Universal Permissive License (UPL), Version 1.0
+
+Subject to the condition set forth below, permission is hereby granted to any 
+person obtaining a copy of this software, associated documentation and/or data 
+(collectively the "Software"), free of charge and under any and all copyright 
+rights in the Software, and any and all patent rights owned or freely licensable 
+by each licensor hereunder covering either (i) the unmodified Software as 
+contributed to or provided by such licensor, or (ii) the Larger Works (as 
+defined below), to deal in both
+
+(a) the Software, and
+
+(b) any piece of software and/or hardware listed in the lrgrwrks.txt file if 
+one is included with the Software (each a ¿Larger Work¿ to which the Software 
+is contributed by such licensors),
+
+without restriction, including without limitation the rights to copy, create 
+derivative works of, display, perform, and distribute the Software and make, 
+use, sell, offer for sale, import, export, have made, and have sold the 
+Software and the Larger Work(s), and to sublicense the foregoing rights on 
+either these or other terms.
+
+This license is subject to the following condition:
+
+The above copyright notice and either this complete permission notice or at a 
+minimum a reference to the UPL must be included in all copies or substantial 
+portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+THE SOFTWARE.
 
 
 ----------------------- Dependencies Grouped by License ------------
@@ -522,11 +574,6 @@ Copyright 2018 Google Inc. All Rights Reserved.
 Copyright 2017 Google Inc. All Rights Reserved.\n" +
 
 -------- Dependency
-github.com/kylelemons/godebug
--------- Copyrights
-Copyright 2013 Google Inc.  All rights reserved.
-
--------- Dependency
 github.com/modern-go/concurrent
 -------- Copyrights
 
@@ -559,6 +606,7 @@ limitations under the License.
 k8s.io/api
 -------- Copyrights
 Copyright 2019 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
@@ -570,6 +618,7 @@ k8s.io/apiextensions-apiserver
 -------- Copyrights
 Copyright 2019 The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
 
@@ -582,12 +631,14 @@ Copyright 2014 The Kubernetes Authors.
 Copyright 2015 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2009 The Go Authors. All rights reserved.
 
 -------- Dependency
 k8s.io/client-go
 -------- Copyrights
+Copyright The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
 Copyright 2014 The Kubernetes Authors.
@@ -604,6 +655,7 @@ Copyright 2013 Google Inc. All Rights Reserved.
 -------- Dependency
 k8s.io/kube-openapi
 -------- Copyrights
+Copyright The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
@@ -648,7 +700,6 @@ github.com/go-logr/zapr
 github.com/golang/groupcache
 github.com/google/gofuzz
 github.com/googleapis/gnostic
-github.com/kylelemons/godebug
 github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 gopkg.in/yaml.v2
@@ -882,6 +933,7 @@ Copyright (c) 2017 The Go Authors. All rights reserved.
 Copyright 2017, The Go Authors. All rights reserved.
 Copyright 2018, The Go Authors. All rights reserved.
 Copyright 2019, The Go Authors. All rights reserved.
+Copyright 2020, The Go Authors. All rights reserved.
 
 -------- Dependency
 github.com/imdario/mergo
@@ -1202,6 +1254,7 @@ go.uber.org/zap
 -------- Copyrights
 Copyright (c) 2016-2017 Uber Technologies, Inc.
 Copyright (c) 2016 Uber Technologies, Inc.
+Copyright (c) "*" Uber Technologies, Inc.")
 Copyright (c) 2017 Uber Technologies, Inc.
 Copyright (c) 2019 Uber Technologies, Inc.
 Copyright (c) 2020 Uber Technologies, Inc.
@@ -1307,4 +1360,4 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ATTRIBUTION-HELPER-GENERATED:
-License file based on go.mod with md5 sum: c51bd7eae6325c740ba751f11fb386f1
+License file based on go.mod with md5 sum: f1bb0931851594115e2509a494da1e63
