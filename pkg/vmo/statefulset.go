@@ -8,12 +8,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +45,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		zap.S().Debugf("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
-			specDiffs := diff.CompareIgnoreTargetEmpties(existingStatefulSet, curStatefulSet)
+			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
 				zap.S().Debugf("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
 				_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})

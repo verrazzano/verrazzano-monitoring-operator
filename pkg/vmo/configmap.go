@@ -13,12 +13,12 @@ import (
 
 	proxy "github.com/verrazzano/verrazzano-monitoring-operator/pkg/proxy"
 
+	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -184,7 +184,7 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 				configMap.Data[k] = v
 			}
 		}
-		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
+		specDiffs := diff.Diff(existingConfigMap, configMap)
 		if specDiffs != "" {
 			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
 			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
@@ -211,7 +211,7 @@ func createUpdateConfigMap(controller *Controller, vmo *vmcontrollerv1.Verrazzan
 	}
 	if existingConfigMap != nil {
 		zap.S().Debugf("Updating existing configmaps for %s ", existingConfigMap.Name)
-		specDiffs := diff.CompareIgnoreTargetEmpties(existingConfigMap, configMap)
+		specDiffs := diff.Diff(existingConfigMap, configMap)
 		if specDiffs != "" {
 			zap.S().Debugf("ConfigMap %s : Spec differences %s", configMap.Name, len(specDiffs))
 			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})

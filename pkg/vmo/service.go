@@ -7,10 +7,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/services"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/diff"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,7 +40,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		zap.S().Debugf("Applying Service '%s' in namespace '%s' for vmo '%s'\n", serviceName, vmo.Namespace, vmo.Name)
 		existingService, err := controller.serviceLister.Services(vmo.Namespace).Get(serviceName)
 		if existingService != nil {
-			specDiffs := diff.CompareIgnoreTargetEmpties(existingService, curService)
+			specDiffs := diff.Diff(existingService, curService)
 			if specDiffs != "" {
 				zap.S().Infof("Service %s : Spec differences %s", curService.Name, specDiffs)
 				err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
