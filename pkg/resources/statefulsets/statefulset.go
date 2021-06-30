@@ -57,7 +57,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 		"logger.org.elasticsearch=INFO",
 	}
 
-	var envVars []corev1.EnvVar = []corev1.EnvVar{
+	var envVars = []corev1.EnvVar{
 		{
 			Name: "node.name",
 			ValueFrom: &corev1.EnvVarSource{
