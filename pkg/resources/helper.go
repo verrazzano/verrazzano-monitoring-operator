@@ -456,35 +456,29 @@ func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componen
 //	}
 //}
 
-// GetMaxJvmHeap returns the max JVM heap setting in the format java expects (e.g. 512m)
-func GetMaxHeap(size string) (string, error) {
+// ConvertPodMemToJvmHeap converts a pod resource memory (.5Gi) to the JVM heap setting
+//in the format java expects (e.g. 512m)
+func ConvertPodMemToJvmHeap(size string) (string, error) {
 	q, err := resource.ParseQuantity(size)
 	if err != nil {
 		// This will never happen when VO creates the VMI since it formats the values correctly.
 		// If someone happened to manually create a VMI this could happen if they format it wrong
 		return "", err
 	}
-	//var heapB int64
-	heapB, ok := q.AsInt64()
-	if !ok {
-		return "", nil
-	}
-	// size is in the format of nG or nM where n can have decimals (1, 1.5, 0.5, .5, etc.)
-	fmt.Printf("%s\n", formatJvmHeapSize(heapB) )
-	return "", nil
+	return formatJvmHeapSize(q.Value()), nil
 }
 
 // Format the string based on the size of the input value
 // Return whole number (1200M not 1.2G)
 func formatJvmHeapSize(sizeB int64) string {
 	if sizeB >= UnitG && sizeB%UnitG == 0 {
-		return fmt.Sprintf("%.0fG", float64(sizeB)/UnitG)
+		return fmt.Sprintf("%.0fg", float64(sizeB)/UnitG)
 	}
 	if sizeB >= UnitM && sizeB%UnitM == 0 {
-		return fmt.Sprintf("%.0fM", float64(sizeB)/UnitM)
+		return fmt.Sprintf("%.0fm", float64(sizeB)/UnitM)
 	}
 	if sizeB >= UnitK && sizeB%UnitK == 0 {
-		return fmt.Sprintf("%.0fK", float64(sizeB)/UnitK)
+		return fmt.Sprintf("%.0fk", float64(sizeB)/UnitK)
 	}
 	return  fmt.Sprintf("%v",sizeB)
 }
