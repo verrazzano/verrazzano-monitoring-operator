@@ -135,3 +135,43 @@ func TestIsValidMultiNodeESCluster(t *testing.T) {
 	vmo.Spec.Elasticsearch.IngestNode.Replicas = 1
 	assert.True(t, IsValidMultiNodeESCluster(vmo), "IsValidMultiNodeESCluster true for valid configuration")
 }
+
+func TestGetMaxHeap(t *testing.T) {
+	GetMaxHeap("1Mi")
+	GetMaxHeap("15Mi")
+	GetMaxHeap("160Mi")
+	GetMaxHeap("1700Mi")
+	GetMaxHeap("18000Mi")
+	GetMaxHeap("19000Mi")
+	GetMaxHeap(".15Gi")
+	GetMaxHeap("7.5Gi")
+	GetMaxHeap("10Gi")
+	GetMaxHeap("100Gi")
+	GetMaxHeap("1000Gi")
+}
+
+// TestFormatJvmHeapSize tests the formatting of Kilobyte values using 1024 multiples
+// GIVEN a integer ranging from 1K to over 1G
+// WHEN formatJvmHeapSize is called
+// THEN ensure the heap in string with whole numbers and correct suffix is returned: K, M, or G suffix.
+func TestFormatJvmHeapSize(t *testing.T) {
+	asserts := assert.New(t)
+	asserts.Equal("100", formatJvmHeapSize(100), "expected 100")
+	asserts.Equal("1K", formatJvmHeapSize(UnitK), "expected 1K")
+	asserts.Equal("10K", formatJvmHeapSize(10 * UnitK), "expected 10K")
+	asserts.Equal("1000K", formatJvmHeapSize(1000 * UnitK), "expected 1000K")
+	asserts.Equal("10000K", formatJvmHeapSize(10000 * UnitK), "expected 10000K")
+	asserts.Equal("1M", formatJvmHeapSize(UnitK * UnitK), "expected 1M")
+
+	asserts.Equal("1M", formatJvmHeapSize(UnitM), "expected 1M")
+	asserts.Equal("10M", formatJvmHeapSize(10 * UnitM), "expected 10M")
+	asserts.Equal("1000M", formatJvmHeapSize(1000 * UnitM), "expected 1000M")
+	asserts.Equal("10000M", formatJvmHeapSize(10000 * UnitM), "expected 10000M")
+	asserts.Equal("1G", formatJvmHeapSize(UnitK * UnitM), "expected 1G")
+
+	asserts.Equal("1G", formatJvmHeapSize(UnitG), "expected 1G")
+	asserts.Equal("10G", formatJvmHeapSize(10 * UnitG), "expected 10G")
+	asserts.Equal("1000G", formatJvmHeapSize(1000 * UnitG), "expected 1000G")
+	asserts.Equal("10000G", formatJvmHeapSize(10000 * UnitG), "expected 10000G")
+	asserts.Equal("1024G", formatJvmHeapSize(UnitK * UnitG), "expected 1024G")
+}
