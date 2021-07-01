@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package statefulsets
@@ -348,7 +348,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal("node.data", sts.Spec.Template.Spec.Containers[0].Env[6].Name, "Incorrect Env[6].Name")
 	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[6].Value, "Incorrect Env[6].Value")
 	assert.Equal("ES_JAVA_OPTS", sts.Spec.Template.Spec.Containers[0].Env[7].Name, "Incorrect Env[7].Name")
-	assert.Equal("-Xms512m -Xmx512m", sts.Spec.Template.Spec.Containers[0].Env[7].Value, "Incorrect Env[7].Value")
+	assert.Equal("-Xms700m -Xmx700m", sts.Spec.Template.Spec.Containers[0].Env[7].Value, "Incorrect Env[7].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
 		"Incorrect Readiness Probe InitialDelaySeconds")

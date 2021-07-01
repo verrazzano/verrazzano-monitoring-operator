@@ -102,7 +102,7 @@ const ESTransportPort = 9300
 const OidcProxyPort = 8775
 
 // DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
-const DefaultDevProfileESMemArgs = "-Xms512m -Xmx512m"
+const DefaultDevProfileESMemArgs = "-Xms700m -Xmx700m"
 
 // DefaultESIngestMemArgs default Elasticsearch Ingest memory settings
 const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
