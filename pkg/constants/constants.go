@@ -102,13 +102,13 @@ const ESTransportPort = 9300
 const OidcProxyPort = 8775
 
 // DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
-const DefaultDevProfileESMemArgs = "-Xms512m -Xmx4g"
+const DefaultDevProfileESMemArgs = "-Xms700m -Xmx700m"
 
 // DefaultESIngestMemArgs default Elasticsearch Ingest memory settings
-const DefaultESIngestMemArgs = "-Xms512m -Xmx2g"
+const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
 
 // DefaultESDataMemArgs default Elasticsearch Data memory settings
-const DefaultESDataMemArgs = "-Xms512m -Xmx4g"
+const DefaultESDataMemArgs = "-Xms4g -Xmx4g"
 
 // K8sTaintNoScheduleEffect constant for Noschedule
 const K8sTaintNoScheduleEffect = "NoSchedule"

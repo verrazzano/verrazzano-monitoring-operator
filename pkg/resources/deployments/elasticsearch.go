@@ -5,6 +5,8 @@ package deployments
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
+	"go.uber.org/zap"
 	"strings"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -85,7 +87,12 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 
 // Creates all Elasticsearch Client deployment elements
 func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
-	javaOpts := constants.DefaultESIngestMemArgs
+	// Default JVM heap settings if none provided
+	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.IngestNode.Resources.RequestMemory)
+	if err != nil {
+		javaOpts = constants.DefaultESIngestMemArgs
+		zap.S().Errorf("Unable to derive heap sizes from Ingest pod, using default %s.  Error: %v", javaOpts, err)
+	}
 	if vmo.Spec.Elasticsearch.IngestNode.JavaOpts != "" {
 		javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
 	}
@@ -129,7 +136,12 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 
 // Creates all Elasticsearch Data deployment elements
 func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
-	javaOpts := constants.DefaultESDataMemArgs
+	// Default JVM heap settings if none provided
+	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.DataNode.Resources.RequestMemory)
+	if err != nil {
+		javaOpts = constants.DefaultESDataMemArgs
+		zap.S().Errorf("Unable to derive heap sizes from Data pod, using default %s.  Error: %v", javaOpts, err)
+	}
 	if vmo.Spec.Elasticsearch.DataNode.JavaOpts != "" {
 		javaOpts = vmo.Spec.Elasticsearch.DataNode.JavaOpts
 	}

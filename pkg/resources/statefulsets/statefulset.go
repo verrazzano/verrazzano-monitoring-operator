@@ -5,6 +5,7 @@ package statefulsets
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
 	"strings"
 
 	"go.uber.org/zap"
@@ -72,7 +73,11 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 	}
 	if resources.IsSingleNodeESCluster(vmo) {
 		zap.S().Infof("ES topology for %s indicates a single-node cluster (single master node only)")
-		javaOpts := constants.DefaultDevProfileESMemArgs // Default JVM heap settings if none provided
+		javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.MasterNode.Resources.RequestMemory) // Default JVM heap settings if none provided
+		if err != nil {
+			javaOpts = constants.DefaultDevProfileESMemArgs
+			zap.S().Errorf("Unable to derive heap sizes from Master pod, using default %s.  Error: %v", javaOpts, err)
+		}
 		if vmo.Spec.Elasticsearch.MasterNode.JavaOpts != "" {
 			javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
 		}
