@@ -17,18 +17,18 @@ const UnitM = 1024 * UnitK
 const UnitG = 1024 * UnitM
 
 // FormatJvmHeapMinMax returns the identical min and max JVM heap setting in the format
-// java expects like "-Xms2g -Xmx2g"
+// Java expects like "-Xms2g -Xmx2g"
 func FormatJvmHeapMinMax(heap string) string {
 	return fmt.Sprintf("-Xms%s -Xmx%s", heap, heap)
 }
 
 // FormatJvmHeapSize formats the string based on the size of the input value
 // Return whole number (1200M not 1.2G)
-// Return min magnatude of K
+// Return a minimum magnitude of K
 func FormatJvmHeapSize(sizeB int64) string {
 	if sizeB >= UnitG {
 		if sizeB%UnitG == 0 {
-			// e.g 50g
+			// e.g. 50g
 			return fmt.Sprintf("%.0fg", float64(sizeB)/UnitG)
 		}
 		if sizeB%UnitM == 0 {
