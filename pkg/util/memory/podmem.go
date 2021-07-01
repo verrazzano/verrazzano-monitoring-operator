@@ -26,5 +26,7 @@ func PodMemToJvmHeap(size string) (string, error) {
 		// If someone happened to manually create a VMI this could happen if they format it wrong
 		return "", err
 	}
-	return FormatJvmHeapSize(q.Value()), nil
+	// JVM setting should be around 75% of pod request size
+	heap := (q.Value() * 75) / 100
+	return FormatJvmHeapSize(heap), nil
 }
