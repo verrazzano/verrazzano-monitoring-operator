@@ -49,18 +49,3 @@ func FormatJvmHeapSize(sizeB int64) string {
 	// round up to next kb
 	return fmt.Sprintf("%vk", sizeB/UnitK+1)
 }
-
-//func FormatJvmHeapSize(sizeB int64) string {
-//	if sizeB >= UnitG && sizeB%UnitG == 0 {
-//		return fmt.Sprintf("%.0fg", float64(sizeB)/UnitG)
-//	}
-//	if sizeB >= UnitM && sizeB%UnitM == 0 {
-//		return fmt.Sprintf("%.0fm", float64(sizeB)/UnitM)
-//	}
-//	if sizeB%UnitK == 0 {
-//		return fmt.Sprintf("%.0fk", float64(sizeB)/UnitK)
-//	}
-//
-//	// Round up to next highest K
-//	return fmt.Sprintf("%vk", (sizeB + UnitK)/UnitK)
-//}
