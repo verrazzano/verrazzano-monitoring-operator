@@ -22,7 +22,7 @@ func FormatJvmHeapMinMax(heap string) string {
 	return fmt.Sprintf("-Xms%s -Xmx%s", heap, heap)
 }
 
-// Format the string based on the size of the input value
+// FormatJvmHeapSize formats the string based on the size of the input value
 // Return whole number (1200M not 1.2G)
 // Return min magnatude of K
 func FormatJvmHeapSize(sizeB int64) string {
