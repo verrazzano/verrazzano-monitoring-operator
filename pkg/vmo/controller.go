@@ -513,15 +513,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		}
 	}
 
-	// Create a Hash on vmo/Status object to identify changes to vmo spec
-	hash, err := vmo.Hash()
-	if err != nil {
-		zap.S().Errorf("Error getting VMO hash: %v", err)
-	}
-	if vmo.Status.Hash != hash {
-		vmo.Status.Hash = hash
-	}
-
 	zap.S().Infof("Successfully synced '%s/%s'", vmo.Namespace, vmo.Name)
 
 	return nil

@@ -4,9 +4,6 @@
 package v1
 
 import (
-	"encoding/json"
-	"hash/fnv"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -140,7 +137,6 @@ type (
 		EnvName      string       `json:"envName" yaml:"envName"`
 		State        string       `json:"state" yaml:"state"`
 		CreationTime *metav1.Time `json:"creationTime,omitempty" yaml:"creationTime"`
-		Hash         uint32       `json:"hash"`
 	}
 
 	// Storage details
@@ -234,19 +230,6 @@ type (
 		Items           []VerrazzanoMonitoringInstance `json:"items"`
 	}
 )
-
-// Hash function to identify VerrazzanoMonitoringInstance changes
-func (c *VerrazzanoMonitoringInstance) Hash() (uint32, error) {
-	b, err := json.Marshal(c.Spec)
-	if err != nil {
-		return 0, err
-	}
-	h := fnv.New32a()
-	if _, err := h.Write(b); err != nil {
-		return 0, err
-	}
-	return h.Sum32(), nil
-}
 
 // GetObjectKind to get kind
 func (c *VerrazzanoMonitoringInstance) GetObjectKind() schema.ObjectKind {
