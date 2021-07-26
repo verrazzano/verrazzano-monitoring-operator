@@ -1237,6 +1237,14 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ----------------------- Dependencies Grouped by License ------------
 -------- Dependency
+github.com/go-resty/resty/v2
+-------- Copyrights
+Copyright (c) 2015-2021 Jeevanandam M., https://myjeeva.com <jeeva@myjeeva.com>
+Copyright (c) 2015-2021 Jeevanandam M (jeeva@myjeeva.com), All rights reserved.
+Copyright (c) 2015-2021 Jeevanandam M (jeeva@myjeeva.com)
+Copyright (c) 2015-2021 Jeevanandam M. (jeeva@myjeeva.com), All rights reserved.
+
+-------- Dependency
 github.com/json-iterator/go
 -------- Copyrights
 Copyright (c) 2016 json-iterator
@@ -1265,20 +1273,12 @@ Copyright (c) 2020 Uber Technologies, Inc.
 Copyright (c) 2016, 2017 Uber Technologies, Inc.
 Copyright (c) 2018 Uber Technologies, Inc.
 
--------- Dependency
-gopkg.in/resty.v1
--------- Copyrights
-Copyright (c) 2015-2019 Jeevanandam M., https://myjeeva.com <jeeva@myjeeva.com>
-Copyright (c) 2015-2019 Jeevanandam M (jeeva@myjeeva.com), All rights reserved.
-Copyright (c) 2015-2019 Jeevanandam M (jeeva@myjeeva.com)
-Copyright (c) 2015-2019 Jeevanandam M. (jeeva@myjeeva.com), All rights reserved.
-
 -------- Dependencies Summary
+github.com/go-resty/resty/v2
 github.com/json-iterator/go
 go.uber.org/atomic
 go.uber.org/multierr
 go.uber.org/zap
-gopkg.in/resty.v1
 
 -------- License used by Dependencies
 SPDX:MIT
@@ -1364,4 +1364,4 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ATTRIBUTION-HELPER-GENERATED:
-License file based on go.mod with md5 sum: 494b5efc99b2069f53e20e2785bb6829
+License file based on go.mod with md5 sum: 48a0b4cef48e7788b309a7fb2747e1ea
