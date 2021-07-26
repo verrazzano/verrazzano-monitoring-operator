@@ -30,7 +30,7 @@ func GetClient() *resty.Client {
 	restyClient := resty.New()
 
 	f := framework.Global
-	// Set proxy for resty clients
+	// Set proxy for resty client
 	if f.ExternalIP != "localhost" {
 		proxyURL := os.Getenv("http_proxy")
 		if proxyURL != "" {
