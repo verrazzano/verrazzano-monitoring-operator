@@ -1,19 +1,16 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package framework
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"math/rand"
 	"time"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/client"
-	"gopkg.in/resty.v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -69,14 +66,6 @@ func Setup() error {
 
 	if *operatorNamespace == "" {
 		operatorNamespace = namespace
-	}
-	// Set proxy for resty clients
-	if *externalIP != "localhost" {
-		proxyURL := os.Getenv("http_proxy")
-		if proxyURL != "" {
-			fmt.Println("Setting proxy for resty clients to :" + proxyURL)
-			resty.SetProxy(proxyURL)
-		}
 	}
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
