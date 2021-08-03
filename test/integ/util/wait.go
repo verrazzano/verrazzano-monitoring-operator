@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package util
@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"gopkg.in/resty.v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -230,7 +229,7 @@ func WaitForEndpointAvailable(name string, externalIP string, port int32, urlPat
 	var err error
 	endpointURL := fmt.Sprintf("http://%s:%d%s", externalIP, port, urlPath)
 	fmt.Printf("Waiting for %s (%s) to reach status code %d...\n", name, endpointURL, expectedStatusCode)
-	restyClient := resty.New()
+	restyClient := GetClient()
 	restyClient.SetTimeout(10 * time.Second)
 	startTime := time.Now()
 	err = Retry(backoff, func() (bool, error) {
