@@ -71,29 +71,29 @@ go-install:
 go-run: go-install
 	GO111MODULE=on $(GO) run cmd/verrazzano-monitoring-ctrl/main.go --kubeconfig=${KUBECONFIG} --zap-log-level=debug --namespace=${K8S_NAMESPACE} --watchNamespace=${WATCH_NAMESPACE} --watchVmi=${WATCH_VMI} ${EXTRA_PARAMS}
 
-.PHONY: go-fmt
-go-fmt:
-	gofmt -s -e -d $(shell find . -name "*.go" | grep -v /vendor/) > error.txt
-	if [ -s error.txt ]; then\
-		cat error.txt;\
-		rm error.txt;\
-		exit 1;\
-	fi
-	rm error.txt
-
-.PHONY: go-vet
-go-vet:
-	$(GO) vet $(shell go list ./... | grep -v /vendor/)
-
-.PHONY: go-lint
-go-lint:
-	$(GO) get -u golang.org/x/lint/golint
-	golint -set_exit_status $(shell go list ./... | grep -v /vendor/)
-
-.PHONY: go-ineffassign
-go-ineffassign:
-	$(GO) get -u github.com/gordonklaus/ineffassign
-	ineffassign $(shell go list ./...)
+# .PHONY: go-fmt
+# go-fmt:
+# 	gofmt -s -e -d $(shell find . -name "*.go" | grep -v /vendor/) > error.txt
+# 	if [ -s error.txt ]; then\
+# 		cat error.txt;\
+# 		rm error.txt;\
+# 		exit 1;\
+# 	fi
+# 	rm error.txt
+#
+# .PHONY: go-vet
+# go-vet:
+# 	$(GO) vet $(shell go list ./... | grep -v /vendor/)
+#
+# .PHONY: go-lint
+# go-lint:
+# 	$(GO) get -u golang.org/x/lint/golint
+# 	golint -set_exit_status $(shell go list ./... | grep -v /vendor/)
+#
+# .PHONY: go-ineffassign
+# go-ineffassign:
+# 	$(GO) get -u github.com/gordonklaus/ineffassign
+# 	ineffassign $(shell go list ./...)
 
 .PHONY: go-vendor
 go-vendor:
@@ -184,7 +184,7 @@ unit-test: go-install
 # Run all checks, convenient as a sanity-check before committing/pushing
 #
 .PHONY: check
-check: go-fmt go-lint go-ineffassign go-vet unit-test
+check: golangci-lint unit-test
 
 .PHONY: coverage
 coverage:
@@ -194,3 +194,11 @@ coverage:
 integ-test: go-install
 	GO111MODULE=on $(GO) get -u github.com/oracle/oci-go-sdk
 	GO111MODULE=on $(GO) test -v ./test/integ/ -timeout 30m --kubeconfig=${KUBECONFIG} --externalip=${K8S_EXTERNAL_IP} --namespace=${K8S_NAMESPACE} --skipteardown=${INTEG_SKIP_TEARDOWN} --run=${INTEG_RUN_REGEX} --phase=${INTEG_PHASE} --ingressControllerSvcName=${INGRESS_CONTROLLER_SVC_NAME} ${INGRESS_OPT} ${RUN_ID_OPT}
+
+# find or download and execute golangci-lint
+.PHONY: golangci-lint
+golangci-lint:
+ifeq (, $(shell command -v golangci-lint))
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.41.1
+endif
+	golangci-lint run

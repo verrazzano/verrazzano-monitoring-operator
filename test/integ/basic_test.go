@@ -1651,34 +1651,6 @@ func waitForStringInResponse(host string, externalIP string, port int32, urlPath
 	return err
 }
 
-// waitForPrometheusMetric waits until the given metric appears in Prometheus (from some time in the last day)
-func waitForPrometheusMetric(domain, prometheusURL string, metricName string) error {
-	var err error
-	var body string
-	var headers = map[string]string{}
-
-	endpointURL := fmt.Sprintf("%s/api/v1/query?query=avg_over_time(%s[1d])", prometheusURL, metricName)
-	err = testutil.Retry(testutil.DefaultRetry, func() (bool, error) {
-
-		_, body, err = sendRequest("GET", endpointURL, "prometheus."+domain, false, headers, "")
-		var jsonResp map[string]interface{}
-		if err := json.Unmarshal([]byte(body), &jsonResp); err == nil {
-			dataJSON := jsonResp["data"]
-			// Need to convert the [data] element into an interface in order to process it
-			switch vv := dataJSON.(type) {
-			case map[string]interface{}:
-				// A non-empty list means the metric exists
-				return fmt.Sprint(vv["result"]) != "[]", nil
-			case []interface{}:
-				return false, nil
-			}
-		}
-		return false, nil
-	})
-	return err
-
-}
-
 // readTestDashboardConfig returns a dashboard as a JSON-encoded string whose title is the specified id.
 func readTestDashboardConfig(id string) (string, error) {
 	dashboardConfig, readErr := ioutil.ReadFile("files/grafana.dashboard.json")
@@ -1760,7 +1732,7 @@ func sendRequestWithUserPassword(action, myURL, host string, useAuth bool, heade
 	var err error
 
 	tr := &http.Transport{
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true}, //nolint:gosec //#gosec G402
 		TLSHandshakeTimeout: 10 * time.Second,
 		// Match Cirith's default timeouts
 		ResponseHeaderTimeout: 20 * time.Second,

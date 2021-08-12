@@ -23,7 +23,7 @@ import (
 // success, it exits with a non-zero status.
 
 // The Version struct is defined to match JSON schema returned by ES REST API endpoints
-type Version struct {
+type Version struct { //nolint:deadcode
 	Number string `json:"number"`
 }
 
@@ -148,10 +148,7 @@ func isSufficient(clusterHealth *ClusterHealth, nodes *[]ESNode, version string,
 			observedDataNodes++
 		}
 	}
-	if observedDataNodes < requiredDataNodes {
-		return false
-	}
-	return true
+	return observedDataNodes >= requiredDataNodes
 }
 
 func notSufficient(format string, v ...interface{}) {
