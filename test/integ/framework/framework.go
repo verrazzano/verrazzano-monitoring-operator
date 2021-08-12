@@ -4,10 +4,9 @@
 package framework
 
 import (
+	"crypto/rand"
 	"flag"
-
-	"math/rand"
-	"time"
+	"math/big"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/client"
@@ -124,12 +123,14 @@ func Teardown() error {
 }
 
 func generateRandomID(n int) string {
-	rand.Seed(time.Now().Unix())
 	var letter = []rune("abcdefghijklmnopqrstuvwxyz")
-
+	nBig, err := rand.Int(rand.Reader, big.NewInt(int64(len(letter))))
+	if err != nil {
+		panic("failed to generate random numbers")
+	}
 	id := make([]rune, n)
 	for i := range id {
-		id[i] = letter[rand.Intn(len(letter))]
+		id[i] = letter[nBig.Int64()]
 	}
 	return string(id)
 }

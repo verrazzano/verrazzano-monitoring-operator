@@ -101,9 +101,9 @@ func WaitForService(namespace string, serviceName string, backoff wait.Backoff,
 		if err != nil {
 			return false, err
 		}
-		for _, service := range services.Items {
+		for i, service := range services.Items {
 			if service.Name == serviceName {
-				latest = &service
+				latest = &services.Items[i]
 				return true, nil
 			}
 		}
@@ -121,7 +121,7 @@ func WaitForElasticSearchIndexDocCount(ElasticSearchIndexDocCountURL string, cou
 	var err error
 	fmt.Println("Getting index doc count from elasticsearch url: " + ElasticSearchIndexDocCountURL)
 	err = Retry(backoff, func() (bool, error) {
-		resp, err := http.Get(ElasticSearchIndexDocCountURL)
+		resp, err := http.Get(ElasticSearchIndexDocCountURL) //nolint:gosec //#gosec G107
 		if err != nil {
 			return false, err
 		}
@@ -164,7 +164,7 @@ func WaitForEndpointAvailableWithAuth(
 	startTime := time.Now()
 
 	tr := &http.Transport{
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, //nolint:gosec //#gosec G402
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: 20 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,

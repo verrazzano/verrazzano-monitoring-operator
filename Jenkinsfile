@@ -1,4 +1,4 @@
-// Copyright (c) 2020, Oracle and/or its affiliates.
+// Copyright (c) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 def DOCKER_IMAGE_TAG
@@ -74,42 +74,12 @@ pipeline {
             }
         }
 
-        stage('gofmt Check') {
+        stage('golangci-lint Check') {
             when { not { buildingTag() } }
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-fmt
-                """
-            }
-        }
-
-        stage('go vet Check') {
-            when { not { buildingTag() } }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-vet
-                """
-            }
-        }
-
-        stage('golint Check') {
-            when { not { buildingTag() } }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-lint
-                """
-            }
-        }
-
-        stage('ineffassign Check') {
-            when { not { buildingTag() } }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-ineffassign
+                    make golangci-lint
                 """
             }
         }

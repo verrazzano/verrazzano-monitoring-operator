@@ -1,11 +1,11 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
+	"math/big"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
@@ -72,9 +72,12 @@ func contains(s []string, e string) bool {
 
 // Returns a random element from the given slice
 func chooseRandomElementFromSlice(slice []string) string {
-	rand.Seed(time.Now().UTC().UnixNano())
 	if len(slice) > 0 {
-		return slice[rand.Intn(len(slice))]
+		nBig, err := rand.Int(rand.Reader, big.NewInt(int64(len(slice))))
+		if err != nil {
+			panic("failed to generate random number")
+		}
+		return slice[nBig.Int64()]
 	}
 	return ""
 }

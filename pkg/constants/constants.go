@@ -203,7 +203,7 @@ const K8sDefaultStorageClassBetaAnnotation = "storageclass.beta.kubernetes.io/is
 const MonitoringNamespace = "monitoring"
 
 // MCRegistrationSecret - the name of the secret that contains the cluster registration information
-const MCRegistrationSecret = "verrazzano-cluster-registration"
+const MCRegistrationSecret = "verrazzano-cluster-registration" //nolint:gosec //#gosec G101
 
 // ClusterNameData - the field name in MCRegistrationSecret that contains this managed cluster's name
 const ClusterNameData = "managed-cluster-name"

@@ -130,7 +130,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 		}
 	}
 
-	var livenessProbe *corev1.Probe = nil
+	var livenessProbe *corev1.Probe
 	if componentDetails.LivenessHTTPPath != "" {
 		livenessProbe = &corev1.Probe{
 			Handler: corev1.Handler{
@@ -143,7 +143,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 		}
 	}
 
-	var readinessProbe *corev1.Probe = nil
+	var readinessProbe *corev1.Probe
 	if componentDetails.ReadinessHTTPPath != "" {
 		readinessProbe = &corev1.Probe{
 			Handler: corev1.Handler{
