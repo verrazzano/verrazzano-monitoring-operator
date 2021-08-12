@@ -6,7 +6,6 @@ package vmo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"reflect"
 	"regexp"
@@ -88,7 +87,7 @@ func CreateOrUpdateAuthSecrets(controller *Controller, vmo *vmcontrollerv1.Verra
 			return err
 		}
 	}
-	auth := fmt.Sprintf("%s", passwords.Bytes())
+	auth := string(passwords.Bytes())
 	// zap.S().Infof("Debug Auth '%s' ", auth)
 
 	secretData := make(map[string][]byte)

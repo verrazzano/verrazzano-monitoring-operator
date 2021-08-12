@@ -6,7 +6,7 @@ linters:
     - govet
     - ineffassign
     - gofmt
-    - golint
+    - revive
     - gosimple
     - deadcode
     - gosec
