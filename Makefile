@@ -71,30 +71,6 @@ go-install:
 go-run: go-install
 	GO111MODULE=on $(GO) run cmd/verrazzano-monitoring-ctrl/main.go --kubeconfig=${KUBECONFIG} --zap-log-level=debug --namespace=${K8S_NAMESPACE} --watchNamespace=${WATCH_NAMESPACE} --watchVmi=${WATCH_VMI} ${EXTRA_PARAMS}
 
-# .PHONY: go-fmt
-# go-fmt:
-# 	gofmt -s -e -d $(shell find . -name "*.go" | grep -v /vendor/) > error.txt
-# 	if [ -s error.txt ]; then\
-# 		cat error.txt;\
-# 		rm error.txt;\
-# 		exit 1;\
-# 	fi
-# 	rm error.txt
-#
-# .PHONY: go-vet
-# go-vet:
-# 	$(GO) vet $(shell go list ./... | grep -v /vendor/)
-#
-# .PHONY: go-lint
-# go-lint:
-# 	$(GO) get -u golang.org/x/lint/golint
-# 	golint -set_exit_status $(shell go list ./... | grep -v /vendor/)
-#
-# .PHONY: go-ineffassign
-# go-ineffassign:
-# 	$(GO) get -u github.com/gordonklaus/ineffassign
-# 	ineffassign $(shell go list ./...)
-
 .PHONY: go-vendor
 go-vendor:
 	glide install -v
