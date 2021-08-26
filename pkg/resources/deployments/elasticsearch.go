@@ -119,11 +119,12 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		corev1.EnvVar{Name: "node.data", Value: "false"},
 		corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 	)
-	if config.ElasticsearchIngest.OidcProxy != nil {
-		oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.IngestNode.Resources, &config.ElasticsearchIngest)
-		elasticsearchIngestDeployment.Spec.Template.Spec.Volumes = append(elasticsearchIngestDeployment.Spec.Template.Spec.Volumes, oidcVolumes...)
-		elasticsearchIngestDeployment.Spec.Template.Spec.Containers = append(elasticsearchIngestDeployment.Spec.Template.Spec.Containers, *oidcProxy)
-	}
+	// VZ-3256: Prevent oidc-auth sidecar from being added to VMI deployment.
+	//if config.ElasticsearchIngest.OidcProxy != nil {
+	//	oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.IngestNode.Resources, &config.ElasticsearchIngest)
+	//	elasticsearchIngestDeployment.Spec.Template.Spec.Volumes = append(elasticsearchIngestDeployment.Spec.Template.Spec.Volumes, oidcVolumes...)
+	//	elasticsearchIngestDeployment.Spec.Template.Spec.Containers = append(elasticsearchIngestDeployment.Spec.Template.Spec.Containers, *oidcProxy)
+	//}
 	// add the required istio annotations to allow inter-es component communication
 	if elasticsearchIngestDeployment.Spec.Template.Annotations == nil {
 		elasticsearchIngestDeployment.Spec.Template.Annotations = make(map[string]string)
