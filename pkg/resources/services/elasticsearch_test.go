@@ -31,14 +31,14 @@ func TestElasticsearchDefaultServices1(t *testing.T) {
 		},
 	}
 	services := createElasticsearchServiceElements(vmo)
-	assert.Equal(t, 4, len(services), "Length of generated services")
+	assert.Equal(t, 3, len(services), "Length of generated services")
 }
 
 func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 	vmo := createDevProfileES()
 
 	services := createElasticsearchServiceElements(vmo)
-	assert.Equal(t, 4, len(services), "Length of generated services")
+	assert.Equal(t, 3, len(services), "Length of generated services")
 
 	ingestService := services[0]
 	masterService := services[1]

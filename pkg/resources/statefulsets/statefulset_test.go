@@ -322,7 +322,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(elasticsearchUID, *sts.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser,
 		"Incorrect Elasticsearch.SecurityContext.RunAsUser")
 
-	assert.Len(sts.Spec.Template.Spec.Containers, 2, "Incorrect number of Containers")
+	assert.Len(sts.Spec.Template.Spec.Containers, 1, "Incorrect number of Containers")
 	assert.Len(sts.Spec.Template.Spec.Containers[0].Ports, 2, "Incorrect number of Ports")
 	assert.Equal("transport", sts.Spec.Template.Spec.Containers[0].Ports[0].Name, "Incorrect Container Port")
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[0].HostPort, "Incorrect Container HostPort")
@@ -382,7 +382,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Len(sts.Spec.VolumeClaimTemplates, 0, "Incorrect number of VolumeClaimTemplates")
 
 	volumes := sts.Spec.Template.Spec.Volumes
-	assert.Len(volumes, 2)
+	assert.Len(volumes, 1)
 	assert.Equal(esMasterVolName, volumes[0].Name, "Incorrect name for master volume")
 	volumeSource := volumes[0].VolumeSource
 	assert.NotNil(volumeSource.EmptyDir, "volumeSource should be EmptyDir")
