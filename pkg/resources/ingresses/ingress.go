@@ -231,7 +231,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 						Path: "/()(.*)",
 						Backend: extensions_v1beta1.IngressBackend{
 							ServiceName: serviceName,
-							ServicePort: intstr.FromString(resources.AuthProxyPort()),
+							ServicePort: intstr.FromString(trimQuotes(resources.AuthProxyPort())),
 						},
 					},
 				},
@@ -269,4 +269,13 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
 	setNginxRoutingAnnotations(ingress)
 	return ingress
+}
+
+func trimQuotes(s string) string {
+	if len(s) >= 2 {
+		if s[0] == '"' && s[len(s)-1] == '"' {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
 }
