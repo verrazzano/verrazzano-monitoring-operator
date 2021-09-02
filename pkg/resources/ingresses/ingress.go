@@ -272,6 +272,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 }
 
 func trimQuotes(s string) string {
+	zap.S().Infof("port '%s'", s)
 	if len(s) >= 2 {
 		if s[0] == '\\' && s[len(s)-1] == '"' {
 			return s[2 : len(s)-2]
