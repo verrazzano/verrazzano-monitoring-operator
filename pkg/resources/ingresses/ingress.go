@@ -220,6 +220,10 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 
 // newOidcProxyIngress creates the Ingress of the OidcProxy
 func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *extensions_v1beta1.Ingress {
+	port, err := strconv.Atoi(resources.AuthProxyPort())
+	if err != nil {
+		port = 8775
+	}
 	serviceName := resources.AuthProxyMetaName()
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
 	ingressRule := extensions_v1beta1.IngressRule{
@@ -231,7 +235,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 						Path: "/()(.*)",
 						Backend: extensions_v1beta1.IngressBackend{
 							ServiceName: serviceName,
-							ServicePort: intstr.FromString(trimQuotes(resources.AuthProxyPort())),
+							ServicePort: intstr.FromInt(port),
 						},
 					},
 				},
@@ -269,14 +273,4 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
 	setNginxRoutingAnnotations(ingress)
 	return ingress
-}
-
-func trimQuotes(s string) string {
-	zap.S().Infof("port '%s'", s)
-	if len(s) >= 2 {
-		if s[0] == '\\' && s[len(s)-1] == '"' {
-			return s[2 : len(s)-2]
-		}
-	}
-	return s
 }
