@@ -220,9 +220,11 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 
 // newOidcProxyIngress creates the Ingress of the OidcProxy
 func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *extensions_v1beta1.Ingress {
-	// VZ-3256: Prevent oidc-auth service from being used in ingress.
-	//serviceName := resources.OidcProxyMetaName(vmo.Name, component.Name)
-	serviceName := resources.GetMetaName(vmo.Name, component.Name)
+	port, err := strconv.Atoi(resources.AuthProxyPort())
+	if err != nil {
+		port = 8775
+	}
+	serviceName := resources.AuthProxyMetaName()
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
 	ingressRule := extensions_v1beta1.IngressRule{
 		Host: ingressHost,
@@ -233,9 +235,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 						Path: "/()(.*)",
 						Backend: extensions_v1beta1.IngressBackend{
 							ServiceName: serviceName,
-							// VZ-3256: Prevent oidc-auth service from being used in ingress.
-							//ServicePort: intstr.FromInt(component.OidcProxy.Port),
-							ServicePort: intstr.FromInt(component.Port),
+							ServicePort: intstr.FromInt(port),
 						},
 					},
 				},
