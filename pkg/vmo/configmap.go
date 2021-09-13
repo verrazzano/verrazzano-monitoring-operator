@@ -109,43 +109,6 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	}
 	configMaps = append(configMaps, vmo.Spec.Prometheus.VersionsConfigMap)
 
-	// VZ-3256: Not used since oidc-auth sidecar not injected.
-	//if config.ElasticsearchIngest.OidcProxy != nil {
-	//	oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.ElasticsearchIngest)
-	//	if err != nil {
-	//		zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
-	//		return err
-	//	}
-	//	configMaps = append(configMaps, oidcConfig)
-	//}
-	// VZ-3256: Not used since oidc-auth sidecar not injected.
-	//if config.Prometheus.OidcProxy != nil {
-	//	oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.Prometheus)
-	//	if err != nil {
-	//		zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
-	//		return err
-	//	}
-	//	configMaps = append(configMaps, oidcConfig)
-	//}
-	// VZ-3256: Not used since oidc-auth sidecar not injected.
-	//if config.Grafana.OidcProxy != nil {
-	//	oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.Grafana)
-	//	if err != nil {
-	//		zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
-	//		return err
-	//	}
-	//	configMaps = append(configMaps, oidcConfig)
-	//}
-	// VZ-3256: Not used since oidc-auth sidecar not injected.
-	//if config.Kibana.OidcProxy != nil {
-	//	oidcConfig, err := addOidcProxyConfig(controller, vmo, &config.Kibana)
-	//	if err != nil {
-	//		zap.S().Errorf("Failed to create oidc-proxy configmap %s, for reason %v", oidcConfig, err)
-	//		return err
-	//	}
-	//	configMaps = append(configMaps, oidcConfig)
-	//}
-
 	// Delete configmaps that shouldn't exist
 	zap.S().Infof("Deleting unwanted ConfigMaps for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
@@ -201,34 +164,6 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 	}
 	return nil
 }
-
-// VZ-3256: Not used since oidc-auth sidecar not injected.
-//func createUpdateConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
-//	configMap := configmaps.NewConfig(vmo, configmap, data)
-//	existingConfigMap, err := getConfigMap(controller, vmo, configmap)
-//	if err != nil {
-//		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
-//		return err
-//	}
-//	if existingConfigMap != nil {
-//		zap.S().Debugf("Updating existing configmaps for %s ", existingConfigMap.Name)
-//		specDiffs := diff.Diff(existingConfigMap, configMap)
-//		if specDiffs != "" {
-//			zap.S().Debugf("ConfigMap %s : Spec differences %s", configMap.Name, len(specDiffs))
-//			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
-//			if err != nil {
-//				zap.S().Errorf("Failed to update existing configmap %s ", configMap.Name)
-//			}
-//		}
-//	} else {
-//		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
-//		if err != nil {
-//			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
-//			return err
-//		}
-//	}
-//	return nil
-//}
 
 // This function is being called for configmaps which don't modify with spec changes
 func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
@@ -303,59 +238,3 @@ func getConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitori
 	}
 	return configMap, nil
 }
-
-// VZ-3256: Not used since oidc-auth sidecar not injected.
-//// getOidcProxyConfig returns an OidcProxyConfig struct
-//func getOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) proxy.OidcProxyConfig {
-//	proxyConfig := proxy.OidcProxyConfig{}
-//	proxyConfig.Mode = proxy.ProxyModeOauth
-//	proxyConfig.OidcRealm = proxy.OidcRealmName
-//	proxyConfig.PKCEClientID = proxy.OidcPkceClientID
-//	proxyConfig.PGClientID = proxy.OidcPgClientID
-//	proxyConfig.OidcCallbackPath = proxy.OidcCallbackPath
-//	proxyConfig.OidcLogoutCallbackPath = proxy.OidcLogoutCallbackPath
-//	proxyConfig.RequiredRealmRole = proxy.OidcRequiredRealmRole
-//	proxyConfig.AuthnStateTTL = proxy.OidcAuthnStateTTL
-//
-//	proxyConfig.Host = "localhost"
-//	proxyConfig.Port = component.Port
-//
-//	// ingress and keycloak location info
-//	proxyConfig.Ingress = resources.OidcProxyIngressHost(vmo, component)
-//	verrazzanoURI := vmo.Spec.URI
-//	uriPrefix := fmt.Sprintf("vmi.%s.", vmo.Name)
-//	if strings.HasPrefix(verrazzanoURI, uriPrefix) {
-//		verrazzanoURI = strings.Replace(verrazzanoURI, uriPrefix, "", 1)
-//	}
-//	proxyConfig.OidcProviderHost = fmt.Sprintf("%s.%s", "keycloak", verrazzanoURI)
-//	proxyConfig.OidcProviderHostInCluster = "keycloak-http.keycloak.svc.cluster.local"
-//	// when keycloakURL is present, meanning it is a managed cluster, keycloakURL is the admin keycloak url
-//	if len(controller.clusterInfo.KeycloakURL) > 0 {
-//		u, err := url.Parse(controller.clusterInfo.KeycloakURL)
-//		if err == nil {
-//			proxyConfig.OidcProviderHost = u.Host
-//			proxyConfig.OidcProviderHostInCluster = ""
-//		} else {
-//			zap.S().Errorf("Failed to parse keycloak URL %s", controller.clusterInfo.KeycloakURL)
-//		}
-//	}
-//
-//	if len(controller.clusterInfo.clusterName) > 0 {
-//		proxyConfig.SSLEnabled = true
-//	}
-//
-//	// return
-//	return proxyConfig
-//}
-
-// VZ-3256: Not used since oidc-auth sidecar not injected.
-//func addOidcProxyConfig(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) (string, error) {
-//	oidcConfig := resources.OidcProxyConfigName(vmo.Name, component.Name)
-//	oidcProxyConfig := getOidcProxyConfig(controller, vmo, component)
-//	oidcConfigMap, err := proxy.GetOidcProxyConfigMapData(oidcProxyConfig)
-//	if err != nil {
-//		return oidcConfig, err
-//	}
-//	err = createUpdateConfigMap(controller, vmo, oidcConfig, oidcConfigMap)
-//	return oidcConfig, err
-//}

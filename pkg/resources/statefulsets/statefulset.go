@@ -215,12 +215,6 @@ fi`,
 			},
 		}
 	}
-	// VZ-3256: Prevent oidc-auth sidecar from being added to VMI deployment.
-	//if resources.IsSingleNodeESCluster(vmo) && config.ElasticsearchIngest.OidcProxy != nil {
-	//	oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, &config.ElasticsearchIngest)
-	//	statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, oidcVolumes...)
-	//	statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, *oidcProxy)
-	//}
 
 	// add istio annotations required for inter component communication
 	if statefulSet.Spec.Template.Annotations == nil {
