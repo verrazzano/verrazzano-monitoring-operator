@@ -124,13 +124,6 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 				corev1.VolumeMount{Name: constants.StorageVolumeName, MountPath: config.Prometheus.DataDir})
 		}
 
-		// VZ-3256: Prevent oidc-auth sidecar from being added to VMI deployment.
-		//if config.Prometheus.OidcProxy != nil {
-		//	oidcVolumes, oidcProxy := resources.CreateOidcProxy(vmo, &vmo.Spec.Prometheus.Resources, &config.Prometheus)
-		//	prometheusDeployment.Spec.Template.Spec.Volumes = append(prometheusDeployment.Spec.Template.Spec.Volumes, oidcVolumes...)
-		//	prometheusDeployment.Spec.Template.Spec.Containers = append(prometheusDeployment.Spec.Template.Spec.Containers, *oidcProxy)
-		//}
-
 		prometheusNodeDeployments = append(prometheusNodeDeployments, prometheusDeployment)
 	}
 	return prometheusNodeDeployments
