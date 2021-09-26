@@ -5,6 +5,7 @@ package resources
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -386,6 +387,17 @@ func oidcProxyName(componentName string) string {
 // OidcProxyMetaName returns OIDC Proxy meta name of the component. ex. vmi-system-es-ingest-oidc
 func OidcProxyMetaName(vmoName string, component string) string {
 	return GetMetaName(vmoName, oidcProxyName(component))
+}
+
+// AuthProxyMetaName returns Auth Proxy service name
+// TESTING: should be passed in from hel chart as s
+func AuthProxyMetaName() string {
+	return os.Getenv("AUTH_PROXY_SERVICE_NAME")
+}
+
+// AuthProxyMetaName returns Auth Proxy service name
+func AuthProxyPort() string {
+	return os.Getenv("AUTH_PROXY_SERVICE_PORT")
 }
 
 // OidcProxyConfigName returns OIDC Proxy ConfigMap name of the component. ex. vmi-system-es-ingest-oidc-config

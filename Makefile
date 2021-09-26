@@ -56,15 +56,18 @@ all: build
 BUILDVERSION=`git describe --tags`
 BUILDDATE=`date +%FT%T%z`
 
+.PHONY: code-gen
+code-gen:
+	git config core.hooksPath hooks
+	GO111MODULE=on $(GO) mod vendor
+	chmod +x vendor/k8s.io/code-generator/*.sh
+	sh hack/update-codegen.sh
+
 #
 # Go build related tasks
 #
 .PHONY: go-install
 go-install:
-	git config core.hooksPath hooks
-	GO111MODULE=on $(GO) mod vendor
-	chmod +x vendor/k8s.io/code-generator/*.sh
-	sh hack/update-codegen.sh
 	GO111MODULE=on $(GO) install ./cmd/...
 
 .PHONY: go-run

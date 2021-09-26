@@ -3,10 +3,9 @@ module github.com/verrazzano/verrazzano-monitoring-operator
 go 1.13
 
 require (
+	github.com/go-logr/logr v0.4.0 // indirect
+	github.com/go-logr/zapr v0.4.0 // indirect
 	github.com/go-resty/resty/v2 v2.6.0
-	github.com/gordonklaus/ineffassign v0.0.0-20210522101830-0589229737b2 // indirect
-	github.com/gorilla/mux v1.7.3 // indirect
-	github.com/oracle/oci-go-sdk v24.3.0+incompatible // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/verrazzano/pkg v0.0.2
 	go.uber.org/zap v1.16.0
@@ -25,7 +24,7 @@ require (
 )
 
 replace (
-	k8s.io/api => k8s.io/api v0.18.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.18.2
-	k8s.io/client-go => k8s.io/client-go v0.18.2
+	k8s.io/api => k8s.io/api v0.19.0
+	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0
+	k8s.io/client-go => k8s.io/client-go v0.19.0
 )
