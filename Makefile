@@ -33,7 +33,7 @@ ifdef INTEG_INGRESS
 endif
 
 DOCKER_NAMESPACE ?= verrazzano
-DOCKER_REPO ?= container-registry.oracle.com
+DOCKER_REPO ?= ghcr.io
 DIST_DIR:=dist
 BIN_DIR:=${DIST_DIR}/bin
 BIN_NAME:=${OPERATOR_NAME}
