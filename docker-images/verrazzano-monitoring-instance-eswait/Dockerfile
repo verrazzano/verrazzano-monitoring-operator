@@ -1,6 +1,6 @@
 # Copyright (C) 2020, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
-FROM cghcr.io/oracle/oraclelinux:7-slim AS build_base
+FROM ghcr.io/oracle/oraclelinux:7-slim AS build_base
 
 RUN yum update -y \
     && yum-config-manager --save --setopt=ol7_ociyum_config.skip_if_unavailable=true \
