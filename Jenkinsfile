@@ -20,7 +20,7 @@ pipeline {
     environment {
         DOCKER_CI_IMAGE_NAME_OPERATOR = 'verrazzano-monitoring-operator-jenkins'
         DOCKER_PUBLISH_IMAGE_NAME_OPERATOR = 'verrazzano-monitoring-operator'
-        DOCKER_IMAGE_NAME_OPERATOR = "${env.BRANCH_NAME == 'master' ? env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR : env.DOCKER_CI_IMAGE_NAME_OPERATOR}"
+        DOCKER_IMAGE_NAME_OPERATOR = "${env.BRANCH_NAME ==~ /^release-.*/ || env.BRANCH_NAME == 'master' ? env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR : env.DOCKER_CI_IMAGE_NAME_OPERATOR}"
 
         DOCKER_CI_IMAGE_NAME_ESWAIT = 'verrazzano-monitoring-instance-eswait-jenkins'
         DOCKER_PUBLISH_IMAGE_NAME_ESWAIT = 'verrazzano-monitoring-instance-eswait'
