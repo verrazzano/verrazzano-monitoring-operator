@@ -223,7 +223,8 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 
 // newOidcProxyIngress creates the Ingress of the OidcProxy
 func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *networkingv1.Ingress {
-	port, err := strconv.Atoi(resources.AuthProxyPort())
+	resources.AuthProxyPort()
+	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
 	if err != nil {
 		port = 8775
 	}
