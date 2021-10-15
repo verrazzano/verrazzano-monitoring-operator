@@ -59,9 +59,9 @@ type Controller struct {
 	cronJobLister        batchlistersv1beta1.CronJobLister
 	cronJobsSynced       cache.InformerSynced
 	deploymentLister     appslistersv1.DeploymentLister
-	deploymentsSynced cache.InformerSynced
-	ingressLister     networkinglistenersv1.IngressLister
-	ingressesSynced   cache.InformerSynced
+	deploymentsSynced    cache.InformerSynced
+	ingressLister        networkinglistenersv1.IngressLister
+	ingressesSynced      cache.InformerSynced
 	nodeLister           corelistersv1.NodeLister
 	nodesSynced          cache.InformerSynced
 	pvcLister            corelistersv1.PersistentVolumeClaimLister
