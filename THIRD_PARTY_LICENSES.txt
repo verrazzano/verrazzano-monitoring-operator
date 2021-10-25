@@ -574,8 +574,8 @@ github.com/googleapis/gnostic
 -------- Copyrights
 Copyright 2017-2020, Google LLC.
 Copyright 2019 Google LLC. All Rights Reserved.
-Copyright 2017 Google LLC. All Rights Reserved.
 Copyright 2020 Google LLC. All Rights Reserved.
+Copyright 2017 Google LLC. All Rights Reserved.
 Copyright 2018 Google LLC. All Rights Reserved.
 Copyright 2020 Google LLC. All Rights Reserved.\n" +
 
@@ -618,7 +618,6 @@ Copyright 2016 The Kubernetes Authors.
 Copyright 2015 The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
-Copyright 2021 The Kubernetes Authors.
 
 -------- Dependency
 k8s.io/apiextensions-apiserver
@@ -627,9 +626,8 @@ Copyright 2019 The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
 Copyright The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
-Copyright 2020 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
-Copyright 2021 The Kubernetes Authors.
+Copyright 2020 The Kubernetes Authors.
 
 -------- Dependency
 k8s.io/apimachinery
@@ -642,7 +640,6 @@ Copyright 2015 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
 Copyright The Kubernetes Authors.
-Copyright 2021 The Kubernetes Authors.
 Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2009 The Go Authors. All rights reserved.
 
@@ -650,20 +647,18 @@ Copyright 2009 The Go Authors. All rights reserved.
 k8s.io/client-go
 -------- Copyrights
 Copyright The Kubernetes Authors.
-Copyright 2016 The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
-Copyright 2019 The Kubernetes Authors.
-Copyright 2015 The Kubernetes Authors.
+Copyright 2016 The Kubernetes Authors.
 Copyright 2014 The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
+Copyright 2015 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
-Copyright 2021 The Kubernetes Authors.
 
 -------- Dependency
 k8s.io/klog/v2
 -------- Copyrights
 Copyright 2013 Google Inc. All Rights Reserved.
-Copyright 2020 The Kubernetes Authors.
 
 -------- Dependency
 k8s.io/kube-openapi
@@ -673,10 +668,6 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
-Copyright 2020 The Kubernetes Authors.
-Copyright 2015 go-swagger maintainers
-Copyright (C) MongoDB, Inc. 2017-present.
-Copyright 2017 go-swagger maintainers
 
 -------- Dependency
 k8s.io/utils
@@ -700,7 +691,6 @@ Copyright 2020 The Kubernetes Authors.
 Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2018 The Kubernetes authors.
-Copyright 2021 The Kubernetes Authors.
 Copyright 2017 The Kubernetes Authors.
 Copyright 2016 The Kubernetes Authors.
 Copyright 2014 The Kubernetes Authors.
@@ -950,10 +940,9 @@ github.com/google/go-cmp
 -------- Copyrights
 Copyright (c) 2017 The Go Authors. All rights reserved.
 Copyright 2017, The Go Authors. All rights reserved.
-Copyright 2021, The Go Authors. All rights reserved.
-Copyright 2020, The Go Authors. All rights reserved.
 Copyright 2018, The Go Authors. All rights reserved.
 Copyright 2019, The Go Authors. All rights reserved.
+Copyright 2020, The Go Authors. All rights reserved.
 
 -------- Dependency
 github.com/imdario/mergo
@@ -1031,7 +1020,6 @@ Copyright (C) 2009 Apple Inc. All rights reserved.
 Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2020 The Go Authors. All rights reserved.
 Copyright 2019 The Go Authors. All rights reserved.
-Copyright 2021 The Go Authors. All rights reserved.
 -------- Patents
 Additional IP Rights Grant (Patents)
 
@@ -1065,7 +1053,6 @@ Copyright 2017 The oauth2 Authors. All rights reserved.
 Copyright 2015 The oauth2 Authors. All rights reserved.
 Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2014 The Go Authors. All rights reserved.
-Copyright 2019 The Go Authors. All rights reserved.
 Copyright 2015 The Go Authors. All rights reserved.
 Copyright 2016 The Go Authors. All rights reserved.
 Copyright 2017 The Go Authors. All rights reserved.
@@ -1116,39 +1103,6 @@ shall terminate as of the date such litigation is filed.
 
 
 -------- Dependency
-golang.org/x/term
--------- Copyrights
-Copyright (c) 2009 The Go Authors. All rights reserved.
-Copyright 2019 The Go Authors. All rights reserved.
-Copyright 2013 The Go Authors. All rights reserved.
-Copyright 2020 The Go Authors. All rights reserved.
-Copyright 2011 The Go Authors. All rights reserved.
--------- Patents
-Additional IP Rights Grant (Patents)
-
-"This implementation" means the copyrightable works distributed by
-Google as part of the Go project.
-
-Google hereby grants to You a perpetual, worldwide, non-exclusive,
-no-charge, royalty-free, irrevocable (except as stated in this section)
-patent license to make, have made, use, offer to sell, sell, import,
-transfer and otherwise run, modify and propagate the contents of this
-implementation of Go, where such license applies only to those patent
-claims, both currently owned or controlled by Google and acquired in
-the future, licensable by Google that are necessarily infringed by this
-implementation of Go.  This grant does not include claims that would be
-infringed only as a consequence of further modification of this
-implementation.  If you or your agent or exclusive licensee institute or
-order or agree to the institution of patent litigation against any
-entity (including a cross-claim or counterclaim in a lawsuit) alleging
-that this implementation of Go or any code incorporated within this
-implementation of Go constitutes direct or contributory patent
-infringement, or inducement of patent infringement, then any patent
-rights granted to you under this License for this implementation of Go
-shall terminate as of the date such litigation is filed.
-
-
--------- Dependency
 golang.org/x/text
 -------- Copyrights
 Copyright (c) 2009 The Go Authors. All rights reserved.
@@ -1158,9 +1112,9 @@ Copyright 2015 The Go Authors. All rights reserved.
 Copyright 2017 The Go Authors. All rights reserved.
 Copyright 2012 The Go Authors. All rights reserved.
 Copyright 2013 The Go Authors. All rights reserved.
-Copyright 2019 The Go Authors. All rights reserved.
 Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2009 The Go Authors. All rights reserved.
+Copyright 2019 The Go Authors. All rights reserved.
 Copyright 2011 The Go Authors. All rights reserved.
 -------- Patents
 Additional IP Rights Grant (Patents)
@@ -1227,7 +1181,6 @@ Copyright 2020 The Go Authors. All rights reserved.
 Copyright 2019 The Go Authors. All rights reserved.",
 Copyright 2018 The Go Authors. All rights reserved.",
 Copyright 2008 Google Inc.  All rights reserved.
-Copyright 2021 The Go Authors. All rights reserved.
 -------- Patents
 Additional IP Rights Grant (Patents)
 
@@ -1268,7 +1221,6 @@ golang.org/x/crypto
 golang.org/x/net
 golang.org/x/oauth2
 golang.org/x/sys
-golang.org/x/term
 golang.org/x/text
 golang.org/x/time
 google.golang.org/protobuf
@@ -1346,8 +1298,7 @@ Copyright (c) 2016 json-iterator
 go.uber.org/atomic
 -------- Copyrights
 Copyright (c) 2016 Uber Technologies, Inc.
-Copyright (c) 2020 Uber Technologies, Inc.
-Copyright (c) 2016-2020 Uber Technologies, Inc.
+Copyright (c) 2019 Uber Technologies, Inc.
 
 -------- Dependency
 go.uber.org/multierr
@@ -1483,4 +1434,4 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ATTRIBUTION-HELPER-GENERATED:
-License file based on go.mod with md5 sum: 423a9923afd7b191bb527abd78229a23
+License file based on go.mod with md5 sum: 7200417953affd17d7401581c774225a
