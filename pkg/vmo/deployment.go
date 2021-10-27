@@ -27,7 +27,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	deployList, err := deployments.New(vmo, controller.dynamicclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
+	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
 		zap.S().Errorf("Failed to create Deployment specs for vmo: %s", err)
 		return false, err

@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -48,8 +47,6 @@ const controllerAgentName = "vmo-controller"
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	// dynamicclientset is a dynamickubernetes clientset
-	dynamicclientset dynamic.Interface
 	// vmoclientset is a clientset for our own API group
 	vmoclientset     clientset.Interface
 	kubeextclientset apiextensionsclient.Interface
@@ -132,12 +129,6 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		zap.S().Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
-	zap.S().Debugw("Building dynamic clientset")
-	dynamicclientset, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		zap.S().Fatalf("Error building dynamic clientset: %v", err)
-	}
-
 	zap.S().Debugw("Building vmo clientset")
 	vmoclientset, err := clientset.NewForConfig(cfg)
 	if err != nil {
@@ -207,7 +198,6 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		watchNamespace:   watchNamespace,
 		watchVmi:         watchVmi,
 		kubeclientset:    kubeclientset,
-		dynamicclientset: dynamicclientset,
 		vmoclientset:     vmoclientset,
 		kubeextclientset: kubeextclientset,
 
