@@ -115,12 +115,13 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 			return false, err
 		}
 
+		zap.S().Infof("%s existing annotations: %v", existingDeployment.Name, existingDeployment.Spec.Template.Annotations)
+		zap.S().Infof("%s current annotations: %v", curDeployment.Name, curDeployment.Spec.Template.Annotations)
+
 		// Deployment spec differences, so call Update() and return
 		specDiffs := diff.Diff(existingDeployment, curDeployment)
 		if specDiffs != "" {
 			zap.S().Infof("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-			zap.S().Infof("existing deployment: %v", existingDeployment)
-			zap.S().Infof("current deployment: %v", curDeployment)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {
 				return false, err
