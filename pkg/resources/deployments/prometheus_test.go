@@ -4,6 +4,7 @@
 package deployments
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic/fake"
 )
 
 func TestPrometheusDeploymentsNoStorage(t *testing.T) {
@@ -25,7 +27,7 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleDynamicClient(runtime.NewScheme()), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
@@ -56,7 +58,7 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleDynamicClient(runtime.NewScheme()), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,7 +92,7 @@ func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
 		},
 	}
 
-	deployments, err := New(vmo, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleDynamicClient(runtime.NewScheme()), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
 	if err != nil {
 		t.Error(err)
 	}

@@ -173,6 +173,9 @@ func setIstioAnnotations(prometheusDeployment *appsv1.Deployment, dynamicclients
 		return err
 	}
 
+	if len(unstList.Items) == 0 {
+		return nil
+	}
 	// Only one verrazzano can be installed so use the first item in the returned list
 	profile, found, err := unstructured.NestedString(unstList.Items[0].Object, "spec", "profile")
 	if err != nil {
@@ -214,10 +217,9 @@ func setIstioAnnotations(prometheusDeployment *appsv1.Deployment, dynamicclients
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
-		} else {
-			zap.S().Errorf("unable to get keycloak-http service: %v", err)
-			return err
 		}
+		zap.S().Errorf("unable to get keycloak-http service: %v", err)
+		return err
 	}
 	clusterIP, found, err := unstructured.NestedString(unst.Object, "spec", "clusterIP")
 	if err != nil {
