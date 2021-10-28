@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -49,10 +49,10 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			specDiffs := diff.Diff(existingIngress, curIngress)
 			if specDiffs != "" {
 				zap.S().Infof("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
-				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
+				_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
 			}
 		} else if k8serrors.IsNotFound(err) {
-			_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
 			zap.S().Errorf("Problem getting existing Ingress %s in namespace %s: %v", ingName, vmo.Namespace, err)
 			return err
@@ -74,7 +74,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
 			zap.S().Infof("Deleting ingress %s", ingress.Name)
-			err := controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
+			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
 				zap.S().Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
 				return err
