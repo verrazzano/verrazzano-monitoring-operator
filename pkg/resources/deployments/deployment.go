@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // Elasticsearch interface
@@ -25,7 +26,7 @@ type Elasticsearch interface {
 
 // New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
 // the resource so handleObject can discover the VMO resource that 'owns' it.
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
 	var err error
 
@@ -138,7 +139,11 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, operatorConfig *confi
 
 	// Prometheus
 	if vmo.Spec.Prometheus.Enabled {
-		deployments = append(deployments, createPrometheusDeploymentElements(vmo, pvcToAdMap)...)
+		promDeployments, err := createPrometheusDeploymentElements(vmo, kubeclientset, pvcToAdMap)
+		if err != nil {
+			return nil, err
+		}
+		deployments = append(deployments, promDeployments...)
 	}
 
 	// Elasticsearch

@@ -27,7 +27,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	deployList, err := deployments.New(vmo, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
+	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
 		zap.S().Errorf("Failed to create Deployment specs for vmo: %s", err)
 		return false, err
@@ -65,6 +65,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 				specDiffs := diff.Diff(existingDeployment, curDeployment)
 				if specDiffs != "" {
 					zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+					zap.S().Infof("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
 					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
@@ -119,6 +120,7 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		specDiffs := diff.Diff(existingDeployment, curDeployment)
 		if specDiffs != "" {
 			zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+			zap.S().Infof("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {
 				return false, err
