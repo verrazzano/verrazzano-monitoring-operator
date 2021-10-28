@@ -12,11 +12,12 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"go.uber.org/zap"
-	networkingv1 "k8s.io/api/networking/v1"
+	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) networkingv1.IngressRule {
+func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) extensions_v1beta1.IngressRule {
 	serviceName := resources.GetMetaName(vmo.Name, componentDetails.Name)
 	endpointName := componentDetails.EndpointName
 	if endpointName == "" {
@@ -24,22 +25,16 @@ func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 	}
 	fqdn := fmt.Sprintf("%s.%s", endpointName, vmo.Spec.URI)
 
-	pathType := networkingv1.PathTypeImplementationSpecific
-	return networkingv1.IngressRule{
+	return extensions_v1beta1.IngressRule{
 		Host: fqdn,
-		IngressRuleValue: networkingv1.IngressRuleValue{
-			HTTP: &networkingv1.HTTPIngressRuleValue{
-				Paths: []networkingv1.HTTPIngressPath{
+		IngressRuleValue: extensions_v1beta1.IngressRuleValue{
+			HTTP: &extensions_v1beta1.HTTPIngressRuleValue{
+				Paths: []extensions_v1beta1.HTTPIngressPath{
 					{
-						Path:     "/",
-						PathType: &pathType,
-						Backend: networkingv1.IngressBackend{
-							Service: &networkingv1.IngressServiceBackend{
-								Name: serviceName,
-								Port: networkingv1.ServiceBackendPort{
-									Number: int32(componentDetails.Port),
-								},
-							},
+						Path: "/",
+						Backend: extensions_v1beta1.IngressBackend{
+							ServiceName: serviceName,
+							ServicePort: intstr.FromInt(componentDetails.Port),
 						},
 					},
 				},
@@ -48,9 +43,9 @@ func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 	}
 }
 
-func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule networkingv1.IngressRule) (*networkingv1.Ingress, error) {
+func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule extensions_v1beta1.IngressRule) (*extensions_v1beta1.Ingress, error) {
 	var hosts = []string{hostName}
-	ingress := &networkingv1.Ingress{
+	ingress := &extensions_v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
 			Labels:          resources.GetMetaLabels(vmo),
@@ -58,14 +53,14 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
-		Spec: networkingv1.IngressSpec{
-			TLS: []networkingv1.IngressTLS{
+		Spec: extensions_v1beta1.IngressSpec{
+			TLS: []extensions_v1beta1.IngressTLS{
 				{
 					Hosts:      hosts,
 					SecretName: vmo.Name + "-tls",
 				},
 			},
-			Rules: []networkingv1.IngressRule{ingressRule},
+			Rules: []extensions_v1beta1.IngressRule{ingressRule},
 		},
 	}
 
@@ -85,7 +80,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	return ingress, nil
 }
 
-func addBasicAuthIngressAnnotations(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *networkingv1.Ingress, healthLocations string) {
+func addBasicAuthIngressAnnotations(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *extensions_v1beta1.Ingress, healthLocations string) {
 	ingress.Annotations["nginx.ingress.kubernetes.io/auth-type"] = "basic"
 	ingress.Annotations["nginx.ingress.kubernetes.io/auth-secret"] = vmo.Spec.SecretName
 	ingress.Annotations["nginx.ingress.kubernetes.io/auth-realm"] = vmo.Spec.URI + " auth"
@@ -94,7 +89,7 @@ func addBasicAuthIngressAnnotations(vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 	ingress.Annotations["nginx.ingress.kubernetes.io/server-snippet"] = healthLocations
 }
 
-func createIngressElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule networkingv1.IngressRule, healthLocations string) (*networkingv1.Ingress, error) {
+func createIngressElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule extensions_v1beta1.IngressRule, healthLocations string) (*extensions_v1beta1.Ingress, error) {
 	ingress, err := createIngressElementNoBasicAuth(vmo, hostName, componentDetails, ingressRule)
 	if err != nil {
 		return ingress, err
@@ -104,8 +99,8 @@ func createIngressElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, host
 }
 
 // New will return a new Service for VMO that needs to executed for on Complete
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*networkingv1.Ingress, error) {
-	var ingresses []*networkingv1.Ingress
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*extensions_v1beta1.Ingress, error) {
+	var ingresses []*extensions_v1beta1.Ingress
 
 	// Only create ingress if URI and secret name specified
 	if len(vmo.Spec.URI) <= 0 {
@@ -188,7 +183,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*networkingv1.Ingr
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 			ingresses = append(ingresses, ingress)
 		} else {
-			var ingress *networkingv1.Ingress
+			var ingress *extensions_v1beta1.Ingress
 			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
 			host := config.ElasticsearchIngest.EndpointName + "." + vmo.Spec.URI
 			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.ElasticsearchIngest)
@@ -206,7 +201,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*networkingv1.Ingr
 }
 
 // setNginxRoutingAnnotations adds the nginx annotations required for routing via istio envoy
-func setNginxRoutingAnnotations(ingress *networkingv1.Ingress) {
+func setNginxRoutingAnnotations(ingress *extensions_v1beta1.Ingress) {
 	ingress.Annotations["nginx.ingress.kubernetes.io/service-upstream"] = "true"
 	ingress.Annotations["nginx.ingress.kubernetes.io/upstream-vhost"] = "${service_name}.${namespace}.svc.cluster.local"
 }
@@ -224,37 +219,30 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 }
 
 // newOidcProxyIngress creates the Ingress of the OidcProxy
-func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *networkingv1.Ingress {
-	resources.AuthProxyPort()
-	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
+func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *extensions_v1beta1.Ingress {
+	port, err := strconv.Atoi(resources.AuthProxyPort())
 	if err != nil {
 		port = 8775
 	}
 	serviceName := resources.AuthProxyMetaName()
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
-	pathType := networkingv1.PathTypeImplementationSpecific
-	ingressRule := networkingv1.IngressRule{
+	ingressRule := extensions_v1beta1.IngressRule{
 		Host: ingressHost,
-		IngressRuleValue: networkingv1.IngressRuleValue{
-			HTTP: &networkingv1.HTTPIngressRuleValue{
-				Paths: []networkingv1.HTTPIngressPath{
+		IngressRuleValue: extensions_v1beta1.IngressRuleValue{
+			HTTP: &extensions_v1beta1.HTTPIngressRuleValue{
+				Paths: []extensions_v1beta1.HTTPIngressPath{
 					{
-						Path:     "/()(.*)",
-						PathType: &pathType,
-						Backend: networkingv1.IngressBackend{
-							Service: &networkingv1.IngressServiceBackend{
-								Name: serviceName,
-								Port: networkingv1.ServiceBackendPort{
-									Number: int32(port),
-								},
-							},
+						Path: "/()(.*)",
+						Backend: extensions_v1beta1.IngressBackend{
+							ServiceName: serviceName,
+							ServicePort: intstr.FromInt(port),
 						},
 					},
 				},
 			},
 		},
 	}
-	ingress := &networkingv1.Ingress{
+	ingress := &extensions_v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
 			Labels:          resources.GetMetaLabels(vmo),
@@ -262,14 +250,14 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
-		Spec: networkingv1.IngressSpec{
-			TLS: []networkingv1.IngressTLS{
+		Spec: extensions_v1beta1.IngressSpec{
+			TLS: []extensions_v1beta1.IngressTLS{
 				{
 					Hosts:      []string{ingressHost},
 					SecretName: vmo.Name + "-tls",
 				},
 			},
-			Rules: []networkingv1.IngressRule{ingressRule},
+			Rules: []extensions_v1beta1.IngressRule{ingressRule},
 		},
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize

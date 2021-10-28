@@ -32,7 +32,7 @@ import (
 	appslistersv1 "k8s.io/client-go/listers/apps/v1"
 	batchlistersv1beta1 "k8s.io/client-go/listers/batch/v1beta1"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
-	networkinglistenersv1 "k8s.io/client-go/listers/networking/v1"
+	extensionslistersv1beta1 "k8s.io/client-go/listers/extensions/v1beta1"
 	rbacv1listers1 "k8s.io/client-go/listers/rbac/v1"
 	storagelisters1 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -60,7 +60,7 @@ type Controller struct {
 	cronJobsSynced       cache.InformerSynced
 	deploymentLister     appslistersv1.DeploymentLister
 	deploymentsSynced    cache.InformerSynced
-	ingressLister        networkinglistenersv1.IngressLister
+	ingressLister        extensionslistersv1beta1.IngressLister
 	ingressesSynced      cache.InformerSynced
 	nodeLister           corelistersv1.NodeLister
 	nodesSynced          cache.InformerSynced
@@ -172,7 +172,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	configmapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 	cronJobInformer := kubeInformerFactory.Batch().V1beta1().CronJobs()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-	ingressInformer := kubeInformerFactory.Networking().V1().Ingresses()
+	ingressInformer := kubeInformerFactory.Extensions().V1beta1().Ingresses()
 	nodeInformer := kubeInformerFactory.Core().V1().Nodes()
 	pvcInformer := kubeInformerFactory.Core().V1().PersistentVolumeClaims()
 	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
@@ -554,7 +554,7 @@ func (c *Controller) IsHealthy() bool {
 	}
 
 	// Make sure the controller can talk to the API server and its CRD is defined.
-	crds, err := c.kubeextclientset.ApiextensionsV1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
+	crds, err := c.kubeextclientset.ApiextensionsV1beta1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
 	// Error getting CRD from API server
 	if err != nil {
 		return false
