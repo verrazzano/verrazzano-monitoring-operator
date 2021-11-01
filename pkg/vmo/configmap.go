@@ -91,7 +91,11 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.Prometheus.RulesVersionsConfigMap)
 
 	//configmap for prometheus config
-	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo)})
+	vzClusterName := controller.clusterInfo.clusterName
+	if vzClusterName == "" {
+		vzClusterName, _ = GetClusterNameFromSecret(controller, vmo.Namespace)
+	}
+	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
 	if err != nil {
 		zap.S().Errorf("Failed to create configmap %s for reason %v", vmo.Spec.Prometheus.ConfigMap, err)
 		return err
