@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"reflect"
 	"regexp"
 	"strings"
@@ -76,6 +78,21 @@ func GetAuthSecrets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		return "", "", err
 	}
 	return string(username), string(password), nil
+}
+
+func GetClusterNameFromSecret(controller *Controller, namespace string) (string, error) {
+	clusterName, err := controller.loadSecretData(namespace, constants.MCRegistrationSecret, constants.ClusterNameData)
+	if err == nil {
+		return string(clusterName), nil
+	}
+	if apierrors.IsNotFound(err) {
+		clusterName, err = controller.loadSecretData(namespace, constants.MCLocalRegistrationSecret, constants.ClusterNameData)
+		if err != nil {
+			return "", err
+		}
+		return string(clusterName), err
+	}
+	return "", err
 }
 
 // CreateOrUpdateAuthSecrets create/updates auth secrets
