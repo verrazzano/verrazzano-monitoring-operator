@@ -63,7 +63,7 @@ pipeline {
                 }
             }
         }
-       
+
         stage('Build') {
             when { not { buildingTag() } }
             steps {
@@ -106,7 +106,7 @@ pipeline {
                     make unit-test
                     make -B coverage
                     cp coverage.html ${WORKSPACE}
-                    build/scripts/copy-junit-output.sh ${WORKSPACE} 
+                    build/scripts/copy-junit-output.sh ${WORKSPACE}
                 """
             }
 	        post {
@@ -214,10 +214,12 @@ pipeline {
 
     post {
         failure {
-            mail to: "${env.BUILD_NOTIFICATION_TO_EMAIL}", from: "${env.BUILD_NOTIFICATION_FROM_EMAIL}",
-            subject: "Verrazzano: ${env.JOB_NAME} - Failed",
-            body: "Job Failed - \"${env.JOB_NAME}\" build: ${env.BUILD_NUMBER}\n\nView the log at:\n ${env.BUILD_URL}\n\nBlue Ocean:\n${env.RUN_DISPLAY_URL}"
+            script {
+                if (env.BRANCH_NAME == "master" || env.BRANCH_NAME ==~ "release-.*" || env.BRANCH_NAME ==~ "mark/*") {
+                    slackSend ( message: "Job Failed - \"${env.JOB_NAME}\" build: ${env.BUILD_NUMBER}\n\nView the log at:\n ${env.BUILD_URL}\n\nBlue Ocean:\n${env.RUN_DISPLAY_URL}" )
+                }
+            }
         }
     }
-    
+
 }
