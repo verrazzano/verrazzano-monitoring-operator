@@ -26,11 +26,13 @@ RUN go build \
 
 FROM ghcr.io/oracle/oraclelinux:7-slim AS final
 
-RUN yum update -y \
+RUN yum update -y && yum-config-manager --enable ol7_u8_security_validation \
+    && yum install -y openssl \
     && yum clean all \
     && rm -rf /var/cache/yum
 
 COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
+COPY --from=build_base /usr/bin/verrazzano-monitoring-operator/THIRD_PARTY_LICENSES.txt /licenses/
 
 WORKDIR /usr/local/bin/
 RUN groupadd -r verrazzano-monitoring-operator && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
