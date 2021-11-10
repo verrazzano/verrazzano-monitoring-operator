@@ -205,10 +205,6 @@ const MonitoringNamespace = "monitoring"
 // MCRegistrationSecret - the name of the secret that contains the cluster registration information
 const MCRegistrationSecret = "verrazzano-cluster-registration" //nolint:gosec //#gosec G101
 
-// MCLocalRegistrationSecret - the name of the secret that contains the local cluster info (used when the cluster
-// is not registered as a managed cluster)
-const MCLocalRegistrationSecret = "verrazzano-local-registration" //nolint:gosec //#gosec G101
-
 // ClusterNameData - the field name in MCRegistrationSecret that contains this managed cluster's name
 const ClusterNameData = "managed-cluster-name"
 
@@ -217,7 +213,3 @@ const KeycloakURLData = "keycloak-url"
 
 // KeycloakCABundleData - the field name in MCRegistrationSecret that contains the admin cluster's Keycloak ca-bundle
 const KeycloakCABundleData = "ca-bundle"
-
-// PrometheusClusterNameLabel - the label name attached to all metrics to indicate the Verrazzano
-// cluster name where the metric originated
-const PrometheusClusterNameLabel = "verrazzano_cluster"

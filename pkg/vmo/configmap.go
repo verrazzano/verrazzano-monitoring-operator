@@ -91,11 +91,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.Prometheus.RulesVersionsConfigMap)
 
 	//configmap for prometheus config
-	vzClusterName := controller.clusterInfo.clusterName
-	if vzClusterName == "" {
-		vzClusterName, _ = GetClusterNameFromSecret(controller, vmo.Namespace)
-	}
-	err = createOrUpdateConfigMap(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
+	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo)})
 	if err != nil {
 		zap.S().Errorf("Failed to create configmap %s for reason %v", vmo.Spec.Prometheus.ConfigMap, err)
 		return err
@@ -128,34 +124,6 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 				zap.S().Errorf("Failed to delete config map %s, for the reason (%v)", configMap.Name, err)
 				return err
 			}
-		}
-	}
-	return nil
-}
-
-// Create config map or update it if it already exists
-func createOrUpdateConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmapName string, data map[string]string) error {
-	configMap := configmaps.NewConfig(vmo, configmapName, data)
-	existingConfigMap, err := getConfigMap(controller, vmo, configmapName)
-	if err != nil {
-		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmapName)
-		return err
-	}
-	if existingConfigMap != nil {
-		zap.S().Debugf("Updating existing configmap for %s ", existingConfigMap.Name)
-		specDiffs := diff.Diff(existingConfigMap, configMap)
-		if specDiffs != "" {
-			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
-			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
-			if err != nil {
-				zap.S().Errorf("Failed to update existing configmap %s: %s ", configMap.Name, err.Error())
-			}
-		}
-	} else {
-		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
-		if err != nil {
-			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmapName)
-			return err
 		}
 	}
 	return nil
