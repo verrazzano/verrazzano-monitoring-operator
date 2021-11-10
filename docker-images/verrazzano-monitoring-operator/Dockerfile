@@ -32,7 +32,6 @@ RUN yum update -y && yum-config-manager --enable ol7_u8_security_validation \
     && rm -rf /var/cache/yum
 
 COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
-COPY --from=build_base /usr/bin/verrazzano-monitoring-operator/THIRD_PARTY_LICENSES.txt /licenses/
 
 WORKDIR /usr/local/bin/
 RUN groupadd -r verrazzano-monitoring-operator && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
