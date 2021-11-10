@@ -212,7 +212,7 @@ func GetElasticsearchInitContainer() *corev1.Container {
 }
 
 // GetDefaultPrometheusConfiguration returns the default Prometheus configuration for a VMO instance
-func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vzClusterName string) string {
+func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 	alertmanagerURL := fmt.Sprintf(GetMetaName(vmo.Name, config.AlertManager.Name)+":%d", config.AlertManager.Port)
 	// Prometheus does not allow any special characters in their label names, So they need to be removed using reg exp
 	re := regexp.MustCompile("[^a-zA-Z0-9_]")
@@ -236,8 +236,6 @@ scrape_configs:
    scrape_timeout: 15s
    static_configs:
    - targets: ['localhost:9090']
-     labels:
-       ` + constants.PrometheusClusterNameLabel + ": " + vzClusterName + `
 
  - job_name: 'node-exporter'
    scrape_interval: 20s
@@ -248,10 +246,6 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_endpoints_name]
      regex: 'node-exporter'
      action: keep
-   - source_labels: null
-     action: replace
-     target_label: ` + constants.PrometheusClusterNameLabel + `
-     replacement: ` + vzClusterName + `
 
  - job_name: 'cadvisor'
    scrape_interval: 20s
@@ -272,10 +266,6 @@ scrape_configs:
      regex: (.+)
      target_label: __metrics_path__
      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-   - source_labels: null
-     action: replace
-     target_label: ` + constants.PrometheusClusterNameLabel + `
-     replacement: ` + vzClusterName + `
 
  - job_name: 'nginx-ingress-controller'
    kubernetes_sd_configs:
@@ -300,10 +290,6 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_pod_name]
      action: replace
      target_label: kubernetes_pod_name
-   - source_labels: null
-     action: replace
-     target_label: ` + constants.PrometheusClusterNameLabel + `
-     replacement: ` + vzClusterName + `
 
  # Scrape config for Istio envoy stats
  - job_name: 'envoy-stats'
@@ -327,10 +313,6 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_pod_name]
      action: replace
      target_label: pod_name
-   - source_labels: null
-     action: replace
-     target_label: ` + constants.PrometheusClusterNameLabel + `
-     replacement: ` + vzClusterName + `
 
  # Scrape config for Istio - mesh and istiod metrics
  - job_name: 'pilot'
@@ -344,11 +326,7 @@ scrape_configs:
      action: keep
      regex: istiod;http-monitoring
    - source_labels: [__meta_kubernetes_service_label_app]
-     target_label: app
-   - source_labels: null
-     action: replace
-     target_label: ` + constants.PrometheusClusterNameLabel + `
-     replacement: ` + vzClusterName)
+     target_label: app`)
 
 	return string(prometheusConfig)
 }
