@@ -50,7 +50,7 @@ func TestCreateConfigmaps(t *testing.T) {
 
 // TestDeleteConfigMapIfExists tests the deleteConfigMapIfExists function
 func TestDeleteConfigMapIfExists(t *testing.T) {
-	configMap := &v1.ConfigMap{};
+	configMap := &v1.ConfigMap{}
 	configMap.SetNamespace(constants.VerrazzanoSystemNamespace)
 	promConfigMapName := resources.GetMetaName(constants.VMODefaultName, config.Prometheus.Name)
 	configMap.SetName(promConfigMapName)

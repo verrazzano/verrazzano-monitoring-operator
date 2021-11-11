@@ -579,6 +579,7 @@ func (c *Controller) IsHealthy() bool {
 // the prometheus config map so that it can be re-created. Other operators that reconcile the config map will
 // eventually catch up and fix up the config map
 func (c *Controller) PreStartCleanup() {
+	zap.S().Infof("Deleting Prometheus config map at startup if it exists: %s/%s", constants.VerrazzanoSystemNamespace, constants.PrometheusConfig)
 	deleteConfigMapIfExists(c, constants.VerrazzanoSystemNamespace,
-		resources.GetMetaName(constants.VMODefaultName, config.Prometheus.Name))
+		resources.GetMetaName(constants.VMODefaultName, constants.PrometheusConfig))
 }
