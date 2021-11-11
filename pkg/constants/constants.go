@@ -56,6 +56,12 @@ const ResyncPeriod = 30 * time.Second
 // VMOServiceNamePrefix to be applied to all VMO services
 const VMOServiceNamePrefix = "vmi-"
 
+// VMODefaultName is the default value (and currently only possible value) for the VMO name
+const VMODefaultName = "system"
+
+// VerrazzanoSystemNamespace is the Verrazzano System namespace
+const VerrazzanoSystemNamespace = "verrazzano-system"
+
 // StorageVolumeName constant for storage volume
 const StorageVolumeName = "storage-volume"
 

@@ -95,7 +95,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	if vzClusterName == "" {
 		vzClusterName, _ = GetClusterNameFromSecret(controller, vmo.Namespace)
 	}
-	err = createOrUpdateConfigMap(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
+	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
 	if err != nil {
 		zap.S().Errorf("Failed to create configmap %s for reason %v", vmo.Spec.Prometheus.ConfigMap, err)
 		return err
@@ -133,38 +133,10 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	return nil
 }
 
-// Create config map or update it if it already exists
-func createOrUpdateConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmapName string, data map[string]string) error {
-	configMap := configmaps.NewConfig(vmo, configmapName, data)
-	existingConfigMap, err := getConfigMap(controller, vmo, configmapName)
-	if err != nil {
-		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmapName)
-		return err
-	}
-	if existingConfigMap != nil {
-		zap.S().Debugf("Updating existing configmap for %s ", existingConfigMap.Name)
-		specDiffs := diff.Diff(existingConfigMap, configMap)
-		if specDiffs != "" {
-			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
-			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
-			if err != nil {
-				zap.S().Errorf("Failed to update existing configmap %s: %s ", configMap.Name, err.Error())
-			}
-		}
-	} else {
-		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
-		if err != nil {
-			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmapName)
-			return err
-		}
-	}
-	return nil
-}
-
 // This function is being called for configmaps which gets modified with spec changes
 func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	configMap := configmaps.NewConfig(vmo, configmap, data)
-	existingConfigMap, err := getConfigMap(controller, vmo, configmap)
+	existingConfigMap, err := getConfigMap(controller, vmo.Namespace, configmap)
 	if err != nil {
 		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
 		return err
@@ -199,7 +171,7 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 
 // This function is being called for configmaps which don't modify with spec changes
 func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
-	existingConfig, err := getConfigMap(controller, vmo, configmap)
+	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)
 	if err != nil {
 		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
 		return err
@@ -215,9 +187,27 @@ func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.Ve
 	return nil
 }
 
+// Deletes the configmap specified, if it exists. If it does not exist, ignore the request and do not error
+func deleteConfigMapIfExists(controller *Controller, namespace string, configmapName string) error {
+	existingConfig, err := getConfigMap(controller, namespace, configmapName)
+	if err != nil {
+		zap.S().Infof("Could not get configmap %s/%s for delete", namespace, configmapName)
+		return nil
+	}
+	if existingConfig != nil {
+		err := controller.kubeclientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), configmapName, metav1.DeleteOptions{})
+		if err != nil {
+			zap.S().Errorf("Could not delete configmap %s/%s", namespace, configmapName)
+			return err
+		}
+		zap.S().Infof("Deleted config map %s/%s", namespace, configmapName)
+	}
+	return nil
+}
+
 // This function is being called for configmaps which don't modify with spec changes
 func createAMConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
-	existingConfig, err := getConfigMap(controller, vmo, configmap)
+	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)
 	if err != nil {
 		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
 		return err
@@ -260,8 +250,8 @@ func asDashboardTemplate(tmplt string, replaceMap map[string]string) (string, er
 	return buf.String(), nil
 }
 
-func getConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmapName string) (*corev1.ConfigMap, error) {
-	configMap, err := controller.configMapLister.ConfigMaps(vmo.Namespace).Get(configmapName)
+func getConfigMap(controller *Controller, namespace string, configmapName string) (*corev1.ConfigMap, error) {
+	configMap, err := controller.configMapLister.ConfigMaps(namespace).Get(configmapName)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil

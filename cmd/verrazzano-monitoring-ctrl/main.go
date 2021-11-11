@@ -60,6 +60,9 @@ func main() {
 
 	vmo.StartHTTPServer(controller)
 
+	// Run any cleanup that needs to happen pre-startup of the controller
+	controller.PreStartCleanup()
+
 	if err = controller.Run(1); err != nil {
 		zap.S().Fatalf("Error running controller: %s", err.Error())
 	}
