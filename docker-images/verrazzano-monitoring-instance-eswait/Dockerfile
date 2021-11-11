@@ -27,10 +27,11 @@ RUN go build \
 
 FROM ghcr.io/oracle/oraclelinux:7-slim AS final
 
-RUN yum update -y \
+RUN yum update -y && yum-config-manager --enable ol7_u8_security_validation \
     && yum install -y ca-certificates curl openssl && yum clean all && rm -rf /var/cache/yum
 
 COPY --from=build_base /usr/bin/eswait /usr/local/bin/eswait
+
 RUN chown nobody:nobody /usr/local/bin/eswait && chmod 500 /usr/local/bin/eswait
 
 USER nobody
