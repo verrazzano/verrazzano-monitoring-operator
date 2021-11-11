@@ -64,7 +64,7 @@ func TestDeleteConfigMapIfExists(t *testing.T) {
 	assert.NoError(t, err)
 
 	//make sure config map was deleted
-	cm, err := getConfigMap(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
+	cm, _ := getConfigMap(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
 	assert.Nil(t, cm)
 
 	// Repeat the test with a non-existent config map and ensure that deleteConfigMapIfExists ignores rather than
