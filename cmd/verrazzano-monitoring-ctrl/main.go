@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package main
@@ -59,6 +59,9 @@ func main() {
 	}
 
 	vmo.StartHTTPServer(controller)
+
+	// Run any cleanup that needs to happen pre-startup of the controller
+	controller.PreStartCleanup()
 
 	if err = controller.Run(1); err != nil {
 		zap.S().Fatalf("Error running controller: %s", err.Error())

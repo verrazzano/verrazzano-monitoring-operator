@@ -7,6 +7,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 
 	"github.com/stretchr/testify/assert"
@@ -24,10 +27,11 @@ func TestCreateConfigmaps(t *testing.T) {
 	controller := &Controller{
 		kubeclientset:   client,
 		configMapLister: &simpleConfigMapLister{kubeClient: client},
+		secretLister:    &simpleSecretLister{kubeClient: client},
 	}
 	vmo := &vmctl.VerrazzanoMonitoringInstance{}
-	vmo.Name = "system"
-	vmo.Namespace = "verrazzano-system"
+	vmo.Name = constants.VMODefaultName
+	vmo.Namespace = constants.VerrazzanoSystemNamespace
 	vmo.Spec.URI = "vmi.system.v8o-env.oracledx.com"
 	vmo.Spec.Grafana.DashboardsConfigMap = "myDashboardsConfigMap"
 	vmo.Spec.Grafana.DatasourcesConfigMap = "myDatasourcesConfigMap"
@@ -42,6 +46,31 @@ func TestCreateConfigmaps(t *testing.T) {
 	assert.Nil(t, err)
 	all, _ := client.CoreV1().ConfigMaps(vmo.Namespace).List(context.TODO(), metav1.ListOptions{})
 	assert.Equal(t, 8, len(all.Items))
+}
+
+// TestDeleteConfigMapIfExists tests the deleteConfigMapIfExists function
+func TestDeleteConfigMapIfExists(t *testing.T) {
+	configMap := &v1.ConfigMap{}
+	configMap.SetNamespace(constants.VerrazzanoSystemNamespace)
+	promConfigMapName := resources.GetMetaName(constants.VMODefaultName, config.Prometheus.Name)
+	configMap.SetName(promConfigMapName)
+	client := fake.NewSimpleClientset(configMap)
+	controller := &Controller{
+		kubeclientset:   client,
+		configMapLister: &simpleConfigMapLister{kubeClient: client},
+		secretLister:    &simpleSecretLister{kubeClient: client},
+	}
+	err := deleteConfigMapIfExists(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
+	assert.NoError(t, err)
+
+	//make sure config map was deleted
+	cm, _ := getConfigMap(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
+	assert.Nil(t, cm)
+
+	// Repeat the test with a non-existent config map and ensure that deleteConfigMapIfExists ignores rather than
+	// return error
+	err = deleteConfigMapIfExists(controller, constants.VerrazzanoSystemNamespace, "nonexistentCM")
+	assert.NoError(t, err)
 }
 
 // simple ConfigMapLister implementation
@@ -101,4 +130,63 @@ func (s simpleConfigMapNamespaceLister) List(selector labels.Selector) ([]*v1.Co
 // Get retrieves the ConfigMap for a given namespace and name.
 func (s simpleConfigMapNamespaceLister) Get(name string) (*v1.ConfigMap, error) {
 	return s.kubeClient.CoreV1().ConfigMaps(s.namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+// simple SecretLister implementation
+type simpleSecretLister struct {
+	kubeClient kubernetes.Interface
+}
+
+// lists all Secrets
+func (s *simpleSecretLister) List(selector labels.Selector) ([]*v1.Secret, error) {
+	namespaces, err := s.kubeClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	var secrets []*v1.Secret
+	for _, namespace := range namespaces.Items {
+
+		list, err := s.Secrets(namespace.Name).List(selector)
+		if err != nil {
+			return nil, err
+		}
+		secrets = append(secrets, list...)
+	}
+	return secrets, nil
+}
+
+// Secrets returns an object that can get Secrets.
+func (s *simpleSecretLister) Secrets(namespace string) corelistersv1.SecretNamespaceLister {
+	return simpleSecretNamespaceLister{
+		namespace:  namespace,
+		kubeClient: s.kubeClient,
+	}
+}
+
+// simpleSecretNamespaceLister implements the SecretNamespaceLister
+// interface.
+type simpleSecretNamespaceLister struct {
+	namespace  string
+	kubeClient kubernetes.Interface
+}
+
+// List lists all Secrets for a given namespace.
+func (s simpleSecretNamespaceLister) List(selector labels.Selector) ([]*v1.Secret, error) {
+	var secrets []*v1.Secret
+
+	list, err := s.kubeClient.CoreV1().Secrets(s.namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for i := range list.Items {
+		if selector.Matches(labels.Set(list.Items[i].Labels)) {
+			secrets = append(secrets, &list.Items[i])
+		}
+	}
+	return secrets, nil
+}
+
+// Get retrieves the Secret for a given namespace and name.
+func (s simpleSecretNamespaceLister) Get(name string) (*v1.Secret, error) {
+	return s.kubeClient.CoreV1().Secrets(s.namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
