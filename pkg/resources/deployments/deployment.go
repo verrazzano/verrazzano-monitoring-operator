@@ -164,7 +164,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
 		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-			{Name: "ELASTICSEARCH_HOSTS", Value: elasticsearchURL},
+			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
 		}
 
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 120

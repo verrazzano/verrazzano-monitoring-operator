@@ -52,11 +52,11 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
 
 	// Set the default logging to INFO; this can be overridden later at runtime
-	esMasterContainer.Args = []string{
-		"elasticsearch",
-		"-E",
-		"logger.org.elasticsearch=INFO",
-	}
+	//esMasterContainer.Args = []string{
+	//	"elasticsearch",
+	//	"-E",
+	//	"logger.org.elasticsearch=INFO",
+	//}
 
 	var envVars = []corev1.EnvVar{
 		{
@@ -86,6 +86,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 			corev1.EnvVar{Name: "node.master", Value: "true"},
 			corev1.EnvVar{Name: "node.ingest", Value: "true"},
 			corev1.EnvVar{Name: "node.data", Value: "true"},
+			// supported via legacy compatibility
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 		)
 	} else {
