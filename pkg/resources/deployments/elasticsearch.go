@@ -112,7 +112,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 	}
 	elasticsearchIngestDeployment.Spec.Template.Spec.Containers[0].Env = append(elasticsearchIngestDeployment.Spec.Template.Spec.Containers[0].Env,
 		corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)},
-		corev1.EnvVar{Name: "INITIAL_MASTER_NODES", Value: strings.Join(initialMasterNodes, ",")},
+		corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
 		corev1.EnvVar{Name: "node.master", Value: "false"},
 		corev1.EnvVar{Name: "NETWORK_HOST", Value: "0.0.0.0"},
 		corev1.EnvVar{Name: "node.ingest", Value: "true"},
@@ -190,7 +190,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 		elasticsearchDataDeployment.Spec.Strategy.RollingUpdate = nil
 		elasticsearchDataDeployment.Spec.Template.Spec.Containers[0].Env = append(elasticsearchDataDeployment.Spec.Template.Spec.Containers[0].Env,
 			corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)},
-			corev1.EnvVar{Name: "INITIAL_MASTER_NODES", Value: strings.Join(initialMasterNodes, ",")},
+			corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
 			corev1.EnvVar{Name: "node.attr.availability_domain", Value: availabilityDomain},
 			corev1.EnvVar{Name: "node.master", Value: "false"},
 			corev1.EnvVar{Name: "node.ingest", Value: "false"},

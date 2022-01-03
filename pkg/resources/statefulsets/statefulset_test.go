@@ -266,7 +266,7 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Equal("false", sts.Spec.Template.Spec.Containers[0].Env[6].Value, "Incorrect Env[6].Value")
 	assert.Equal("HTTP_ENABLE", sts.Spec.Template.Spec.Containers[0].Env[2].Name, "Incorrect Env[2].Name")
 	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[2].Value, "Incorrect Env[2].Value")
-	assert.Equal("INITIAL_MASTER_NODES", sts.Spec.Template.Spec.Containers[0].Env[7].Name, "Incorrect Env[7].Name")
+	assert.Equal("cluster.initial_master_nodes", sts.Spec.Template.Spec.Containers[0].Env[7].Name, "Incorrect Env[7].Name")
 	assert.Equal(strings.Join(initialMasterNodes, ","), sts.Spec.Template.Spec.Containers[0].Env[7].Value, "Incorrect Env[7].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
@@ -331,7 +331,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[1].HostPort, "Incorrect Container HostPort")
 	assert.Equal(int32(constants.ESHttpPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
 
-	assert.Len(sts.Spec.Template.Spec.Containers[0].Env, 9, "Incorrect number of Env Vars")
+	assert.Len(sts.Spec.Template.Spec.Containers[0].Env, 8, "Incorrect number of Env Vars")
 	assert.Equal("node.name", sts.Spec.Template.Spec.Containers[0].Env[0].Name, "Incorrect Env[0].Name")
 	assert.Equal("metadata.name", sts.Spec.Template.Spec.Containers[0].Env[0].ValueFrom.FieldRef.FieldPath,
 		"Incorrect Env[0].ValueFrom")
@@ -349,8 +349,6 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[6].Value, "Incorrect Env[6].Value")
 	assert.Equal("ES_JAVA_OPTS", sts.Spec.Template.Spec.Containers[0].Env[7].Name, "Incorrect Env[7].Name")
 	assert.Equal("-Xms700m -Xmx700m", sts.Spec.Template.Spec.Containers[0].Env[7].Value, "Incorrect Env[7].Value")
-	assert.Equal("INITIAL_MASTER_NODES", sts.Spec.Template.Spec.Containers[0].Env[8].Name, "Incorrect Env[8].Name")
-	assert.Equal("", sts.Spec.Template.Spec.Containers[0].Env[8].Value, "Incorrect Env[8].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
 		"Incorrect Readiness Probe InitialDelaySeconds")
