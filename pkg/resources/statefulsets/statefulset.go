@@ -88,7 +88,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 			corev1.EnvVar{Name: "node.data", Value: "true"},
 			// supported via legacy compatibility
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
-			corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: ""},
+			corev1.EnvVar{Name: "INITIAL_MASTER_NODES", Value: ""},
 		)
 	} else {
 		var i int32
@@ -105,7 +105,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 			corev1.EnvVar{Name: "node.master", Value: "true"},
 			corev1.EnvVar{Name: "node.ingest", Value: "false"},
 			corev1.EnvVar{Name: "node.data", Value: "false"},
-			corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
+			corev1.EnvVar{Name: "INITIAL_MASTER_NODES", Value: strings.Join(initialMasterNodes, ",")},
 		)
 	}
 	esMasterContainer.Env = envVars
