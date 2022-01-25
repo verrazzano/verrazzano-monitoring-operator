@@ -43,7 +43,7 @@ func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonito
 		env := prometheusDeployment.Spec.Template.Spec.Containers[0].Env
 		env = append(env, corev1.EnvVar{Name: "AVAILABILITY_DOMAIN", Value: getAvailabilityDomainForPvcIndex(&vmo.Spec.Prometheus.Storage, pvcToAdMap, i)})
 		http2 := "disabled"
-		if vmo.Spec.Prometheus.Http2Enabled {
+		if vmo.Spec.Prometheus.HTTP2Enabled {
 			http2 = ""
 		}
 		env = append(env, corev1.EnvVar{Name: "PROMETHEUS_COMMON_DISABLE_HTTP2", Value: http2})
