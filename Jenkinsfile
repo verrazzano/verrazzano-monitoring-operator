@@ -201,7 +201,6 @@ pipeline {
                 script {
                     scanContainerImage "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG}"
                 }
-                sh "mv scanning-report.json verrazzano-monitoring-instance-eswait.scanning-report.json"
             }
             post {
                 always {
