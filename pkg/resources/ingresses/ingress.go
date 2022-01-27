@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ingresses
@@ -77,6 +77,9 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	} else {
 		ingress.Annotations["kubernetes.io/tls-acme"] = "false"
 	}
+
+	ingress.Annotations["cert-manager.io/common-name"] = "*." + vmo.Spec.URI
+
 	return ingress, nil
 }
 
@@ -272,5 +275,6 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
 	setNginxRoutingAnnotations(ingress)
+	ingress.Annotations["cert-manager.io/common-name"] = "*." + vmo.Spec.URI
 	return ingress
 }
