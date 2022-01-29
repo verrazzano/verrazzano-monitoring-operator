@@ -163,7 +163,7 @@ fi`,
 		}
 
 	const esMasterVolName = "elasticsearch-master"
-	const esMasterData = "/usr/share/elasticsearch/data"
+	const esMasterData = "/usr/share/opensearch/data"
 
 	// Add the pv volume mount to the main container
 	esMasterContainer.VolumeMounts =

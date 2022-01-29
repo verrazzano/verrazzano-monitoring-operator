@@ -149,7 +149,7 @@ var ElasticsearchData = ComponentDetails{
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.ESHttpPort,
-	DataDir:           "/usr/share/elasticsearch/data",
+	DataDir:           "/usr/share/opensearch/data",
 	LivenessHTTPPath:  "/_cluster/health",
 	ReadinessHTTPPath: "/_cluster/health",
 	Privileged:        false,

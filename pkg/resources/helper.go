@@ -198,7 +198,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 func GetElasticsearchMasterInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
 	elasticsearchInitContainer.Command =
-		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data; sysctl -w vm.max_map_count=262144"}
+		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/opensearch/data; sysctl -w vm.max_map_count=262144"}
 	elasticsearchInitContainer.Ports = nil
 	return &elasticsearchInitContainer
 }

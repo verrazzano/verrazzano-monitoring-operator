@@ -227,7 +227,7 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 
 	assert := assert.New(t)
 	const esMasterVolName = "elasticsearch-master"
-	const esMasterData = "/usr/share/elasticsearch/data"
+	const esMasterData = "/usr/share/opensearch/data"
 
 	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch Master replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
@@ -315,7 +315,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 
 	assert := assert.New(t)
 	const esMasterVolName = "elasticsearch-master"
-	const esMasterData = "/usr/share/elasticsearch/data"
+	const esMasterData = "/usr/share/opensearch/data"
 
 	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch Master replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
