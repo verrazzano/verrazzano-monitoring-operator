@@ -6,6 +6,7 @@ package deployments
 import (
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,7 @@ type Elasticsearch interface {
 // New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
 // the resource so handleObject can discover the VMO resource that 'owns' it.
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
+	zap.S().Info("--------I CAN SEE THIS LOG-----")
 	var deployments []*appsv1.Deployment
 	var err error
 
