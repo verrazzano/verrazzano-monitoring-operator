@@ -107,7 +107,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 // Updates the *next* candidate deployment of the given deployments list.  A deployment is a candidate only if
-// its precessors in the list have already been updated and are fully up and running.
+// its predecessors  in the list have already been updated and are fully up and running.
 // return false if 1) no errors occurred, and 2) no work was done
 func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
 	for index, curDeployment := range deployments {
