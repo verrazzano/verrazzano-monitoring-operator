@@ -87,6 +87,8 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 
 // Creates all Elasticsearch Client deployment elements
 func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
+	zap.S().Infof("-----Ingest Deployment----")
+
 	// Default JVM heap settings if none provided
 	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.IngestNode.Resources.RequestMemory)
 	if err != nil {
@@ -132,6 +134,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 // Creates all Elasticsearch Data deployment elements
 func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	// Default JVM heap settings if none provided
+	zap.S().Infof("-----Data Deployment----")
 	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.DataNode.Resources.RequestMemory)
 	if err != nil {
 		javaOpts = constants.DefaultESDataMemArgs
