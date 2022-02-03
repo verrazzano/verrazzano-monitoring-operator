@@ -6,8 +6,6 @@ package vmo
 import (
 	"context"
 	"errors"
-	"fmt"
-
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -125,10 +123,10 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			return err
 		}
 	}
-	expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
-	actualNumPVCs := len(existingPvcList)
-	if actualNumPVCs != expectedNumPVCs {
-		return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
-	}
+	//expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
+	//actualNumPVCs := len(existingPvcList)
+	//if actualNumPVCs != expectedNumPVCs {
+	//	return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
+	//}
 	return nil
 }

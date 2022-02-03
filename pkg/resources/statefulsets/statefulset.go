@@ -241,8 +241,8 @@ fi`,
 }
 
 func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface) *appsv1.StatefulSet {
-	fmt.Println("Inside createPrometheusStatefulSet...")
-	fmt.Printf("Prometheus config = %v", config.Prometheus)
+	fmt.Println("+++ Inside createPrometheusStatefulSet +++")
+	fmt.Printf("+++ Prometheus config = %v +++", config.Prometheus)
 	const prometheusVolume = "vmi-system-prometheus"
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Prometheus.Resources, config.Prometheus, "")
 	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Prometheus.ImagePullPolicy
@@ -438,8 +438,8 @@ func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 }
 
 func createGrafanaStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, username, password string) *appsv1.StatefulSet {
-	fmt.Println("Inside createGrafanaStatefulSet...")
-	fmt.Printf("Grafana config = %v", config.Grafana)
+	fmt.Println("+++ Inside createGrafanaStatefulSet +++")
+	fmt.Printf("+++ Grafana config = %v ++++", config.Grafana)
 	const grafanaVolume = "vmi-system-grafana"
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Grafana.Resources, config.Grafana, "")
