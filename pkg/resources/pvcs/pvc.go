@@ -22,13 +22,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 	//	}
 	//	pvcList = append(pvcList, pvcs...)
 	//}
-	if vmo.Spec.Elasticsearch.Enabled && vmo.Spec.Elasticsearch.Storage.Size != "" {
-		pvcs, err := createPvcElements(vmo, &vmo.Spec.Elasticsearch.Storage, storageClassName)
-		if err != nil {
-			return pvcList, err
-		}
-		pvcList = append(pvcList, pvcs...)
-	}
+	//if vmo.Spec.Elasticsearch.Enabled && vmo.Spec.Elasticsearch.Storage.Size != "" {
+	//	pvcs, err := createPvcElements(vmo, &vmo.Spec.Elasticsearch.Storage, storageClassName)
+	//	if err != nil {
+	//		return pvcList, err
+	//	}
+	//	pvcList = append(pvcList, pvcs...)
+	//}
 
 	//if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
 	//	pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)

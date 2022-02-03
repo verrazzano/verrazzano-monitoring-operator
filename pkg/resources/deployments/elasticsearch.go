@@ -214,6 +214,6 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 func (es ElasticsearchBasic) createElasticsearchDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var deployList []*appsv1.Deployment
 	deployList = append(deployList, es.createElasticsearchIngestDeploymentElements(vmo)...)
-	deployList = append(deployList, es.createElasticsearchDataDeploymentElements(vmo, pvcToAdMap)...)
+	//deployList = append(deployList, es.createElasticsearchDataDeploymentElements(vmo, pvcToAdMap)...)
 	return deployList
 }

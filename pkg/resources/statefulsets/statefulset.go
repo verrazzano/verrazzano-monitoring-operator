@@ -36,6 +36,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	// Elasticsearch Master
 	if vmo.Spec.Elasticsearch.Enabled {
 		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(vmo))
+		statefulSets = append(statefulSets, createElasticSearchDataStatefulSet(vmo))
 	}
 
 	// Grafana
@@ -240,12 +241,188 @@ fi`,
 	return statefulSet
 }
 
+func createElasticSearchDataStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+	zap.S().Infof("+++ Invoked createElasticSearchDataStatefulSet +++")
+	const esDataVolume = "vmi-system-es-data"
+
+	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Grafana.Resources, config.Grafana, "")
+	esContainer := &statefulSet.Spec.Template.Spec.Containers[0]
+	esContainer.Env = append(esContainer.Env,
+		corev1.EnvVar{
+			Name: "NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		},
+		corev1.EnvVar{
+			Name: "node.name",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name})
+	// Set the default logging to INFO; this can be overridden later at runtime
+	esContainer.Args = []string{
+		"elasticsearch",
+		"-E",
+		"logger.org.elasticsearch=INFO",
+	}
+
+	esContainer.Ports = []corev1.ContainerPort{
+		{Name: "http", ContainerPort: int32(constants.ESHttpPort)},
+		{Name: "transport", ContainerPort: int32(constants.ESTransportPort)},
+	}
+
+	// Common Elasticsearch readiness and liveness settings
+	if esContainer.LivenessProbe != nil {
+		esContainer.LivenessProbe.InitialDelaySeconds = 60
+		esContainer.LivenessProbe.TimeoutSeconds = 3
+		esContainer.LivenessProbe.PeriodSeconds = 20
+		esContainer.LivenessProbe.FailureThreshold = 5
+	}
+	if esContainer.ReadinessProbe != nil {
+		esContainer.ReadinessProbe.InitialDelaySeconds = 60
+		esContainer.ReadinessProbe.TimeoutSeconds = 3
+		esContainer.ReadinessProbe.PeriodSeconds = 10
+		esContainer.ReadinessProbe.FailureThreshold = 10
+	}
+	// Add init containers
+	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers, *resources.GetElasticsearchInitContainer())
+
+	// Istio does not work with ElasticSearch.  Uncomment the following line when istio is present
+	// deploymentElement.Spec.Template.Annotations = map[string]string{"sidecar.istio.io/inject": "false"}
+
+	var elasticsearchUID int64 = 1000
+	esContainer.SecurityContext.RunAsUser = &elasticsearchUID
+
+	// Default JVM heap settings if none provided
+	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.DataNode.Resources.RequestMemory)
+	if err != nil {
+		javaOpts = constants.DefaultESDataMemArgs
+		zap.S().Errorf("Unable to derive heap sizes from Data pod, using default %s.  Error: %v", javaOpts, err)
+	}
+	if vmo.Spec.Elasticsearch.DataNode.JavaOpts != "" {
+		javaOpts = vmo.Spec.Elasticsearch.DataNode.JavaOpts
+	}
+
+	initialMasterNodes := make([]string, 0)
+	masterReplicas := resources.NewVal(vmo.Spec.Elasticsearch.MasterNode.Replicas)
+	var i int32
+	for i = 0; i < *masterReplicas; i++ {
+		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
+	}
+	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Elasticsearch.DataNode.Replicas)
+
+	//availabilityDomain := getAvailabilityDomainForPvcIndex(&vmo.Spec.Elasticsearch.Storage, pvcToAdMap, i)
+	//if availabilityDomain == "" {
+	//	// With shard allocation awareness, we must provide something for the AD, even in the case of the simple
+	//	// VMO with no persistence volumes
+	//	availabilityDomain = "None"
+	//}
+
+	// Anti-affinity on other data pod *nodes* (try out best to spread across many nodes)
+	statefulSet.Spec.Template.Spec.Affinity = &corev1.Affinity{
+		PodAntiAffinity: &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+				{
+					Weight: 100,
+					PodAffinityTerm: corev1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: resources.GetSpecID(vmo.Name, config.ElasticsearchData.Name),
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
+	}
+
+	// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
+	// initially owned by root/root.  Previous versions of the ES image were run as "root", and chown'd the mounted
+	// directory to "elasticsearch", but we don't want to run as "root".  The current ES image creates a group
+	// "elasticsearch" (GID 1000), and a user "elasticsearch" (UID 1000) in that group.  When we provide FSGroup =
+	// 1000 below, the volume is owned by root/elasticsearch, with permissions "rwxrwsr-x".  This allows the ES
+	// image to run as UID 1000, and have sufficient permissions to write to the mounted volume.
+	elasticsearchGid := int64(1000)
+	statefulSet.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+		FSGroup: &elasticsearchGid,
+	}
+
+	statefulSet.Spec.PodManagementPolicy = appsv1.OrderedReadyPodManagement
+	//statefulSet.Spec.UpdateStrategy.Type = appsv1.RollingUpdateStatefulSetStrategyType
+	//statefulSet.Spec.UpdateStrategy.RollingUpdate = nil
+	statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env,
+		corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)},
+		corev1.EnvVar{Name: "cluster.initial_master_nodes", Value: strings.Join(initialMasterNodes, ",")},
+		//corev1.EnvVar{Name: "node.attr.availability_domain", Value: availabilityDomain},
+		corev1.EnvVar{Name: "node.master", Value: "false"},
+		corev1.EnvVar{Name: "node.ingest", Value: "false"},
+		corev1.EnvVar{Name: "node.data", Value: "true"},
+		corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
+	)
+
+	// add the required istio annotations to allow inter-es component communication
+	if statefulSet.Spec.Template.Annotations == nil {
+		statefulSet.Spec.Template.Annotations = make(map[string]string)
+	}
+	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+
+	// es data vaolume mounts
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      esDataVolume,
+			MountPath: "/usr/share/elasticsearch/data",
+		},
+	}
+
+	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
+	//statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, volumes...)
+
+	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
+	// pod in the stateful set.
+	storageSize := vmo.Spec.Elasticsearch.Storage.Size
+	if len(storageSize) > 0 {
+		statefulSet.Spec.VolumeClaimTemplates =
+			[]corev1.PersistentVolumeClaim{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      esDataVolume,
+					Namespace: vmo.Namespace,
+				},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storageSize)},
+					},
+				},
+			}}
+	} else {
+		statefulSet.Spec.Template.Spec.Volumes = []corev1.Volume{
+			{
+				Name: esDataVolume,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		}
+	}
+
+	// add istio annotations required for inter component communication
+	if statefulSet.Spec.Template.Annotations == nil {
+		statefulSet.Spec.Template.Annotations = make(map[string]string)
+	}
+	return statefulSet
+}
+
 func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface) *appsv1.StatefulSet {
-	fmt.Println("+++ Inside createPrometheusStatefulSet +++")
-	fmt.Printf("+++ Prometheus config = %v +++", config.Prometheus)
 	const prometheusVolume = "vmi-system-prometheus"
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Prometheus.Resources, config.Prometheus, "")
-	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Prometheus.ImagePullPolicy
+	statefulSet.Spec.PodManagementPolicy = appsv1.OrderedReadyPodManagement
+	//statefulSet.Spec.UpdateStrategy.Type = appsv1.RollingUpdateStatefulSetStrategyType
 
 	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Prometheus.ImagePullPolicy
 	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &config.Prometheus.RunAsUser
@@ -304,14 +481,14 @@ func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 	// Volumes for Prometheus config and alert rules.  The istio-certs-dir volume supports the output of the istio
 	// certs for use by prometheus scrape configurations
 	configVolumes := []corev1.Volume{
-		{
-			Name: prometheusVolume,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Prometheus.RulesConfigMap},
-				},
-			},
-		},
+		//{
+		//	Name: prometheusVolume,
+		//	VolumeSource: corev1.VolumeSource{
+		//		ConfigMap: &corev1.ConfigMapVolumeSource{
+		//			LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Prometheus.RulesConfigMap},
+		//		},
+		//	},
+		//},
 		{
 			Name: "rules-volume",
 			VolumeSource: corev1.VolumeSource{
@@ -400,7 +577,6 @@ func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 			statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
 			corev1.VolumeMount{Name: prometheusVolume, MountPath: config.Prometheus.DataDir})
 	}
-	//##########################
 
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
@@ -438,11 +614,11 @@ func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 }
 
 func createGrafanaStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, username, password string) *appsv1.StatefulSet {
-	fmt.Println("+++ Inside createGrafanaStatefulSet +++")
-	fmt.Printf("+++ Grafana config = %v ++++", config.Grafana)
 	const grafanaVolume = "vmi-system-grafana"
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Grafana.Resources, config.Grafana, "")
+	statefulSet.Spec.PodManagementPolicy = appsv1.OrderedReadyPodManagement
+	//statefulSet.Spec.UpdateStrategy.Type = appsv1.RollingUpdateStatefulSetStrategyType
 	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 
 	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
@@ -499,14 +675,14 @@ func createGrafanaStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 
 	// dashboard volume
 	volumes := []corev1.Volume{
-		{
-			Name: grafanaVolume,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
-				},
-			},
-		},
+		//{
+		//	Name: grafanaVolume,
+		//	VolumeSource: corev1.VolumeSource{
+		//		ConfigMap: &corev1.ConfigMapVolumeSource{
+		//			LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
+		//		},
+		//	},
+		//},
 		{
 			Name: "dashboards-volume",
 			VolumeSource: corev1.VolumeSource{
