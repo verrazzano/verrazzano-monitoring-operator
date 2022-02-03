@@ -40,7 +40,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			runtime.HandleError(errors.New("statefulset name must be specified"))
 			return nil
 		}
-		zap.S().Debugf("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
+		zap.S().Infof("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
 			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
