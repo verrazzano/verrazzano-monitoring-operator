@@ -411,7 +411,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		zap.S().Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
 		return nil
 	}
-
 	/*********************
 	 * Initialize VMO Spec
 	 **********************/
@@ -471,7 +470,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Create StatefulSets
 	 **********************/
-	err = CreateStatefulSets(c, vmo)
+	err = CreateStatefulSets(c, vmo, vmoUsername, vmoPassword)
 	if err != nil {
 		zap.S().Errorf("Failed to create StatefulSets for vmo: %v", err)
 		errorObserved = true

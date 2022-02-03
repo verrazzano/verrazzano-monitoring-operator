@@ -4,8 +4,12 @@
 package statefulsets
 
 import (
+	"context"
 	"fmt"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/kubernetes"
+	"strconv"
 	"strings"
 
 	"go.uber.org/zap"
@@ -22,7 +26,7 @@ import (
 )
 
 // New creates StatefulSet objects for a VMO resource
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, username, password string) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
@@ -33,6 +37,16 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSe
 	if vmo.Spec.Elasticsearch.Enabled {
 		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(vmo))
 	}
+
+	// Grafana
+	if vmo.Spec.Grafana.Enabled {
+		statefulSets = append(statefulSets, createGrafanaStatefulSet(vmo, username, password))
+	}
+	// Prometheus
+	if vmo.Spec.Prometheus.Enabled {
+		statefulSets = append(statefulSets, createPrometheusStatefulSet(vmo, kubeclientset))
+	}
+
 	return statefulSets, nil
 }
 
@@ -223,6 +237,356 @@ fi`,
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
 
+	return statefulSet
+}
+
+func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface) *appsv1.StatefulSet {
+	fmt.Println("Inside createPrometheusStatefulSet...")
+	fmt.Printf("Prometheus config = %v", config.Prometheus)
+	const prometheusVolume = "vmi-system-prometheus"
+	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Prometheus.Resources, config.Prometheus, "")
+	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Prometheus.ImagePullPolicy
+
+	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Prometheus.ImagePullPolicy
+	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &config.Prometheus.RunAsUser
+
+	statefulSet.Spec.Template.Spec.Containers[0].Command = []string{"/bin/prometheus"}
+	statefulSet.Spec.Template.Spec.Containers[0].Args = []string{
+		"--config.file=" + constants.PrometheusConfigContainerLocation,
+		"--storage.tsdb.path=" + config.Prometheus.DataDir,
+		fmt.Sprintf("--storage.tsdb.retention.time=%dd", vmo.Spec.Prometheus.RetentionPeriod),
+		"--web.enable-lifecycle",
+		"--web.enable-admin-api",
+		"--storage.tsdb.no-lockfile"}
+
+	env := statefulSet.Spec.Template.Spec.Containers[0].Env
+	http2 := "disabled"
+	if vmo.Spec.Prometheus.HTTP2Enabled {
+		http2 = ""
+	}
+	env = append(env, corev1.EnvVar{Name: "PROMETHEUS_COMMON_DISABLE_HTTP2", Value: http2})
+	statefulSet.Spec.Template.Spec.Containers[0].Env = env
+
+	if statefulSet.Spec.Template.Annotations == nil {
+		statefulSet.Spec.Template.Annotations = make(map[string]string)
+	}
+	// These annotations are required uniquely for prometheus to support both the request routing to keycloak via the envoy and the writing
+	// of the Istio certs to a volume that can be accessed for scraping
+	statefulSet.Spec.Template.Annotations["proxy.istio.io/config"] = `{"proxyMetadata":{ "OUTPUT_CERTS": "/etc/istio-output-certs"}}`
+	statefulSet.Spec.Template.Annotations["sidecar.istio.io/userVolumeMount"] = `[{"name": "istio-certs-dir", "mountPath": "/etc/istio-output-certs"}]`
+
+	// If Keycloak isn't deployed configure Prometheus to avoid the Istio sidecar for metrics scraping.
+	// This is done by adding the traffic.sidecar.istio.io/excludeOutboundIPRanges: 0.0.0.0/0 annotation.
+	_, err := kubeclientset.AppsV1().StatefulSets("keycloak").Get(context.TODO(), "keycloak", metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundIPRanges"] = "0.0.0.0/0"
+			return nil
+		}
+		zap.S().Errorf("unable to get keycloak pod: %v", err)
+		return nil
+	}
+
+	// Set the Istio annotation on Prometheus to exclude Keycloak HTTP Service IP address.
+	// The includeOutboundIPRanges implies all others are excluded.
+	// This is done by adding the traffic.sidecar.istio.io/includeOutboundIPRanges=<Keycloak IP>/32 annotation.
+	svc, err := kubeclientset.CoreV1().Services("keycloak").Get(context.TODO(), "keycloak-http", metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		zap.S().Errorf("unable to get keycloak-http service: %v", err)
+		return nil
+	}
+
+	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundIPRanges"] = fmt.Sprintf("%s/32", svc.Spec.ClusterIP)
+
+	// Volumes for Prometheus config and alert rules.  The istio-certs-dir volume supports the output of the istio
+	// certs for use by prometheus scrape configurations
+	configVolumes := []corev1.Volume{
+		{
+			Name: prometheusVolume,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Prometheus.RulesConfigMap},
+				},
+			},
+		},
+		{
+			Name: "rules-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Prometheus.RulesConfigMap},
+				},
+			},
+		},
+		{
+			Name: "config-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Prometheus.ConfigMap},
+				},
+			},
+		},
+		{
+			Name: "istio-certs-dir",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory,
+				},
+			},
+		},
+	}
+	statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, configVolumes...)
+
+	configVolumeMounts := []corev1.VolumeMount{
+		{
+			Name:      prometheusVolume,
+			MountPath: "/prometheus",
+		},
+		{
+			Name:      "rules-volume",
+			MountPath: constants.PrometheusRulesMountPath,
+		},
+		{
+			Name:      "config-volume",
+			MountPath: constants.PrometheusConfigMountPath,
+		},
+	}
+	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMounts...)
+	istioVolumeMount := corev1.VolumeMount{
+		Name:      "istio-certs-dir",
+		MountPath: constants.IstioCertsMountPath,
+	}
+	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, istioVolumeMount)
+
+	// Readiness/liveness settings
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 30
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 10
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold = 10
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 10
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
+
+	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Prometheus.Replicas)
+	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Prometheus.Name)
+
+	// Config-reloader container
+	statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, corev1.Container{
+		Name:            config.ConfigReloader.Name,
+		Image:           config.ConfigReloader.Image,
+		ImagePullPolicy: config.ConfigReloader.ImagePullPolicy,
+	})
+	statefulSet.Spec.Template.Spec.Containers[1].Args = []string{"-volume-dir=" + constants.PrometheusConfigMountPath, "-volume-dir=" + constants.PrometheusRulesMountPath, "-webhook-url=http://localhost:9090/-/reload"}
+	statefulSet.Spec.Template.Spec.Containers[1].VolumeMounts = configVolumeMounts
+
+	// Prometheus init container
+	statefulSet.Spec.Template.Spec.InitContainers = []corev1.Container{
+		{
+			Name:            config.PrometheusInit.Name,
+			Image:           config.PrometheusInit.Image,
+			ImagePullPolicy: config.PrometheusInit.ImagePullPolicy,
+			Command:         []string{"sh", "-c", fmt.Sprintf("chown -R %d:%d /prometheus", constants.NobodyUID, constants.NobodyUID)},
+			VolumeMounts:    []corev1.VolumeMount{{Name: prometheusVolume, MountPath: config.PrometheusInit.DataDir}},
+		},
+	}
+	if vmo.Spec.Prometheus.Storage.Size == "" {
+		statefulSet.Spec.Template.Spec.Volumes = append(
+			statefulSet.Spec.Template.Spec.Volumes,
+			corev1.Volume{Name: prometheusVolume, VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}})
+		statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{Name: prometheusVolume, MountPath: config.Prometheus.DataDir})
+	}
+	//##########################
+
+	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
+	// pod in the stateful set.
+	storageSize := vmo.Spec.Prometheus.Storage.Size
+	if len(storageSize) > 0 {
+		statefulSet.Spec.VolumeClaimTemplates =
+			[]corev1.PersistentVolumeClaim{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      prometheusVolume,
+					Namespace: vmo.Namespace,
+				},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storageSize)},
+					},
+				},
+			}}
+	} else {
+		statefulSet.Spec.Template.Spec.Volumes = []corev1.Volume{
+			{
+				Name: prometheusVolume,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		}
+	}
+
+	// add istio annotations required for inter component communication
+	if statefulSet.Spec.Template.Annotations == nil {
+		statefulSet.Spec.Template.Annotations = make(map[string]string)
+	}
+	return statefulSet
+}
+
+func createGrafanaStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, username, password string) *appsv1.StatefulSet {
+	fmt.Println("Inside createGrafanaStatefulSet...")
+	fmt.Printf("Grafana config = %v", config.Grafana)
+	const grafanaVolume = "vmi-system-grafana"
+
+	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Grafana.Resources, config.Grafana, "")
+	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
+
+	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
+	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Grafana.Name)
+
+	statefulSet.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+		{Name: "GF_PATHS_PROVISIONING", Value: "/etc/grafana/provisioning"},
+		{Name: "GF_SERVER_ENABLE_GZIP", Value: "true"},
+		{Name: "PROMETHEUS_TARGETS", Value: "http://" + constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + ":" + strconv.Itoa(config.Prometheus.Port)},
+	}
+	if config.Grafana.OidcProxy == nil {
+		statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+			{Name: "GF_SECURITY_ADMIN_USER", Value: username},
+			{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
+			{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
+			{Name: "GF_AUTH_BASIC_ENABLED", Value: "true"},
+			{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "true"},
+			{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
+			{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Admin"},
+			{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
+			{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "false"},
+		}...)
+	} else {
+		statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+			{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
+			{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
+			{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
+			{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
+			{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Editor"},
+			{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
+			{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+			{Name: "GF_AUTH_PROXY_ENABLED", Value: "true"},
+			{Name: "GF_AUTH_PROXY_HEADER_NAME", Value: "X-WEBAUTH-USER"},
+			{Name: "GF_AUTH_PROXY_HEADER_PROPERTY", Value: "username"},
+			{Name: "GF_AUTH_PROXY_AUTO_SIGN_UP", Value: "true"},
+		}...)
+	}
+	if vmo.Spec.URI != "" {
+		externalDomainName := config.Grafana.Name + "." + vmo.Spec.URI
+		statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_DOMAIN", Value: externalDomainName})
+		statefulSet.Spec.Template.Spec.Containers[0].Env = append(statefulSet.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_ROOT_URL", Value: "https://" + externalDomainName})
+	}
+	// container will be restarted (per restart policy) if it fails the following liveness check:
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 15
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
+	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 20
+
+	// container will be removed from services if fails the following readiness check.
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
+
+	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe = statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe
+
+	// dashboard volume
+	volumes := []corev1.Volume{
+		{
+			Name: grafanaVolume,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
+				},
+			},
+		},
+		{
+			Name: "dashboards-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
+				},
+			},
+		},
+		{
+			Name: "datasources-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DatasourcesConfigMap},
+				},
+			},
+		},
+	}
+
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      grafanaVolume,
+			MountPath: "/var/lib/grafana",
+		},
+		{
+			Name:      "dashboards-volume",
+			MountPath: "/etc/grafana/provisioning/dashboards",
+		},
+
+		{
+			Name:      "datasources-volume",
+			MountPath: "/etc/grafana/provisioning/datasources",
+		},
+	}
+
+	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
+	statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, volumes...)
+
+	// When the sts does not have a pod security context with an FSGroup attribute, any mounted volumes are
+	// initially owned by root/root.  Previous versions of the Grafana image were run as "root", and chown'd the mounted
+	// directory to "grafana", but we don't want to run as "root".  The current Grafana image creates a group
+	// "grafana" (GID 472), and a user "grafana" (UID 472) in that group.  When we provide FSGroup =
+	// 472 below, the volume is owned by root/grafana, with permissions "rwxrwsr-x".  This allows the Grafana
+	// image to run as UID 472, and have sufficient permissions to write to the mounted volume.
+	grafanaGid := int64(472)
+	statefulSet.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+		FSGroup: &grafanaGid,
+	}
+
+	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
+	// pod in the stateful set.
+	storageSize := vmo.Spec.Grafana.Storage.Size
+	if len(storageSize) > 0 {
+		statefulSet.Spec.VolumeClaimTemplates =
+			[]corev1.PersistentVolumeClaim{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      grafanaVolume,
+					Namespace: vmo.Namespace,
+				},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storageSize)},
+					},
+				},
+			}}
+	} else {
+		statefulSet.Spec.Template.Spec.Volumes = []corev1.Volume{
+			{
+				Name: grafanaVolume,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		}
+	}
+
+	// add istio annotations required for inter component communication
+	if statefulSet.Spec.Template.Annotations == nil {
+		statefulSet.Spec.Template.Annotations = make(map[string]string)
+	}
 	return statefulSet
 }
 

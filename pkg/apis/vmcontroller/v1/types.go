@@ -81,6 +81,7 @@ type (
 		DatasourcesConfigMap string    `json:"datasourcesConfigMap,omitempty"`
 		DashboardsConfigMap  string    `json:"dashboardsConfigMap,omitempty"`
 		Resources            Resources `json:"resources,omitempty"`
+		Replicas             int32     `json:"replicas,omitempty"`
 	}
 
 	// Prometheus details
