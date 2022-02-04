@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ingresses
@@ -59,6 +59,7 @@ func TestVMOWithIngresses(t *testing.T) {
 	assert.Equal(t, 4, len(ingresses), "Length of generated Ingresses")
 	assert.Equal(t, 1, len(ingresses[0].Spec.TLS), "Number of TLS elements in generated Ingress")
 	assert.Equal(t, 1, len(ingresses[0].Spec.TLS[0].Hosts), "Number of hosts in generated Ingress")
+	assert.Equal(t, "*.example.com", ingresses[0].Spec.TLS[0].Hosts[0], "Number of hosts in generated Ingress")
 	assert.True(t, strings.Contains(ingresses[0].Spec.TLS[0].SecretName, "tls"), "TLS secret")
 	assert.Equal(t, "basic", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-type"], "Auth type")
 	assert.Equal(t, "secret", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-secret"], "Auth secret")
