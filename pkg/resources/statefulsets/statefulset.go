@@ -27,7 +27,6 @@ import (
 
 // New creates StatefulSet objects for a VMO resource
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, username, password string) ([]*appsv1.StatefulSet, error) {
-	zap.S().Infof("+++ Stateful set constructor called +++")
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager

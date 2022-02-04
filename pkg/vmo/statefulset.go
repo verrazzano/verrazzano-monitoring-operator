@@ -68,7 +68,6 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		if latestSts == nil {
 			break
 		}
-		zap.S().Infof("+++ STS name = '%s' +++", latestSts.Name)
 		// Update the PVC owner ref if needed
 		err = updateOwnerForPVCs(controller, latestSts, vmo)
 		if err != nil {
@@ -101,7 +100,6 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 	// Get the PVCs for this STS using the specID label. Each PVC metadata.label
 	// has the same specID label as the STS template.metadata.label.
 	// For example: " app: hello-world-binding-es-master"
-	zap.S().Info("+++ Inside updateOwnerForPVCs +++")
 	var idLabel map[string]string
 	var err error
 	if vmo.Spec.Elasticsearch.Enabled {
@@ -162,7 +160,6 @@ func updateOwnerForPvcHelper(controller *Controller, statefulSet *appsv1.Statefu
 			Name:       statefulSet.Name,
 			UID:        statefulSet.UID,
 		}}
-		zap.S().Infof("+++++ Setting StatefuleSet owner reference for PVC %s ++++", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
 			zap.S().Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)

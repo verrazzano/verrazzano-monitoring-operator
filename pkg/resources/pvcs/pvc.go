@@ -15,29 +15,7 @@ import (
 // New will return a new Service for VMO that needs to executed for on Complete
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	var pvcList []*corev1.PersistentVolumeClaim
-	//if vmo.Spec.Prometheus.Enabled && vmo.Spec.Prometheus.Storage.Size != "" {
-	//	pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, storageClassName)
-	//	if err != nil {
-	//		return pvcList, err
-	//	}
-	//	pvcList = append(pvcList, pvcs...)
-	//}
-	//if vmo.Spec.Elasticsearch.Enabled && vmo.Spec.Elasticsearch.Storage.Size != "" {
-	//	pvcs, err := createPvcElements(vmo, &vmo.Spec.Elasticsearch.Storage, storageClassName)
-	//	if err != nil {
-	//		return pvcList, err
-	//	}
-	//	pvcList = append(pvcList, pvcs...)
-	//}
-	//
-	//if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
-	//	pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)
-	//	if err != nil {
-	//		return pvcList, err
-	//	}
-	//	pvcList = append(pvcList, pvcs...)
-	//}
-	zap.S().Info("+++ Skipping PVC Create for ES Data,Grafana and Prometheus +++")
+	zap.S().Debugf("Returning an empty list as pvc creation has been moved to volume claim templates")
 	return pvcList, nil
 }
 
