@@ -27,6 +27,7 @@ import (
 
 // New creates StatefulSet objects for a VMO resource
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, username, password string) ([]*appsv1.StatefulSet, error) {
+	zap.S().Infof("+++ Stateful set constructor called +++")
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
@@ -242,10 +243,9 @@ fi`,
 }
 
 func createElasticSearchDataStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
-	zap.S().Infof("+++ Invoked createElasticSearchDataStatefulSet +++")
 	const esDataVolume = "vmi-system-es-data"
 
-	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Grafana.Resources, config.Grafana, "")
+	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.DataNode.Resources, config.ElasticsearchData, "")
 	esContainer := &statefulSet.Spec.Template.Spec.Containers[0]
 	esContainer.Env = append(esContainer.Env,
 		corev1.EnvVar{
@@ -372,7 +372,7 @@ func createElasticSearchDataStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoring
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
 
-	// es data vaolume mounts
+	// es data volume mounts
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      esDataVolume,
@@ -420,12 +420,12 @@ func createElasticSearchDataStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoring
 
 func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface) *appsv1.StatefulSet {
 	const prometheusVolume = "vmi-system-prometheus"
+
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Prometheus.Resources, config.Prometheus, "")
-	statefulSet.Spec.PodManagementPolicy = appsv1.OrderedReadyPodManagement
-	//statefulSet.Spec.UpdateStrategy.Type = appsv1.RollingUpdateStatefulSetStrategyType
 
 	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Prometheus.ImagePullPolicy
 	statefulSet.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = &config.Prometheus.RunAsUser
+	statefulSet.Spec.PodManagementPolicy = appsv1.OrderedReadyPodManagement
 
 	statefulSet.Spec.Template.Spec.Containers[0].Command = []string{"/bin/prometheus"}
 	statefulSet.Spec.Template.Spec.Containers[0].Args = []string{
@@ -437,6 +437,7 @@ func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 		"--storage.tsdb.no-lockfile"}
 
 	env := statefulSet.Spec.Template.Spec.Containers[0].Env
+	//env = append(env, corev1.EnvVar{Name: "AVAILABILITY_DOMAIN", Value: getAvailabilityDomainForPvcIndex(&vmo.Spec.Prometheus.Storage, pvcToAdMap, i)})
 	http2 := "disabled"
 	if vmo.Spec.Prometheus.HTTP2Enabled {
 		http2 = ""
@@ -530,6 +531,18 @@ func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 			MountPath: constants.PrometheusConfigMountPath,
 		},
 	}
+
+	configVolumeMountsReloader := []corev1.VolumeMount{
+		{
+			Name:      "rules-volume",
+			MountPath: constants.PrometheusRulesMountPath,
+		},
+		{
+			Name:      "config-volume",
+			MountPath: constants.PrometheusConfigMountPath,
+		},
+	}
+
 	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMounts...)
 	istioVolumeMount := corev1.VolumeMount{
 		Name:      "istio-certs-dir",
@@ -557,7 +570,7 @@ func createPrometheusStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 		ImagePullPolicy: config.ConfigReloader.ImagePullPolicy,
 	})
 	statefulSet.Spec.Template.Spec.Containers[1].Args = []string{"-volume-dir=" + constants.PrometheusConfigMountPath, "-volume-dir=" + constants.PrometheusRulesMountPath, "-webhook-url=http://localhost:9090/-/reload"}
-	statefulSet.Spec.Template.Spec.Containers[1].VolumeMounts = configVolumeMounts
+	statefulSet.Spec.Template.Spec.Containers[1].VolumeMounts = configVolumeMountsReloader
 
 	// Prometheus init container
 	statefulSet.Spec.Template.Spec.InitContainers = []corev1.Container{
@@ -621,7 +634,8 @@ func createGrafanaStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 	//statefulSet.Spec.UpdateStrategy.Type = appsv1.RollingUpdateStatefulSetStrategyType
 	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 
-	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
+	//statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
+	statefulSet.Spec.Replicas = resources.NewVal(1)
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Grafana.Name)
 
 	statefulSet.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
@@ -870,6 +884,7 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 			Replicas: resources.NewVal(1),
 			// The default PodManagementPolicy (OrderedReady) has known issues where a statefulset with
 			// a crashing pod is never updated on further statefulset changes, so use Parallel here
+			UpdateStrategy:      appsv1.StatefulSetUpdateStrategy{Type: appsv1.RollingUpdateStatefulSetStrategyType},
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			ServiceName:         serviceName,
 			Selector: &metav1.LabelSelector{

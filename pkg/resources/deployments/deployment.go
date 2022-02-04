@@ -30,6 +30,121 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	var deployments []*appsv1.Deployment
 	var err error
 
+	// Grafana
+	/*
+		if vmo.Spec.Grafana.Enabled {
+
+			deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana)
+			deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
+
+			deployment.Spec.Strategy.Type = "Recreate"
+			deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+				{Name: "GF_PATHS_PROVISIONING", Value: "/etc/grafana/provisioning"},
+				{Name: "GF_SERVER_ENABLE_GZIP", Value: "true"},
+				{Name: "PROMETHEUS_TARGETS", Value: "http://" + constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + ":" + strconv.Itoa(config.Prometheus.Port)},
+			}
+			if config.Grafana.OidcProxy == nil {
+				deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+					{Name: "GF_SECURITY_ADMIN_USER", Value: username},
+					{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
+					{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
+					{Name: "GF_AUTH_BASIC_ENABLED", Value: "true"},
+					{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "true"},
+					{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
+					{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Admin"},
+					{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
+					{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "false"},
+				}...)
+			} else {
+				deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+					{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
+					{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
+					{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
+					{Name: "GF_USERS_AUTO_ASSIGN_ORG", Value: "true"},
+					{Name: "GF_USERS_AUTO_ASSIGN_ORG_ROLE", Value: "Editor"},
+					{Name: "GF_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
+					{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+					{Name: "GF_AUTH_PROXY_ENABLED", Value: "true"},
+					{Name: "GF_AUTH_PROXY_HEADER_NAME", Value: "X-WEBAUTH-USER"},
+					{Name: "GF_AUTH_PROXY_HEADER_PROPERTY", Value: "username"},
+					{Name: "GF_AUTH_PROXY_AUTO_SIGN_UP", Value: "true"},
+				}...)
+			}
+			if vmo.Spec.URI != "" {
+				externalDomainName := config.Grafana.Name + "." + vmo.Spec.URI
+				deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_DOMAIN", Value: externalDomainName})
+				deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_ROOT_URL", Value: "https://" + externalDomainName})
+			}
+			// container will be restarted (per restart policy) if it fails the following liveness check:
+			deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 15
+			deployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
+			deployment.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 20
+
+			// container will be removed from services if fails the following readiness check.
+			deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
+			deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
+			deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
+
+			deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = deployment.Spec.Template.Spec.Containers[0].LivenessProbe
+
+			// dashboard volume
+			volumes := []corev1.Volume{
+				{
+					Name: "dashboards-volume",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
+						},
+					},
+				},
+				{
+					Name: "datasources-volume",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DatasourcesConfigMap},
+						},
+					},
+				},
+			}
+			volumeMounts := []corev1.VolumeMount{
+				{
+					Name:      "dashboards-volume",
+					MountPath: "/etc/grafana/provisioning/dashboards",
+				},
+
+				{
+					Name:      "datasources-volume",
+					MountPath: "/etc/grafana/provisioning/datasources",
+				},
+			}
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, volumes...)
+
+			// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
+			// initially owned by root/root.  Previous versions of the Grafana image were run as "root", and chown'd the mounted
+			// directory to "grafana", but we don't want to run as "root".  The current Grafana image creates a group
+			// "grafana" (GID 472), and a user "grafana" (UID 472) in that group.  When we provide FSGroup =
+			// 472 below, the volume is owned by root/grafana, with permissions "rwxrwsr-x".  This allows the Grafana
+			// image to run as UID 472, and have sufficient permissions to write to the mounted volume.
+			grafanaGid := int64(472)
+			deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+				FSGroup: &grafanaGid,
+			}
+			deployments = append(deployments, deployment)
+		}
+	*/
+
+	/*
+		// Prometheus
+		if vmo.Spec.Prometheus.Enabled {
+			promDeployments, err := createPrometheusDeploymentElements(vmo, kubeclientset, pvcToAdMap)
+			if err != nil {
+				return nil, err
+			}
+			deployments = append(deployments, promDeployments...)
+		}
+	*/
+
 	// Elasticsearch
 	// - V8O supports essentially 2 "known" configurations, a "prod" and a "dev" configuration for ES; while we want
 	//   to allow customizing topologies, we need to enforce certain constraints for now.

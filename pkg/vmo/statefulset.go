@@ -57,7 +57,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		zap.S().Infof("Successfully applied StatefulSet '%s'\n", statefulSetName)
 	}
 
-	// Do a second pass through the stateful sets to update PVC ownership and clean up statesful sets as needed
+	// Do a second pass through the stateful sets to update PVC ownership and clean up stateful sets as needed
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingStatefulSetsList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
 	if err != nil {
@@ -68,8 +68,9 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		if latestSts == nil {
 			break
 		}
+		zap.S().Infof("+++ STS name = '%s' +++", latestSts.Name)
 		// Update the PVC owner ref if needed
-		err = updateOwnerForPVCs(controller, latestSts, vmo.Name, vmo.Namespace)
+		err = updateOwnerForPVCs(controller, latestSts, vmo)
 		if err != nil {
 			return err
 		}
@@ -95,14 +96,59 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 // to the STS resource, the PVC will automatically get deleted when the STS is deleted.
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
 // NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
-func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
+func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 
 	// Get the PVCs for this STS using the specID label. Each PVC metadata.label
 	// has the same specID label as the STS template.metadata.label.
 	// For example: " app: hello-world-binding-es-master"
-	idLabel := resources.GetSpecID(vmoName, config.ElasticsearchMaster.Name)
+	zap.S().Info("+++ Inside updateOwnerForPVCs +++")
+	var idLabel map[string]string
+	var err error
+	if vmo.Spec.Elasticsearch.Enabled {
+		idLabel = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
+		err = updateOwnerForPvcHelper(controller, statefulSet, vmo, idLabel)
+		if err != nil {
+			zap.S().Errorf("Failed to update the owner reference due to (%v)", err)
+			return err
+		}
+
+	}
+	if vmo.Spec.Grafana.Enabled {
+		idLabel = resources.GetSpecID(vmo.Name, config.Grafana.Name)
+		err = updateOwnerForPvcHelper(controller, statefulSet, vmo, idLabel)
+		if err != nil {
+			zap.S().Errorf("Failed to update the owner reference due to (%v)", err)
+			return err
+		}
+	}
+	if vmo.Spec.Prometheus.Enabled {
+		idLabel = resources.GetSpecID(vmo.Name, config.Prometheus.Name)
+		err = updateOwnerForPvcHelper(controller, statefulSet, vmo, idLabel)
+		if err != nil {
+			zap.S().Errorf("Failed to update the owner reference due to (%v)", err)
+			return err
+		}
+	}
+	if vmo.Spec.Elasticsearch.Enabled {
+		idLabel = resources.GetSpecID(vmo.Name, config.ElasticsearchData.Name)
+		err = updateOwnerForPvcHelper(controller, statefulSet, vmo, idLabel)
+		if err != nil {
+			zap.S().Errorf("Failed to update the owner reference due to (%v)", err)
+			return err
+		}
+	}
+
+	//expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
+	//actualNumPVCs := len(existingPvcList)
+	//if actualNumPVCs != expectedNumPVCs {
+	//	return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
+	//}
+	return nil
+}
+
+func updateOwnerForPvcHelper(controller *Controller, statefulSet *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, idLabel map[string]string) error {
 	selector := labels.SelectorFromSet(idLabel)
-	existingPvcList, err := controller.pvcLister.PersistentVolumeClaims(vmoNamespace).List(selector)
+	existingPvcList, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).List(selector)
 	if err != nil {
 		return err
 	}
@@ -117,16 +163,11 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			UID:        statefulSet.UID,
 		}}
 		zap.S().Infof("+++++ Setting StatefuleSet owner reference for PVC %s ++++", pvc.Name)
-		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
+		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
 			zap.S().Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
 			return err
 		}
 	}
-	//expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
-	//actualNumPVCs := len(existingPvcList)
-	//if actualNumPVCs != expectedNumPVCs {
-	//	return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
-	//}
 	return nil
 }

@@ -6,6 +6,7 @@ package pvcs
 import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,6 @@ import (
 // New will return a new Service for VMO that needs to executed for on Complete
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	var pvcList []*corev1.PersistentVolumeClaim
-
 	//if vmo.Spec.Prometheus.Enabled && vmo.Spec.Prometheus.Storage.Size != "" {
 	//	pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, storageClassName)
 	//	if err != nil {
@@ -29,7 +29,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 	//	}
 	//	pvcList = append(pvcList, pvcs...)
 	//}
-
+	//
 	//if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
 	//	pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)
 	//	if err != nil {
@@ -37,6 +37,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 	//	}
 	//	pvcList = append(pvcList, pvcs...)
 	//}
+	zap.S().Info("+++ Skipping PVC Create for ES Data,Grafana and Prometheus +++")
 	return pvcList, nil
 }
 
