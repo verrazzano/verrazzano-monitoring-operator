@@ -104,7 +104,7 @@ k8s-dist: docker-clean
 
 .PHONY: build
 build: k8s-dist
-	docker build --pull  \
+	docker build --pull --no-cache \
 		--build-arg BUILDVERSION=${BUILDVERSION} \
 		--build-arg BUILDDATE=${BUILDDATE} \
 		-t ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} \
