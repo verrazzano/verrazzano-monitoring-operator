@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"time"
 
@@ -387,7 +388,6 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Get the VMO resource with this namespace/name
-	zap.S().Infof("[VMO] Name: %s  NameSpace: %s", name, namespace)
 	vmo, err := c.vmoLister.VerrazzanoMonitoringInstances(namespace).Get(name)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("error getting VMO %s in namespace %s: %v", name, namespace, err))
@@ -400,13 +400,14 @@ func (c *Controller) syncHandler(key string) error {
 		Namespace:      vmo.Namespace,
 		ID:             string(vmo.UID),
 		Generation:     vmo.Generation,
-		ControllerName: "VMO",
+		ControllerName: "vmi",
 	})
 	if err != nil {
 		zap.S().Errorf("Failed to create controller logger for VMO controller", err)
 	}
 	c.log = log
 
+	log.Progressf("Reconciling vmi resource %v, generation %v", types.NamespacedName{Namespace: vmo.Namespace, Name: vmo.Name}, vmo.Generation)
 	return c.syncHandlerStandardMode(vmo)
 }
 
@@ -426,7 +427,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	// If lock, controller will not sync/process the VMO env
 	if vmo.Spec.Lock {
-		c.log.Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
+		c.log.Progressf("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
 		return nil
 	}
 
