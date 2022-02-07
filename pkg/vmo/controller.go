@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"reflect"
 	"time"
 
@@ -106,6 +107,9 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+
+	// VerrazzanoLogger is used to log
+	log vzlog.VerrazzanoLogger
 }
 
 // ClusterInfo has info like ContainerRuntime and managed cluster name
@@ -389,6 +393,19 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	// Get the resource logger needed to log message using 'progress' and 'once' methods
+	log, err := vzlog.EnsureResourceLogger(&vzlog.ResourceConfig{
+		Name:           vmo.Name,
+		Namespace:      vmo.Namespace,
+		ID:             string(vmo.UID),
+		Generation:     vmo.Generation,
+		ControllerName: "VMO",
+	})
+	if err != nil {
+		zap.S().Errorf("Failed to create controller logger for VMO controller", err)
+	}
+	c.log = log
+
 	return c.syncHandlerStandardMode(vmo)
 }
 
@@ -408,7 +425,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	// If lock, controller will not sync/process the VMO env
 	if vmo.Spec.Lock {
-		zap.S().Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
+		c.log.Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
 		return nil
 	}
 
@@ -424,7 +441,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateRoleBindings(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Role Bindings for vmo: %v", err)
+		c.log.Errorf("Failed to create Role Bindings for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -433,7 +450,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create config maps for vmo: %v", err)
+		c.log.Errorf("Failed to create config maps for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -442,7 +459,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateServices(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Services for vmo: %v", err)
+		c.log.Errorf("Failed to create Services for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -451,7 +468,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	pvcToAdMap, err := createPersistentVolumeClaims(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create PVCs for vmo: %v", err)
+		c.log.Errorf("Failed to create PVCs for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -460,12 +477,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	vmoUsername, vmoPassword, err := GetAuthSecrets(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to extract VMO Secrets for vmo: %v", err)
+		c.log.Errorf("Failed to extract VMO Secrets for vmo: %v", err)
 		errorObserved = true
 	}
 	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		zap.S().Errorf("Failed to create Deployments for vmo: %v", err)
+		c.log.Errorf("Failed to create Deployments for vmo: %v", err)
 		errorObserved = true
 	}
 	/*********************
@@ -473,7 +490,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateStatefulSets(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create StatefulSets for vmo: %v", err)
+		c.log.Errorf("Failed to create StatefulSets for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -482,7 +499,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateIngresses(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Ingresses for vmo: %v", err)
+		c.log.Errorf("Failed to create Ingresses for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -491,12 +508,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	specDiffs := diff.Diff(originalVMO, vmo)
 	if specDiffs != "" {
-		zap.S().Debugf("Acquired lock in namespace: %s", vmo.Namespace)
-		zap.S().Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
-		zap.S().Infof("Updating VMO")
+		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
+		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
+		c.log.Oncef("Updating VMO")
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to update status for vmo: %v", err)
+			c.log.Errorf("Failed to update status for vmo: %v", err)
 			errorObserved = true
 		}
 	}
@@ -508,23 +525,22 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.Versioning.CurrentVersion = c.buildVersion
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to update currentVersion for vmo %s: %v", vmo.Name, err)
+			c.log.Errorf("Failed to update currentVersion for vmo %s: %v", vmo.Name, err)
 		} else {
-			zap.S().Infof("Updated VMO %s currentVersion to %s", vmo.Name, c.buildVersion)
+			c.log.Oncef("Updated VMO %s currentVersion to %s", vmo.Name, c.buildVersion)
 		}
 	}
 
 	// Create a Hash on vmo/Status object to identify changes to vmo spec
 	hash, err := vmo.Hash()
 	if err != nil {
-		zap.S().Errorf("Error getting VMO hash: %v", err)
+		c.log.Errorf("Error getting VMO hash: %v", err)
 	}
 	if vmo.Status.Hash != hash {
 		vmo.Status.Hash = hash
 	}
 
-	zap.S().Infof("Successfully synced '%s/%s'", vmo.Namespace, vmo.Name)
-
+	c.log.Oncef("Successfully synced VMI'%s/%s'", vmo.Namespace, vmo.Name)
 	return nil
 }
 
@@ -579,7 +595,7 @@ func (c *Controller) IsHealthy() bool {
 // the prometheus config map so that it can be re-created. Other operators that reconcile the config map will
 // eventually catch up and fix up the config map
 func (c *Controller) PreStartCleanup() {
-	zap.S().Infof("Deleting Prometheus config map at startup if it exists: %s/%s", constants.VerrazzanoSystemNamespace, constants.PrometheusConfig)
+	c.log.Oncef("Deleting Prometheus config map at startup if it exists: %s/%s", constants.VerrazzanoSystemNamespace, constants.PrometheusConfig)
 	deleteConfigMapIfExists(c, constants.VerrazzanoSystemNamespace,
 		resources.GetMetaName(constants.VMODefaultName, constants.PrometheusConfig))
 }

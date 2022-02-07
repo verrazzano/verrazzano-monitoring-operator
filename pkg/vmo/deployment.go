@@ -36,7 +36,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	zap.S().Infof("Creating/updating Deployments for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Deployments for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)
@@ -65,7 +65,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 				specDiffs := diff.Diff(existingDeployment, curDeployment)
 				if specDiffs != "" {
 					zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-					zap.S().Infof("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
+					controller.log.Oncef("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
 					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
@@ -120,7 +120,7 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		specDiffs := diff.Diff(existingDeployment, curDeployment)
 		if specDiffs != "" {
 			zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-			zap.S().Infof("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
+			controller.log.Oncef("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {
 				return false, err

@@ -16,7 +16,7 @@ import (
 func StartHTTPServer(controller *Controller) {
 	setupHandlers(controller)
 	go wait.Until(func() {
-		zap.S().Infow("Starting HTTP server")
+		controller.log.Oncef("Starting HTTP server")
 		err := http.ListenAndServeTLS(":8080", "/etc/certs/tls.crt", "/etc/certs/tls.key", nil)
 		if err != nil {
 			zap.S().Errorf("Failed to start HTTP server for vmo: %s", err)

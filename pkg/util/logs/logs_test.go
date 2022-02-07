@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func TestInitLogsDefaultInfo(t *testing.T) {
+func TestInitLogsDefaultInfo2(t *testing.T) {
 	InitLogs(kzap.Options{})
 	zap.S().Errorf("greeting %v", "hello")
 	zap.S().Infof("greeting %v", "hello")

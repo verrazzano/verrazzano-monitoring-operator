@@ -39,7 +39,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	}
 	deploymentToAdMap := map[string]string{}
 
-	zap.S().Infof("Creating/updating PVCs for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating PVCs for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
@@ -92,7 +92,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 				}
 				currPvc.Spec.Selector = &metav1.LabelSelector{MatchLabels: map[string]string{storageClassInfo.PvcZoneMatchLabel: newAd}}
 			}
-			zap.S().Infof("Creating PVC %s in AD %s", currPvc.Name, newAd)
+			controller.log.Oncef("Creating PVC %s in AD %s", currPvc.Name, newAd)
 
 			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
 

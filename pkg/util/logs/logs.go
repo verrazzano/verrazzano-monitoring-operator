@@ -10,7 +10,7 @@ import (
 )
 
 // InitLogs initializes logs with Time and Global Level of Logs set at Info
-func InitLogs(opts kzap.Options) {
+func InitLogs2(opts kzap.Options) {
 	var config zap.Config
 	if opts.Development {
 		config = zap.NewDevelopmentConfig()

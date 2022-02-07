@@ -310,7 +310,7 @@ func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.V
 		zap.S().Errorf("caught an error trying to create a secret, err: %s", err)
 		return err
 	}
-	zap.S().Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
+	controller.log.Oncef("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
 
 	return nil
 }
