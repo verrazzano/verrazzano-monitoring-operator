@@ -5,10 +5,9 @@ package statefulsets
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
 	"strings"
-
-	"go.uber.org/zap"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -22,7 +21,7 @@ import (
 )
 
 // New creates StatefulSet objects for a VMO resource
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
+func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
@@ -31,13 +30,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSe
 	}
 	// Elasticsearch Master
 	if vmo.Spec.Elasticsearch.Enabled {
-		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(vmo))
+		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(log, vmo))
 	}
 	return statefulSets, nil
 }
 
 // Creates StatefulSet for Elasticsearch Master
-func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
@@ -72,11 +71,11 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 		{Name: "HTTP_ENABLE", Value: "true"},
 	}
 	if resources.IsSingleNodeESCluster(vmo) {
-		zap.S().Infof("ES topology for %s indicates a single-node cluster (single master node only)")
+		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
 		javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.MasterNode.Resources.RequestMemory) // Default JVM heap settings if none provided
 		if err != nil {
 			javaOpts = constants.DefaultDevProfileESMemArgs
-			zap.S().Errorf("Unable to derive heap sizes from Master pod, using default %s.  Error: %v", javaOpts, err)
+			log.Errorf("Unable to derive heap sizes from Master pod, using default %s.  Error: %v", javaOpts, err)
 		}
 		if vmo.Spec.Elasticsearch.MasterNode.JavaOpts != "" {
 			javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
