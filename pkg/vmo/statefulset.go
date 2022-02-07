@@ -118,7 +118,7 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			Name:       statefulSet.Name,
 			UID:        statefulSet.UID,
 		}}
-		controller.log.Debugf()"Setting StatefuleSet owner reference for PVC %s", pvc.Name)
+		controller.log.Debugf("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
 			zap.S().Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)

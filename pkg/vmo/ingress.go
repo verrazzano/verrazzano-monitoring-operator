@@ -73,7 +73,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
-			zap.S().Oncef("Deleting ingress %s", ingress.Name)
+			controller.log.Oncef("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
 				zap.S().Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
