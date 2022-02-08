@@ -34,12 +34,12 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 
 	pvcList, err := pvcs.New(vmo, storageClass.Name)
 	if err != nil {
-		zap.S().Errorf("Failed to create PVC specs for vmo: %s", err)
+		zap.S().Errorf("Failed to create PVC specs for VMI: %s", err)
 		return nil, err
 	}
 	deploymentToAdMap := map[string]string{}
 
-	controller.log.Oncef("Creating/updating PVCs for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating PVCs for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
@@ -63,7 +63,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			return deploymentToAdMap, nil
 		}
 
-		zap.S().Debugf("Applying PVC '%s' in namespace '%s' for vmo '%s'\n", pvcName, vmo.Namespace, vmo.Name)
+		zap.S().Debugf("Applying PVC '%s' in namespace '%s' for VMI '%s'\n", pvcName, vmo.Namespace, vmo.Name)
 		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).Get(pvcName)
 
 		// If the PVC already exists, we *only* read its current AD, *if possible* (this is not possible for all storage classes and situations)

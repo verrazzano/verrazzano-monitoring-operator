@@ -23,7 +23,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Ingress specs for vmo: %s", err)
+		zap.S().Errorf("Failed to create Ingress specs for VMI: %s", err)
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
@@ -31,7 +31,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.IngressTargetDNSName = controller.operatorConfig.DefaultIngressTargetDNSName
 	}
 	var ingressNames []string
-	controller.log.Oncef("Creating/updating Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	for _, curIngress := range ingList {
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
@@ -43,7 +43,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			return nil
 		}
 
-		zap.S().Debugf("Applying Ingress '%s' in namespace '%s' for vmo '%s'\n", ingName, vmo.Namespace, vmo.Name)
+		zap.S().Debugf("Applying Ingress '%s' in namespace '%s' for VMI '%s'\n", ingName, vmo.Namespace, vmo.Name)
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
 			specDiffs := diff.Diff(existingIngress, curIngress)
@@ -59,13 +59,13 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		}
 
 		if err != nil {
-			zap.S().Errorf("Failed to apply Ingress for vmo: %s", err)
+			zap.S().Errorf("Failed to apply Ingress for VMI: %s", err)
 			return err
 		}
 	}
 
 	// Delete ingresses that shouldn't exist
-	controller.log.Oncef("Deleting unwanted Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Deleting unwanted Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 	if err != nil {
