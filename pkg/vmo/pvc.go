@@ -34,12 +34,12 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 
 	pvcList, err := pvcs.New(vmo, storageClass.Name)
 	if err != nil {
-		controller.log.Errorf("Failed to create PVC specs for VMI: %v", err)
+		controller.log.Errorf("Failed to create PVC specs for VMI %s: %v", vmo.Name, err)
 		return nil, err
 	}
 	deploymentToAdMap := map[string]string{}
 
-	controller.log.Once("Creating/updating PVCs for VMI")
+	controller.log.Oncef("Creating/updating PVCs for VMI %s", vmo.Name)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)

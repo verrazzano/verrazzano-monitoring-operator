@@ -29,14 +29,14 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		controller.log.Errorf("Failed to create Deployment specs for VMI: %v", err)
+		controller.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
 		return false, err
 	}
 
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	controller.log.Once("Creating/updating Deployments for VMI")
+	controller.log.Oncef("Creating/updating Deployments for VMI %s", vmo.Name)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)

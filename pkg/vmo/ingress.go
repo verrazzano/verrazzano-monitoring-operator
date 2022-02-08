@@ -23,7 +23,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
-		controller.log.Errorf("Failed to create Ingress specs for VMI: %v", err)
+		controller.log.Errorf("Failed to create Ingress specs for VMI %s: %v", vmo.Name, err)
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
@@ -31,7 +31,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.IngressTargetDNSName = controller.operatorConfig.DefaultIngressTargetDNSName
 	}
 	var ingressNames []string
-	controller.log.Once("Creating/updating Ingresses for VMI")
+	controller.log.Oncef("Creating/updating Ingresses for VMI %s", vmo.Name)
 	for _, curIngress := range ingList {
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
@@ -65,7 +65,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 
 	// Delete ingresses that shouldn't exist
-	controller.log.Once("Deleting unwanted Ingresses for VMI")
+	controller.log.Oncef("Deleting unwanted Ingresses for VMI %s", vmo.Name)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 	if err != nil {

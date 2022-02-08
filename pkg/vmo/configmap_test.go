@@ -5,6 +5,7 @@ package vmo
 
 import (
 	"context"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -28,6 +29,7 @@ func TestCreateConfigmaps(t *testing.T) {
 		kubeclientset:   client,
 		configMapLister: &simpleConfigMapLister{kubeClient: client},
 		secretLister:    &simpleSecretLister{kubeClient: client},
+		log:             vzlog.DefaultLogger(),
 	}
 	vmo := &vmctl.VerrazzanoMonitoringInstance{}
 	vmo.Name = constants.VMODefaultName
@@ -59,6 +61,7 @@ func TestDeleteConfigMapIfExists(t *testing.T) {
 		kubeclientset:   client,
 		configMapLister: &simpleConfigMapLister{kubeClient: client},
 		secretLister:    &simpleSecretLister{kubeClient: client},
+		log:             vzlog.DefaultLogger(),
 	}
 	err := deleteConfigMapIfExists(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
 	assert.NoError(t, err)

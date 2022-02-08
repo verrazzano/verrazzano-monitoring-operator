@@ -20,11 +20,11 @@ import (
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	svcList, err := services.New(vmo)
 	if err != nil {
-		controller.log.Errorf("Failed to create Services for VMI: %v", err)
+		controller.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
 		return err
 	}
 	var serviceNames []string
-	controller.log.Once("Creating/updating Services for VMI")
+	controller.log.Oncef("Creating/updating Services for VMI %s", vmo.Name)
 	for _, curService := range svcList {
 		serviceName := curService.Name
 		serviceNames = append(serviceNames, serviceName)
@@ -53,7 +53,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		}
 
 		if err != nil {
-			controller.log.Errorf("Failed to apply Service for VMI: %v", err)
+			controller.log.Errorf("Failed to apply Service for VMI %s: %v", vmo.Name, err)
 			return err
 		}
 		controller.log.Debugf("Successfully applied Service '%s'\n", serviceName)

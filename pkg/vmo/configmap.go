@@ -42,7 +42,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 		constants.GrafanaTmplAlertManagerURI: resources.GetMetaName(vmo.Name, config.AlertManager.Name)}
 	dataSourceTemplate, err := asDashboardTemplate(constants.DataSourcesTmpl, replaceMap)
 	if err != nil {
-		controller.log.Errorf("Failed to create dashboard datasource template for VMI: %v", err)
+		controller.log.Errorf("Failed to create dashboard datasource template for VMI %s: %v", vmo.Name, err)
 		return err
 	}
 	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Grafana.DatasourcesConfigMap, map[string]string{"datasource.yaml": dataSourceTemplate})

@@ -19,7 +19,7 @@ import (
 
 // CreateRoleBindings creates/updates VMO RoleBindings k8s resources
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	controller.log.Once("Creating/updating RoleBindings for VMI")
+	controller.log.Oncef("Creating/updating RoleBindings for VMI %s", vmo.Name)
 
 	newRoleBindings, err := NewRoleBindings(vmo, controller)
 	if err != nil {
