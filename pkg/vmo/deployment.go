@@ -64,13 +64,14 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else {
 				specDiffs := diff.Diff(existingDeployment, curDeployment)
 				if specDiffs != "" {
-					zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-					controller.log.Oncef("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
+					controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
+					controller.log.Oncef("Updating deployment %s/%s", curDeployment.Namespace, curDeployment.Name)
 					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
 		}
 		if err != nil {
+			controller.log.Errorf("Failed to update deployment %s/%s: %v", curDeployment.Namespace, curDeployment.Name, err)
 			return false, err
 		}
 	}

@@ -47,16 +47,16 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		if existingStatefulSet != nil {
 			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
-				zap.S().Debugf("Statefulset %s : Spec differences %s", curStatefulSet.Name, specDiffs)
+				controller.log.Oncef("Statefulset %s/%s has spec differences %s", curStatefulSet.Namespace, curStatefulSet.Name, specDiffs)
 				_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
 			}
 		} else {
 			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
 		}
 		if err != nil {
-			return err
+			return controller.log.ErrorfNewErr("Failed to update StatefulSets %s%s: %v", curStatefulSet.Namespace, curStatefulSet.Name, err)
 		}
-		controller.log.Oncef("Successfully applied StatefulSet '%s'\n", statefulSetName)
+		controller.log.Oncef("Successfully applied StatefulSet '%s/%'\n", curStatefulSet.Namespace, curStatefulSet.Name)
 	}
 
 	// Do a second pass through the stateful sets to update PVC ownership and clean up statesful sets as needed

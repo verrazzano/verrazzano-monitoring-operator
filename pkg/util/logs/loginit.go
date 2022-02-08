@@ -10,7 +10,12 @@ import (
 	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-const timeFormat = "2006-01-02T15:04:05.000Z"
+const (
+	timeFormat = "2006-01-02T15:04:05.000Z"
+	timeKey = "@timestamp"
+	messageKey = "message"
+	callerKey = "caller"
+)
 
 // InitLogs initializes logs with Time and Global Level of Logs set at Info
 func InitLogs(opts kzap.Options) {
@@ -26,9 +31,9 @@ func InitLogs(opts kzap.Options) {
 		config.Level.SetLevel(zapcore.InfoLevel)
 	}
 	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(timeFormat)
-	config.EncoderConfig.TimeKey = "@timestamp"
-	config.EncoderConfig.MessageKey = "message"
-	config.EncoderConfig.CallerKey = "caller"
+	config.EncoderConfig.TimeKey = timeKey
+	config.EncoderConfig.MessageKey = messageKey
+	config.EncoderConfig.CallerKey = callerKey
 	logger, err := config.Build()
 	if err != nil {
 		zap.S().Errorf("Error creating logger %v", err)
@@ -58,9 +63,9 @@ func BuildZapLogger(callerSkip int) (*zap.SugaredLogger, error) {
 	config.Level.SetLevel(zapcore.InfoLevel)
 
 	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(timeFormat)
-	config.EncoderConfig.TimeKey = "@timestamp"
-	config.EncoderConfig.MessageKey = "message"
-	config.EncoderConfig.CallerKey = "caller"
+	config.EncoderConfig.TimeKey = timeKey
+	config.EncoderConfig.MessageKey = messageKey
+	config.EncoderConfig.CallerKey = callerKey
 	logger, err := config.Build()
 	if err != nil {
 		return nil, err

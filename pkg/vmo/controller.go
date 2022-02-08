@@ -479,12 +479,10 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	vmoUsername, vmoPassword, err := GetAuthSecrets(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to extract VMO Secrets for vmo: %v", err)
 		errorObserved = true
 	}
 	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		c.log.Errorf("Failed to create Deployments for vmo: %v", err)
 		errorObserved = true
 	}
 	/*********************
@@ -492,7 +490,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateStatefulSets(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create StatefulSets for vmo: %v", err)
 		errorObserved = true
 	}
 
