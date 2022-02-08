@@ -240,7 +240,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		operatorConfig:        operatorConfig,
 		latestConfigMap:       operatorConfigMap,
 		clusterInfo:           ClusterInfo{},
-		log: 				   vzlog.DefaultLogger(),
+		log:                   vzlog.DefaultLogger(),
 	}
 
 	zap.S().Infow("Setting up event handlers")
