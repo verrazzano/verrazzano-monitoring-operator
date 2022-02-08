@@ -36,7 +36,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	controller.log.Oncef("Creating/updating Deployments for VMI %s/%s", vmo.Namespace, vmo.Name)
+	controller.log.Once("Creating/updating Deployments for VMI")
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)
@@ -98,7 +98,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			zap.S().Debugf("Deleting deployment %s", deployment.Name)
 			err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
-				controller.log.Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
+				controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
 				return false, err
 			}
 		}

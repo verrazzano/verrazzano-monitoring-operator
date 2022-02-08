@@ -29,7 +29,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 
 	// Loop through the existing stateful sets and create/update as needed
-	controller.log.Oncef("Creating/updating Statefulsets for VMI %s/%s", vmo.Namespace, vmo.Name)
+	controller.log.Once("Creating/updating Statefulsets for VMI")
 	var statefulSetNames []string
 	for _, curStatefulSet := range statefulSetList {
 		statefulSetName := curStatefulSet.Name
@@ -85,7 +85,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 	}
 
-	controller.log.Oncef("Successfully applied StatefulSets for VMI %s/%s", vmo.Namespace, vmo.Name)
+	controller.log.Once("Successfully applied StatefulSets for VMI")
 	return nil
 }
 
@@ -127,7 +127,7 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 	expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
 	actualNumPVCs := len(existingPvcList)
 	if actualNumPVCs != expectedNumPVCs {
-		return fmt.Errorf("Failed, PVC owner reference set in %v of %v PVCs for VMI %s/%s", actualNumPVCs, expectedNumPVCs, vmoName)
+		return fmt.Errorf("Failed, PVC owner reference set in %v of %v PVCs for VMI", actualNumPVCs, expectedNumPVCs)
 	}
 	return nil
 }

@@ -23,7 +23,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
-		controller.log.Errorf("Failed to create Ingress specs for VMI: %s", err)
+		controller.log.Errorf("Failed to create Ingress specs for VMI: %v", err)
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
@@ -31,7 +31,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.IngressTargetDNSName = controller.operatorConfig.DefaultIngressTargetDNSName
 	}
 	var ingressNames []string
-	controller.log.Oncef("Creating/updating Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Once("Creating/updating Ingresses for VMI")
 	for _, curIngress := range ingList {
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
@@ -54,18 +54,18 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		} else if k8serrors.IsNotFound(err) {
 			_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
-			controller.log.Errorf("Failed getting existing Ingress %s in namespace %s: %v", ingName, vmo.Namespace, err)
+			controller.log.Errorf("Failed getting existing Ingress %s/%s: %v", vmo.Namespace, ingName, err)
 			return err
 		}
 
 		if err != nil {
-			controller.log.Errorf("Failed to apply Ingress for VMI: %v", err)
+			controller.log.Errorf("Failed to create/update Ingress %s/%s: %v", vmo.Namespace, ingName, err)
 			return err
 		}
 	}
 
 	// Delete ingresses that shouldn't exist
-	controller.log.Oncef("Deleting unwanted Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Once("Deleting unwanted Ingresses for VMI")
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 	if err != nil {
@@ -76,7 +76,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
-				controller.log.Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
+				controller.log.Errorf("Failed to delete Ingress %s/%s: %v", vmo.Namespace, ingress.Name, err)
 				return err
 			}
 		}

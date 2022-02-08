@@ -524,9 +524,9 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.Versioning.CurrentVersion = c.buildVersion
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			c.log.Errorf("Failed to update currentVersion for VMI %s: %v", vmo.Name, err)
+			c.log.Errorf("Failed to update currentVersion for VMI: %v", err)
 		} else {
-			c.log.Oncef("Updated VMO %s currentVersion to %s", vmo.Name, c.buildVersion)
+			c.log.Oncef("Updated VMI currentVersion to %s", c.buildVersion)
 		}
 	}
 

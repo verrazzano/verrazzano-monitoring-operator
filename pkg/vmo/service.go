@@ -24,7 +24,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		return err
 	}
 	var serviceNames []string
-	controller.log.Oncef("Creating/updating Services for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Once("Creating/updating Services for VMI")
 	for _, curService := range svcList {
 		serviceName := curService.Name
 		serviceNames = append(serviceNames, serviceName)

@@ -23,20 +23,20 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	controller.log.Oncef("Loading auth secret data")
 	credsMap, err := controller.loadAllAuthSecretData(vmo.Namespace, vmo.Spec.SecretsName)
 	if err != nil {
-		controller.log.Errorf("Failed to extract VMO Secrets for VMI %s/%s: %v", vmo.Namespace, vmo.Name, err)
+		controller.log.Errorf("Failed to extract VMO Secrets for VMI: %v", err)
 	}
 
 	controller.log.Oncef("Reconciling auth secrets")
 	err = CreateOrUpdateAuthSecrets(controller, vmo, credsMap)
 	if err != nil {
-		controller.log.Errorf("Failed to create VMO Secrets for VMI %s/%s: %v", vmo.Namespace, vmo.Name, err)
+		controller.log.Errorf("Failed to create VMO Secrets for VMI: %v", err)
 	}
 
 	// Create TLS secrets or get certs
 	controller.log.Oncef("Reconciling TLS secrets")
 	err = CreateOrUpdateTLSSecrets(controller, vmo)
 	if err != nil {
-		controller.log.Errorf("Failed to create TLS Secrets for VMI %s/%s: %v", vmo.Namespace, vmo.Name, err)
+		controller.log.Errorf("Failed to create TLS Secrets for VMI: %v", err)
 	}
 
 	controller.log.Oncef("Ensuring TLS secret is in monitoring namespace")

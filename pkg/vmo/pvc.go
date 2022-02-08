@@ -39,7 +39,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	}
 	deploymentToAdMap := map[string]string{}
 
-	controller.log.Oncef("Creating/updating PVCs for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Once("Creating/updating PVCs for VMI")
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
