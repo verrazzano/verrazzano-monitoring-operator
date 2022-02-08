@@ -12,9 +12,9 @@ import (
 
 const (
 	timeFormat = "2006-01-02T15:04:05.000Z"
-	timeKey = "@timestamp"
+	timeKey    = "@timestamp"
 	messageKey = "message"
-	callerKey = "caller"
+	callerKey  = "caller"
 )
 
 // InitLogs initializes logs with Time and Global Level of Logs set at Info
