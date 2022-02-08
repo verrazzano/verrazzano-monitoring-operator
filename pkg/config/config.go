@@ -19,12 +19,12 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*OperatorConfig, error
 	if value, ok := configMap.Data[configKeyValue]; ok {
 		configString = value
 	} else {
-		return nil, fmt.Errorf("expected key '%s' not found in ConfigMap %s", configKeyValue, configMap.Name)
+		return nil, fmt.Errorf("Failed, expected key '%s' not found in ConfigMap %s", configKeyValue, configMap.Name)
 	}
 	var config OperatorConfig
 	err := yaml.Unmarshal([]byte(configString), &config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshall ConfigMap %s: %v", configMap.String(), err)
+		return nil, fmt.Errorf("Failed to unmarshall ConfigMap %s: %v", configMap.String(), err)
 	}
 	// Comment out the debug line below to avoid halting the debugger in Goland/IntelliJ
 	// see https://youtrack.jetbrains.com/issue/GO-8953

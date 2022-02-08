@@ -75,7 +75,7 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 		javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.MasterNode.Resources.RequestMemory) // Default JVM heap settings if none provided
 		if err != nil {
 			javaOpts = constants.DefaultDevProfileESMemArgs
-			log.Errorf("Unable to derive heap sizes from Master pod, using default %s.  Error: %v", javaOpts, err)
+			log.Errorf("Failed to derive heap sizes from Master pod, using default %s: %v", javaOpts, err)
 		}
 		if vmo.Spec.Elasticsearch.MasterNode.JavaOpts != "" {
 			javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
