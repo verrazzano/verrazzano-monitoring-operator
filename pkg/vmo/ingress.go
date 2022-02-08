@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -23,7 +23,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Ingress specs for vmo: %s", err)
+		zap.S().Errorf("Failed to create Ingress specs for VMI: %s", err)
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
@@ -31,7 +31,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.IngressTargetDNSName = controller.operatorConfig.DefaultIngressTargetDNSName
 	}
 	var ingressNames []string
-	zap.S().Infof("Creating/updating Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	for _, curIngress := range ingList {
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
@@ -43,12 +43,12 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			return nil
 		}
 
-		zap.S().Debugf("Applying Ingress '%s' in namespace '%s' for vmo '%s'\n", ingName, vmo.Namespace, vmo.Name)
+		zap.S().Debugf("Applying Ingress '%s' in namespace '%s' for VMI '%s'\n", ingName, vmo.Namespace, vmo.Name)
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
 			specDiffs := diff.Diff(existingIngress, curIngress)
 			if specDiffs != "" {
-				zap.S().Infof("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
+				zap.S().Debugf("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
 				_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
 			}
 		} else if k8serrors.IsNotFound(err) {
@@ -59,13 +59,13 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		}
 
 		if err != nil {
-			zap.S().Errorf("Failed to apply Ingress for vmo: %s", err)
+			zap.S().Errorf("Failed to apply Ingress for VMI: %s", err)
 			return err
 		}
 	}
 
 	// Delete ingresses that shouldn't exist
-	zap.S().Infof("Deleting unwanted Ingresses for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Deleting unwanted Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 	if err != nil {
@@ -73,7 +73,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
-			zap.S().Infof("Deleting ingress %s", ingress.Name)
+			controller.log.Oncef("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
 				zap.S().Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)

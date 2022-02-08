@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -310,7 +310,7 @@ func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.V
 		zap.S().Errorf("caught an error trying to create a secret, err: %s", err)
 		return err
 	}
-	zap.S().Infof("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
+	controller.log.Oncef("Created TLS secret %s in namespace %s", secretName, constants.MonitoringNamespace)
 
 	return nil
 }

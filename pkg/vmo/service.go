@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -25,7 +25,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		return err
 	}
 	var serviceNames []string
-	zap.S().Infof("Creating/updating Services for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Services for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	for _, curService := range svcList {
 		serviceName := curService.Name
 		serviceNames = append(serviceNames, serviceName)
@@ -42,7 +42,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		if existingService != nil {
 			specDiffs := diff.Diff(existingService, curService)
 			if specDiffs != "" {
-				zap.S().Infof("Service %s : Spec differences %s", curService.Name, specDiffs)
+				zap.S().Debugf("Service %s : Spec differences %s", curService.Name, specDiffs)
 				err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 				if err != nil {
 					zap.S().Errorf("Failed to delete service %s: %+v", serviceName, err)

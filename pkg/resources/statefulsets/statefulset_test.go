@@ -1,10 +1,11 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package statefulsets
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"strings"
 	"testing"
 
@@ -25,7 +26,7 @@ import (
 //  THEN there should be no StatefulSets created
 func TestVMOEmptyStatefulSetSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	statefulsets, err := New(vmo)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo)
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,7 +48,7 @@ func TestVMODisabledSpecs(t *testing.T) {
 			},
 		},
 	}
-	statefulsets, err := New(vmo)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo)
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +109,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	// Create the stateful sets
-	statefulsets, err := New(vmo)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo)
 	if err != nil {
 		t.Error(err)
 	}

@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -23,14 +23,14 @@ import (
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	statefulSetList, err := statefulsets.New(vmo)
+	statefulSetList, err := statefulsets.New(controller.log, vmo)
 	if err != nil {
 		zap.S().Errorf("Failed to create StatefulSet specs for vmo: %s", err)
 		return err
 	}
 
 	// Loop through the existing stateful sets and create/update as needed
-	zap.S().Infof("Creating/updating Statefulsets for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Statefulsets for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	var statefulSetNames []string
 	for _, curStatefulSet := range statefulSetList {
 		statefulSetName := curStatefulSet.Name
@@ -56,7 +56,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		if err != nil {
 			return err
 		}
-		zap.S().Infof("Successfully applied StatefulSet '%s'\n", statefulSetName)
+		controller.log.Oncef("Successfully applied StatefulSet '%s'\n", statefulSetName)
 	}
 
 	// Do a second pass through the stateful sets to update PVC ownership and clean up statesful sets as needed
@@ -86,7 +86,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 	}
 
-	zap.S().Infof("Successfully applied StatefulSets for vmo '%s'", vmo.Name)
+	controller.log.Oncef("Successfully applied StatefulSets for vmo '%s'", vmo.Name)
 	return nil
 }
 
@@ -118,7 +118,7 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			Name:       statefulSet.Name,
 			UID:        statefulSet.UID,
 		}}
-		zap.S().Infof("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
+		controller.log.Debugf("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
 			zap.S().Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)

@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -114,7 +114,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.Prometheus.VersionsConfigMap)
 
 	// Delete configmaps that shouldn't exist
-	zap.S().Infof("Deleting unwanted ConfigMaps for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	zap.S().Debug("Deleting unwanted ConfigMaps for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	configMapList, err := controller.configMapLister.ConfigMaps(vmo.Namespace).List(selector)
 	if err != nil {
@@ -153,7 +153,7 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 		}
 		specDiffs := diff.Diff(existingConfigMap, configMap)
 		if specDiffs != "" {
-			zap.S().Infof("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
+			zap.S().Debugf("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
 			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 			if err != nil {
 				zap.S().Errorf("Failed to update existing configmap %s ", configMap.Name)
@@ -191,7 +191,7 @@ func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.Ve
 func deleteConfigMapIfExists(controller *Controller, namespace string, configmapName string) error {
 	existingConfig, err := getConfigMap(controller, namespace, configmapName)
 	if err != nil {
-		zap.S().Infof("Could not get configmap %s/%s for delete", namespace, configmapName)
+		controller.log.Oncef("Could not get configmap %s/%s for delete", namespace, configmapName)
 		return nil
 	}
 	if existingConfig != nil {
@@ -200,7 +200,7 @@ func deleteConfigMapIfExists(controller *Controller, namespace string, configmap
 			zap.S().Errorf("Could not delete configmap %s/%s", namespace, configmapName)
 			return err
 		}
-		zap.S().Infof("Deleted config map %s/%s", namespace, configmapName)
+		zap.S().Debugf("Deleted config map %s/%s", namespace, configmapName)
 	}
 	return nil
 }
