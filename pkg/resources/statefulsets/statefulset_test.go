@@ -26,7 +26,7 @@ import (
 //  THEN there should be no StatefulSets created
 func TestVMOEmptyStatefulSetSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	statefulsets, err := New(vzlog.DefaultLogger(),vmo)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo)
 	if err != nil {
 		t.Error(err)
 	}
