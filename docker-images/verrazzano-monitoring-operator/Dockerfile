@@ -2,9 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 FROM ghcr.io/oracle/oraclelinux:8-slim AS build_base
 
-RUN microdnf install -y dnf
-
-RUN dnf install -y golang \
+RUN microdnf install -y golang \
     && go version
 
 ARG BUILDVERSION
@@ -20,13 +18,10 @@ RUN go build -mod=mod \
     -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
     -o /usr/bin/verrazzano-monitoring-operator ./cmd/verrazzano-monitoring-ctrl
 
-
 FROM ghcr.io/oracle/oraclelinux:8-slim AS final
 
-RUN microdnf install -y dnf
-
-RUN dnf install -y openssl \
-    && dnf clean all
+RUN microdnf install -y openssl \
+    && microdnf clean all
 
 COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
 
