@@ -18,7 +18,7 @@ func StartHTTPServer(controller *Controller) {
 		controller.log.Oncef("Starting HTTP server")
 		err := http.ListenAndServeTLS(":8080", "/etc/certs/tls.crt", "/etc/certs/tls.key", nil)
 		if err != nil {
-			controller.log.Errorf("Failed to start HTTP server for vmo: %s", err)
+			controller.log.Errorf("Failed to start HTTP server for VMI: %v", err)
 		}
 	}, time.Second*3, wait.NeverStop)
 }

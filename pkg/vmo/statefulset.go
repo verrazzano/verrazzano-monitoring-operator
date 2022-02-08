@@ -24,12 +24,12 @@ import (
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	statefulSetList, err := statefulsets.New(controller.log, vmo)
 	if err != nil {
-		controller.log.Errorf("Failed to create StatefulSet specs for vmo: %s", err)
+		controller.log.Errorf("Failed to create StatefulSet specs for VMI: %v", err)
 		return err
 	}
 
 	// Loop through the existing stateful sets and create/update as needed
-	controller.log.Oncef("Creating/updating Statefulsets for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Statefulsets for VMI %s/%s", vmo.Namespace, vmo.Name)
 	var statefulSetNames []string
 	for _, curStatefulSet := range statefulSetList {
 		statefulSetName := curStatefulSet.Name
@@ -41,7 +41,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			runtime.HandleError(errors.New("statefulset name must be specified"))
 			return nil
 		}
-		controller.log.Debugf("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
+		controller.log.Debugf("Applying StatefulSet '%s' in namespace '%s' for VMI '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
 			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
@@ -85,7 +85,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 	}
 
-	controller.log.Oncef("Successfully applied StatefulSets for vmo '%s'", vmo.Name)
+	controller.log.Oncef("Successfully applied StatefulSets for VMI %s/%s", vmo.Namespace, vmo.Name)
 	return nil
 }
 
@@ -120,14 +120,14 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 		controller.log.Debugf("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
-			controller.log.Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
+			controller.log.Errorf("Failed to update the owner reference in PVC %s: %v", pvc.Name, err)
 			return err
 		}
 	}
 	expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
 	actualNumPVCs := len(existingPvcList)
 	if actualNumPVCs != expectedNumPVCs {
-		return fmt.Errorf("Failed, PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
+		return fmt.Errorf("Failed, PVC owner reference set in %v of %v PVCs for VMI %s/%s", actualNumPVCs, expectedNumPVCs, vmoName)
 	}
 	return nil
 }

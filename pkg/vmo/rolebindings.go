@@ -19,7 +19,7 @@ import (
 
 // CreateRoleBindings creates/updates VMO RoleBindings k8s resources
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	controller.log.Oncef("Creating/updating RoleBindings for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating RoleBindings for VMI %s/%s", vmo.Namespace, vmo.Name)
 
 	newRoleBindings, err := NewRoleBindings(vmo, controller)
 	if err != nil {
@@ -52,7 +52,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 
 	// Delete RoleBindings that shouldn't exist
-	zap.S().Debugf("Deleting unwanted RoleBindings for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	zap.S().Debugf("Deleting unwanted RoleBindings for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingRoleBindings, err := controller.roleBindingLister.RoleBindings(vmo.Namespace).List(selector)
 	if err != nil {

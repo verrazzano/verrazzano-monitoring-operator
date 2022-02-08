@@ -29,14 +29,14 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		controller.log.Errorf("Failed to create Deployment specs for vmo: %s", err)
+		controller.log.Errorf("Failed to create Deployment specs for VMI: %v", err)
 		return false, err
 	}
 
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	controller.log.Oncef("Creating/updating Deployments for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Deployments for VMI %s/%s", vmo.Namespace, vmo.Name)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)
@@ -47,7 +47,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			runtime.HandleError(errors.New("deployment name must be specified"))
 			return true, nil
 		}
-		zap.S().Debugf("Applying Deployment '%s' in namespace '%s' for vmo '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
+		zap.S().Debugf("Applying Deployment '%s' in namespace '%s' for VMI '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
 
 		if err != nil {
