@@ -15,7 +15,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +31,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	// Only create the CM if it doesnt exist. This will allow us to override the provider file e.g. Verrazzano
 	err := createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Grafana.DashboardsConfigMap, dashboardTemplateMap)
 	if err != nil {
-		zap.S().Errorf("Failed to create dashboard configmap %s, for reason %v", vmo.Spec.Grafana.DashboardsConfigMap, err)
+		controller.log.Errorf("Failed to create dashboard configmap %s, for reason %v", vmo.Spec.Grafana.DashboardsConfigMap, err)
 		return err
 
 	}
@@ -43,12 +42,12 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 		constants.GrafanaTmplAlertManagerURI: resources.GetMetaName(vmo.Name, config.AlertManager.Name)}
 	dataSourceTemplate, err := asDashboardTemplate(constants.DataSourcesTmpl, replaceMap)
 	if err != nil {
-		zap.S().Errorf("Failed to create dashboard datasource template for vmo %s dur to %v", vmo.Name, err)
+		controller.log.Errorf("Failed to create dashboard datasource template for vmo %s dur to %v", vmo.Name, err)
 		return err
 	}
 	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Grafana.DatasourcesConfigMap, map[string]string{"datasource.yaml": dataSourceTemplate})
 	if err != nil {
-		zap.S().Errorf("Failed to create datasource configmap %s, for reason %v", vmo.Spec.Grafana.DatasourcesConfigMap, err)
+		controller.log.Errorf("Failed to create datasource configmap %s, for reason %v", vmo.Spec.Grafana.DatasourcesConfigMap, err)
 		return err
 
 	}
@@ -57,7 +56,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	//configmap for alertmanager config
 	err = createAMConfigMapIfDoesntExist(controller, vmo, vmo.Spec.AlertManager.ConfigMap, map[string]string{constants.AlertManagerYaml: resources.GetDefaultAlertManagerConfiguration(vmo)})
 	if err != nil {
-		zap.S().Errorf("Failed to create configmap %s for reason %v", vmo.Spec.AlertManager.ConfigMap, err)
+		controller.log.Errorf("Failed to create configmap %s for reason %v", vmo.Spec.AlertManager.ConfigMap, err)
 		return err
 	}
 	configMaps = append(configMaps, vmo.Spec.AlertManager.ConfigMap)
@@ -66,7 +65,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	//starts off with an empty configmap - Cirith will add to it later
 	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.AlertManager.VersionsConfigMap, map[string]string{})
 	if err != nil {
-		zap.S().Errorf("Failed to create configmap %s for reason %v", vmo.Spec.AlertManager.VersionsConfigMap, err)
+		controller.log.Errorf("Failed to create configmap %s for reason %v", vmo.Spec.AlertManager.VersionsConfigMap, err)
 		return err
 	}
 	configMaps = append(configMaps, vmo.Spec.AlertManager.VersionsConfigMap)
@@ -74,7 +73,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	//configmap for alertrules
 	err = createUpdateAlertRulesConfigMap(controller, vmo, vmo.Spec.Prometheus.RulesConfigMap, alertrulesMap)
 	if err != nil {
-		zap.S().Errorf("Failed to create alertrules configmap %s for reason %v", vmo.Spec.Prometheus.RulesConfigMap, err)
+		controller.log.Errorf("Failed to create alertrules configmap %s for reason %v", vmo.Spec.Prometheus.RulesConfigMap, err)
 		return err
 
 	}
@@ -84,7 +83,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	//starts off with an empty configmap - Cirith will add to it later
 	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.RulesVersionsConfigMap, map[string]string{})
 	if err != nil {
-		zap.S().Errorf("Failed to create alertrules configmap %s for reason %v", vmo.Spec.Prometheus.RulesVersionsConfigMap, err)
+		controller.log.Errorf("Failed to create alertrules configmap %s for reason %v", vmo.Spec.Prometheus.RulesVersionsConfigMap, err)
 		return err
 
 	}
@@ -97,7 +96,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	}
 	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
 	if err != nil {
-		zap.S().Errorf("Failed to create configmap %s for reason %v", vmo.Spec.Prometheus.ConfigMap, err)
+		controller.log.Errorf("Failed to create configmap %s for reason %v", vmo.Spec.Prometheus.ConfigMap, err)
 		return err
 
 	}
@@ -107,14 +106,14 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	//starts off with an empty configmap - Cirith will add to it later.
 	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.VersionsConfigMap, map[string]string{})
 	if err != nil {
-		zap.S().Errorf("Failed to create configmap %s for reason %v", vmo.Spec.Prometheus.VersionsConfigMap, err)
+		controller.log.Errorf("Failed to create configmap %s for reason %v", vmo.Spec.Prometheus.VersionsConfigMap, err)
 		return err
 
 	}
 	configMaps = append(configMaps, vmo.Spec.Prometheus.VersionsConfigMap)
 
 	// Delete configmaps that shouldn't exist
-	zap.S().Debug("Deleting unwanted ConfigMaps for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Debug("Deleting unwanted ConfigMaps for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	configMapList, err := controller.configMapLister.ConfigMaps(vmo.Namespace).List(selector)
 	if err != nil {
@@ -122,10 +121,10 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	}
 	for _, configMap := range configMapList {
 		if !contains(configMaps, configMap.Name) {
-			zap.S().Debugf("Deleting config map %s", configMap.Name)
+			controller.log.Debugf("Deleting config map %s", configMap.Name)
 			err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Delete(context.TODO(), configMap.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete config map %s, for the reason (%v)", configMap.Name, err)
+				controller.log.Errorf("Failed to delete config map %s, for the reason (%v)", configMap.Name, err)
 				return err
 			}
 		}
@@ -138,11 +137,11 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 	configMap := configmaps.NewConfig(vmo, configmap, data)
 	existingConfigMap, err := getConfigMap(controller, vmo.Namespace, configmap)
 	if err != nil {
-		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
+		controller.log.Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
 		return err
 	}
 	if existingConfigMap != nil {
-		zap.S().Debugf("Updating existing configmaps for %s ", existingConfigMap.Name)
+		controller.log.Debugf("Updating existing configmaps for %s ", existingConfigMap.Name)
 		//Retain any AlertManager rules added or modified by user
 		if existingConfigMap.Name == resources.GetMetaName(vmo.Name, constants.AlertrulesConfig) {
 			//get custom rules if any
@@ -153,16 +152,16 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 		}
 		specDiffs := diff.Diff(existingConfigMap, configMap)
 		if specDiffs != "" {
-			zap.S().Debugf("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
+			controller.log.Debugf("ConfigMap %s : Spec differences %s", configMap.Name, specDiffs)
 			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to update existing configmap %s ", configMap.Name)
+				controller.log.Errorf("Failed to update existing configmap %s ", configMap.Name)
 			}
 		}
 	} else {
 		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
+			controller.log.Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
 			return err
 		}
 	}
@@ -173,14 +172,14 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)
 	if err != nil {
-		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
+		controller.log.Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
 		return err
 	}
 	if existingConfig == nil {
 		configMap := configmaps.NewConfig(vmo, configmap, data)
 		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
+			controller.log.Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
 			return err
 		}
 	}
@@ -197,10 +196,10 @@ func deleteConfigMapIfExists(controller *Controller, namespace string, configmap
 	if existingConfig != nil {
 		err := controller.kubeclientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), configmapName, metav1.DeleteOptions{})
 		if err != nil {
-			zap.S().Errorf("Could not delete configmap %s/%s", namespace, configmapName)
+			controller.log.Errorf("Could not delete configmap %s/%s", namespace, configmapName)
 			return err
 		}
-		zap.S().Debugf("Deleted config map %s/%s", namespace, configmapName)
+		controller.log.Debugf("Deleted config map %s/%s", namespace, configmapName)
 	}
 	return nil
 }
@@ -209,7 +208,7 @@ func deleteConfigMapIfExists(controller *Controller, namespace string, configmap
 func createAMConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)
 	if err != nil {
-		zap.S().Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
+		controller.log.Errorf("Failed to get configmap %s for vmo %s", vmo.Name, configmap)
 		return err
 	}
 	if existingConfig == nil {
@@ -220,7 +219,7 @@ func createAMConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.
 		configMap := configmaps.NewConfig(vmo, configmap, data)
 		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
+			controller.log.Errorf("Failed to create configmap %s for vmo %s", vmo.Name, configmap)
 			return err
 		}
 	}

@@ -39,7 +39,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 				zap.S().Debugf("RoleBinding %s : Spec differences %s", newRoleBinding.Name, specDiffs)
 				err = controller.kubeclientset.RbacV1().RoleBindings(vmo.Namespace).Delete(context.TODO(), newRoleBinding.Name, metav1.DeleteOptions{})
 				if err != nil {
-					zap.S().Errorf("Problem deleting role binding %s: %+v", newRoleBinding.Name, err)
+					controller.log.Errorf("Failed deleting role binding %s: %v", newRoleBinding.Name, err)
 				}
 				_, err = controller.kubeclientset.RbacV1().RoleBindings(vmo.Namespace).Create(context.TODO(), newRoleBinding, metav1.CreateOptions{})
 			}
@@ -70,7 +70,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			controller.log.Oncef("Deleting RoleBinding %s", roleBinding.Name)
 			err := controller.kubeclientset.RbacV1().RoleBindings(vmo.Namespace).Delete(context.TODO(), roleBinding.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete RoleBinding %s, for the reason (%v)", roleBinding.Name, err)
+				controller.log.Errorf("Failed to delete RoleBinding %s: %v", roleBinding.Name, err)
 				return err
 			}
 		}

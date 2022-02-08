@@ -23,7 +23,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Ingress specs for VMI: %s", err)
+		controller.log.Errorf("Failed to create Ingress specs for VMI: %s", err)
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
@@ -54,12 +54,12 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		} else if k8serrors.IsNotFound(err) {
 			_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
-			zap.S().Errorf("Problem getting existing Ingress %s in namespace %s: %v", ingName, vmo.Namespace, err)
+			controller.log.Errorf("Failed getting existing Ingress %s in namespace %s: %v", ingName, vmo.Namespace, err)
 			return err
 		}
 
 		if err != nil {
-			zap.S().Errorf("Failed to apply Ingress for VMI: %s", err)
+			controller.log.Errorf("Failed to apply Ingress for VMI: %v", err)
 			return err
 		}
 	}
@@ -76,7 +76,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
+				controller.log.Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
 				return err
 			}
 		}

@@ -14,7 +14,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
-	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -25,7 +24,7 @@ import (
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	statefulSetList, err := statefulsets.New(controller.log, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create StatefulSet specs for vmo: %s", err)
+		controller.log.Errorf("Failed to create StatefulSet specs for vmo: %s", err)
 		return err
 	}
 
@@ -42,7 +41,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			runtime.HandleError(errors.New("statefulset name must be specified"))
 			return nil
 		}
-		zap.S().Debugf("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
+		controller.log.Debugf("Applying StatefulSet '%s' in namespace '%s' for vmo '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
 			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
@@ -77,10 +76,10 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 		// Delete StatefulSets that shouldn't exist
 		if !contains(statefulSetNames, statefulSet.Name) {
-			zap.S().Debugf("Deleting StatefulSet %s", statefulSet.Name)
+			controller.log.Debugf("Deleting StatefulSet %s", statefulSet.Name)
 			err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
+				controller.log.Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
 				return err
 			}
 		}
@@ -121,14 +120,14 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 		controller.log.Debugf("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
+			controller.log.Errorf("Failed to update the owner reference in PVC %s, for the reason (%v)", pvc.Name, err)
 			return err
 		}
 	}
 	expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
 	actualNumPVCs := len(existingPvcList)
 	if actualNumPVCs != expectedNumPVCs {
-		return fmt.Errorf("PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
+		return fmt.Errorf("Failed, PVC owner reference set in %v of %v PVCs for VMO %s", actualNumPVCs, expectedNumPVCs, vmoName)
 	}
 	return nil
 }

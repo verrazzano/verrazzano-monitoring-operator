@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -19,7 +18,7 @@ func StartHTTPServer(controller *Controller) {
 		controller.log.Oncef("Starting HTTP server")
 		err := http.ListenAndServeTLS(":8080", "/etc/certs/tls.crt", "/etc/certs/tls.key", nil)
 		if err != nil {
-			zap.S().Errorf("Failed to start HTTP server for vmo: %s", err)
+			controller.log.Errorf("Failed to start HTTP server for vmo: %s", err)
 		}
 	}, time.Second*3, wait.NeverStop)
 }
@@ -29,7 +28,7 @@ func setupHandlers(controller *Controller) {
 		if controller.IsHealthy() {
 			w.WriteHeader(http.StatusOK)
 			if _, err := w.Write([]byte("ok")); err != nil {
-				zap.S().Errorf("error writing healthcheck response: %v", err)
+				controller.log.Errorf("Failed writing healthcheck response: %v", err)
 			}
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)

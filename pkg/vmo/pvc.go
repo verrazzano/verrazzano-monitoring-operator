@@ -34,7 +34,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 
 	pvcList, err := pvcs.New(vmo, storageClass.Name)
 	if err != nil {
-		zap.S().Errorf("Failed to create PVC specs for VMI: %s", err)
+		controller.log.Errorf("Failed to create PVC specs for VMI: %v", err)
 		return nil, err
 	}
 	deploymentToAdMap := map[string]string{}
@@ -59,7 +59,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			// We choose to absorb the error here as the worker would requeue the
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
-			runtime.HandleError(fmt.Errorf("PVC name must be specified"))
+			runtime.HandleError(fmt.Errorf("Failed, PVC name must be specified"))
 			return deploymentToAdMap, nil
 		}
 

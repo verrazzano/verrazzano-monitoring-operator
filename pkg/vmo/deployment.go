@@ -29,7 +29,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		zap.S().Errorf("Failed to create Deployment specs for vmo: %s", err)
+		controller.log.Errorf("Failed to create Deployment specs for vmo: %s", err)
 		return false, err
 	}
 
@@ -98,7 +98,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			zap.S().Debugf("Deleting deployment %s", deployment.Name)
 			err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
+				controller.log.Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
 				return false, err
 			}
 		}
