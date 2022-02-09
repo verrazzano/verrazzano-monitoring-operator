@@ -11,7 +11,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"go.uber.org/zap"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -19,7 +18,7 @@ import (
 
 // CreateRoleBindings creates/updates VMO RoleBindings k8s resources
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	controller.log.Oncef("Creating/updating RoleBindings for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating RoleBindings for VMI %s", vmo.Name)
 
 	newRoleBindings, err := NewRoleBindings(vmo, controller)
 	if err != nil {
@@ -36,10 +35,10 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		if existingRoleBinding != nil {
 			specDiffs := diff.Diff(existingRoleBinding, newRoleBinding)
 			if specDiffs != "" {
-				zap.S().Debugf("RoleBinding %s : Spec differences %s", newRoleBinding.Name, specDiffs)
+				controller.log.Debugf("RoleBinding %s : Spec differences %s", newRoleBinding.Name, specDiffs)
 				err = controller.kubeclientset.RbacV1().RoleBindings(vmo.Namespace).Delete(context.TODO(), newRoleBinding.Name, metav1.DeleteOptions{})
 				if err != nil {
-					zap.S().Errorf("Problem deleting role binding %s: %+v", newRoleBinding.Name, err)
+					controller.log.Errorf("Failed deleting role binding %s: %v", newRoleBinding.Name, err)
 				}
 				_, err = controller.kubeclientset.RbacV1().RoleBindings(vmo.Namespace).Create(context.TODO(), newRoleBinding, metav1.CreateOptions{})
 			}
@@ -52,7 +51,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 
 	// Delete RoleBindings that shouldn't exist
-	zap.S().Debugf("Deleting unwanted RoleBindings for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Debugf("Deleting unwanted RoleBindings for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingRoleBindings, err := controller.roleBindingLister.RoleBindings(vmo.Namespace).List(selector)
 	if err != nil {
@@ -70,7 +69,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			controller.log.Oncef("Deleting RoleBinding %s", roleBinding.Name)
 			err := controller.kubeclientset.RbacV1().RoleBindings(vmo.Namespace).Delete(context.TODO(), roleBinding.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete RoleBinding %s, for the reason (%v)", roleBinding.Name, err)
+				controller.log.Errorf("Failed to delete RoleBinding %s: %v", roleBinding.Name, err)
 				return err
 			}
 		}

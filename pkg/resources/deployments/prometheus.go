@@ -165,7 +165,7 @@ func setIstioAnnotations(prometheusDeployment *appsv1.Deployment, kubeclientset 
 			prometheusDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundIPRanges"] = "0.0.0.0/0"
 			return nil
 		}
-		zap.S().Errorf("unable to get keycloak pod: %v", err)
+		zap.S().Errorf("Failed to get keycloak pod: %v", err)
 		return err
 	}
 
@@ -177,7 +177,7 @@ func setIstioAnnotations(prometheusDeployment *appsv1.Deployment, kubeclientset 
 		if errors.IsNotFound(err) {
 			return nil
 		}
-		zap.S().Errorf("unable to get keycloak-http service: %v", err)
+		zap.S().Errorf("Failed to get keycloak-http service: %v", err)
 		return err
 	}
 

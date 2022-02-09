@@ -11,7 +11,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/services"
-	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -21,11 +20,11 @@ import (
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	svcList, err := services.New(vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Services for vmo: %s", err)
+		controller.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
 		return err
 	}
 	var serviceNames []string
-	controller.log.Oncef("Creating/updating Services for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Services for VMI %s", vmo.Name)
 	for _, curService := range svcList {
 		serviceName := curService.Name
 		serviceNames = append(serviceNames, serviceName)
@@ -37,15 +36,15 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			return nil
 		}
 
-		zap.S().Debugf("Applying Service '%s' in namespace '%s' for vmo '%s'\n", serviceName, vmo.Namespace, vmo.Name)
+		controller.log.Debugf("Applying Service '%s' in namespace '%s' for VMI '%s'\n", serviceName, vmo.Namespace, vmo.Name)
 		existingService, err := controller.serviceLister.Services(vmo.Namespace).Get(serviceName)
 		if existingService != nil {
 			specDiffs := diff.Diff(existingService, curService)
 			if specDiffs != "" {
-				zap.S().Debugf("Service %s : Spec differences %s", curService.Name, specDiffs)
+				controller.log.Debugf("Service %s : Spec differences %s", curService.Name, specDiffs)
 				err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 				if err != nil {
-					zap.S().Errorf("Failed to delete service %s: %+v", serviceName, err)
+					controller.log.Errorf("Failed to delete service %s: %v", serviceName, err)
 				}
 				_, err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
 			}
@@ -54,10 +53,10 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		}
 
 		if err != nil {
-			zap.S().Errorf("Failed to apply Service for vmo: %s", err)
+			controller.log.Errorf("Failed to apply Service for VMI %s: %v", vmo.Name, err)
 			return err
 		}
-		zap.S().Debugf("Successfully applied Service '%s'\n", serviceName)
+		controller.log.Debugf("Successfully applied Service '%s'\n", serviceName)
 	}
 
 	// Delete services that shouldn't exist
@@ -68,10 +67,10 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 	}
 	for _, service := range existingServicesList {
 		if !contains(serviceNames, service.Name) {
-			zap.S().Debugf("Deleting service %s", service.Name)
+			controller.log.Debugf("Deleting service %s", service.Name)
 			err := controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete service %s, for the reason (%v)", service.Name, err)
+				controller.log.Errorf("Failed to delete service %s: %v", service.Name, err)
 				return err
 			}
 		}

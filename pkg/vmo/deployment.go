@@ -13,7 +13,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
-	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,14 +28,14 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		zap.S().Errorf("Failed to create Deployment specs for vmo: %s", err)
+		controller.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
 		return false, err
 	}
 
 	var prometheusDeployments []*appsv1.Deployment
 	var elasticsearchDataDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	controller.log.Oncef("Creating/updating Deployments for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Deployments for VMI %s", vmo.Name)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)
@@ -47,7 +46,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			runtime.HandleError(errors.New("deployment name must be specified"))
 			return true, nil
 		}
-		zap.S().Debugf("Applying Deployment '%s' in namespace '%s' for vmo '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
+		controller.log.Debugf("Applying Deployment '%s' in namespace '%s' for VMI '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
 
 		if err != nil {
@@ -64,13 +63,14 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else {
 				specDiffs := diff.Diff(existingDeployment, curDeployment)
 				if specDiffs != "" {
-					zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
-					controller.log.Oncef("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
+					controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
+					controller.log.Oncef("Updating deployment %s/%s", curDeployment.Namespace, curDeployment.Name)
 					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 				}
 			}
 		}
 		if err != nil {
+			controller.log.Errorf("Failed to update deployment %s/%s: %v", curDeployment.Namespace, curDeployment.Name, err)
 			return false, err
 		}
 	}
@@ -94,10 +94,10 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 	for _, deployment := range existingDeploymentsList {
 		if !contains(deploymentNames, deployment.Name) {
-			zap.S().Debugf("Deleting deployment %s", deployment.Name)
+			controller.log.Debugf("Deleting deployment %s", deployment.Name)
 			err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete deployment %s, for the reason (%v)", deployment.Name, err)
+				controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
 				return false, err
 			}
 		}
@@ -119,7 +119,7 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		// Deployment spec differences, so call Update() and return
 		specDiffs := diff.Diff(existingDeployment, curDeployment)
 		if specDiffs != "" {
-			zap.S().Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
+			controller.log.Debugf("Deployment %s : Spec differences %s", curDeployment.Name, specDiffs)
 			controller.log.Oncef("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 			if err != nil {

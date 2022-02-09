@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package deployments
@@ -91,7 +91,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.IngestNode.Resources.RequestMemory)
 	if err != nil {
 		javaOpts = constants.DefaultESIngestMemArgs
-		zap.S().Errorf("Unable to derive heap sizes from Ingest pod, using default %s.  Error: %v", javaOpts, err)
+		zap.S().Errorf("Failed to derive heap sizes from Ingest pod, using default %s: %v", javaOpts, err)
 	}
 	if vmo.Spec.Elasticsearch.IngestNode.JavaOpts != "" {
 		javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
@@ -135,7 +135,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.DataNode.Resources.RequestMemory)
 	if err != nil {
 		javaOpts = constants.DefaultESDataMemArgs
-		zap.S().Errorf("Unable to derive heap sizes from Data pod, using default %s.  Error: %v", javaOpts, err)
+		zap.S().Errorf("Failed to derive heap sizes from Data pod, using default %s: %v", javaOpts, err)
 	}
 	if vmo.Spec.Elasticsearch.DataNode.JavaOpts != "" {
 		javaOpts = vmo.Spec.Elasticsearch.DataNode.JavaOpts

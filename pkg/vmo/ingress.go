@@ -11,7 +11,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
-	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -23,15 +22,15 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Ingress specs for VMI: %s", err)
+		controller.log.Errorf("Failed to create Ingress specs for VMI %s: %v", vmo.Name, err)
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
-		zap.S().Debugf("No Ingress target specified, using default Ingress target: '%s'", controller.operatorConfig.DefaultIngressTargetDNSName)
+		controller.log.Debugf("No Ingress target specified, using default Ingress target: '%s'", controller.operatorConfig.DefaultIngressTargetDNSName)
 		vmo.Spec.IngressTargetDNSName = controller.operatorConfig.DefaultIngressTargetDNSName
 	}
 	var ingressNames []string
-	controller.log.Oncef("Creating/updating Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating Ingresses for VMI %s", vmo.Name)
 	for _, curIngress := range ingList {
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
@@ -43,29 +42,29 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			return nil
 		}
 
-		zap.S().Debugf("Applying Ingress '%s' in namespace '%s' for VMI '%s'\n", ingName, vmo.Namespace, vmo.Name)
+		controller.log.Debugf("Applying Ingress '%s' in namespace '%s' for VMI '%s'\n", ingName, vmo.Namespace, vmo.Name)
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
 			specDiffs := diff.Diff(existingIngress, curIngress)
 			if specDiffs != "" {
-				zap.S().Debugf("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
+				controller.log.Debugf("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
 				_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
 			}
 		} else if k8serrors.IsNotFound(err) {
 			_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
-			zap.S().Errorf("Problem getting existing Ingress %s in namespace %s: %v", ingName, vmo.Namespace, err)
+			controller.log.Errorf("Failed getting existing Ingress %s/%s: %v", vmo.Namespace, ingName, err)
 			return err
 		}
 
 		if err != nil {
-			zap.S().Errorf("Failed to apply Ingress for VMI: %s", err)
+			controller.log.Errorf("Failed to create/update Ingress %s/%s: %v", vmo.Namespace, ingName, err)
 			return err
 		}
 	}
 
 	// Delete ingresses that shouldn't exist
-	controller.log.Oncef("Deleting unwanted Ingresses for VMI '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Deleting unwanted Ingresses for VMI %s", vmo.Name)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 	if err != nil {
@@ -76,7 +75,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
-				zap.S().Errorf("Failed to delete ingress %s, for the reason (%v)", ingress.Name, err)
+				controller.log.Errorf("Failed to delete Ingress %s/%s: %v", vmo.Namespace, ingress.Name, err)
 				return err
 			}
 		}

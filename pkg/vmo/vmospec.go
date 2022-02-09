@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -8,7 +8,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -21,25 +20,29 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	/*********************
 	 * Create Secrets
 	 **********************/
+	controller.log.Oncef("Loading auth secret data")
 	credsMap, err := controller.loadAllAuthSecretData(vmo.Namespace, vmo.Spec.SecretsName)
 	if err != nil {
-		zap.S().Errorf("Failed to extract VMO Secrets for vmo %s in namespace %s: %v", vmo.Name, vmo.Namespace, err)
+		controller.log.Errorf("Failed to extract VMO Secrets for VMI %s: %v", vmo.Name, err)
 	}
 
+	controller.log.Oncef("Reconciling auth secrets")
 	err = CreateOrUpdateAuthSecrets(controller, vmo, credsMap)
 	if err != nil {
-		zap.S().Errorf("Failed to create VMO Secrets for vmo %s in namespace %s: %v", vmo.Name, vmo.Namespace, err)
+		controller.log.Errorf("Failed to create VMO Secrets for VMI %s: %v", vmo.Name, err)
 	}
 
 	// Create TLS secrets or get certs
+	controller.log.Oncef("Reconciling TLS secrets")
 	err = CreateOrUpdateTLSSecrets(controller, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create TLS Secrets for vmo: %v", err)
+		controller.log.Errorf("Failed to create TLS Secrets for VMI %s: %v", vmo.Name, err)
 	}
 
+	controller.log.Oncef("Ensuring TLS secret is in monitoring namespace")
 	err = EnsureTLSSecretInMonitoringNS(controller, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
+		controller.log.Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
 	}
 
 	// Set creation time

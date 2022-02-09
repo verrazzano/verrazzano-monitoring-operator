@@ -443,7 +443,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateRoleBindings(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Role Bindings for vmo: %v", err)
+		c.log.Errorf("Failed to create Role Bindings for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -452,7 +452,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create config maps for vmo: %v", err)
+		c.log.Errorf("Failed to create config maps for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -461,7 +461,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateServices(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Services for vmo: %v", err)
+		c.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -470,7 +470,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	pvcToAdMap, err := createPersistentVolumeClaims(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create PVCs for vmo: %v", err)
+		c.log.Errorf("Failed to create PVCs for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -479,12 +479,10 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	vmoUsername, vmoPassword, err := GetAuthSecrets(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to extract VMO Secrets for vmo: %v", err)
 		errorObserved = true
 	}
 	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
-		c.log.Errorf("Failed to create Deployments for vmo: %v", err)
 		errorObserved = true
 	}
 	/*********************
@@ -492,7 +490,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateStatefulSets(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create StatefulSets for vmo: %v", err)
 		errorObserved = true
 	}
 
@@ -501,7 +498,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateIngresses(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Ingresses for vmo: %v", err)
+		c.log.Errorf("Failed to create Ingresses for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -515,7 +512,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.log.Oncef("Updating VMO")
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			c.log.Errorf("Failed to update status for vmo: %v", err)
+			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
 			errorObserved = true
 		}
 	}
@@ -527,9 +524,9 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.Versioning.CurrentVersion = c.buildVersion
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			c.log.Errorf("Failed to update currentVersion for vmo %s: %v", vmo.Name, err)
+			c.log.Errorf("Failed to update currentVersion for VMI %s: %v", vmo.Name, err)
 		} else {
-			c.log.Oncef("Updated VMO %s currentVersion to %s", vmo.Name, c.buildVersion)
+			c.log.Oncef("Updated VMI currentVersion to %s", c.buildVersion)
 		}
 	}
 
