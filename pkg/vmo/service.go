@@ -44,7 +44,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 				controller.log.Debugf("Service %s : Spec differences %s", curService.Name, specDiffs)
 				err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 				if err != nil {
-					controller.log.Errorf("Failed to delete service %s: %+v", serviceName, err)
+					controller.log.Errorf("Failed to delete service %s: %v", serviceName, err)
 				}
 				_, err = controller.kubeclientset.CoreV1().Services(vmo.Namespace).Create(context.TODO(), curService, metav1.CreateOptions{})
 			}

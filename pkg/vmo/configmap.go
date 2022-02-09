@@ -110,7 +110,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.Prometheus.VersionsConfigMap)
 
 	// Delete configmaps that shouldn't exist
-	controller.log.Debug("Deleting unwanted ConfigMaps for VMI %s/%s", vmo.Namespace, vmo.Name)
+	controller.log.Debugf("Deleting unwanted ConfigMaps for VMI %s/%s", vmo.Namespace, vmo.Name)
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	configMapList, err := controller.configMapLister.ConfigMaps(vmo.Namespace).List(selector)
 	if err != nil {

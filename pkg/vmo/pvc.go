@@ -5,6 +5,7 @@ package vmo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/pvcs"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,11 +59,11 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			// We choose to absorb the error here as the worker would requeue the
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
-			runtime.HandleError(fmt.Errorf("Failed, PVC name must be specified"))
+			runtime.HandleError(errors.New(("Failed, PVC name must be specified")))
 			return deploymentToAdMap, nil
 		}
 
-		zap.S().Debugf("Applying PVC '%s' in namespace '%s' for VMI '%s'\n", pvcName, vmo.Namespace, vmo.Name)
+		controller.log.Debugf("Applying PVC '%s' in namespace '%s' for VMI '%s'\n", pvcName, vmo.Namespace, vmo.Name)
 		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).Get(pvcName)
 
 		// If the PVC already exists, we *only* read its current AD, *if possible* (this is not possible for all storage classes and situations)
@@ -106,7 +106,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		if err != nil {
 			return deploymentToAdMap, err
 		}
-		zap.S().Debugf("Successfully applied PVC '%s'\n", pvcName)
+		controller.log.Debugf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
 	return deploymentToAdMap, nil
