@@ -50,13 +50,6 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 	esMasterContainer.Ports[0].Name = "transport"
 	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
 
-	// Set the default logging to INFO; this can be overridden later at runtime
-	esMasterContainer.Args = []string{
-		"elasticsearch",
-		"-E",
-		"logger.org.elasticsearch=INFO",
-	}
-
 	var envVars = []corev1.EnvVar{
 		{
 			Name: "node.name",
@@ -69,6 +62,7 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 		{Name: "cluster.name", Value: vmo.Name},
 		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
 		{Name: "HTTP_ENABLE", Value: "true"},
+		{Name: "logger.org.opensearch", Value: "info"},
 	}
 	if resources.IsSingleNodeESCluster(vmo) {
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
@@ -85,6 +79,7 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 			corev1.EnvVar{Name: "node.master", Value: "true"},
 			corev1.EnvVar{Name: "node.ingest", Value: "true"},
 			corev1.EnvVar{Name: "node.data", Value: "true"},
+			// supported via legacy compatibility
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 		)
 	} else {
@@ -167,7 +162,7 @@ fi`,
 		}
 
 	const esMasterVolName = "elasticsearch-master"
-	const esMasterData = "/usr/share/elasticsearch/data"
+	const esMasterData = "/usr/share/opensearch/data"
 
 	// Add the pv volume mount to the main container
 	esMasterContainer.VolumeMounts =

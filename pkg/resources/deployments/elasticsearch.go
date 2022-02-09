@@ -46,14 +46,9 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 				},
 			},
 		},
-		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name})
-
-	// Set the default logging to INFO; this can be overridden later at runtime
-	esContainer.Args = []string{
-		"elasticsearch",
-		"-E",
-		"logger.org.elasticsearch=INFO",
-	}
+		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name},
+		corev1.EnvVar{Name: "logger.org.opensearch", Value: "info"},
+	)
 
 	esContainer.Ports = []corev1.ContainerPort{
 		{Name: "http", ContainerPort: int32(constants.ESHttpPort)},
