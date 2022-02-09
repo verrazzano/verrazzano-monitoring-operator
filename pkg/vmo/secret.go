@@ -278,7 +278,7 @@ func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.V
 	// The secret must be this name since the name is hardcoded in monitoring/deployments.go of verrazzano operator.
 	secret, err = controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		return controller.log.ErrorfNewErr("Failed getting TLS secret %s/%s: %s", vmo.Namespace, secretName, err)
+		return controller.log.ErrorfNewErr("Failed getting TLS secret %s/%s: %v", vmo.Namespace, secretName, err)
 	}
 
 	// Create the secret
