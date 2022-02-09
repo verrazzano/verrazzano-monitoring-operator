@@ -70,7 +70,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			controller.log.Debugf("Deleting service %s", service.Name)
 			err := controller.kubeclientset.CoreV1().Services(vmo.Namespace).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
-				controller.log.Errorf("Failed to delete service %s, for the reason (%v)", service.Name, err)
+				controller.log.Errorf("Failed to delete service %s: %v", service.Name, err)
 				return err
 			}
 		}

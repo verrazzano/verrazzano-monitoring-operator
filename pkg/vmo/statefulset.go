@@ -55,7 +55,6 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		if err != nil {
 			return controller.log.ErrorfNewErr("Failed to update StatefulSets %s%s: %v", curStatefulSet.Namespace, curStatefulSet.Name, err)
 		}
-		controller.log.Oncef("Successfully applied StatefulSet '%s/%'\n", curStatefulSet.Namespace, curStatefulSet.Name)
 	}
 
 	// Do a second pass through the stateful sets to update PVC ownership and clean up statesful sets as needed
@@ -79,7 +78,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			controller.log.Debugf("Deleting StatefulSet %s", statefulSet.Name)
 			err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
 			if err != nil {
-				controller.log.Errorf("Failed to delete StatefulSet %s, for the reason (%v)", statefulSet.Name, err)
+				controller.log.Errorf("Failed to delete StatefulSet %s: %v", statefulSet.Name, err)
 				return err
 			}
 		}
