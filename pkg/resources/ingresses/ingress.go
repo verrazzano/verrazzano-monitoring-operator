@@ -44,7 +44,6 @@ func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 }
 
 func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule extensions_v1beta1.IngressRule) (*extensions_v1beta1.Ingress, error) {
-	var hosts = []string{hostName}
 	ingress := &extensions_v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
@@ -56,8 +55,8 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 		Spec: extensions_v1beta1.IngressSpec{
 			TLS: []extensions_v1beta1.IngressTLS{
 				{
-					Hosts:      hosts,
-					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, componentDetails.Name),
+					Hosts:      getTLSHosts(vmo),
+					SecretName: vmo.Name + "-tls",
 				},
 			},
 			Rules: []extensions_v1beta1.IngressRule{ingressRule},
@@ -253,8 +252,8 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 		Spec: extensions_v1beta1.IngressSpec{
 			TLS: []extensions_v1beta1.IngressTLS{
 				{
-					Hosts:      []string{ingressHost},
-					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
+					Hosts:      getTLSHosts(vmo),
+					SecretName: vmo.Name + "-tls",
 				},
 			},
 			Rules: []extensions_v1beta1.IngressRule{ingressRule},
@@ -273,4 +272,12 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
 	setNginxRoutingAnnotations(ingress)
 	return ingress
+}
+
+func getTLSHosts(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
+	return []string{"grafana." + vmo.Spec.URI,
+		"prometheus." + vmo.Spec.URI,
+		"kibana." + vmo.Spec.URI,
+		"elasticsearch." + vmo.Spec.URI,
+		"kiali." + vmo.Spec.URI}
 }
