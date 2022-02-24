@@ -177,6 +177,15 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
+		waitForEsInitContainer := corev1.Container{
+			Name:  config.ESWait.Name,
+			Image: config.ESWait.Image,
+			// `-number-of-data-nodes 1` tells eswait to look for at least one data node
+			// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
+			Args: []string{"-number-of-data-nodes", "1", "-timeout", "10m", elasticsearchURL, config.ESWaitTargetVersion},
+		}
+		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
+
 		// add the required istio annotations to allow inter-es component communication
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
