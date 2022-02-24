@@ -182,7 +182,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 			Image: config.ESWait.Image,
 			// `-number-of-data-nodes 1` tells eswait to look for at least one data node
 			// `-timeout 5m` tells eswait to wait up to 5 minutes for desired state
-			Args: []string{"-number-of-data-nodes", "1", "-timeout", "10m", elasticsearchURL, config.ESWaitTargetVersion},
+			Args: []string{"-number-of-data-nodes", fmt.Sprintf("%d", vmo.Spec.Elasticsearch.DataNode.Replicas), "-timeout", "10m", elasticsearchURL, config.ESWaitTargetVersion},
 		}
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, waitForEsInitContainer)
 
