@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package deployments
@@ -176,12 +176,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
-
-		// Kibana/OSD should not have concurrent replicas with separate versions
-		// this can lead to race conditions and result in data corruption
-		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
-			Type: appsv1.RecreateDeploymentStrategyType,
-		}
 
 		// add the required istio annotations to allow inter-es component communication
 		if deployment.Spec.Template.Annotations == nil {
