@@ -6,6 +6,7 @@ package deployments
 import (
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"strconv"
 	"strings"
 
@@ -85,6 +86,18 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = deployment.Spec.Template.Spec.Containers[0].LivenessProbe
+
+		// Kibana/OSD should not have concurrent replicas with separate versions
+		// this can lead to race conditions and result in data corruption
+		maxUnavailable := intstr.FromString("100%")
+		maxSurge := intstr.FromInt(0)
+		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+			Type: appsv1.RecreateDeploymentStrategyType,
+			RollingUpdate: &appsv1.RollingUpdateDeployment{
+				MaxUnavailable: &maxUnavailable,
+				MaxSurge:       &maxSurge,
+			},
+		}
 
 		// dashboard volume
 		volumes := []corev1.Volume{
