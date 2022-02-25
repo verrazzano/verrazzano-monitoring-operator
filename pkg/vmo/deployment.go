@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -61,6 +60,9 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				elasticsearchDataDeployments = append(elasticsearchDataDeployments, curDeployment)
 			} else {
+				if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.Kibana.Name) {
+					addKibanaUpgradeStrategy(curDeployment, existingDeployment)
+				}
 				specDiffs := diff.Diff(existingDeployment, curDeployment)
 				if specDiffs != "" {
 					controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
@@ -104,6 +106,37 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 
 	return prometheusDirty || elasticsearchDirty, nil
+}
+
+//addKibanaUpgradeStrategy updates the Kibana deployment with an appropriate update strategy,
+// whether the upgrade is a rolling upgrade or a recreate upgrade.
+func addKibanaUpgradeStrategy(newDeploy, oldDeploy *appsv1.Deployment) {
+	getKibanaImage := func(deploy *appsv1.Deployment) string {
+		kibanaImage := ""
+		for _, container := range deploy.Spec.Template.Spec.Containers {
+			if container.Name == config.Kibana.Name {
+				kibanaImage = container.Image
+				break
+			}
+		}
+		return kibanaImage
+	}
+	oldKibanaImage := getKibanaImage(oldDeploy)
+	newKibanaImage := getKibanaImage(newDeploy)
+
+	// Kibana/OSD should not have concurrent replicas with separate versions
+	// this can lead to race conditions and result in data corruption
+	newDeploy.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: getUpdateStrategy(newKibanaImage, oldKibanaImage),
+	}
+}
+
+//getUpdateStrategy returns a deployment strategy for recreate or rolling updates
+func getUpdateStrategy(newImage, oldImage string) appsv1.DeploymentStrategyType {
+	if newImage == oldImage {
+		return appsv1.RollingUpdateDeploymentStrategyType
+	}
+	return appsv1.RecreateDeploymentStrategyType
 }
 
 // Updates the *next* candidate deployment of the given deployments list.  A deployment is a candidate only if
