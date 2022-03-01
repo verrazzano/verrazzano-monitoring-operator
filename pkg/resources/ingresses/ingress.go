@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ingresses
@@ -57,7 +57,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 			TLS: []extensions_v1beta1.IngressTLS{
 				{
 					Hosts:      hosts,
-					SecretName: vmo.Name + "-tls",
+					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, componentDetails.Name),
 				},
 			},
 			Rules: []extensions_v1beta1.IngressRule{ingressRule},
@@ -254,7 +254,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 			TLS: []extensions_v1beta1.IngressTLS{
 				{
 					Hosts:      []string{ingressHost},
-					SecretName: vmo.Name + "-tls",
+					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
 			},
 			Rules: []extensions_v1beta1.IngressRule{ingressRule},
