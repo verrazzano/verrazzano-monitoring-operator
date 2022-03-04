@@ -39,12 +39,6 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		controller.log.Errorf("Failed to create TLS Secrets for VMI %s: %v", vmo.Name, err)
 	}
 
-	controller.log.Oncef("Ensuring TLS secret is in monitoring namespace")
-	err = EnsureTLSSecretInMonitoringNS(controller, vmo)
-	if err != nil {
-		controller.log.Errorf("Failed to copy TLS Secret to monitoring namespace: %v", err)
-	}
-
 	// Set creation time
 	if vmo.Status.CreationTime == nil {
 		now := metav1.Now()
