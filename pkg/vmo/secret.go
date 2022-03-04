@@ -16,7 +16,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/secrets"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -261,41 +260,4 @@ func (c *Controller) loadAllAuthSecretData(ns, secretName string) (map[string]st
 	}
 
 	return m, nil
-}
-
-// EnsureTLSSecretInMonitoringNS copies the TLS secret. The prometheus pusher needs to access the ca.ctl cert in
-// system-tls secret from within the pod.  The secret must be in the monitoring namespace to access it as a volume.
-// Copy the secret from the verrazzano-system namespace.
-func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	const secretName = "system-tls"
-
-	// Don't copy the secret if it already exists.
-	secret, err := controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
-	if err == nil && secret != nil {
-		return nil
-	}
-
-	// The secret must be this name since the name is hardcoded in monitoring/deployments.go of verrazzano operator.
-	secret, err = controller.kubeclientset.CoreV1().Secrets(vmo.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
-	if err != nil {
-		return controller.log.ErrorfNewErr("Failed getting TLS secret %s/%s: %v", vmo.Namespace, secretName, err)
-	}
-
-	// Create the secret
-	newSecret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secret.Name,
-			Namespace: constants.MonitoringNamespace,
-		},
-		Data:       secret.Data,
-		StringData: secret.StringData,
-		Type:       secret.Type,
-	}
-	_, err = controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Create(context.TODO(), &newSecret, metav1.CreateOptions{})
-	if err != nil {
-		return controller.log.ErrorfNewErr("Failed to create a secret %s/%s: %v", constants.MonitoringNamespace, secretName, err)
-	}
-	controller.log.Oncef("Created TLS secret %s/%s", constants.MonitoringNamespace, secretName)
-
-	return nil
 }
