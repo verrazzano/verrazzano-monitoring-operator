@@ -1,13 +1,21 @@
-# Copyright (C) 2020, Oracle and/or its affiliates.
-# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 #!/bin/bash
+# Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
+CODEGEN_PATH=k8s.io/code-generator
+GOPATH=$(go env GOPATH)
 SCRIPT_ROOT=$(dirname $0)/..
-CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
+# Obtain k8s.io/code-generator version
+codeGenVer=$(go list -m -f '{{.Version}}' k8s.io/code-generator)
+# ensure code-generator has been downloaded
+go get -d k8s.io/code-generator@${codeGenVer}
+CODEGEN_PKG=${CODEGEN_PKG:-${GOPATH}/pkg/mod/${CODEGEN_PATH}@${codeGenVer}}
+echo "codegen_pkg = ${CODEGEN_PKG}"
+chmod +x ${CODEGEN_PKG}/generate-groups.sh
 
 GENERATED_ZZ_FILE=$SCRIPT_ROOT/pkg/apis/vmcontroller/v1/zz_generated.deepcopy.go
 echo Remove $GENERATED_ZZ_FILE file if exist
