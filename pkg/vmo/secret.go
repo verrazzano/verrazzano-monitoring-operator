@@ -267,7 +267,7 @@ func (c *Controller) loadAllAuthSecretData(ns, secretName string) (map[string]st
 // system-tls secret from within the pod.  The secret must be in the monitoring namespace to access it as a volume.
 // Copy the secret from the verrazzano-system namespace.
 func EnsureTLSSecretInMonitoringNS(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	const secretName = "system-tls"
+	const secretName = "system-tls-prometheus"
 
 	// Don't copy the secret if it already exists.
 	secret, err := controller.kubeclientset.CoreV1().Secrets(constants.MonitoringNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
