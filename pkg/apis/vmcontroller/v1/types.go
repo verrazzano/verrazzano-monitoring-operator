@@ -94,7 +94,7 @@ type (
 		Resources              Resources `json:"resources,omitempty"`
 		RetentionPeriod        int32     `json:"retentionPeriod,omitempty"`
 		Replicas               int32     `json:"replicas,omitempty"`
-		HTTP2Enabled           bool      `json:"http2Enabled" yaml:"http2Enabled"`
+		HTTP2Enabled           bool      `json:"http2Enabled,omitempty" yaml:"http2Enabled"`
 	}
 
 	// AlertManager details
@@ -153,12 +153,18 @@ type (
 
 	// Resources details
 	Resources struct {
-		LimitCPU      string `json:"limitCPU,omitempty"`
-		LimitMemory   string `json:"limitMemory,omitempty"`
-		RequestCPU    string `json:"requestCPU,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		LimitCPU string `json:"limitCPU,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		LimitMemory string `json:"limitMemory,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		RequestCPU string `json:"requestCPU,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 		RequestMemory string `json:"requestMemory,omitempty"`
-		MaxSizeDisk   string `json:"maxSizeDisk,omitempty" yaml:"maxSizeDisk,omitempty"`
-		MinSizeDisk   string `json:"minSizeDisk,omitempty" yaml:"minSizeDisk,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		MaxSizeDisk string `json:"maxSizeDisk,omitempty" yaml:"maxSizeDisk,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		MinSizeDisk string `json:"minSizeDisk,omitempty" yaml:"minSizeDisk,omitempty"`
 	}
 
 	// ContainerSpec represents a container image that needs to be run periodically
