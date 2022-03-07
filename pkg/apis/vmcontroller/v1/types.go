@@ -94,8 +94,7 @@ type (
 		Resources              Resources `json:"resources,omitempty"`
 		RetentionPeriod        int32     `json:"retentionPeriod,omitempty"`
 		Replicas               int32     `json:"replicas,omitempty"`
-		// +optional
-		HTTP2Enabled bool `json:"http2Enabled,omitempty"`
+		HTTP2Enabled           bool      `json:"http2Enabled,omitempty" yaml:"http2Enabled"`
 	}
 
 	// AlertManager details

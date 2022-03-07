@@ -59,10 +59,13 @@ all: build
 BUILDVERSION=`git describe --tags`
 BUILDDATE=`date +%FT%T%z`
 
-.PHONY: code-gen
-code-gen: controller-gen
+.PHONY: manifests
+manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=verrazzano-monitoring-operator-cluster-role webhook paths="./..." output:crd:artifacts:config=$(CRD_PATH)
 	./hack/add_header.sh $(CRD_FILE)
+
+.PHONY: generate
+generate:
 	./hack/update-codegen.sh
 
 .PHONY: controller-gen
