@@ -66,6 +66,9 @@ type (
 		ContactEmail string `json:"contactemail,omitempty" yaml:"contactemail,omitempty"`
 
 		NatGatewayIPs []string `json:"natGatewayIPs,omitempty" yaml:"natGatewayIPs,omitempty"`
+
+		// +optional
+		StorageClass *string `json:"storageClass,omitempty"`
 	}
 
 	// Versioning details
@@ -121,6 +124,7 @@ type (
 		Replicas  int32     `json:"replicas,omitempty"`
 		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
 		Resources Resources `json:"resources,omitempty"`
+		Storage   *Storage  `json:"storage,omitempty"`
 	}
 
 	// Kibana details

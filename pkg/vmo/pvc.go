@@ -26,7 +26,7 @@ import (
 // subsequent deployment processing logic to do the job of choosing ADs.
 func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
 	// Inspect the Storage Class to use
-	storageClass, err := determineStorageClass(controller)
+	storageClass, err := determineStorageClass(controller, vmo.Spec.StorageClass)
 	if err != nil {
 		return nil, err
 	}
@@ -153,27 +153,30 @@ func (p *AdPvcCounter) GetLeastUsedAd() string {
 }
 
 // Determines the storage class to use for the current environment
-func determineStorageClass(controller *Controller) (*storagev1.StorageClass, error) {
-	var storageClass *storagev1.StorageClass
-	var err error
-
-	// If a storage class was explicitly specified, use that
-	if controller.operatorConfig.Pvcs.StorageClass != "" {
-		storageClass, err = controller.storageClassLister.Get(controller.operatorConfig.Pvcs.StorageClass)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to fetch storage class %s: %v", controller.operatorConfig.Pvcs.StorageClass, err)
-		}
-	} else { // Otherwise we'll use the "default"
-		storageClasses, err := controller.storageClassLister.List(labels.Everything())
-		if err != nil {
-			return nil, err
-		}
-		storageClass, err = getDefaultStorageClass(storageClasses)
-		if err != nil {
-			return nil, err
-		}
+func determineStorageClass(controller *Controller, className *string) (*storagev1.StorageClass, error) {
+	if className != nil {
+		// If a storage class was explicitly specified via the VMO API, use that
+		return getStorageClassByName(controller, *className)
+	} else if controller.operatorConfig.Pvcs.StorageClass != "" {
+		// if a storageclass was configured in the operator, use that
+		return getStorageClassByName(controller, controller.operatorConfig.Pvcs.StorageClass)
 	}
-	return storageClass, nil
+
+	// Otherwise we'll use the "default" storage class
+	storageClasses, err := controller.storageClassLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	return getDefaultStorageClass(storageClasses)
+}
+
+func getStorageClassByName(controller *Controller, className string) (*storagev1.StorageClass, error) {
+	storageClass, err := controller.storageClassLister.Get(className)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch storage class %s: %v", className, err)
+	}
+
+	return storageClass, err
 }
 
 // Parses the given storage class into a StorageClassInfo objects

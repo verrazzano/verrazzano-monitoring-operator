@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
@@ -191,6 +191,15 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 			},
 		},
 	}
+}
+
+//GetStorageForNode selects the Storage object to use, prioritizing the node-level configuration
+// Spec.Elasticsearch.Storage exists for historical reasons, and we use this function to ensure compatibility
+func GetStorageForNode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, node vmcontrollerv1.ElasticsearchNode) *vmcontrollerv1.Storage {
+	if node.Storage != nil {
+		return node.Storage
+	}
+	return &vmo.Spec.Elasticsearch.Storage
 }
 
 // GetElasticsearchMasterInitContainer return an Elasticsearch Init container for the master.  This changes ownership of
