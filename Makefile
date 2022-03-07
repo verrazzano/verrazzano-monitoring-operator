@@ -49,7 +49,7 @@ INTEG_RUN_REGEX=Test
 INGRESS_CONTROLLER_SVC_NAME:=ingress-controller
 GO ?= go
 HELM_CHART_NAME ?= verrazzano-monitoring-operator
-CONTROLLER_GEN_VERSION:=v0.4.1
+CONTROLLER_GEN_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/controller-tools)
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 CRD_PATH:=./k8s/crds
 CRD_FILE:=./k8s/crds/verrazzano.io_verrazzanomonitoringinstances.yaml
