@@ -13,6 +13,7 @@ import (
 )
 
 type (
+
 	// VerrazzanoMonitoringInstanceSpec defines the attributes a user can specify when creating a VerrazzanoMonitoringInstance
 	VerrazzanoMonitoringInstanceSpec struct {
 
@@ -226,6 +227,7 @@ type (
 	// +genclient
 	// +genclient:noStatus
 	// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+	// +kubebuilder:resource:shortName=vmi
 	VerrazzanoMonitoringInstance struct {
 		metav1.TypeMeta   `json:",inline"`
 		metav1.ObjectMeta `json:"metadata"`
