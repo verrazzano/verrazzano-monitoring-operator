@@ -31,6 +31,13 @@ func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMoni
 		elasticSearchMasterService.Spec.Type = corev1.ServiceTypeClusterIP
 		elasticSearchMasterService.Spec.ClusterIP = corev1.ClusterIPNone
 	}
+	internalHealthPort := corev1.ServicePort{
+		Port:       constants.ESHttpPort,
+		Name:       config.ElasticsearchMaster.Name + "-internal",
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(constants.ESHttpPort),
+	}
+	elasticSearchMasterService.Spec.Ports = append(elasticSearchMasterService.Spec.Ports, internalHealthPort)
 	return elasticSearchMasterService
 }
 
