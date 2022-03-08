@@ -42,12 +42,36 @@ spec:
               alertmanager:
                 description: Prometheus details
                 properties:
+                  alertmanagerConfigMap:
+                    description: Location of the Alertmanager ConfigMap
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
                   config:
                     type: string
                   configMap:
+                    description: ConfigMap is deprecated. Use alertmanagerConfigMap
+                      instead.
                     type: string
                   enabled:
                     type: boolean
+                  receiverTemplateConfigMap:
+                    description: Location of the Alertmanager receiver template ConfigMap
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
                   replicas:
                     format: int32
                     type: integer
@@ -72,6 +96,17 @@ spec:
                       requestMemory:
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
+                    type: object
+                  ruleConfigMap:
+                    description: Location of the Prometheus rule ConfigMap
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    - namespace
                     type: object
                   versionsConfigMap:
                     type: string

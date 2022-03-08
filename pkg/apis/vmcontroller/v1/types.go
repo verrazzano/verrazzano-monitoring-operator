@@ -74,6 +74,12 @@ type (
 		DesiredVersion string `json:"desiredVersion,omitempty" yaml:"desiredVersion"`
 	}
 
+	// NamespaceName identifies a Namespace and Name pair for a resource
+	NamespaceName struct {
+		Namespace string `json:"namespace"`
+		Name      string `json:"name"`
+	}
+
 	// Grafana details
 	Grafana struct {
 		Enabled              bool      `json:"enabled" yaml:"enabled"`
@@ -99,12 +105,25 @@ type (
 
 	// AlertManager details
 	AlertManager struct {
-		Enabled           bool      `json:"enabled" yaml:"enabled"`
-		Config            string    `json:"config,omitempty"`
-		ConfigMap         string    `json:"configMap,omitempty"`
-		VersionsConfigMap string    `json:"versionsConfigMap,omitempty"`
-		Resources         Resources `json:"resources,omitempty"`
-		Replicas          int32     `json:"replicas,omitempty"`
+		Enabled   bool      `json:"enabled" yaml:"enabled"`
+		Resources Resources `json:"resources,omitempty"`
+		Replicas  int32     `json:"replicas,omitempty"`
+		// Location of the Alertmanager ConfigMap
+		// +optional
+		AlertmanagerConfigMap *NamespaceName `json:"alertmanagerConfigMap,omitempty"`
+		// Location of the Prometheus rule ConfigMap
+		// +optional
+		RuleConfigMap *NamespaceName `json:"ruleConfigMap,omitempty"`
+		// Location of the Alertmanager receiver template ConfigMap
+		// +optional
+		ReceiverTemplateConfigMap *NamespaceName `json:"receiverTemplateConfigMap,omitempty"`
+		// +deprecated
+		Config string `json:"config,omitempty"`
+		// ConfigMap is deprecated. Use alertmanagerConfigMap instead.
+		// +deprecated
+		ConfigMap string `json:"configMap,omitempty"`
+		// +deprecated
+		VersionsConfigMap string `json:"versionsConfigMap,omitempty"`
 	}
 
 	// Elasticsearch details
