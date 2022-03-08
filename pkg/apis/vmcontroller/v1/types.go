@@ -76,8 +76,10 @@ type (
 
 	// NamespaceName identifies a Namespace and Name pair for a resource
 	NamespaceName struct {
+		// Namespace of the resource
 		Namespace string `json:"namespace"`
-		Name      string `json:"name"`
+		// Name of the resource
+		Name string `json:"name"`
 	}
 
 	// Grafana details
