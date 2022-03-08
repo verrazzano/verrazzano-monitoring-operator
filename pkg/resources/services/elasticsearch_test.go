@@ -47,11 +47,12 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 	expectedSelector := resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 
 	assert.Equal(t, ingestService.Spec.Selector, expectedSelector)
-	assert.Equal(t, ingestService.Spec.Ports[0].Port, int32(constants.ESHttpPort))
+	assert.EqualValues(t, ingestService.Spec.Ports[0].Port, constants.ESHttpPort)
 
-	assert.Equal(t, masterService.Spec.Ports[0].Port, int32(constants.ESTransportPort))
+	assert.EqualValues(t, masterService.Spec.Ports[0].Port, constants.ESTransportPort)
+	assert.EqualValues(t, masterService.Spec.Ports[1].Port, constants.ESHttpPort)
 
-	assert.Equal(t, dataService.Spec.Ports[0].Port, int32(9200))
+	assert.EqualValues(t, dataService.Spec.Ports[0].Port, constants.ESHttpPort)
 	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.ESHttpPort))
 	assert.Equal(t, dataService.Spec.Selector, expectedSelector)
 }
