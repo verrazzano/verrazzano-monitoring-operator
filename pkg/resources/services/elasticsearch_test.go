@@ -1,9 +1,10 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package services
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -31,30 +32,34 @@ func TestElasticsearchDefaultServices1(t *testing.T) {
 		},
 	}
 	services := createElasticsearchServiceElements(vmo)
-	assert.Equal(t, 3, len(services), "Length of generated services")
+	assert.Equal(t, 4, len(services), "Length of generated services")
 }
 
 func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 	vmo := createDevProfileES()
 
 	services := createElasticsearchServiceElements(vmo)
-	assert.Equal(t, 3, len(services), "Length of generated services")
+	assert.Equal(t, 4, len(services), "Length of generated services")
 
 	ingestService := services[0]
 	masterService := services[1]
 	dataService := services[2]
+	masterHttpService := services[3]
 
 	expectedSelector := resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 
+	fmt.Println(masterHttpService)
 	assert.Equal(t, ingestService.Spec.Selector, expectedSelector)
 	assert.EqualValues(t, ingestService.Spec.Ports[0].Port, constants.ESHttpPort)
 
 	assert.EqualValues(t, masterService.Spec.Ports[0].Port, constants.ESTransportPort)
-	assert.EqualValues(t, masterService.Spec.Ports[1].Port, constants.ESHttpPort)
 
 	assert.EqualValues(t, dataService.Spec.Ports[0].Port, constants.ESHttpPort)
 	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.ESHttpPort))
 	assert.Equal(t, dataService.Spec.Selector, expectedSelector)
+
+	assert.EqualValues(t, constants.ESHttpPort, masterHttpService.Spec.Ports[0].Port)
+	assert.EqualValues(t, intstr.FromInt(constants.ESHttpPort), masterHttpService.Spec.Ports[0].TargetPort)
 }
 
 func createDevProfileES() *vmcontrollerv1.VerrazzanoMonitoringInstance {
