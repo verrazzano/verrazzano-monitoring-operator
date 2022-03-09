@@ -31,13 +31,6 @@ func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMoni
 		elasticSearchMasterService.Spec.Type = corev1.ServiceTypeClusterIP
 		elasticSearchMasterService.Spec.ClusterIP = corev1.ClusterIPNone
 	}
-	internalHealthPort := corev1.ServicePort{
-		Port:       constants.ESHttpPort,
-		Name:       config.ElasticsearchMaster.Name + "-internal",
-		Protocol:   corev1.ProtocolTCP,
-		TargetPort: intstr.FromInt(constants.ESHttpPort),
-	}
-	elasticSearchMasterService.Spec.Ports = append(elasticSearchMasterService.Spec.Ports, internalHealthPort)
 	return elasticSearchMasterService
 }
 
@@ -52,11 +45,22 @@ func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonito
 	return elasticsearchDataService
 }
 
+// Creates the master HTTP Service with Cluster IP
+func createMasterServiceHTTP(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
+	masterHTTPService := createServiceElement(vmo, config.ElasticsearchMaster)
+	masterHTTPService.Name = masterHTTPService.Name + "-http"
+	masterHTTPService.Spec.Ports[0].Name = config.ElasticsearchMaster.Name + "-http"
+	masterHTTPService.Spec.Ports[0].Port = constants.ESHttpPort
+	masterHTTPService.Spec.Ports[0].TargetPort = intstr.FromInt(constants.ESHttpPort)
+	return masterHTTPService
+}
+
 // Creates *all* Elasticsearch service elements
 func createElasticsearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*corev1.Service {
 	var services []*corev1.Service
 	services = append(services, createElasticsearchIngestServiceElements(vmo))
 	services = append(services, createElasticsearchMasterServiceElements(vmo))
 	services = append(services, createElasticsearchDataServiceElements(vmo))
+	services = append(services, createMasterServiceHTTP(vmo))
 	return services
 }
