@@ -29,6 +29,7 @@ var (
 	buildVersion   string
 	buildDate      string
 	certdir        string
+	port           string
 	zapOptions     = kzap.Options{}
 )
 
@@ -59,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	vmo.StartHTTPServer(controller, certdir)
+	vmo.StartHTTPServer(controller, certdir, port)
 
 	// Run any cleanup that needs to happen pre-startup of the controller
 	controller.PreStartCleanup()
@@ -77,6 +78,7 @@ func init() {
 	flag.StringVar(&watchVmi, "watchVmi", "", "Optionally, a specific VMI to watch exclusively.  If not set, all VMIs will be watched.")
 	flag.StringVar(&configmapName, "configmapName", config.DefaultOperatorConfigmapName, "The configmap name containing the operator config")
 	flag.StringVar(&certdir, "certdir", "/etc/certs", "the directory to initalize certificates into")
+	flag.StringVar(&port, "port", "8080", "VMO server HTTP port")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s version %s\n", os.Args[0], buildVersion)
 		fmt.Fprintf(os.Stderr, "built %s\n", buildDate)

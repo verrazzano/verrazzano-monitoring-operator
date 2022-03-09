@@ -13,11 +13,11 @@ import (
 
 // StartHTTPServer runs an embedded HTTP server for any VMO handlers as a "resilient" goroutine meaning it runs in
 // the background and will be restarted if it dies.
-func StartHTTPServer(controller *Controller, certdir string) {
+func StartHTTPServer(controller *Controller, certdir string, port string) {
 	setupHandlers(controller)
 	go wait.Until(func() {
 		controller.log.Oncef("Starting HTTP server")
-		err := http.ListenAndServeTLS(":8080", path.Join(certdir, "tls.crt"), path.Join(certdir, "tls.key"), nil)
+		err := http.ListenAndServeTLS(":"+port, path.Join(certdir, "tls.crt"), path.Join(certdir, "tls.key"), nil)
 		if err != nil {
 			controller.log.Errorf("Failed to start HTTP server for VMI: %v", err)
 		}
