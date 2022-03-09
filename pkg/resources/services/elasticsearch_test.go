@@ -44,11 +44,11 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 	ingestService := services[0]
 	masterService := services[1]
 	dataService := services[2]
-	masterHttpService := services[3]
+	masterHTTPService := services[3]
 
 	expectedSelector := resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 
-	fmt.Println(masterHttpService)
+	fmt.Println(masterHTTPService)
 	assert.Equal(t, ingestService.Spec.Selector, expectedSelector)
 	assert.EqualValues(t, ingestService.Spec.Ports[0].Port, constants.ESHttpPort)
 
@@ -58,8 +58,8 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.ESHttpPort))
 	assert.Equal(t, dataService.Spec.Selector, expectedSelector)
 
-	assert.EqualValues(t, constants.ESHttpPort, masterHttpService.Spec.Ports[0].Port)
-	assert.EqualValues(t, intstr.FromInt(constants.ESHttpPort), masterHttpService.Spec.Ports[0].TargetPort)
+	assert.EqualValues(t, constants.ESHttpPort, masterHTTPService.Spec.Ports[0].Port)
+	assert.EqualValues(t, intstr.FromInt(constants.ESHttpPort), masterHTTPService.Spec.Ports[0].TargetPort)
 }
 
 func createDevProfileES() *vmcontrollerv1.VerrazzanoMonitoringInstance {
