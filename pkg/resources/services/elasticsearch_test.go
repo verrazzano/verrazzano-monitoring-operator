@@ -4,7 +4,6 @@
 package services
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -48,7 +47,6 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 
 	expectedSelector := resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 
-	fmt.Println(masterHTTPService)
 	assert.Equal(t, ingestService.Spec.Selector, expectedSelector)
 	assert.EqualValues(t, ingestService.Spec.Ports[0].Port, constants.ESHttpPort)
 
