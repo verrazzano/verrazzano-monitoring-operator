@@ -37,14 +37,14 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		controller.log.Errorf("Failed to create PVC specs for VMI %s: %v", vmo.Name, err)
 		return nil, err
 	}
-	deploymentToAdMap := map[string]string{}
+	pvcToAdMap := map[string]string{}
 
 	controller.log.Oncef("Creating/updating PVCs for VMI %s", vmo.Name)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
 	if err != nil {
-		return deploymentToAdMap, err
+		return pvcToAdMap, err
 	}
 
 	// Keep track of ADs for Prometheus and Elasticsearch PVCs, to ensure they land on all different ADs
@@ -60,7 +60,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
 			runtime.HandleError(errors.New(("Failed, PVC name must be specified")))
-			return deploymentToAdMap, nil
+			return pvcToAdMap, nil
 		}
 
 		controller.log.Debugf("Applying PVC '%s' in namespace '%s' for VMI '%s'\n", pvcName, vmo.Namespace, vmo.Name)
@@ -70,7 +70,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		if existingPvc != nil {
 			if storageClassInfo.PvcAcceptsZone {
 				zone := getZoneFromExistingPvc(storageClassInfo, existingPvc)
-				deploymentToAdMap[pvcName] = zone
+				pvcToAdMap[pvcName] = zone
 				if strings.Contains(existingPvc.Name, config.Prometheus.Name) {
 					prometheusAdCounter.Inc(zone)
 				} else if strings.Contains(existingPvc.Name, "elasticsearch") {
@@ -97,19 +97,19 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
 
 			if err != nil {
-				return deploymentToAdMap, err
+				return pvcToAdMap, err
 			}
 
-			deploymentToAdMap[pvcName] = newAd
+			pvcToAdMap[pvcName] = newAd
 
 		}
 		if err != nil {
-			return deploymentToAdMap, err
+			return pvcToAdMap, err
 		}
 		controller.log.Debugf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
-	return deploymentToAdMap, nil
+	return pvcToAdMap, nil
 }
 
 // AdPvcCounter type for AD PVC counts

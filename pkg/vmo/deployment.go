@@ -19,6 +19,37 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
+func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
+	if osd == nil {
+		return false, nil
+	}
+	ready, err := IsOpenSearchReady(vmo)
+	if err != nil {
+		return false, err
+	}
+	if !ready {
+		return false, errors.New("waiting for OpenSearch to be ready before creating/updating OpenSearch Dashboards")
+	}
+
+	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
+		} else {
+			return false, err
+		}
+	} else {
+		addKibanaUpgradeStrategy(osd, existingDeployment)
+		err = updateDeployment(controller, vmo, existingDeployment, osd)
+		if err != nil {
+			controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
+			return false, err
+		}
+	}
+
+	return true, nil
+}
+
 // CreateDeployments create/update VMO deployment k8s resources
 func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, vmoUsername string, vmoPassword string) (dirty bool, err error) {
 	// Assigning the following spec members seems like a hack; is any
@@ -60,15 +91,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				elasticsearchDataDeployments = append(elasticsearchDataDeployments, curDeployment)
 			} else {
-				if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.Kibana.Name) {
-					addKibanaUpgradeStrategy(curDeployment, existingDeployment)
-				}
-				specDiffs := diff.Diff(existingDeployment, curDeployment)
-				if specDiffs != "" {
-					controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
-					controller.log.Oncef("Updating deployment %s/%s", curDeployment.Namespace, curDeployment.Name)
-					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
-				}
+				err = updateDeployment(controller, vmo, existingDeployment, curDeployment)
 			}
 		}
 		if err != nil {
@@ -88,6 +111,17 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		return false, err
 	}
 
+	// Create the OSD deployment
+	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
+	var osdDirty bool = false
+	if osd != nil {
+		deploymentNames = append(deploymentNames, osd.Name)
+		osdDirty, err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
+		if err != nil {
+			return false, err
+		}
+	}
+
 	// Delete deployments that shouldn't exist
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingDeploymentsList, err := controller.deploymentLister.Deployments(vmo.Namespace).List(selector)
@@ -105,7 +139,19 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 	}
 
-	return prometheusDirty || elasticsearchDirty, nil
+	return prometheusDirty || elasticsearchDirty || osdDirty, nil
+}
+
+func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
+	var err error
+	specDiffs := diff.Diff(existingDeployment, curDeployment)
+	if specDiffs != "" {
+		controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
+		controller.log.Oncef("Updating deployment %s/%s", curDeployment.Namespace, curDeployment.Name)
+		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
+	}
+
+	return err
 }
 
 //addKibanaUpgradeStrategy updates the Kibana deployment with an appropriate update strategy,
