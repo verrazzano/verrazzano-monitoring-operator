@@ -38,8 +38,7 @@ var doHttp = func(client *http.Client, request *http.Request) (*http.Response, e
 	return client.Do(request)
 }
 
-//IsOpenSearchReady verifies the health of the OpenSearch Cluster by checking the cluster status is green,
-// the number of nodes matches the VMO spec's expected replica count,
+//IsOpenSearchReady verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
 // and that each node is running the expected version
 func IsOpenSearchReady(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
 	// Verify that the cluster is Green
@@ -55,12 +54,6 @@ func IsOpenSearchReady(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, 
 	nodes, err := getOpenSearchNodes(vmo)
 	if err != nil {
 		return false, err
-	}
-
-	// If the expected replicas does not match the cluster replicas, the cluster is not ready
-	expectedReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas + vmo.Spec.Elasticsearch.DataNode.Replicas + vmo.Spec.Elasticsearch.MasterNode.Replicas
-	if len(nodes) != int(expectedReplicas) {
-		return false, fmt.Errorf("failed to find ready cluster, expected %d nodes, found %d", expectedReplicas, len(nodes))
 	}
 
 	// If any node is not running the expected version, the cluster is not ready

@@ -50,16 +50,6 @@ const (
 		}
 	}
 }`
-	unhealthyNodes = `{
-	"nodes": {
-		"1": {
-			"version": "1.2.3",
-			"roles": [
-				"master"
-			]
-		}
-	}
-}`
 	healthyNodes = `{
 	"nodes": {
 		"1": {
@@ -174,12 +164,6 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 		{
 			"unhealthy when cluster health is yellow",
 			mockHTTPGenerator(unhealthyClusterStatus, healthyNodes, 200, 200),
-			false,
-			false,
-		},
-		{
-			"unhealthy when expected nodes are not all present",
-			mockHTTPGenerator(healthyNodes, unhealthyNodes, 200, 200),
 			false,
 			false,
 		},
