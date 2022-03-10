@@ -129,6 +129,18 @@ spec:
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                         type: object
+                      storage:
+                        description: Storage details
+                        properties:
+                          availabilityDomain:
+                            type: string
+                          pvcNames:
+                            items:
+                              type: string
+                            type: array
+                          size:
+                            type: string
+                        type: object
                     required:
                     - javaOpts
                     type: object
@@ -164,6 +176,18 @@ spec:
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                         type: object
+                      storage:
+                        description: Storage details
+                        properties:
+                          availabilityDomain:
+                            type: string
+                          pvcNames:
+                            items:
+                              type: string
+                            type: array
+                          size:
+                            type: string
+                        type: object
                     required:
                     - javaOpts
                     type: object
@@ -195,6 +219,18 @@ spec:
                             type: string
                           requestMemory:
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                            type: string
+                        type: object
+                      storage:
+                        description: Storage details
+                        properties:
+                          availabilityDomain:
+                            type: string
+                          pvcNames:
+                            items:
+                              type: string
+                            type: array
+                          size:
                             type: string
                         type: object
                     required:
@@ -371,6 +407,8 @@ spec:
                 type: string
               serviceType:
                 description: Service type for component services
+                type: string
+              storageClass:
                 type: string
               uri:
                 description: the external endpoint or uniform resource identifier

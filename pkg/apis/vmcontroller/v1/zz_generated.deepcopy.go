@@ -139,9 +139,9 @@ func (in *ContainerSpec) DeepCopy() *ContainerSpec {
 func (in *Elasticsearch) DeepCopyInto(out *Elasticsearch) {
 	*out = *in
 	in.Storage.DeepCopyInto(&out.Storage)
-	out.IngestNode = in.IngestNode
-	out.MasterNode = in.MasterNode
-	out.DataNode = in.DataNode
+	in.IngestNode.DeepCopyInto(&out.IngestNode)
+	in.MasterNode.DeepCopyInto(&out.MasterNode)
+	in.DataNode.DeepCopyInto(&out.DataNode)
 	return
 }
 
@@ -159,6 +159,11 @@ func (in *Elasticsearch) DeepCopy() *Elasticsearch {
 func (in *ElasticsearchNode) DeepCopyInto(out *ElasticsearchNode) {
 	*out = *in
 	out.Resources = in.Resources
+	if in.Storage != nil {
+		in, out := &in.Storage, &out.Storage
+		*out = new(Storage)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
@@ -416,6 +421,11 @@ func (in *VerrazzanoMonitoringInstanceSpec) DeepCopyInto(out *VerrazzanoMonitori
 		in, out := &in.NatGatewayIPs, &out.NatGatewayIPs
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.StorageClass != nil {
+		in, out := &in.StorageClass, &out.StorageClass
+		*out = new(string)
+		**out = **in
 	}
 	return
 }

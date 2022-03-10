@@ -166,6 +166,8 @@ type (
 		RequestCPU string `json:"requestCPU,omitempty"`
 		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 		RequestMemory string `json:"requestMemory,omitempty"`
+
+		// These fields are not used anywhere
 		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 		MaxSizeDisk string `json:"maxSizeDisk,omitempty" yaml:"maxSizeDisk,omitempty"`
 		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
