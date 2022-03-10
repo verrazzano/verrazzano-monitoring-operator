@@ -34,7 +34,7 @@ const (
 	HealthGreen        = "green"
 )
 
-var doHttp = func(client *http.Client, request *http.Request) (*http.Response, error) {
+var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
 	return client.Do(request)
 }
 
@@ -72,7 +72,7 @@ func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Nod
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doHttp(http.DefaultClient, req)
+	resp, err := doHTTP(http.DefaultClient, req)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doHttp(http.DefaultClient, req)
+	resp, err := doHTTP(http.DefaultClient, req)
 	if err != nil {
 		return nil, err
 	}

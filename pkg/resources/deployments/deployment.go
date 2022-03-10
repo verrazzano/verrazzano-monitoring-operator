@@ -183,7 +183,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 }
 
 func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.Deployment {
-	var deployment *appsv1.Deployment = nil
+	var deployment *appsv1.Deployment
 	// Kibana
 	if vmo.Spec.Kibana.Enabled {
 		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)

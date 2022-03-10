@@ -113,25 +113,6 @@ var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 	},
 }
 
-var testvmo2 = vmcontrollerv1.VerrazzanoMonitoringInstance{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "system",
-	},
-	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-		Elasticsearch: vmcontrollerv1.Elasticsearch{
-			DataNode: vmcontrollerv1.ElasticsearchNode{
-				Replicas: 2,
-			},
-			IngestNode: vmcontrollerv1.ElasticsearchNode{
-				Replicas: 1,
-			},
-			MasterNode: vmcontrollerv1.ElasticsearchNode{
-				Replicas: 2,
-			},
-		},
-	},
-}
-
 func mockHTTPGenerator(body1, body2 string, code1, code2 int) func(client *http.Client, request *http.Request) (*http.Response, error) {
 	return func(client *http.Client, request *http.Request) (*http.Response, error) {
 		if strings.Contains(request.URL.Path, "_cluster/health") {
@@ -191,7 +172,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doHttp = tt.httpFunc
+			doHTTP = tt.httpFunc
 			healthy, err := IsOpenSearchReady(&testvmo)
 			assert.Equal(t, tt.isHealthy, healthy)
 			if tt.isError {

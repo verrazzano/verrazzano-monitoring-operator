@@ -19,35 +19,37 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
+func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	if osd == nil {
-		return false, nil
+		return nil
 	}
 
+	var err error
 	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
 		} else {
-			return false, err
+			return err
 		}
 	} else {
-		ready, err := IsOpenSearchReady(vmo)
+		var ready bool
+		ready, err = IsOpenSearchReady(vmo)
 		if err != nil {
-			return false, err
+			return err
 		}
 		if !ready {
-			return false, errors.New("waiting for OpenSearch cluster to be ready before updating OpenSearch Dashboards")
+			return errors.New("waiting for OpenSearch cluster to be ready before updating OpenSearch Dashboards")
 		}
 		addKibanaUpgradeStrategy(osd, existingDeployment)
 		err = updateDeployment(controller, vmo, existingDeployment, osd)
-		if err != nil {
-			controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
-			return false, err
-		}
+	}
+	if err != nil {
+		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
+		return err
 	}
 
-	return true, nil
+	return nil
 }
 
 // CreateDeployments create/update VMO deployment k8s resources
@@ -113,10 +115,9 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	// Create the OSD deployment
 	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
-	var osdDirty bool = false
 	if osd != nil {
 		deploymentNames = append(deploymentNames, osd.Name)
-		osdDirty, err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
+		err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
 		if err != nil {
 			return false, err
 		}
@@ -139,7 +140,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 	}
 
-	return prometheusDirty || elasticsearchDirty || osdDirty, nil
+	return prometheusDirty || elasticsearchDirty, nil
 }
 
 func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
