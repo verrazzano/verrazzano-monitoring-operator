@@ -67,6 +67,9 @@ type (
 		ContactEmail string `json:"contactemail,omitempty" yaml:"contactemail,omitempty"`
 
 		NatGatewayIPs []string `json:"natGatewayIPs,omitempty" yaml:"natGatewayIPs,omitempty"`
+
+		// +optional
+		StorageClass *string `json:"storageClass,omitempty"`
 	}
 
 	// Versioning details
@@ -122,6 +125,7 @@ type (
 		Replicas  int32     `json:"replicas,omitempty"`
 		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
 		Resources Resources `json:"resources,omitempty"`
+		Storage   *Storage  `json:"storage,omitempty"`
 	}
 
 	// Kibana details
@@ -162,6 +166,8 @@ type (
 		RequestCPU string `json:"requestCPU,omitempty"`
 		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 		RequestMemory string `json:"requestMemory,omitempty"`
+
+		// These fields are not used anywhere
 		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 		MaxSizeDisk string `json:"maxSizeDisk,omitempty" yaml:"maxSizeDisk,omitempty"`
 		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$

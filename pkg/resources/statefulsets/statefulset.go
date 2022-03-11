@@ -21,7 +21,7 @@ import (
 )
 
 // New creates StatefulSet objects for a VMO resource
-func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
+func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass string) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
@@ -30,13 +30,13 @@ func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	}
 	// Elasticsearch Master
 	if vmo.Spec.Elasticsearch.Enabled {
-		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(log, vmo))
+		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(log, vmo, storageClass))
 	}
 	return statefulSets, nil
 }
 
 // Creates StatefulSet for Elasticsearch Master
-func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass string) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
@@ -184,8 +184,8 @@ fi`,
 
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
-	storageSize := vmo.Spec.Elasticsearch.Storage.Size
-	if len(storageSize) > 0 {
+	storage := resources.GetStorageForNode(vmo, vmo.Spec.Elasticsearch.MasterNode)
+	if len(storage.Size) > 0 {
 		statefulSet.Spec.VolumeClaimTemplates =
 			[]corev1.PersistentVolumeClaim{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -193,9 +193,10 @@ fi`,
 					Namespace: vmo.Namespace,
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					StorageClassName: &storageClass,
+					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storageSize)},
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storage.Size)},
 					},
 				},
 			}}

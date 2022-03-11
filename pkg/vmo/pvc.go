@@ -26,7 +26,7 @@ import (
 // subsequent deployment processing logic to do the job of choosing ADs.
 func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
 	// Inspect the Storage Class to use
-	storageClass, err := determineStorageClass(controller)
+	storageClass, err := determineStorageClass(controller, vmo.Spec.StorageClass)
 	if err != nil {
 		return nil, err
 	}
@@ -37,14 +37,14 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		controller.log.Errorf("Failed to create PVC specs for VMI %s: %v", vmo.Name, err)
 		return nil, err
 	}
-	deploymentToAdMap := map[string]string{}
+	pvcToAdMap := map[string]string{}
 
 	controller.log.Oncef("Creating/updating PVCs for VMI %s", vmo.Name)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
 	if err != nil {
-		return deploymentToAdMap, err
+		return pvcToAdMap, err
 	}
 
 	// Keep track of ADs for Prometheus and Elasticsearch PVCs, to ensure they land on all different ADs
@@ -60,7 +60,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
 			runtime.HandleError(errors.New(("Failed, PVC name must be specified")))
-			return deploymentToAdMap, nil
+			return pvcToAdMap, nil
 		}
 
 		controller.log.Debugf("Applying PVC '%s' in namespace '%s' for VMI '%s'\n", pvcName, vmo.Namespace, vmo.Name)
@@ -70,7 +70,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		if existingPvc != nil {
 			if storageClassInfo.PvcAcceptsZone {
 				zone := getZoneFromExistingPvc(storageClassInfo, existingPvc)
-				deploymentToAdMap[pvcName] = zone
+				pvcToAdMap[pvcName] = zone
 				if strings.Contains(existingPvc.Name, config.Prometheus.Name) {
 					prometheusAdCounter.Inc(zone)
 				} else if strings.Contains(existingPvc.Name, "elasticsearch") {
@@ -97,19 +97,19 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
 
 			if err != nil {
-				return deploymentToAdMap, err
+				return pvcToAdMap, err
 			}
 
-			deploymentToAdMap[pvcName] = newAd
+			pvcToAdMap[pvcName] = newAd
 
 		}
 		if err != nil {
-			return deploymentToAdMap, err
+			return pvcToAdMap, err
 		}
 		controller.log.Debugf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
-	return deploymentToAdMap, nil
+	return pvcToAdMap, nil
 }
 
 // AdPvcCounter type for AD PVC counts
@@ -153,27 +153,30 @@ func (p *AdPvcCounter) GetLeastUsedAd() string {
 }
 
 // Determines the storage class to use for the current environment
-func determineStorageClass(controller *Controller) (*storagev1.StorageClass, error) {
-	var storageClass *storagev1.StorageClass
-	var err error
-
-	// If a storage class was explicitly specified, use that
-	if controller.operatorConfig.Pvcs.StorageClass != "" {
-		storageClass, err = controller.storageClassLister.Get(controller.operatorConfig.Pvcs.StorageClass)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to fetch storage class %s: %v", controller.operatorConfig.Pvcs.StorageClass, err)
-		}
-	} else { // Otherwise we'll use the "default"
-		storageClasses, err := controller.storageClassLister.List(labels.Everything())
-		if err != nil {
-			return nil, err
-		}
-		storageClass, err = getDefaultStorageClass(storageClasses)
-		if err != nil {
-			return nil, err
-		}
+func determineStorageClass(controller *Controller, className *string) (*storagev1.StorageClass, error) {
+	if className != nil {
+		// If a storage class was explicitly specified via the VMO API, use that
+		return getStorageClassByName(controller, *className)
+	} else if controller.operatorConfig.Pvcs.StorageClass != "" {
+		// if a storageclass was configured in the operator, use that
+		return getStorageClassByName(controller, controller.operatorConfig.Pvcs.StorageClass)
 	}
-	return storageClass, nil
+
+	// Otherwise we'll use the "default" storage class
+	storageClasses, err := controller.storageClassLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	return getDefaultStorageClass(storageClasses)
+}
+
+func getStorageClassByName(controller *Controller, className string) (*storagev1.StorageClass, error) {
+	storageClass, err := controller.storageClassLister.Get(className)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch storage class %s: %v", className, err)
+	}
+
+	return storageClass, err
 }
 
 // Parses the given storage class into a StorageClassInfo objects

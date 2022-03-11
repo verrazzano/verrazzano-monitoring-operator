@@ -485,6 +485,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if err != nil {
 		errorObserved = true
 	}
+
 	/*********************
 	 * Create StatefulSets
 	 **********************/
