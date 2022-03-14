@@ -21,10 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-// Creates PVCs for the given VMO instance.  Returns a pvc->AD map, which is populated *only if* AD information
+//CreatePersistentVolumeClaims Creates PVCs for the given VMO instance.  Returns a pvc->AD map, which is populated *only if* AD information
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
-func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
 	// Inspect the Storage Class to use
 	storageClass, err := determineStorageClass(controller, vmo.Spec.StorageClass)
 	if err != nil {
@@ -32,7 +32,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	}
 	storageClassInfo := parseStorageClassInfo(storageClass, controller.operatorConfig)
 
-	pvcList, err := pvcs.New(vmo, storageClass.Name)
+	expectedPVCs, err := pvcs.New(vmo, storageClass.Name)
 	if err != nil {
 		controller.log.Errorf("Failed to create PVC specs for VMI %s: %v", vmo.Name, err)
 		return nil, err
@@ -51,10 +51,8 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	prometheusAdCounter := NewAdPvcCounter(schedulableADs)
 	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
 
-	var pvcNames []string
-	for _, currPvc := range pvcList {
-		pvcName := currPvc.Name
-		pvcNames = append(pvcNames, pvcName)
+	for _, expectedPVC := range expectedPVCs {
+		pvcName := expectedPVC.Name
 		if pvcName == "" {
 			// We choose to absorb the error here as the worker would requeue the
 			// resource otherwise. Instead, the next time the resource is updated
@@ -66,14 +64,26 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		controller.log.Debugf("Applying PVC '%s' in namespace '%s' for VMI '%s'\n", pvcName, vmo.Namespace, vmo.Name)
 		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).Get(pvcName)
 
-		// If the PVC already exists, we *only* read its current AD, *if possible* (this is not possible for all storage classes and situations)
+		// If the PVC already exists, we check if it needs resizing
 		if existingPvc != nil {
+			if existingPvc.Status.Phase != corev1.ClaimBound {
+				return nil, fmt.Errorf("not yet bound: %s", existingPvc.Name)
+			}
+			if pvcNeedsResize(existingPvc, expectedPVC) {
+				if newPVCName, err := resizePVC(controller, vmo, existingPvc, expectedPVC, storageClass); err != nil {
+					return nil, err
+				} else if newPVCName != nil {
+					// we need to wait until the PVC is bound
+					return pvcToAdMap, nil
+				}
+			}
+
 			if storageClassInfo.PvcAcceptsZone {
 				zone := getZoneFromExistingPvc(storageClassInfo, existingPvc)
 				pvcToAdMap[pvcName] = zone
 				if strings.Contains(existingPvc.Name, config.Prometheus.Name) {
 					prometheusAdCounter.Inc(zone)
-				} else if strings.Contains(existingPvc.Name, "elasticsearch") {
+				} else if isOpenSearchPVC(existingPvc) {
 					elasticsearchAdCounter.Inc(zone)
 				}
 			}
@@ -81,20 +91,20 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			// If the StorageClass allows us to specify zone info on the PVC, we'll do that now
 			var newAd string
 			if storageClassInfo.PvcAcceptsZone {
-				if strings.Contains(currPvc.Name, config.Prometheus.Name) {
+				if strings.Contains(expectedPVC.Name, config.Prometheus.Name) {
 					newAd = prometheusAdCounter.GetLeastUsedAd()
 					prometheusAdCounter.Inc(newAd)
-				} else if strings.Contains(currPvc.Name, "elasticsearch") {
+				} else if isOpenSearchPVC(expectedPVC) {
 					newAd = elasticsearchAdCounter.GetLeastUsedAd()
 					elasticsearchAdCounter.Inc(newAd)
 				} else {
 					newAd = chooseRandomElementFromSlice(schedulableADs)
 				}
-				currPvc.Spec.Selector = &metav1.LabelSelector{MatchLabels: map[string]string{storageClassInfo.PvcZoneMatchLabel: newAd}}
+				expectedPVC.Spec.Selector = &metav1.LabelSelector{MatchLabels: map[string]string{storageClassInfo.PvcZoneMatchLabel: newAd}}
 			}
-			controller.log.Oncef("Creating PVC %s in AD %s", currPvc.Name, newAd)
+			controller.log.Oncef("Creating PVC %s in AD %s", expectedPVC.Name, newAd)
 
-			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), expectedPVC, metav1.CreateOptions{})
 
 			if err != nil {
 				return pvcToAdMap, err
@@ -109,7 +119,7 @@ func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		controller.log.Debugf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
-	return pvcToAdMap, nil
+	return pvcToAdMap, cleanupUnusedPVCs(controller, vmo)
 }
 
 // AdPvcCounter type for AD PVC counts

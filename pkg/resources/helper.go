@@ -5,10 +5,12 @@ package resources
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -19,6 +21,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+var runes = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+
+//GetNewRandomPrefix generates a random alphanumeric string of the format [a-z0-9]{size}
+func GetNewRandomPrefix(size int) string {
+	rand.Seed(time.Now().UnixNano())
+	builder := strings.Builder{}
+	for i := 0; i < size; i++ {
+		builder.WriteRune(runes[rand.Intn(len(runes))])
+	}
+	return builder.String()
+}
 
 // GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {

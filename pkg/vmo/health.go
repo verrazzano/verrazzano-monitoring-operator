@@ -38,32 +38,49 @@ var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, e
 	return client.Do(request)
 }
 
+func IsOpenSearchUpgradeable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	return opensearchHealth(vmo, true)
+}
+
 //IsOpenSearchReady verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
 // and that each node is running the expected version
-func IsOpenSearchReady(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
+func IsOpenSearchReady(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	return opensearchHealth(vmo, false)
+}
+
+func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {
 	// Verify that the cluster is Green
 	clusterHealth, err := getOpenSearchClusterHealth(vmo)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if !(clusterHealth.Status == HealthGreen) {
-		return false, nil
+		return fmt.Errorf("OpenSearch health is %s", clusterHealth.Status)
 	}
 
 	// Verify that the nodes are running the expected version
 	nodes, err := getOpenSearchNodes(vmo)
 	if err != nil {
-		return false, err
+		return err
+	}
+
+	if checkNodeCount {
+		// Verify that the count of nodes matches the spec
+		opensearchSpec := vmo.Spec.Elasticsearch
+		expectedNodes := int(opensearchSpec.IngestNode.Replicas + opensearchSpec.MasterNode.Replicas + opensearchSpec.DataNode.Replicas)
+		if expectedNodes != len(nodes) {
+			return fmt.Errorf("Expected %d OpenSearch nodes, got %d", expectedNodes, len(nodes))
+		}
 	}
 
 	// If any node is not running the expected version, the cluster is not ready
 	for _, node := range nodes {
 		if node.Version != config.ESWaitTargetVersion {
-			return false, nil
+			return fmt.Errorf("Not all OpenSearch nodes are upgrade to %s version", config.ESWaitTargetVersion)
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Node, error) {
