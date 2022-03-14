@@ -49,6 +49,8 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		controller.log.Debugf("Applying StatefulSet '%s' in namespace '%s' for VMI '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
+			// Changes to VolumeClaimTemplates are not supported without recreating the statefulset
+			curStatefulSet.Spec.VolumeClaimTemplates = existingStatefulSet.Spec.VolumeClaimTemplates
 			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
 				controller.log.Oncef("Statefulset %s/%s has spec differences %s", curStatefulSet.Namespace, curStatefulSet.Name, specDiffs)
@@ -91,6 +93,10 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 
 	controller.log.Oncef("Successfully applied StatefulSets for VMI %s", vmo.Name)
 	return nil
+}
+
+func fixVolumeClaimTemplate(old, new *appsv1.StatefulSet) {
+
 }
 
 // Update each PVC metadata.ownerReferences field to refer to the StatefulSet (STS).
