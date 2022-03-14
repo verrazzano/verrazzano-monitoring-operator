@@ -22,12 +22,12 @@ import (
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	storageClass, err := determineStorageClass(controller, vmo.Spec.StorageClass)
+	storageClass, err := getStorageClassOverride(controller, vmo.Spec.StorageClass)
 	if err != nil {
 		controller.log.Errorf("Failed to determine storage class for VMI %s: %v", vmo.Name, err)
 		return err
 	}
-	statefulSetList, err := statefulsets.New(controller.log, vmo, storageClass.Name)
+	statefulSetList, err := statefulsets.New(controller.log, vmo, storageClass)
 	if err != nil {
 		controller.log.Errorf("Failed to create StatefulSet specs for VMI %s: %v", vmo.Name, err)
 		return err
@@ -49,6 +49,8 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		controller.log.Debugf("Applying StatefulSet '%s' in namespace '%s' for VMI '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
+			// Changes to VolumeClaimTemplates are not supported without recreating the statefulset
+			curStatefulSet.Spec.VolumeClaimTemplates = existingStatefulSet.Spec.VolumeClaimTemplates
 			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
 			if specDiffs != "" {
 				controller.log.Oncef("Statefulset %s/%s has spec differences %s", curStatefulSet.Namespace, curStatefulSet.Name, specDiffs)

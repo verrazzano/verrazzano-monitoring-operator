@@ -154,12 +154,12 @@ func (p *AdPvcCounter) GetLeastUsedAd() string {
 
 // Determines the storage class to use for the current environment
 func determineStorageClass(controller *Controller, className *string) (*storagev1.StorageClass, error) {
-	if className != nil {
-		// If a storage class was explicitly specified via the VMO API, use that
-		return getStorageClassByName(controller, *className)
-	} else if controller.operatorConfig.Pvcs.StorageClass != "" {
-		// if a storageclass was configured in the operator, use that
-		return getStorageClassByName(controller, controller.operatorConfig.Pvcs.StorageClass)
+	storageClass, err := getStorageClassOverride(controller, className)
+	if err != nil {
+		return nil, err
+	}
+	if storageClass != nil {
+		return storageClass, nil
 	}
 
 	// Otherwise we'll use the "default" storage class
@@ -168,6 +168,17 @@ func determineStorageClass(controller *Controller, className *string) (*storagev
 		return nil, err
 	}
 	return getDefaultStorageClass(storageClasses)
+}
+
+func getStorageClassOverride(controller *Controller, className *string) (*storagev1.StorageClass, error) {
+	if className != nil {
+		// If a storage class was explicitly specified via the VMO API, use that
+		return getStorageClassByName(controller, *className)
+	} else if controller.operatorConfig.Pvcs.StorageClass != "" {
+		// if a storageclass was configured in the operator, use that
+		return getStorageClassByName(controller, controller.operatorConfig.Pvcs.StorageClass)
+	}
+	return nil, nil
 }
 
 func getStorageClassByName(controller *Controller, className string) (*storagev1.StorageClass, error) {

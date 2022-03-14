@@ -6,6 +6,8 @@ package statefulsets
 import (
 	"fmt"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	storagev1 "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"testing"
 
@@ -22,13 +24,19 @@ import (
 
 const defaultStorageClass = "default"
 
+var storageClass = storagev1.StorageClass{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: defaultStorageClass,
+	},
+}
+
 // TestVMOEmptyStatefulSetSize tests the creation of a VMI without StatefulSets
 // GIVEN a VMI spec with empty AlertManager and ElasticSearch specs
 //  WHEN I call New
 //  THEN there should be no StatefulSets created
 func TestVMOEmptyStatefulSetSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	statefulsets, err := New(vzlog.DefaultLogger(), vmo, defaultStorageClass)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass)
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,7 +58,7 @@ func TestVMODisabledSpecs(t *testing.T) {
 			},
 		},
 	}
-	statefulsets, err := New(vzlog.DefaultLogger(), vmo, defaultStorageClass)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass)
 	if err != nil {
 		t.Error(err)
 	}
@@ -111,7 +119,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	// Create the stateful sets
-	statefulsets, err := New(vzlog.DefaultLogger(), vmo, defaultStorageClass)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass)
 	if err != nil {
 		t.Error(err)
 	}

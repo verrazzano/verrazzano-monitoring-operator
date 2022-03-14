@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
+	storagev1 "k8s.io/api/storage/v1"
 	"strings"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -21,7 +22,7 @@ import (
 )
 
 // New creates StatefulSet objects for a VMO resource
-func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass string) ([]*appsv1.StatefulSet, error) {
+func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
@@ -36,7 +37,7 @@ func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 }
 
 // Creates StatefulSet for Elasticsearch Master
-func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass string) *appsv1.StatefulSet {
+func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
@@ -193,13 +194,18 @@ fi`,
 					Namespace: vmo.Namespace,
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
-					StorageClassName: &storageClass,
-					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storage.Size)},
 					},
 				},
 			}}
+		// Only set the storage class name if one was explicitly specified by the user.
+		// This is to facilitate upgrades where storage class name is empty,
+		// since you cannot update this field of a statefulset
+		if storageClass != nil {
+			statefulSet.Spec.VolumeClaimTemplates[0].Spec.StorageClassName = &storageClass.Name
+		}
 	} else {
 		statefulSet.Spec.Template.Spec.Volumes = []corev1.Volume{
 			{
