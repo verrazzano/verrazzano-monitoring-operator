@@ -95,10 +95,6 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	return nil
 }
 
-func fixVolumeClaimTemplate(old, new *appsv1.StatefulSet) {
-
-}
-
 // Update each PVC metadata.ownerReferences field to refer to the StatefulSet (STS).
 // PVCs are created automatically by Kubernetes when the STS is created
 // because the STS has a volumeClaimTemplate.  However, the PVCs are not deleted
