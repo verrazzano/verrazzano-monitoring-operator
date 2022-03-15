@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"io"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
@@ -46,6 +47,16 @@ const (
 			"version": "1.2.3",
 			"roles": [
 				"data"
+			]
+		}
+	}
+}`
+	wrongCountNodes = `{
+	"nodes": {
+		"1": {
+			"version": "1.2.3",
+			"roles": [
+				"master"
 			]
 		}
 	}
@@ -96,7 +107,8 @@ const (
 
 var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 	ObjectMeta: metav1.ObjectMeta{
-		Name: "system",
+		Name:      "system",
+		Namespace: constants.VerrazzanoSystemNamespace,
 	},
 	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 		Elasticsearch: vmcontrollerv1.Elasticsearch{
@@ -131,33 +143,33 @@ func mockHTTPGenerator(body1, body2 string, code1, code2 int) func(client *http.
 func TestIsOpenSearchHealthy(t *testing.T) {
 	config.ESWaitTargetVersion = "1.2.3"
 	var tests = []struct {
-		name      string
-		httpFunc  func(client *http.Client, request *http.Request) (*http.Response, error)
-		isHealthy bool
-		isError   bool
+		name     string
+		httpFunc func(client *http.Client, request *http.Request) (*http.Response, error)
+		isError  bool
 	}{
 		{
 			"healthy when cluster health is green and nodes are ready",
 			mockHTTPGenerator(healthyCluster, healthyNodes, 200, 200),
-			true,
 			false,
 		},
 		{
 			"unhealthy when cluster health is yellow",
 			mockHTTPGenerator(unhealthyClusterStatus, healthyNodes, 200, 200),
-			false,
-			false,
+			true,
 		},
 		{
 			"unhealthy when expected node version is not all updated",
 			mockHTTPGenerator(healthyNodes, wrongNodeVersion, 200, 200),
-			false,
-			false,
+			true,
+		},
+		{
+			"unhealthy when expected node version is not all updated",
+			mockHTTPGenerator(healthyNodes, wrongCountNodes, 200, 200),
+			true,
 		},
 		{
 			"unhealthy when cluster status code is not OK",
 			mockHTTPGenerator(healthyCluster, healthyNodes, 403, 200),
-			false,
 			true,
 		},
 		{
@@ -165,7 +177,6 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 			func(client *http.Client, request *http.Request) (*http.Response, error) {
 				return nil, errors.New("boom")
 			},
-			false,
 			true,
 		},
 	}
@@ -173,8 +184,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			doHTTP = tt.httpFunc
-			healthy, err := IsOpenSearchReady(&testvmo)
-			assert.Equal(t, tt.isHealthy, healthy)
+			err := IsOpenSearchUpdated(&testvmo)
 			if tt.isError {
 				assert.Error(t, err)
 			} else {
