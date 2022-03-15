@@ -38,14 +38,10 @@ var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, e
 	return client.Do(request)
 }
 
-func IsOpenSearchUpgradeable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return opensearchHealth(vmo, true)
-}
-
-//IsOpenSearchReady verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
+//IsOpenSearchUpdated verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
 // and that each node is running the expected version
-func IsOpenSearchReady(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return opensearchHealth(vmo, false)
+func IsOpenSearchUpdated(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	return opensearchHealth(vmo, true)
 }
 
 func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {

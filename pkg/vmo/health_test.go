@@ -51,6 +51,16 @@ const (
 		}
 	}
 }`
+	wrongCountNodes = `{
+	"nodes": {
+		"1": {
+			"version": "1.2.3",
+			"roles": [
+				"master"
+			]
+		}
+	}
+}`
 	healthyNodes = `{
 	"nodes": {
 		"1": {
@@ -153,6 +163,11 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 			true,
 		},
 		{
+			"unhealthy when expected node version is not all updated",
+			mockHTTPGenerator(healthyNodes, wrongCountNodes, 200, 200),
+			true,
+		},
+		{
 			"unhealthy when cluster status code is not OK",
 			mockHTTPGenerator(healthyCluster, healthyNodes, 403, 200),
 			true,
@@ -169,7 +184,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			doHTTP = tt.httpFunc
-			err := IsOpenSearchReady(&testvmo)
+			err := IsOpenSearchUpdated(&testvmo)
 			if tt.isError {
 				assert.Error(t, err)
 			} else {
