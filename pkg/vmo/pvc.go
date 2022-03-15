@@ -25,6 +25,8 @@ import (
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
 func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+	// Update storage with the new API
+	setPerNodeStorage(vmo)
 	// Inspect the Storage Class to use
 	storageClass, err := determineStorageClass(controller, vmo.Spec.StorageClass)
 	if err != nil {

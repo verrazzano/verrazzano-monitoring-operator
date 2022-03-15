@@ -71,7 +71,7 @@ func TestGetUnboundPVCs(t *testing.T) {
 		"pvc4",
 	}
 
-	unboundPVCNames := getUnbouncdPVCs(pvcs, boundPVCNames)
+	unboundPVCNames := getUnboundPVCs(pvcs, boundPVCNames)
 	assert.Equal(t, 2, len(unboundPVCNames))
 	assert.Equal(t, "pvc1", unboundPVCNames[0].Name)
 	assert.Equal(t, "pvc3", unboundPVCNames[1].Name)
@@ -158,10 +158,12 @@ func TestUpdateVMOStorageForPVC(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Storage: vmcontrollerv1.Storage{
-					PvcNames: []string{
-						"some other pvc",
-						"oldpvc",
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Storage: &vmcontrollerv1.Storage{
+						PvcNames: []string{
+							"some other pvc",
+							"oldpvc",
+						},
 					},
 				},
 			},
@@ -169,10 +171,42 @@ func TestUpdateVMOStorageForPVC(t *testing.T) {
 	}
 
 	updateVMOStorageForPVC(vmo, "oldpvc", "newpvc")
-	assert.Equal(t, "newpvc", vmo.Spec.Elasticsearch.Storage.PvcNames[1])
+	assert.Equal(t, "newpvc", vmo.Spec.Elasticsearch.DataNode.Storage.PvcNames[1])
 }
 
 func TestIsOpenSearchPVC(t *testing.T) {
 	assert.True(t, isOpenSearchPVC(makePVC("vmi-system-es-data-0", "1Gi")))
 	assert.False(t, isOpenSearchPVC(makePVC("vmi-system-grafana", "1Gi")))
+}
+
+func TestSetPerNodeStorage(t *testing.T) {
+	pvcNames := []string{
+		"some other pvc",
+		"oldpvc",
+	}
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+				},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+				},
+				Storage: vmcontrollerv1.Storage{
+					Size:     "1Gi",
+					PvcNames: pvcNames,
+				},
+			},
+		},
+	}
+
+	setPerNodeStorage(vmo)
+	dataNode := vmo.Spec.Elasticsearch.DataNode
+	assert.NotNil(t, dataNode.Storage)
+	assert.Equal(t, dataNode.Storage.Size, "1Gi")
+	assert.ElementsMatch(t, pvcNames, dataNode.Storage.PvcNames)
+	masterNode := vmo.Spec.Elasticsearch.MasterNode
+	assert.NotNil(t, masterNode.Storage)
+	assert.Equal(t, masterNode.Storage.Size, "1Gi")
 }

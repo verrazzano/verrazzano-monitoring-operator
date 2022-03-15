@@ -65,7 +65,7 @@ func cleanupUnusedPVCs(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if err != nil {
 		return err
 	}
-	unboundPVCs := getUnbouncdPVCs(allPVCs, inUsePVCNames)
+	unboundPVCs := getUnboundPVCs(allPVCs, inUsePVCNames)
 
 	for _, unboundPVC := range unboundPVCs {
 		err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(unboundPVC.Namespace).Delete(context.TODO(), unboundPVC.Name, metav1.DeleteOptions{})
@@ -89,8 +89,8 @@ func getInUsePVCNames(deployments []*appsv1.Deployment) []string {
 	return inUsePVCNames
 }
 
-//getUnbouncdPVCs gets the VMO-managed PVCs which are not currently used by VMO deployments
-func getUnbouncdPVCs(pvcs []*corev1.PersistentVolumeClaim, boundPVCNames []string) []*corev1.PersistentVolumeClaim {
+//getUnboundPVCs gets the VMO-managed PVCs which are not currently used by VMO deployments
+func getUnboundPVCs(pvcs []*corev1.PersistentVolumeClaim, boundPVCNames []string) []*corev1.PersistentVolumeClaim {
 	isPVCBound := func(pvc *corev1.PersistentVolumeClaim, boundPVCNames []string) bool {
 		for _, pvcName := range boundPVCNames {
 			if pvcName == pvc.Name {
@@ -139,23 +139,38 @@ func newPVCName(pvcName string, size int) (string, error) {
 
 //updateVMOStorageForPVC updates the VMO storage to replace an old PVC with a new PVC
 func updateVMOStorageForPVC(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, oldPVCName, newPVCName string) {
-	updateStorage := func(storage *vmcontrollerv1.Storage) bool {
-		for idx, pvcName := range storage.PvcNames {
-			if pvcName == oldPVCName {
-				storage.PvcNames[idx] = newPVCName
-				return true
+	updateStorage := func(storage *vmcontrollerv1.Storage) {
+		if storage != nil {
+			for idx, pvcName := range storage.PvcNames {
+				if pvcName == oldPVCName {
+					storage.PvcNames[idx] = newPVCName
+				}
 			}
 		}
-
-		return false
 	}
 
 	// Look for the PVC reference and update it
-	if ok := updateStorage(&vmo.Spec.Prometheus.Storage); ok {
-		return
+	updateStorage(&vmo.Spec.Prometheus.Storage)
+	updateStorage(&vmo.Spec.Grafana.Storage)
+	updateStorage(vmo.Spec.Elasticsearch.DataNode.Storage)
+}
+
+//setPerNodeStorage updates the VMO OpenSearch storage spec to reflect the current API
+func setPerNodeStorage(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
+	updateFunc := func(storage *vmcontrollerv1.Storage, node *vmcontrollerv1.ElasticsearchNode) {
+		if node.Replicas > 0 && node.Storage == nil {
+			node.Storage = &vmcontrollerv1.Storage{
+				Size: storage.Size,
+			}
+		}
 	}
-	if ok := updateStorage(&vmo.Spec.Grafana.Storage); ok {
-		return
+
+	updateFunc(&vmo.Spec.Elasticsearch.Storage, &vmo.Spec.Elasticsearch.MasterNode)
+	updateFunc(&vmo.Spec.Elasticsearch.Storage, &vmo.Spec.Elasticsearch.DataNode)
+	if vmo.Spec.Elasticsearch.DataNode.Storage != nil && len(vmo.Spec.Elasticsearch.Storage.PvcNames) > 0 {
+		vmo.Spec.Elasticsearch.DataNode.Storage.PvcNames = make([]string, len(vmo.Spec.Elasticsearch.Storage.PvcNames))
+		copy(vmo.Spec.Elasticsearch.DataNode.Storage.PvcNames, vmo.Spec.Elasticsearch.Storage.PvcNames)
 	}
-	updateStorage(&vmo.Spec.Elasticsearch.Storage)
+
+	vmo.Spec.Elasticsearch.Storage = vmcontrollerv1.Storage{}
 }

@@ -107,13 +107,20 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 				Replicas: alertManagerReplicas,
 			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled:    true,
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: masterNodeReplicas},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: dataNodeReplicas},
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: ingestNodeReplicas},
-				Storage: vmcontrollerv1.Storage{
-					Size: storageSize,
+				Enabled: true,
+				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: masterNodeReplicas,
+					Storage: &vmcontrollerv1.Storage{
+						Size: storageSize,
+					},
 				},
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: dataNodeReplicas,
+					Storage: &vmcontrollerv1.Storage{
+						Size: storageSize,
+					},
+				},
+				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: ingestNodeReplicas},
 			},
 		},
 	}

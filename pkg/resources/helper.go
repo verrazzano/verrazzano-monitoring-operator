@@ -28,7 +28,7 @@ var runes = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 func GetNewRandomPrefix(size int) (string, error) {
 	builder := strings.Builder{}
 	for i := 0; i < size; i++ {
-		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes)+1)))
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
 		if err != nil {
 			return "", err
 		}
@@ -208,15 +208,6 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 			},
 		},
 	}
-}
-
-//GetStorageForNode selects the Storage object to use, prioritizing the node-level configuration
-// Spec.Elasticsearch.Storage exists for historical reasons, and we use this function to ensure compatibility
-func GetStorageForNode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, node vmcontrollerv1.ElasticsearchNode) *vmcontrollerv1.Storage {
-	if node.Storage != nil {
-		return node.Storage
-	}
-	return &vmo.Spec.Elasticsearch.Storage
 }
 
 // GetElasticsearchMasterInitContainer return an Elasticsearch Init container for the master.  This changes ownership of
