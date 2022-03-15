@@ -33,13 +33,9 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 			return err
 		}
 	} else {
-		var ready bool
-		ready, err = IsOpenSearchReady(vmo)
+		err = IsOpenSearchUpdated(vmo)
 		if err != nil {
 			return err
-		}
-		if !ready {
-			return errors.New("waiting for OpenSearch cluster to be ready before updating OpenSearch Dashboards")
 		}
 		addKibanaUpgradeStrategy(osd, existingDeployment)
 		err = updateDeployment(controller, vmo, existingDeployment, osd)
