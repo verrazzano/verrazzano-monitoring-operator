@@ -439,6 +439,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	errorObserved := false
 
 	/*********************
+	 * Configure ISM
+	 **********************/
+	ismChannel := ConfigureIndexManagementPlugin(vmo)
+
+	/*********************
 	 * Create RoleBindings
 	 **********************/
 	err = CreateRoleBindings(c, vmo)
@@ -516,6 +521,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
 			errorObserved = true
 		}
+	}
+
+	ismErr := <-ismChannel
+	if ismErr != nil {
+		c.log.Errorf("Failed to configure ISM Policies: %v", ismErr)
+		errorObserved = true
 	}
 	if !errorObserved && !deploymentsDirty && len(c.buildVersion) > 0 && vmo.Spec.Versioning.CurrentVersion != c.buildVersion {
 		// The spec.versioning.currentVersion field should not be updated to the new value until a sync produces no

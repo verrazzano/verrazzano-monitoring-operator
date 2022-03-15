@@ -8,10 +8,8 @@ import (
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"net/http"
-	"os"
 )
 
 type (
@@ -30,12 +28,17 @@ type (
 )
 
 const (
-	MasterHTTPEndpoint = "VMO_MASTER_HTTP_ENDPOINT"
-	HealthGreen        = "green"
+	HealthGreen = "green"
 )
 
 var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
 	return client.Do(request)
+}
+
+func resetDoHTTP() {
+	doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
+		return client.Do(request)
+	}
 }
 
 //IsOpenSearchUpdated verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
@@ -80,7 +83,7 @@ func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNod
 }
 
 func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Node, error) {
-	url := getOpenSearchHTTPEndpoint(vmo) + "/_nodes/settings"
+	url := resources.GetOpenSearchHTTPEndpoint(vmo) + "/_nodes/settings"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -117,7 +120,7 @@ func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Nod
 }
 
 func getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*ClusterHealth, error) {
-	url := getOpenSearchHTTPEndpoint(vmo) + "/_cluster/health"
+	url := resources.GetOpenSearchHTTPEndpoint(vmo) + "/_cluster/health"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -136,15 +139,4 @@ func getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 		return nil, err
 	}
 	return clusterHealth, nil
-}
-
-func getOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
-	// The master HTTP port may be overridden if necessary.
-	// This can be useful in situations where the VMO does not have direct access to the cluster service,
-	// such as when you are using port-forwarding.
-	masterServiceEndpoint := os.Getenv(MasterHTTPEndpoint)
-	if len(masterServiceEndpoint) > 0 {
-		return masterServiceEndpoint
-	}
-	return fmt.Sprintf("http://%s-http:%d", resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHttpPort)
 }

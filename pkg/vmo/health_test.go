@@ -190,6 +190,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			resetDoHTTP()
 		})
 	}
 }

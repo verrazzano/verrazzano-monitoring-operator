@@ -113,11 +113,12 @@ type (
 
 	// Elasticsearch details
 	Elasticsearch struct {
-		Enabled    bool              `json:"enabled" yaml:"enabled"`
-		Storage    Storage           `json:"storage,omitempty"`
-		IngestNode ElasticsearchNode `json:"ingestNode,omitempty"`
-		MasterNode ElasticsearchNode `json:"masterNode,omitempty"`
-		DataNode   ElasticsearchNode `json:"dataNode,omitempty"`
+		Enabled         bool              `json:"enabled" yaml:"enabled"`
+		Storage         Storage           `json:"storage,omitempty"`
+		IngestNode      ElasticsearchNode `json:"ingestNode,omitempty"`
+		MasterNode      ElasticsearchNode `json:"masterNode,omitempty"`
+		DataNode        ElasticsearchNode `json:"dataNode,omitempty"`
+		IndexManagement *IndexManagement  `json:"indexManagement,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
@@ -126,6 +127,12 @@ type (
 		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
 		Resources Resources `json:"resources,omitempty"`
 		Storage   *Storage  `json:"storage,omitempty"`
+	}
+
+	IndexManagement struct {
+		Enabled                *bool   `json:"enabled,omitempty"`
+		MaxSystemIndexAge      *string `json:"maxSystemIndexAge,omitempty"`
+		MaxApplicationIndexAge *string `json:"maApplicationIndexAge,omitempty"`
 	}
 
 	// Kibana details
