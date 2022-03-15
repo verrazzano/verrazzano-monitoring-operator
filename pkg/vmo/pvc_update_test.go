@@ -47,8 +47,8 @@ func makeDeploymentWithPVC(pvc *corev1.PersistentVolumeClaim) *appsv1.Deployment
 	if pvc != nil {
 		d.Spec.Template.Spec.Volumes = []corev1.Volume{
 			{
-				pvc.Name,
-				corev1.VolumeSource{
+				Name: pvc.Name,
+				VolumeSource: corev1.VolumeSource{
 					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 						ClaimName: pvc.Name,
 					},
@@ -108,7 +108,8 @@ func TestNewPVCName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			newName := newPVCName(tt.name, prefixSize)
+			newName, err := newPVCName(tt.name, prefixSize)
+			assert.NoError(t, err)
 			assert.NotEqual(t, tt.name, newName)
 			if tt.resizedName {
 				assert.Equal(t, len(tt.name)+1+prefixSize, len(newName))

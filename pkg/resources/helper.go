@@ -4,13 +4,13 @@
 package resources
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -25,13 +25,16 @@ import (
 var runes = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 //GetNewRandomPrefix generates a random alphanumeric string of the format [a-z0-9]{size}
-func GetNewRandomPrefix(size int) string {
-	rand.Seed(time.Now().UnixNano())
+func GetNewRandomPrefix(size int) (string, error) {
 	builder := strings.Builder{}
 	for i := 0; i < size; i++ {
-		builder.WriteRune(runes[rand.Intn(len(runes))])
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes)+1)))
+		if err != nil {
+			return "", err
+		}
+		builder.WriteRune(runes[idx.Int64()])
 	}
-	return builder.String()
+	return builder.String(), nil
 }
 
 // GetMetaName returns name

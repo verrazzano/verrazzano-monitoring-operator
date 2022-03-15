@@ -38,8 +38,12 @@ func resizePVC(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	expectedPVC.Spec.Selector = existingPVC.Spec.Selector
 	// because the new PVC will exist concurrently with the old PVC, it needs a new name
 	// the new name is based off the old name to help correlate the PVC with its deploymnt
-	expectedPVC.Name = newPVCName(expectedPVC.Name, 5)
-	_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), expectedPVC, metav1.CreateOptions{})
+	newName, err := newPVCName(expectedPVC.Name, 5)
+	if err != nil {
+		return nil, err
+	}
+	expectedPVC.Name = newName
+	_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), expectedPVC, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -118,15 +122,19 @@ func pvcNeedsResize(existingPVC, expectedPVC *corev1.PersistentVolumeClaim) bool
 }
 
 //newPVCName adds a prefix if not present, otherwise it rewrites the existing prefix
-func newPVCName(pvcName string, size int) string {
+func newPVCName(pvcName string, size int) (string, error) {
 	pvcNameSplit := strings.Split(pvcName, "-")
+	prefix, err := resources.GetNewRandomPrefix(size)
+	if err != nil {
+		return "", err
+	}
 	if pvcNameSplit[0] == "vmi" {
-		pvcNameSplit = append([]string{resources.GetNewRandomPrefix(size)}, pvcNameSplit...)
+		pvcNameSplit = append([]string{prefix}, pvcNameSplit...)
 	} else {
-		pvcNameSplit[0] = resources.GetNewRandomPrefix(size)
+		pvcNameSplit[0] = prefix
 	}
 
-	return strings.Join(pvcNameSplit, "-")
+	return strings.Join(pvcNameSplit, "-"), nil
 }
 
 //updateVMOStorageForPVC updates the VMO storage to replace an old PVC with a new PVC
