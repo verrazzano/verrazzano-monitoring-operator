@@ -29,7 +29,7 @@ func resizePVC(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	// If we are updating an OpenSearch PVC, we need to make sure the OpenSearch cluster is ready
 	// before doing the resize
 	if isOpenSearchPVC(expectedPVC) {
-		if err := IsOpenSearchUpgradeable(vmo); err != nil {
+		if err := IsOpenSearchUpdated(vmo); err != nil {
 			return nil, err
 		}
 	}
@@ -124,14 +124,15 @@ func pvcNeedsResize(existingPVC, expectedPVC *corev1.PersistentVolumeClaim) bool
 //newPVCName adds a prefix if not present, otherwise it rewrites the existing prefix
 func newPVCName(pvcName string, size int) (string, error) {
 	pvcNameSplit := strings.Split(pvcName, "-")
-	prefix, err := resources.GetNewRandomPrefix(size)
+	suffix, err := resources.GetNewRandomId(size)
 	if err != nil {
 		return "", err
 	}
-	if pvcNameSplit[0] == "vmi" {
-		pvcNameSplit = append([]string{prefix}, pvcNameSplit...)
+	lastIdx := len(pvcNameSplit) - 1
+	if len(pvcNameSplit[lastIdx]) != size {
+		pvcNameSplit = append(pvcNameSplit, suffix)
 	} else {
-		pvcNameSplit[0] = prefix
+		pvcNameSplit[lastIdx] = suffix
 	}
 
 	return strings.Join(pvcNameSplit, "-"), nil

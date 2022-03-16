@@ -9,8 +9,10 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 	"testing"
 )
 
@@ -18,7 +20,8 @@ func makePVC(name, quantity string) *corev1.PersistentVolumeClaim {
 	q, _ := resource.ParseQuantity(quantity)
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: constants.VerrazzanoSystemNamespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -101,7 +104,7 @@ func TestNewPVCName(t *testing.T) {
 			true,
 		},
 		{
-			"abcde-" + constants.VMOServiceNamePrefix + "pvc",
+			constants.VMOServiceNamePrefix + "pvc-abcde",
 			false,
 		},
 	}
@@ -209,4 +212,42 @@ func TestSetPerNodeStorage(t *testing.T) {
 	masterNode := vmo.Spec.Elasticsearch.MasterNode
 	assert.NotNil(t, masterNode.Storage)
 	assert.Equal(t, masterNode.Storage.Size, "1Gi")
+}
+
+func TestResizePVC(t *testing.T) {
+	allowVolumeExpansion := true
+	disableVolumeExpansion := false
+	pvcName := "pvc"
+	var tests = []struct {
+		name         string
+		storageClass *storagev1.StorageClass
+		createdPVC   bool
+	}{
+		{
+			"should not create a new PVC when volume expansion is allowed",
+			&storagev1.StorageClass{AllowVolumeExpansion: &allowVolumeExpansion},
+			false,
+		},
+		{
+			"should create a new PVC when volume expansion is not allowed",
+			&storagev1.StorageClass{AllowVolumeExpansion: &disableVolumeExpansion},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			existingPVC := makePVC(pvcName, "1Gi")
+			expectedPVC := makePVC(pvcName, "2Gi")
+			c := &Controller{
+				kubeclientset: fake.NewSimpleClientset(existingPVC),
+			}
+			newName, err := resizePVC(c, &testvmo, existingPVC, expectedPVC, tt.storageClass)
+			assert.NoError(t, err)
+			if tt.createdPVC {
+				assert.NotNil(t, newName)
+				assert.NotEqual(t, *newName, pvcName)
+			}
+		})
+	}
 }
