@@ -30,12 +30,20 @@ type (
 )
 
 const (
-	MasterHTTPEndpoint = "VMO_MASTER_HTTP_ENDPOINT"
-	HealthGreen        = "green"
+	MasterHTTPEndpoint    = "VMO_MASTER_HTTP_ENDPOINT"
+	HealthGreen           = "green"
+	MinDataNodesForResize = 2
 )
 
 var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
 	return client.Do(request)
+}
+
+func IsOpenSearchResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
+		return fmt.Errorf("cannot resize OpenSearch with less than 3 data nodes. Scale up your cluster 3 or more data nodes")
+	}
+	return opensearchHealth(vmo, true)
 }
 
 //IsOpenSearchUpdated verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
