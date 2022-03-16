@@ -124,7 +124,7 @@ func pvcNeedsResize(existingPVC, expectedPVC *corev1.PersistentVolumeClaim) bool
 //newPVCName adds a prefix if not present, otherwise it rewrites the existing prefix
 func newPVCName(pvcName string, size int) (string, error) {
 	pvcNameSplit := strings.Split(pvcName, "-")
-	suffix, err := resources.GetNewRandomId(size)
+	suffix, err := resources.GetNewRandomID(size)
 	if err != nil {
 		return "", err
 	}
