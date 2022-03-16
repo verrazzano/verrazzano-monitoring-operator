@@ -38,8 +38,8 @@ func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance)
 	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHttpPort)
 }
 
-//GetNewRandomPrefix generates a random alphanumeric string of the format [a-z0-9]{size}
-func GetNewRandomPrefix(size int) (string, error) {
+//GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
+func GetNewRandomID(size int) (string, error) {
 	builder := strings.Builder{}
 	for i := 0; i < size; i++ {
 		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
