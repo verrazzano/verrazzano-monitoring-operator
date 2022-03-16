@@ -25,7 +25,7 @@ import (
 var runes = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 //GetNewRandomId generates a random alphanumeric string of the format [a-z0-9]{size}
-func GetNewRandomId(size int) (string, error) {
+func GetNewRandomID(size int) (string, error) {
 	builder := strings.Builder{}
 	for i := 0; i < size; i++ {
 		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
