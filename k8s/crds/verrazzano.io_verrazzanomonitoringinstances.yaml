@@ -63,6 +63,7 @@ spec:
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       maxSizeDisk:
+                        description: These fields are not used anywhere
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       minSizeDisk:
@@ -117,6 +118,7 @@ spec:
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                           maxSizeDisk:
+                            description: These fields are not used anywhere
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                           minSizeDisk:
@@ -146,6 +148,15 @@ spec:
                     type: object
                   enabled:
                     type: boolean
+                  indexManagement:
+                    properties:
+                      enabled:
+                        type: boolean
+                      maApplicationIndexAge:
+                        type: string
+                      maxSystemIndexAge:
+                        type: string
+                    type: object
                   ingestNode:
                     description: ElasticsearchNode Type details
                     properties:
@@ -164,6 +175,7 @@ spec:
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                           maxSizeDisk:
+                            description: These fields are not used anywhere
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                           minSizeDisk:
@@ -209,6 +221,7 @@ spec:
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                           maxSizeDisk:
+                            description: These fields are not used anywhere
                             pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                             type: string
                           minSizeDisk:
@@ -270,6 +283,7 @@ spec:
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       maxSizeDisk:
+                        description: These fields are not used anywhere
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       minSizeDisk:
@@ -320,6 +334,7 @@ spec:
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       maxSizeDisk:
+                        description: These fields are not used anywhere
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       minSizeDisk:
@@ -365,6 +380,7 @@ spec:
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       maxSizeDisk:
+                        description: These fields are not used anywhere
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                       minSizeDisk:

@@ -3,7 +3,6 @@ package vmo
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -14,11 +13,31 @@ import (
 
 type (
 	ISMPolicy struct {
-		ID             string `json:"_id"`
-		PrimaryTerm    int    `json:"_primary_term"`
-		SequenceNumber int    `json:"_seq_no"`
-		Status         int    `json:"status"`
+		ID             string       `json:"_id"`
+		PrimaryTerm    int          `json:"_primary_term"`
+		SequenceNumber int          `json:"_seq_no"`
+		Status         int          `json:"status"`
+		Policy         InlinePolicy `json:"policy"`
 	}
+
+	InlinePolicy struct {
+		States []PolicyState `json:"states"`
+	}
+
+	PolicyState struct {
+		Name        string             `json:"name"`
+		Transitions []PolicyTransition `json:"transitions"`
+	}
+
+	PolicyTransition struct {
+		StateName  string           `json:"state_name"`
+		Conditions PolicyConditions `json:"conditions"`
+	}
+
+	PolicyConditions struct {
+		MinIndexAge string `json:"min_index_age"`
+	}
+
 	ReindexInput struct {
 		SourceName      string
 		DestinationName string
@@ -149,20 +168,26 @@ var (
 //ConfigureIndexManagementPlugin sets up the ISM Policies
 func ConfigureIndexManagementPlugin(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)
-	if !isIndexManagementEnabled(vmi) {
-		return nil
-	}
-
+	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
+		if !isIndexManagementEnabled(vmi) {
+			ch <- nil
+			return
+		}
+
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
+		// setup the system ISM Policy
 		if err := createOrUpdatePolicy(opensearchEndpoint, &systemPolicyTemplate, vmi.Spec.Elasticsearch.IndexManagement.MaxSystemIndexAge); err != nil {
 			ch <- err
 			return
 		}
+
+		// setup the application ISM Policy
 		if err := createOrUpdatePolicy(opensearchEndpoint, &applicationPolicyTemplate, vmi.Spec.Elasticsearch.IndexManagement.MaxApplicationIndexAge); err != nil {
 			ch <- err
 			return
 		}
+		ch <- nil
 	}()
 
 	return ch
@@ -181,30 +206,11 @@ func createOrUpdatePolicy(opensearchEndpoint string, policy *PolicyTemplate, max
 	if err != nil {
 		return err
 	}
-
-	payloadBytes, err := formatISMPayload(policy, maxIndexAge)
+	updatedPolicy, err := putUpdatedPolicy(opensearchEndpoint, maxIndexAge, policy, existingPolicy)
 	if err != nil {
 		return err
 	}
-	var resp *http.Response
-	switch existingPolicy.Status {
-	case http.StatusOK:
-		resp, err = updateISMPolicy(opensearchEndpoint, policy.name, payloadBytes, existingPolicy)
-	case http.StatusNotFound:
-		resp, err = createNewISMPolicy(opensearchEndpoint, policy.name, payloadBytes)
-	default:
-		return errors.New("plugin 'ISM' is not enabled on your OpenSearch server")
-
-	}
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	createdPolicy := &ISMPolicy{}
-	if err := json.NewDecoder(resp.Body).Decode(createdPolicy); err != nil {
-		return err
-	}
-	return addPolicyToExistingIndices(opensearchEndpoint, policy, createdPolicy)
+	return addPolicyToExistingIndices(opensearchEndpoint, policy, updatedPolicy)
 }
 
 func getPolicyByName(policyURL string) (*ISMPolicy, error) {
@@ -221,7 +227,52 @@ func getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	if err := json.NewDecoder(resp.Body).Decode(existingPolicy); err != nil {
 		return nil, err
 	}
+	existingPolicy.Status = resp.StatusCode
 	return existingPolicy, nil
+}
+
+func putUpdatedPolicy(opensearchEndpoint string, maxIndexAge *string, policy *PolicyTemplate, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
+	payload, err := formatISMPayload(policy, maxIndexAge)
+	if err != nil {
+		return nil, err
+	}
+
+	var url string
+	var statusCode int
+	switch existingPolicy.Status {
+	case http.StatusOK: // The policy exists and must be updated in place if it has changed
+		url = fmt.Sprintf("%s/_plugins/_ism/policies/%s?if_seq_no=%d&if_primary_term=%d",
+			opensearchEndpoint,
+			policy.name,
+			existingPolicy.SequenceNumber,
+			existingPolicy.PrimaryTerm,
+		)
+		statusCode = http.StatusOK
+	case http.StatusNotFound: // The policy doesn't exist and must be updated
+		url = fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.name)
+		statusCode = http.StatusCreated
+	default:
+		return nil, fmt.Errorf("invalid status when fetching ISM Policy %s: %d", policy.name, existingPolicy.Status)
+	}
+	req, err := http.NewRequest("PUT", url, payload)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := doHTTP(http.DefaultClient, req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != statusCode {
+		return nil, fmt.Errorf("got status code %d when updating policy %s, expected %d", resp.StatusCode, policy.name, statusCode)
+	}
+	updatedISMPolicy := &ISMPolicy{}
+	err = json.NewDecoder(resp.Body).Decode(updatedISMPolicy)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedISMPolicy, nil
 }
 
 func formatISMPayload(policy *PolicyTemplate, maxIndexAge *string) (*bytes.Buffer, error) {
@@ -247,43 +298,25 @@ func formatISMPayload(policy *PolicyTemplate, maxIndexAge *string) (*bytes.Buffe
 	return buffer, nil
 }
 
-func createNewISMPolicy(opensearchEndpoint, policyName string, payload *bytes.Buffer) (*http.Response, error) {
-	url := fmt.Sprintf("%s/_plugins/_ism/_policies/%s", opensearchEndpoint, policyName)
-	req, err := http.NewRequest("PUT", url, payload)
-	if err != nil {
-		return nil, err
+func addPolicyToExistingIndices(opensearchEndpoint string, policy *PolicyTemplate, updatedPolicy *ISMPolicy) error {
+	// If no policy was updated, then there is nothing to do
+	if updatedPolicy == nil {
+		return nil
 	}
-	req.Header.Add("Content-Type", "application/json")
-	return doHTTP(http.DefaultClient, req)
-}
-
-func updateISMPolicy(opensearchEndpoint, policyName string, payload *bytes.Buffer, existingPolicy *ISMPolicy) (*http.Response, error) {
-	url := fmt.Sprintf("%s/_plugins/_ism/_policies/%s?if_seq_no=%d&if_primary_term=%d",
-		opensearchEndpoint,
-		policyName,
-		existingPolicy.SequenceNumber,
-		existingPolicy.PrimaryTerm,
-	)
-	req, err := http.NewRequest("POST", url, payload)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	return doHTTP(http.DefaultClient, req)
-}
-
-func addPolicyToExistingIndices(opensearchEndpoint string, policy *PolicyTemplate, createdPolicy *ISMPolicy) error {
 	url := fmt.Sprintf("%s/_plugins/_ism/add/%s", opensearchEndpoint, policy.indexPattern)
-	body := strings.NewReader(fmt.Sprintf(`{"policy_id": "%s"}`, createdPolicy.ID))
+	body := strings.NewReader(fmt.Sprintf(`{"policy_id": "%s"}`, updatedPolicy.ID))
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return err
 	}
+	req.Header.Add("Content-Type", "application/json")
 	resp, err := doHTTP(http.DefaultClient, req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	// TODO: Check response status code is acceptable
-	return err
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when updating indicies for policy %s", resp.StatusCode, policy.name)
+	}
+	return nil
 }
