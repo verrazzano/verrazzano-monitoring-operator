@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	appslistersv1 "k8s.io/client-go/listers/apps/v1"
-	batchlistersv1beta1 "k8s.io/client-go/listers/batch/v1beta1"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	extensionslistersv1beta1 "k8s.io/client-go/listers/extensions/v1beta1"
 	rbacv1listers1 "k8s.io/client-go/listers/rbac/v1"
@@ -59,8 +58,6 @@ type Controller struct {
 	clusterRolesSynced   cache.InformerSynced
 	configMapLister      corelistersv1.ConfigMapLister
 	configMapsSynced     cache.InformerSynced
-	cronJobLister        batchlistersv1beta1.CronJobLister
-	cronJobsSynced       cache.InformerSynced
 	deploymentLister     appslistersv1.DeploymentLister
 	deploymentsSynced    cache.InformerSynced
 	ingressLister        extensionslistersv1beta1.IngressLister
@@ -176,7 +173,6 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	// types.
 	clusterRoleInformer := kubeInformerFactory.Rbac().V1().ClusterRoles()
 	configmapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
-	cronJobInformer := kubeInformerFactory.Batch().V1beta1().CronJobs()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	ingressInformer := kubeInformerFactory.Extensions().V1beta1().Ingresses()
 	nodeInformer := kubeInformerFactory.Core().V1().Nodes()
@@ -211,8 +207,6 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		clusterRolesSynced:    clusterRoleInformer.Informer().HasSynced,
 		configMapLister:       configmapInformer.Lister(),
 		configMapsSynced:      configmapInformer.Informer().HasSynced,
-		cronJobLister:         cronJobInformer.Lister(),
-		cronJobsSynced:        cronJobInformer.Informer().HasSynced,
 		deploymentLister:      deploymentInformer.Lister(),
 		deploymentsSynced:     deploymentInformer.Informer().HasSynced,
 		ingressLister:         ingressInformer.Lister(),
@@ -296,7 +290,7 @@ func (c *Controller) Run(threadiness int) error {
 
 	// Wait for the caches to be synced before starting workers
 	zap.S().Infow("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(c.stopCh, c.clusterRolesSynced, c.configMapsSynced, c.cronJobsSynced,
+	if ok := cache.WaitForCacheSync(c.stopCh, c.clusterRolesSynced, c.configMapsSynced,
 		c.deploymentsSynced, c.ingressesSynced, c.nodesSynced, c.pvcsSynced, c.roleBindingsSynced, c.secretsSynced,
 		c.servicesSynced, c.statefulSetsSynced, c.vmosSynced, c.storageClassesSynced); !ok {
 		return errors.New("failed to wait for caches to sync")
@@ -571,7 +565,7 @@ func (c *Controller) IsHealthy() bool {
 	}
 
 	// Make sure the controller can talk to the API server and its CRD is defined.
-	crds, err := c.kubeextclientset.ApiextensionsV1beta1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
+	crds, err := c.kubeextclientset.ApiextensionsV1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
 	// Error getting CRD from API server
 	if err != nil {
 		return false
