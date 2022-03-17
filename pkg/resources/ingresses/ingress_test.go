@@ -4,8 +4,9 @@
 package ingresses
 
 import (
-	"strings"
 	"testing"
+
+	"strings"
 
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
