@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package pvcs
@@ -77,10 +77,12 @@ func TestVMOWithStorageVolumes2(t *testing.T) {
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
-				Storage: vmcontrollerv1.Storage{
-					Size:               "50Gi",
-					AvailabilityDomain: "AD1",
-					PvcNames:           []string{"elasticsearch-pvc"},
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Storage: &vmcontrollerv1.Storage{
+						Size:               "50Gi",
+						AvailabilityDomain: "AD1",
+						PvcNames:           []string{"elasticsearch-pvc"},
+					},
 				},
 			},
 		},

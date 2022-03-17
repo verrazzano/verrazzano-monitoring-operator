@@ -144,10 +144,10 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 	}
 	var deployList []*appsv1.Deployment
 	for i := 0; i < int(vmo.Spec.Elasticsearch.DataNode.Replicas); i++ {
-		elasticsearchDataDeployment := es.createElasticsearchCommonDeployment(vmo, &vmo.Spec.Elasticsearch.Storage, &vmo.Spec.Elasticsearch.DataNode.Resources, config.ElasticsearchData, i)
+		elasticsearchDataDeployment := es.createElasticsearchCommonDeployment(vmo, vmo.Spec.Elasticsearch.DataNode.Storage, &vmo.Spec.Elasticsearch.DataNode.Resources, config.ElasticsearchData, i)
 
 		elasticsearchDataDeployment.Spec.Replicas = resources.NewVal(1)
-		availabilityDomain := getAvailabilityDomainForPvcIndex(&vmo.Spec.Elasticsearch.Storage, pvcToAdMap, i)
+		availabilityDomain := getAvailabilityDomainForPvcIndex(vmo.Spec.Elasticsearch.DataNode.Storage, pvcToAdMap, i)
 		if availabilityDomain == "" {
 			// With shard allocation awareness, we must provide something for the AD, even in the case of the simple
 			// VMO with no persistence volumes

@@ -4,7 +4,9 @@
 package resources
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"regexp"
 	"strconv"
@@ -19,6 +21,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+var runes = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+
+//GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
+func GetNewRandomID(size int) (string, error) {
+	builder := strings.Builder{}
+	for i := 0; i < size; i++ {
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
+		if err != nil {
+			return "", err
+		}
+		builder.WriteRune(runes[idx.Int64()])
+	}
+	return builder.String(), nil
+}
 
 // GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {
@@ -191,15 +208,6 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 			},
 		},
 	}
-}
-
-//GetStorageForNode selects the Storage object to use, prioritizing the node-level configuration
-// Spec.Elasticsearch.Storage exists for historical reasons, and we use this function to ensure compatibility
-func GetStorageForNode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, node vmcontrollerv1.ElasticsearchNode) *vmcontrollerv1.Storage {
-	if node.Storage != nil {
-		return node.Storage
-	}
-	return &vmo.Spec.Elasticsearch.Storage
 }
 
 // GetElasticsearchMasterInitContainer return an Elasticsearch Init container for the master.  This changes ownership of

@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -12,7 +12,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestNoPvcs(t *testing.T) {
@@ -113,19 +113,19 @@ func TestNonSchedulable(t *testing.T) {
 }
 
 func TestParseStorageClassInfoOciFlex(t *testing.T) {
-	storageClass := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass1"}, Provisioner: constants.OciFlexVolumeProvisioner}
+	storageClass := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass1"}, Provisioner: constants.OciFlexVolumeProvisioner}
 	expectedStorageClassInfo := StorageClassInfo{Name: "storageclass1", PvcAcceptsZone: true, PvcZoneMatchLabel: constants.OciAvailabilityDomainLabel}
 	assert.Equal(t, expectedStorageClassInfo, parseStorageClassInfo(&storageClass, &config.OperatorConfig{}), "OCI Flex Volume with no operator config")
 }
 
 func TestParseStorageClassInfoWithMatchLabel(t *testing.T) {
-	storageClass := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass2"}, Provisioner: "someprovisioner"}
+	storageClass := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2"}, Provisioner: "someprovisioner"}
 	expectedStorageClassInfo := StorageClassInfo{Name: "storageclass2", PvcAcceptsZone: true, PvcZoneMatchLabel: "somematchlabel"}
 	assert.Equal(t, expectedStorageClassInfo, parseStorageClassInfo(&storageClass, &config.OperatorConfig{Pvcs: config.Pvcs{ZoneMatchLabel: "somematchlabel"}}), "Match label specified in operator config")
 }
 
 func TestParseStorageClassInfoWithoutMatchLabel(t *testing.T) {
-	storageClass := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass3"}, Provisioner: "someprovisioner"}
+	storageClass := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3"}, Provisioner: "someprovisioner"}
 	expectedStorageClassInfo := StorageClassInfo{Name: "storageclass3", PvcAcceptsZone: false}
 	assert.Equal(t, expectedStorageClassInfo, parseStorageClassInfo(&storageClass, &config.OperatorConfig{}), "No match label specified in operator config")
 }
@@ -133,7 +133,7 @@ func TestParseStorageClassInfoWithoutMatchLabel(t *testing.T) {
 func TestAdFromExistingPVC1(t *testing.T) {
 	// Storage class accepts an AD, and the PVC is labels as expected
 	storageClassInfo := StorageClassInfo{Name: "storageclass1", PvcAcceptsZone: true, PvcZoneMatchLabel: "somematchlabel"}
-	pvc := corev1.PersistentVolumeClaim{Spec: corev1.PersistentVolumeClaimSpec{Selector: &v1.LabelSelector{MatchLabels: map[string]string{"somematchlabel": "zone1"}}}}
+	pvc := corev1.PersistentVolumeClaim{Spec: corev1.PersistentVolumeClaimSpec{Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"somematchlabel": "zone1"}}}}
 	assert.Equal(t, "zone1", getZoneFromExistingPvc(storageClassInfo, &pvc), "Existing PVC contains expected AD label")
 }
 
@@ -152,25 +152,25 @@ func TestAdFromExistingPVC3(t *testing.T) {
 }
 
 func TestGetDefaultStorageClass1(t *testing.T) {
-	storageClass1 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass1"}}
-	storageClass2 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass2", Annotations: map[string]string{constants.K8sDefaultStorageClassAnnotation: "true"}}}
-	storageClass3 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass3"}}
+	storageClass1 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass1"}}
+	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2", Annotations: map[string]string{constants.K8sDefaultStorageClassAnnotation: "true"}}}
+	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3"}}
 	result, _ := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
 	assert.Equal(t, result, &storageClass2, "Default storage class found based on standard label")
 }
 
 func TestGetDefaultStorageClass2(t *testing.T) {
-	storageClass1 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass1"}}
-	storageClass2 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass2"}}
-	storageClass3 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass3", Annotations: map[string]string{constants.K8sDefaultStorageClassBetaAnnotation: "true"}}}
+	storageClass1 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass1"}}
+	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2"}}
+	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3", Annotations: map[string]string{constants.K8sDefaultStorageClassBetaAnnotation: "true"}}}
 	result, _ := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
 	assert.Equal(t, result, &storageClass3, "Default storage class found based on beta label")
 }
 
 func TestGetDefaultStorageClass3(t *testing.T) {
-	storageClass1 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass1"}}
-	storageClass2 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass2"}}
-	storageClass3 := storagev1.StorageClass{ObjectMeta: v1.ObjectMeta{Name: "storageclass3"}}
+	storageClass1 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass1"}}
+	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2"}}
+	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3"}}
 	result, err := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
 	var expectedStorageClass *storagev1.StorageClass
 	assert.Equal(t, expectedStorageClass, result, "No default storage class")

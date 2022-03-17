@@ -14,7 +14,6 @@ import (
 // New will return a new Service for VMO that needs to executed for on Complete
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	var pvcList []*corev1.PersistentVolumeClaim
-	dataNodeStorage := resources.GetStorageForNode(vmo, vmo.Spec.Elasticsearch.DataNode)
 
 	if vmo.Spec.Prometheus.Enabled && vmo.Spec.Prometheus.Storage.Size != "" {
 		pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, storageClassName)
@@ -23,8 +22,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 		}
 		pvcList = append(pvcList, pvcs...)
 	}
-	if vmo.Spec.Elasticsearch.Enabled && dataNodeStorage.Size != "" {
-		pvcs, err := createPvcElements(vmo, dataNodeStorage, storageClassName)
+	dataNodeStorage := vmo.Spec.Elasticsearch.DataNode.Storage
+	if vmo.Spec.Elasticsearch.Enabled && dataNodeStorage != nil && dataNodeStorage.Size != "" {
+		pvcs, err := createPvcElements(vmo, vmo.Spec.Elasticsearch.DataNode.Storage, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
