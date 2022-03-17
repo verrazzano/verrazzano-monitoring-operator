@@ -29,7 +29,7 @@ func resizePVC(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	// If we are updating an OpenSearch PVC, we need to make sure the OpenSearch cluster is ready
 	// before doing the resize
 	if isOpenSearchPVC(expectedPVC) {
-		if err := IsOpenSearchUpdated(vmo); err != nil {
+		if err := IsOpenSearchResizable(vmo); err != nil {
 			return nil, err
 		}
 	}
