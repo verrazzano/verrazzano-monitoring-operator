@@ -90,7 +90,7 @@ func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	case config.Prometheus.Name:
 		return &vmo.Spec.Prometheus.Storage
 	case config.ElasticsearchData.Name:
-		return &vmo.Spec.Elasticsearch.Storage
+		return vmo.Spec.Elasticsearch.DataNode.Storage
 	}
 	return nil
 }
