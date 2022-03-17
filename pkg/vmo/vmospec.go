@@ -97,7 +97,7 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	for _, component := range config.StorageEnableComponents {
 		storageElement := resources.GetStorageElementForComponent(vmo, component)
 		replicas := int(resources.GetReplicasForComponent(vmo, component))
-		if storageElement.Size == "" {
+		if storageElement == nil || storageElement.Size == "" {
 			continue
 		}
 		// Initialize the current state of the storage element, if not already set
