@@ -28,7 +28,6 @@ type (
 )
 
 const (
-	MasterHTTPEndpoint    = "VMO_MASTER_HTTP_ENDPOINT"
 	HealthGreen           = "green"
 	MinDataNodesForResize = 2
 )

@@ -1,3 +1,6 @@
+// Copyright (C) 2022, Oracle and/or its affiliates.
+// Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package vmo
 
 import (
@@ -38,17 +41,7 @@ type (
 		MinIndexAge string `json:"min_index_age"`
 	}
 
-	ReindexInput struct {
-		SourceName      string
-		DestinationName string
-		NumberOfSeconds string
-	}
-	ReindexInputWithoutQuery struct {
-		SourceName      string
-		DestinationName string
-	}
-
-	PolicyTemplate struct {
+	PolicyMeta struct {
 		name         string
 		indexPattern string
 		payload      string
@@ -56,10 +49,8 @@ type (
 )
 
 const (
-	minIndexAge            = "min_index_age"
-	defaultMinIndexAge     = "7d"
-	systemDataStreamName   = "verrazzano-system"
-	dataStreamTemplateName = "verrazzano-data-stream"
+	minIndexAge        = "min_index_age"
+	defaultMinIndexAge = "7d"
 )
 
 const systemISMPayloadTemplate = `{
@@ -153,12 +144,12 @@ const applicationISMPayloadTemplate = `{
 }`
 
 var (
-	systemPolicyTemplate = PolicyTemplate{
+	systemPolicyTemplate = PolicyMeta{
 		name:         "verrazzano-system",
 		indexPattern: "verrazzano-system",
 		payload:      systemISMPayloadTemplate,
 	}
-	applicationPolicyTemplate = PolicyTemplate{
+	applicationPolicyTemplate = PolicyMeta{
 		name:         "verrazzano-application",
 		indexPattern: "verrazzano-application*",
 		payload:      applicationISMPayloadTemplate,
@@ -200,7 +191,7 @@ func isIndexManagementEnabled(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) 
 		*vmo.Spec.Elasticsearch.IndexManagement.Enabled
 }
 
-func createOrUpdatePolicy(opensearchEndpoint string, policy *PolicyTemplate, maxIndexAge *string) error {
+func createOrUpdatePolicy(opensearchEndpoint string, policy *PolicyMeta, maxIndexAge *string) error {
 	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.name)
 	existingPolicy, err := getPolicyByName(policyURL)
 	if err != nil {
@@ -231,7 +222,11 @@ func getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	return existingPolicy, nil
 }
 
-func putUpdatedPolicy(opensearchEndpoint string, maxIndexAge *string, policy *PolicyTemplate, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
+func putUpdatedPolicy(opensearchEndpoint string, maxIndexAge *string, policy *PolicyMeta, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
+	if !policyNeedsUpdate(maxIndexAge, existingPolicy) {
+		return nil, nil
+	}
+
 	payload, err := formatISMPayload(policy, maxIndexAge)
 	if err != nil {
 		return nil, err
@@ -275,7 +270,31 @@ func putUpdatedPolicy(opensearchEndpoint string, maxIndexAge *string, policy *Po
 	return updatedISMPolicy, nil
 }
 
-func formatISMPayload(policy *PolicyTemplate, maxIndexAge *string) (*bytes.Buffer, error) {
+//policyNeedsUpdate returns true if the policy minIndexAge is different than the current minIndexAge
+// or if the policy has no states and/or transitions
+func policyNeedsUpdate(maxIndexAge *string, existingPolicy *ISMPolicy) bool {
+	var indexAge = defaultMinIndexAge
+	if maxIndexAge != nil {
+		indexAge = *maxIndexAge
+	}
+
+	if existingPolicy == nil {
+		return true
+	}
+	for _, state := range existingPolicy.Policy.States {
+		if state.Name == "ingest" {
+			for _, transition := range state.Transitions {
+				if transition.StateName == "delete" {
+					return indexAge != transition.Conditions.MinIndexAge
+				}
+			}
+		}
+	}
+
+	return true
+}
+
+func formatISMPayload(policy *PolicyMeta, maxIndexAge *string) (*bytes.Buffer, error) {
 	tmpl, err := template.New("lifecycleManagement").
 		Option("missingkey=error").
 		Parse(policy.payload)
@@ -298,7 +317,7 @@ func formatISMPayload(policy *PolicyTemplate, maxIndexAge *string) (*bytes.Buffe
 	return buffer, nil
 }
 
-func addPolicyToExistingIndices(opensearchEndpoint string, policy *PolicyTemplate, updatedPolicy *ISMPolicy) error {
+func addPolicyToExistingIndices(opensearchEndpoint string, policy *PolicyMeta, updatedPolicy *ISMPolicy) error {
 	// If no policy was updated, then there is nothing to do
 	if updatedPolicy == nil {
 		return nil
