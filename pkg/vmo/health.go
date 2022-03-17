@@ -44,7 +44,7 @@ func resetDoHTTP() {
 
 func IsOpenSearchResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
-		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes.", MinDataNodesForResize)
+		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
 	}
 	return opensearchHealth(vmo, true)
 }
