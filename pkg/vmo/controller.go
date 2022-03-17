@@ -462,9 +462,9 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Create Persistent Volume Claims
 	 **********************/
-	pvcToAdMap, err := createPersistentVolumeClaims(c, vmo)
+	pvcToAdMap, err := CreatePersistentVolumeClaims(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create PVCs for VMI %s: %v", vmo.Name, err)
+		c.log.Errorf("Failed to create/update PVCs for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 

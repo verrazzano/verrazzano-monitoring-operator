@@ -193,3 +193,26 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 		})
 	}
 }
+
+func TestIsOpenSearchResizable(t *testing.T) {
+	var notEnoughNodesVMO = vmcontrollerv1.VerrazzanoMonitoringInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "system",
+			Namespace: constants.VerrazzanoSystemNamespace,
+		},
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+				},
+				IngestNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+				},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+				},
+			},
+		},
+	}
+	assert.Error(t, IsOpenSearchResizable(&notEnoughNodesVMO))
+}

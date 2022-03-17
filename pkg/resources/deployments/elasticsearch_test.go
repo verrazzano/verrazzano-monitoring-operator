@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package deployments
@@ -48,12 +48,14 @@ func TestElasticsearchDefaultDeployments2(t *testing.T) {
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 5},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 4},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 3},
-				Enabled:    true,
-				Storage: vmcontrollerv1.Storage{
-					Size:     "50GI",
-					PvcNames: []string{"pvc1", "pvc2", "pvc3"},
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 3,
+					Storage: &vmcontrollerv1.Storage{
+						Size:     "50GI",
+						PvcNames: []string{"pvc1", "pvc2", "pvc3"},
+					},
 				},
+				Enabled: true,
 			},
 		},
 	}
