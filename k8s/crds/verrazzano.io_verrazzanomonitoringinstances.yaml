@@ -152,7 +152,7 @@ spec:
                     properties:
                       enabled:
                         type: boolean
-                      maApplicationIndexAge:
+                      maxApplicationIndexAge:
                         type: string
                       maxSystemIndexAge:
                         type: string

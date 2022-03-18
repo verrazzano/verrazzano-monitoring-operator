@@ -132,7 +132,7 @@ type (
 	IndexManagement struct {
 		Enabled                *bool   `json:"enabled,omitempty"`
 		MaxSystemIndexAge      *string `json:"maxSystemIndexAge,omitempty"`
-		MaxApplicationIndexAge *string `json:"maApplicationIndexAge,omitempty"`
+		MaxApplicationIndexAge *string `json:"maxApplicationIndexAge,omitempty"`
 	}
 
 	// Kibana details
