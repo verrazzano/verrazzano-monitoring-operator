@@ -12,6 +12,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+type NodeRole string
+
+const (
+	MasterRole NodeRole = "master"
+	DataRole   NodeRole = "data"
+	IngestRole NodeRole = "ingest"
+)
+
 type (
 
 	// VerrazzanoMonitoringInstanceSpec defines the attributes a user can specify when creating a VerrazzanoMonitoringInstance
@@ -113,19 +121,21 @@ type (
 
 	// Elasticsearch details
 	Elasticsearch struct {
-		Enabled    bool              `json:"enabled" yaml:"enabled"`
-		Storage    Storage           `json:"storage,omitempty"`
-		IngestNode ElasticsearchNode `json:"ingestNode,omitempty"`
-		MasterNode ElasticsearchNode `json:"masterNode,omitempty"`
-		DataNode   ElasticsearchNode `json:"dataNode,omitempty"`
+		Enabled    bool                `json:"enabled" yaml:"enabled"`
+		Storage    Storage             `json:"storage,omitempty"`
+		IngestNode ElasticsearchNode   `json:"ingestNode,omitempty"`
+		MasterNode ElasticsearchNode   `json:"masterNode,omitempty"`
+		DataNode   ElasticsearchNode   `json:"dataNode,omitempty"`
+		Nodes      []ElasticsearchNode `json:"nodes,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
 	ElasticsearchNode struct {
-		Replicas  int32     `json:"replicas,omitempty"`
-		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
-		Resources Resources `json:"resources,omitempty"`
-		Storage   *Storage  `json:"storage,omitempty"`
+		Replicas  int32      `json:"replicas,omitempty"`
+		JavaOpts  string     `json:"javaOpts" yaml:"javaOpts,omitempty"`
+		Resources Resources  `json:"resources,omitempty"`
+		Storage   *Storage   `json:"storage,omitempty"`
+		Roles     []NodeRole `json:"roles"`
 	}
 
 	// Kibana details
