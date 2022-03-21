@@ -136,6 +136,7 @@ type (
 		// Index pattern the policy will be matched to
 		IndexPattern string `json:"indexPattern"`
 		// Minimum age of an index before it is automatically deleted
+		// +kubebuilder:validation:Pattern:=^[0-9]+(d|h|m|s|ms|micros|nanos)$
 		MinIndexAge *string        `json:"minIndexAge,omitempty"`
 		Rollover    RolloverPolicy `json:"rollover,omitempty"`
 	}
@@ -143,9 +144,11 @@ type (
 	//RolloverPolicy Settings for Index Management rollover
 	RolloverPolicy struct {
 		// Minimum age of an index before it is rolled over
+		// +kubebuilder:validation:Pattern:=^[0-9]+(d|h|m|s|ms|micros|nanos)$
 		MinIndexAge *string `json:"minIndexAge,omitempty"`
 		// Minimum size of an index before it is rolled over
 		// e.g., 20mb, 5gb, etc.
+		// +kubebuilder:validation:Pattern:=^[0-9]+(b|kb|mb|gb|tb|pb)$
 		MinSize *string `json:"minSize,omitempty"`
 		// Minimum count of documents in an index before it is rolled over
 		MinDocCount *int `json:"minDocCount,omitempty"`

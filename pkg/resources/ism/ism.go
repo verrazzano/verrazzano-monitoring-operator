@@ -63,9 +63,14 @@ type (
 )
 
 const (
-	minIndexAgeKey          = "min_index_age"
-	defaultMinIndexAge      = "7d"
+	minIndexAgeKey = "min_index_age"
+
+	// Default amount of time before a policy-managed index is deleted
+	defaultMinIndexAge = "7d"
+	// Default amount of time before a policy-managed index is rolled over
 	defaultRolloverIndexAge = "1d"
+	// Descriptor to identify policies as being managed by the VMI
+	vmiManagedPolicy = "__vmi managed__"
 )
 
 //Configure sets up the ISM Policies
@@ -81,7 +86,7 @@ func Configure(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 		for _, policy := range vmi.Spec.Elasticsearch.Policies {
-			if err := createISMPolicy(opensearchEndpoint, &policy); err != nil {
+			if err := createISMPolicy(opensearchEndpoint, policy); err != nil {
 				ch <- err
 				return
 			}
@@ -92,17 +97,19 @@ func Configure(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	return ch
 }
 
-func createISMPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy) error {
+//createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
+// If the policy already exsts and its spec matches the VMO policy spec, no update will be issued
+func createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) error {
 	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.PolicyName)
 	existingPolicy, err := getPolicyByName(policyURL)
 	if err != nil {
 		return err
 	}
-	updatedPolicy, err := putUpdatedPolicy(opensearchEndpoint, policy, existingPolicy)
+	updatedPolicy, err := putUpdatedPolicy(opensearchEndpoint, &policy, existingPolicy)
 	if err != nil {
 		return err
 	}
-	return addPolicyToExistingIndices(opensearchEndpoint, policy, updatedPolicy)
+	return addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
 }
 
 func getPolicyByName(policyURL string) (*ISMPolicy, error) {
@@ -123,6 +130,8 @@ func getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	return existingPolicy, nil
 }
 
+//putUpdatedPolicy updates a policy in place, if the update is required. If no update was necessary, the returned
+// ISMPolicy will be nil.
 func putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
 	if !policyNeedsUpdate(policy, existingPolicy) {
 		return nil, nil
@@ -204,6 +213,9 @@ func policyNeedsUpdate(policy *vmcontrollerv1.IndexManagementPolicy, existingPol
 		return true
 	}
 	rolloverMap, ok := rollover.(map[string]interface{})
+	if !ok {
+		return true
+	}
 	newRollover := createRolloverAction(&policy.Rollover)
 	if !reflect.DeepEqual(newRollover, rolloverMap) {
 		return true
@@ -212,6 +224,7 @@ func policyNeedsUpdate(policy *vmcontrollerv1.IndexManagementPolicy, existingPol
 	return policy.IndexPattern != existingPolicy.Policy.ISMTemplate[0].IndexPatterns[0]
 }
 
+//addPolicyToExistingIndices updates any pre-existing cluster indices to be managed by the ISMPolicy
 func addPolicyToExistingIndices(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, updatedPolicy *ISMPolicy) error {
 	// If no policy was updated, then there is nothing to do
 	if updatedPolicy == nil {
@@ -267,7 +280,7 @@ func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
 	return &ISMPolicy{
 		Policy: InlinePolicy{
 			DefaultState: "ingest",
-			Description:  fmt.Sprintf("Policy for %s indices", policy.IndexPattern),
+			Description:  vmiManagedPolicy,
 			ISMTemplate: []ISMTemplate{
 				{
 					Priority: 1,
