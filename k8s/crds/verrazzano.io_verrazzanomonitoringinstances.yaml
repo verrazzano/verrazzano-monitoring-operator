@@ -148,15 +148,6 @@ spec:
                     type: object
                   enabled:
                     type: boolean
-                  indexManagement:
-                    properties:
-                      enabled:
-                        type: boolean
-                      maxApplicationIndexAge:
-                        type: string
-                      maxSystemIndexAge:
-                        type: string
-                    type: object
                   ingestNode:
                     description: ElasticsearchNode Type details
                     properties:
@@ -249,6 +240,43 @@ spec:
                     required:
                     - javaOpts
                     type: object
+                  policies:
+                    items:
+                      description: IndexManagementPolicy Defines a policy for managing
+                        indices
+                      properties:
+                        indexPattern:
+                          description: Index pattern the policy will be matched to
+                          type: string
+                        minIndexAge:
+                          description: Minimum age of an index before it is automatically
+                            deleted
+                          type: string
+                        policyName:
+                          description: Name of the policy
+                          type: string
+                        rollover:
+                          description: RolloverPolicy Settings for Index Management
+                            rollover
+                          properties:
+                            minDocCount:
+                              description: Minimum count of documents in an index
+                                before it is rolled over
+                              type: integer
+                            minIndexAge:
+                              description: Minimum age of an index before it is rolled
+                                over
+                              type: string
+                            minSize:
+                              description: Minimum size of an index before it is rolled
+                                over e.g., 20mb, 5gb, etc.
+                              type: string
+                          type: object
+                      required:
+                      - indexPattern
+                      - policyName
+                      type: object
+                    type: array
                   storage:
                     description: Storage details
                     properties:

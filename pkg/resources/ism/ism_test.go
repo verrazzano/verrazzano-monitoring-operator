@@ -1,7 +1,7 @@
 // Copyright (C) 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package vmo
+package ism
 
 import (
 	"encoding/json"
@@ -72,6 +72,19 @@ const (
 `
 )
 
+func createTestPolicy(age, rolloverAge, indexPattern, minSize string, minDocCount int) *vmcontrollerv1.IndexManagementPolicy {
+	return &vmcontrollerv1.IndexManagementPolicy{
+		PolicyName:   "verrazzano-system",
+		IndexPattern: indexPattern,
+		MinIndexAge:  &age,
+		Rollover: vmcontrollerv1.RolloverPolicy{
+			MinIndexAge: &rolloverAge,
+			MinSize:     &minSize,
+			MinDocCount: &minDocCount,
+		},
+	}
+}
+
 func makeISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoringInstance {
 	v := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: metav1.ObjectMeta{
@@ -79,24 +92,19 @@ func makeISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoringIn
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				Enabled: true,
-				IndexManagement: &vmcontrollerv1.IndexManagement{
-					Enabled: &enabled,
+				Enabled: enabled,
+				Policies: []vmcontrollerv1.IndexManagementPolicy{
+					*createTestPolicy(age, age, "*", "1gb", 1),
 				},
 			},
 		},
-	}
-
-	if len(age) > 0 {
-		v.Spec.Elasticsearch.IndexManagement.MaxSystemIndexAge = &age
-		v.Spec.Elasticsearch.IndexManagement.MaxApplicationIndexAge = &age
 	}
 
 	return v
 }
 
 func TestConfigureIndexManagementPluginISMDisabled(t *testing.T) {
-	assert.NoError(t, <-ConfigureIndexManagementPlugin(&vmcontrollerv1.VerrazzanoMonitoringInstance{}))
+	assert.NoError(t, <-Configure(&vmcontrollerv1.VerrazzanoMonitoringInstance{}))
 }
 
 func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
@@ -120,50 +128,9 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 		}
 	}
 	vmi := makeISMVMI("1d", true)
-	ch := ConfigureIndexManagementPlugin(vmi)
+	ch := Configure(vmi)
 	assert.NoError(t, <-ch)
 	resetDoHTTP()
-}
-
-func TestIsIndexManagementEnabled(t *testing.T) {
-	var tests = []struct {
-		name    string
-		vmi     *vmcontrollerv1.VerrazzanoMonitoringInstance
-		enabled bool
-	}{
-		{
-			"enabled when ism and elasticsearch enabled",
-			makeISMVMI("", true),
-			true,
-		},
-		{
-			"disabled when ism disabled",
-			makeISMVMI("", false),
-			false,
-		},
-		{
-			"disabled when elasticsearch disabled",
-			&vmcontrollerv1.VerrazzanoMonitoringInstance{},
-			false,
-		},
-		{
-			"disabled when ism not specified",
-			&vmcontrollerv1.VerrazzanoMonitoringInstance{
-				Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmcontrollerv1.Elasticsearch{
-						Enabled: true,
-					},
-				},
-			},
-			false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.enabled, isIndexManagementEnabled(tt.vmi))
-		})
-	}
 }
 
 func TestGetPolicyByName(t *testing.T) {
@@ -196,10 +163,10 @@ func TestGetPolicyByName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			policy, err := getPolicyByName("http://localhost:9200/" + tt.policyName)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.status, policy.Status)
+			assert.Equal(t, tt.status, *policy.Status)
 			if tt.status == http.StatusOK {
-				assert.Equal(t, 0, policy.SequenceNumber)
-				assert.Equal(t, 1, policy.PrimaryTerm)
+				assert.Equal(t, 0, *policy.SequenceNumber)
+				assert.Equal(t, 1, *policy.PrimaryTerm)
 			}
 		})
 	}
@@ -251,10 +218,16 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 		existingPolicy := &ISMPolicy{}
 		err := json.NewDecoder(strings.NewReader(testSystemPolicy)).Decode(existingPolicy)
 		assert.NoError(t, err)
-		existingPolicy.Status = http.StatusOK
+		status := http.StatusOK
+		existingPolicy.Status = &status
 		doHTTP = tt.httpFunc
 		t.Run(tt.name, func(t *testing.T) {
-			updatedPolicy, err := putUpdatedPolicy("http://localhost:9200", &tt.age, &systemPolicyTemplate, existingPolicy)
+			newPolicy := &vmcontrollerv1.IndexManagementPolicy{
+				PolicyName:   "verrazzano-system",
+				IndexPattern: "verrazzano-system",
+				MinIndexAge:  &tt.age,
+			}
+			updatedPolicy, err := putUpdatedPolicy("http://localhost:9200", newPolicy, existingPolicy)
 			if tt.hasError {
 				assert.Error(t, err)
 			} else {
@@ -267,5 +240,59 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 			}
 		})
 		resetDoHTTP()
+	}
+}
+
+func TestPolicyNeedsUpdate(t *testing.T) {
+	basePolicy := createTestPolicy("7d", "1d", "verrazzano-system", "10gb", 1000)
+	var tests = []struct {
+		name        string
+		p1          *vmcontrollerv1.IndexManagementPolicy
+		p2          *ISMPolicy
+		needsUpdate bool
+	}{
+		{
+			"no update when equal",
+			basePolicy,
+			toISMPolicy(basePolicy),
+			false,
+		},
+		{
+			"needs update when age changed",
+			basePolicy,
+			toISMPolicy(createTestPolicy("14d", "1d", "verrazzano-system", "10gb", 1000)),
+			true,
+		},
+		{
+			"needs update when rollover age changed",
+			basePolicy,
+			toISMPolicy(createTestPolicy("7d", "2d", "verrazzano-system", "10gb", 1000)),
+			true,
+		},
+		{
+			"needs update when index pattern changed",
+			basePolicy,
+			toISMPolicy(createTestPolicy("7d", "1d", "verrazzano-system-*", "10gb", 1000)),
+			true,
+		},
+		{
+			"needs update when min size changed",
+			basePolicy,
+			toISMPolicy(createTestPolicy("7d", "1d", "verrazzano-system", "20gb", 1000)),
+			true,
+		},
+		{
+			"needs update when min doc count changed",
+			basePolicy,
+			toISMPolicy(createTestPolicy("7d", "1d", "verrazzano-system", "10gb", 5000)),
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			needsUpdate := policyNeedsUpdate(tt.p1, tt.p2)
+			assert.Equal(t, tt.needsUpdate, needsUpdate)
+		})
 	}
 }

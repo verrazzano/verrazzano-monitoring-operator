@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ism"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
@@ -441,7 +442,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Configure ISM
 	 **********************/
-	ismChannel := ConfigureIndexManagementPlugin(vmo)
+	ismChannel := ism.Configure(vmo)
 
 	/*********************
 	 * Create RoleBindings

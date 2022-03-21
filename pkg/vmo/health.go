@@ -36,6 +36,7 @@ var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, e
 	return client.Do(request)
 }
 
+// This is for unit testing
 func resetDoHTTP() {
 	doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
 		return client.Do(request)
