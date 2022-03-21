@@ -142,7 +142,6 @@ func putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexMan
 		return nil, err
 	}
 
-	fmt.Println(string(payload))
 	var url string
 	var statusCode int
 	existingPolicyStatus := *existingPolicy.Status

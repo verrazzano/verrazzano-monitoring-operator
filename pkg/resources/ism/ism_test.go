@@ -85,7 +85,7 @@ func createTestPolicy(age, rolloverAge, indexPattern, minSize string, minDocCoun
 	}
 }
 
-func makeISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoringInstance {
+func createISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoringInstance {
 	v := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -103,10 +103,18 @@ func makeISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoringIn
 	return v
 }
 
+// TestConfigureIndexManagementPluginISMDisabled Tests that ISM configuration when disabled
+// GIVEN a default VMI instance
+// WHEN I call Configure
+// THEN the ISM configuration does nothing because it is disabled
 func TestConfigureIndexManagementPluginISMDisabled(t *testing.T) {
 	assert.NoError(t, <-Configure(&vmcontrollerv1.VerrazzanoMonitoringInstance{}))
 }
 
+// TestConfigureIndexManagementPluginHappyPath Tests configuration of the ISM plugin
+// GIVEN a VMI instance with an ISM Policy
+// WHEN I call Configure
+// THEN the ISM configuration is created in OpenSearch
 func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 	doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
 		switch request.Method {
@@ -127,12 +135,16 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 			}, nil
 		}
 	}
-	vmi := makeISMVMI("1d", true)
+	vmi := createISMVMI("1d", true)
 	ch := Configure(vmi)
 	assert.NoError(t, <-ch)
 	resetDoHTTP()
 }
 
+// TestGetPolicyByName Tests retrieving ISM policies by name
+// GIVEN an OpenSearch instance
+// WHEN I call getPolicyByName
+// THEN the specified policy should be returned, if it exists
 func TestGetPolicyByName(t *testing.T) {
 	var tests = []struct {
 		name       string
@@ -174,6 +186,10 @@ func TestGetPolicyByName(t *testing.T) {
 	resetDoHTTP()
 }
 
+// TestPutUpdatedPolicy_PolicyExists Tests updating a policy in place
+// GIVEN a policy that already exists in the server
+// WHEN I call putUpdatedPolicy
+// THEN the ISM policy should be updated in place IFF there are changes to the policy
 func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 	httpFunc := func(client *http.Client, request *http.Request) (*http.Response, error) {
 		return &http.Response{
@@ -243,6 +259,10 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 	}
 }
 
+// TestPolicyNeedsUpdate Tests that the ISM policy will only be updated when it changes
+// GIVEN a new ISM policy and the existing ISM policy
+// WHEN I call policyNeedsUpdate
+// THEN true is only returned if the new ISM policy has changed
 func TestPolicyNeedsUpdate(t *testing.T) {
 	basePolicy := createTestPolicy("7d", "1d", "verrazzano-system", "10gb", 1000)
 	var tests = []struct {
