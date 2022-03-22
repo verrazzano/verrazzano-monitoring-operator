@@ -229,12 +229,12 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 # required for the repository-s3 plugin
 
 if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
-    echo "Updating oci access key..."
-	echo $OCI_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+    echo "Updating object store access key..."
+	echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
 fi
 if [ "${OBJECT_STORE_ACCESS_SECRET_KEY_ID:-}" ]; then
-    echo "Updating oci secret access key..."
-	echo OCI_SECRET_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+    echo "Updating object store secret access key..."
+	echo $OBJECT_STORE_ACCESS_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
 fi
 /usr/local/bin/docker-entrypoint.sh`,
 		}
