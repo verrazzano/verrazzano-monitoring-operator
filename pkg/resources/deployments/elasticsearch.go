@@ -233,7 +233,7 @@ if [ "${OCI_ACCESS_KEY_ID:-}" ]; then
 	echo $OCI_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
 fi
 if [ "${OCI_SECRET_ACCESS_KEY_ID:-}" ]; then
-    echo "Updating oci access key..."
+    echo "Updating oci secret access key..."
 	echo OCI_SECRET_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
 fi
 /usr/local/bin/docker-entrypoint.sh`,
