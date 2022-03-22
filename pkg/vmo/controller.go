@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
@@ -108,6 +109,9 @@ type Controller struct {
 
 	// VerrazzanoLogger is used to log
 	log vzlog.VerrazzanoLogger
+
+	// OpenSearch Client
+	osClient *opensearch.OSClient
 }
 
 // ClusterInfo has info like ContainerRuntime and managed cluster name
@@ -195,6 +199,9 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
+	zap.S().Infow("Creating OpenSearch client")
+	osClient := opensearch.NewOSClient()
+
 	controller := &Controller{
 		namespace:        namespace,
 		watchNamespace:   watchNamespace,
@@ -235,6 +242,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		latestConfigMap:       operatorConfigMap,
 		clusterInfo:           ClusterInfo{},
 		log:                   vzlog.DefaultLogger(),
+		osClient:              osClient,
 	}
 
 	zap.S().Infow("Setting up event handlers")
@@ -433,6 +441,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	errorObserved := false
 
 	/*********************
+	 * Configure ISM
+	 **********************/
+	ismChannel := c.osClient.ConfigureISM(vmo)
+
+	/*********************
 	 * Create RoleBindings
 	 **********************/
 	err = CreateRoleBindings(c, vmo)
@@ -510,6 +523,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
 			errorObserved = true
 		}
+	}
+
+	ismErr := <-ismChannel
+	if ismErr != nil {
+		c.log.Errorf("Failed to configure ISM Policies: %v", ismErr)
+		errorObserved = true
 	}
 	if !errorObserved && !deploymentsDirty && len(c.buildVersion) > 0 && vmo.Spec.Versioning.CurrentVersion != c.buildVersion {
 		// The spec.versioning.currentVersion field should not be updated to the new value until a sync produces no

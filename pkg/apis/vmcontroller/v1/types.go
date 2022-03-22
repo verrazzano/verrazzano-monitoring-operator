@@ -113,11 +113,12 @@ type (
 
 	// Elasticsearch details
 	Elasticsearch struct {
-		Enabled    bool              `json:"enabled" yaml:"enabled"`
-		Storage    Storage           `json:"storage,omitempty"`
-		IngestNode ElasticsearchNode `json:"ingestNode,omitempty"`
-		MasterNode ElasticsearchNode `json:"masterNode,omitempty"`
-		DataNode   ElasticsearchNode `json:"dataNode,omitempty"`
+		Enabled    bool                    `json:"enabled" yaml:"enabled"`
+		Storage    Storage                 `json:"storage,omitempty"`
+		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
@@ -126,6 +127,31 @@ type (
 		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
 		Resources Resources `json:"resources,omitempty"`
 		Storage   *Storage  `json:"storage,omitempty"`
+	}
+
+	//IndexManagementPolicy Defines a policy for managing indices
+	IndexManagementPolicy struct {
+		// Name of the policy
+		PolicyName string `json:"policyName"`
+		// Index pattern the policy will be matched to
+		IndexPattern string `json:"indexPattern"`
+		// Minimum age of an index before it is automatically deleted
+		// +kubebuilder:validation:Pattern:=^[0-9]+(d|h|m|s|ms|micros|nanos)$
+		MinIndexAge *string        `json:"minIndexAge,omitempty"`
+		Rollover    RolloverPolicy `json:"rollover,omitempty"`
+	}
+
+	//RolloverPolicy Settings for Index Management rollover
+	RolloverPolicy struct {
+		// Minimum age of an index before it is rolled over
+		// +kubebuilder:validation:Pattern:=^[0-9]+(d|h|m|s|ms|micros|nanos)$
+		MinIndexAge *string `json:"minIndexAge,omitempty"`
+		// Minimum size of an index before it is rolled over
+		// e.g., 20mb, 5gb, etc.
+		// +kubebuilder:validation:Pattern:=^[0-9]+(b|kb|mb|gb|tb|pb)$
+		MinSize *string `json:"minSize,omitempty"`
+		// Minimum count of documents in an index before it is rolled over
+		MinDocCount *int `json:"minDocCount,omitempty"`
 	}
 
 	// Kibana details
