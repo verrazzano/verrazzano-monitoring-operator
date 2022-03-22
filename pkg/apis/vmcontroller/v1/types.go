@@ -131,6 +131,7 @@ type (
 
 	// ElasticsearchNode Type details
 	ElasticsearchNode struct {
+		Name      string     `json:"name"`
 		Replicas  int32      `json:"replicas,omitempty"`
 		JavaOpts  string     `json:"javaOpts" yaml:"javaOpts,omitempty"`
 		Resources Resources  `json:"resources,omitempty"`

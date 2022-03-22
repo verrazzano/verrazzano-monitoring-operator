@@ -24,6 +24,12 @@ import (
 
 var runes = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
+func GetOwnerLabels(owner string) map[string]string {
+	return map[string]string{
+		"owner": owner,
+	}
+}
+
 //GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
 func GetNewRandomID(size int) (string, error) {
 	builder := strings.Builder{}
@@ -400,22 +406,6 @@ func NewVal(value int32) *int32 {
 func New64Val(value int64) *int64 {
 	var val = value
 	return &val
-}
-
-// IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
-func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return masterNodeReplicas == 1 && dataNodeReplicas == 0 && ingestNodeReplicas == 0
-}
-
-// IsValidMultiNodeESCluster For a valid multi-node cluster that we have a minimum of one master, one ingest, and one data node
-func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return dataNodeReplicas > 0 && ingestNodeReplicas > 0 && masterNodeReplicas > 0
 }
 
 // oidcProxyName returns OIDC Proxy name of the component. ex. es-ingest-oidc

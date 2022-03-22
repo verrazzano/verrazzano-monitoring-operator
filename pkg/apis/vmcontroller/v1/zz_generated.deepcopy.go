@@ -142,6 +142,13 @@ func (in *Elasticsearch) DeepCopyInto(out *Elasticsearch) {
 	in.IngestNode.DeepCopyInto(&out.IngestNode)
 	in.MasterNode.DeepCopyInto(&out.MasterNode)
 	in.DataNode.DeepCopyInto(&out.DataNode)
+	if in.Nodes != nil {
+		in, out := &in.Nodes, &out.Nodes
+		*out = make([]ElasticsearchNode, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 
@@ -163,6 +170,11 @@ func (in *ElasticsearchNode) DeepCopyInto(out *ElasticsearchNode) {
 		in, out := &in.Storage, &out.Storage
 		*out = new(Storage)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Roles != nil {
+		in, out := &in.Roles, &out.Roles
+		*out = make([]NodeRole, len(*in))
+		copy(*out, *in)
 	}
 	return
 }

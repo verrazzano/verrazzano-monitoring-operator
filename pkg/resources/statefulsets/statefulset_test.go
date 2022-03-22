@@ -5,6 +5,7 @@ package statefulsets
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,12 +133,12 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	if isDevProfileTest {
-		assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be true")
-		assert.False(t, resources.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be false")
+		assert.True(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be true")
+		assert.False(t, nodes.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be false")
 		verifyDevProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, masterNodeReplicas, storageSize)
 	} else {
-		assert.False(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be false")
-		assert.True(t, resources.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be true")
+		assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be false")
+		assert.True(t, nodes.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be true")
 		verifyProdProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, masterNodeReplicas, storageSize)
 	}
 }

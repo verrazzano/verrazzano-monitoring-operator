@@ -8,6 +8,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -15,7 +16,7 @@ import (
 // Creates Elasticsearch Client service element
 func createElasticsearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	var elasticsearchIngestService = createServiceElement(vmo, config.ElasticsearchIngest)
-	if resources.IsSingleNodeESCluster(vmo) {
+	if nodes.IsSingleNodeESCluster(vmo) {
 		elasticsearchIngestService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
 		elasticsearchIngestService.Spec.Ports = []corev1.ServicePort{resources.GetServicePort(config.ElasticsearchData)}
@@ -26,7 +27,7 @@ func createElasticsearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMoni
 // Creates Elasticsearch Master service element
 func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	elasticSearchMasterService := createServiceElement(vmo, config.ElasticsearchMaster)
-	if !resources.IsSingleNodeESCluster(vmo) {
+	if !nodes.IsSingleNodeESCluster(vmo) {
 		// Master service is headless
 		elasticSearchMasterService.Spec.Type = corev1.ServiceTypeClusterIP
 		elasticSearchMasterService.Spec.ClusterIP = corev1.ClusterIPNone
@@ -37,7 +38,7 @@ func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMoni
 // Creates Elasticsearch Data service element
 func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	var elasticsearchDataService = createServiceElement(vmo, config.ElasticsearchData)
-	if resources.IsSingleNodeESCluster(vmo) {
+	if nodes.IsSingleNodeESCluster(vmo) {
 		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
 		elasticsearchDataService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 		elasticsearchDataService.Spec.Ports[0].TargetPort = intstr.FromInt(constants.ESHttpPort)
