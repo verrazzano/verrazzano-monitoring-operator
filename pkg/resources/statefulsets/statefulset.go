@@ -96,13 +96,13 @@ fi
 				},
 			},
 		},
-		{Name: constants.ObjectStoreSecretKeyVarName,
+		{Name: constants.ObjectStoreCustomerKeyVarName,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: constants.VerrazzanoSecretName,
 					},
-					Key: constants.ObjectStoreSecretKey,
+					Key: constants.ObjectStoreCustomerKey,
 					Optional: func(opt bool) *bool {
 						return &opt
 					}(true),
