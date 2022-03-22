@@ -1,7 +1,7 @@
 // Copyright (C) 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package ism
+package opensearch
 
 import (
 	"encoding/json"
@@ -108,7 +108,8 @@ func createISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoring
 // WHEN I call Configure
 // THEN the ISM configuration does nothing because it is disabled
 func TestConfigureIndexManagementPluginISMDisabled(t *testing.T) {
-	assert.NoError(t, <-Configure(&vmcontrollerv1.VerrazzanoMonitoringInstance{}))
+	o := NewOSClient()
+	assert.NoError(t, <-o.ConfigureISM(&vmcontrollerv1.VerrazzanoMonitoringInstance{}))
 }
 
 // TestConfigureIndexManagementPluginHappyPath Tests configuration of the ISM plugin
@@ -116,7 +117,8 @@ func TestConfigureIndexManagementPluginISMDisabled(t *testing.T) {
 // WHEN I call Configure
 // THEN the ISM configuration is created in OpenSearch
 func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
-	doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
+	o := NewOSClient()
+	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		switch request.Method {
 		case "GET":
 			return &http.Response{
@@ -136,9 +138,8 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 		}
 	}
 	vmi := createISMVMI("1d", true)
-	ch := Configure(vmi)
+	ch := o.ConfigureISM(vmi)
 	assert.NoError(t, <-ch)
-	resetDoHTTP()
 }
 
 // TestGetPolicyByName Tests retrieving ISM policies by name
@@ -158,7 +159,8 @@ func TestGetPolicyByName(t *testing.T) {
 		},
 	}
 
-	doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
+	o := NewOSClient()
+	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		if strings.Contains(request.URL.Path, "verrazzano-system") {
 			return &http.Response{
 				StatusCode: http.StatusOK,
@@ -173,7 +175,7 @@ func TestGetPolicyByName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			policy, err := getPolicyByName("http://localhost:9200/" + tt.policyName)
+			policy, err := o.getPolicyByName("http://localhost:9200/" + tt.policyName)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.status, *policy.Status)
 			if tt.status == http.StatusOK {
@@ -182,8 +184,6 @@ func TestGetPolicyByName(t *testing.T) {
 			}
 		})
 	}
-
-	resetDoHTTP()
 }
 
 // TestPutUpdatedPolicy_PolicyExists Tests updating a policy in place
@@ -191,7 +191,7 @@ func TestGetPolicyByName(t *testing.T) {
 // WHEN I call putUpdatedPolicy
 // THEN the ISM policy should be updated in place IFF there are changes to the policy
 func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
-	httpFunc := func(client *http.Client, request *http.Request) (*http.Response, error) {
+	httpFunc := func(request *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(testSystemPolicy)),
@@ -201,7 +201,7 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 	var tests = []struct {
 		name          string
 		age           string
-		httpFunc      func(client *http.Client, request *http.Request) (*http.Response, error)
+		httpFunc      func(request *http.Request) (*http.Response, error)
 		policyUpdated bool
 		hasError      bool
 	}{
@@ -222,7 +222,7 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 		{
 			"Policy should not be updated when the update call fails",
 			"1d",
-			func(client *http.Client, request *http.Request) (*http.Response, error) {
+			func(request *http.Request) (*http.Response, error) {
 				return nil, errors.New("boom")
 			},
 			false,
@@ -236,14 +236,15 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 		assert.NoError(t, err)
 		status := http.StatusOK
 		existingPolicy.Status = &status
-		doHTTP = tt.httpFunc
+		o := NewOSClient()
+		o.DoHTTP = tt.httpFunc
 		t.Run(tt.name, func(t *testing.T) {
 			newPolicy := &vmcontrollerv1.IndexManagementPolicy{
 				PolicyName:   "verrazzano-system",
 				IndexPattern: "verrazzano-system",
 				MinIndexAge:  &tt.age,
 			}
-			updatedPolicy, err := putUpdatedPolicy("http://localhost:9200", newPolicy, existingPolicy)
+			updatedPolicy, err := o.putUpdatedPolicy("http://localhost:9200", newPolicy, existingPolicy)
 			if tt.hasError {
 				assert.Error(t, err)
 			} else {
@@ -255,7 +256,6 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 				assert.Nil(t, updatedPolicy)
 			}
 		})
-		resetDoHTTP()
 	}
 }
 

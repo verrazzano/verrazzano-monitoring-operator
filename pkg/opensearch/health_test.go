@@ -1,7 +1,7 @@
 // Copyright (C) 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package vmo
+package opensearch
 
 import (
 	"errors"
@@ -125,8 +125,8 @@ var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 	},
 }
 
-func mockHTTPGenerator(body1, body2 string, code1, code2 int) func(client *http.Client, request *http.Request) (*http.Response, error) {
-	return func(client *http.Client, request *http.Request) (*http.Response, error) {
+func mockHTTPGenerator(body1, body2 string, code1, code2 int) func(request *http.Request) (*http.Response, error) {
+	return func(request *http.Request) (*http.Response, error) {
 		if strings.Contains(request.URL.Path, "_cluster/health") {
 			return &http.Response{
 				StatusCode: code1,
@@ -144,7 +144,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 	config.ESWaitTargetVersion = "1.2.3"
 	var tests = []struct {
 		name     string
-		httpFunc func(client *http.Client, request *http.Request) (*http.Response, error)
+		httpFunc func(request *http.Request) (*http.Response, error)
 		isError  bool
 	}{
 		{
@@ -174,7 +174,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 		},
 		{
 			"unhealthy when cluster is unreachable",
-			func(client *http.Client, request *http.Request) (*http.Response, error) {
+			func(request *http.Request) (*http.Response, error) {
 				return nil, errors.New("boom")
 			},
 			true,
@@ -183,14 +183,14 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doHTTP = tt.httpFunc
-			err := IsOpenSearchUpdated(&testvmo)
+			o := NewOSClient()
+			o.DoHTTP = tt.httpFunc
+			err := o.IsOpenSearchUpdated(&testvmo)
 			if tt.isError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
-			resetDoHTTP()
 		})
 	}
 }
@@ -215,5 +215,6 @@ func TestIsOpenSearchResizable(t *testing.T) {
 			},
 		},
 	}
-	assert.Error(t, IsOpenSearchResizable(&notEnoughNodesVMO))
+	o := NewOSClient()
+	assert.Error(t, o.IsOpenSearchResizable(&notEnoughNodesVMO))
 }

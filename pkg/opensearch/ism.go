@@ -1,29 +1,17 @@
 // Copyright (C) 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package ism
+package opensearch
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"net/http"
 	"reflect"
 	"strings"
 )
-
-var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
-	return client.Do(request)
-}
-
-// This is for unit testing
-func resetDoHTTP() {
-	doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
-		return client.Do(request)
-	}
-}
 
 type (
 	ISMPolicy struct {
@@ -73,51 +61,27 @@ const (
 	vmiManagedPolicy = "__vmi managed__"
 )
 
-//Configure sets up the ISM Policies
-// The returned channel should be read for exactly one response, which tells whether ISM configuration succeeded.
-func Configure(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
-	ch := make(chan error)
-	// configuration is done asynchronously, as this does not need to be blocking
-	go func() {
-		if !vmi.Spec.Elasticsearch.Enabled {
-			ch <- nil
-			return
-		}
-
-		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		for _, policy := range vmi.Spec.Elasticsearch.Policies {
-			if err := createISMPolicy(opensearchEndpoint, policy); err != nil {
-				ch <- err
-				return
-			}
-		}
-		ch <- nil
-	}()
-
-	return ch
-}
-
 //createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
 // If the policy already exsts and its spec matches the VMO policy spec, no update will be issued
-func createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) error {
+func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) error {
 	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.PolicyName)
-	existingPolicy, err := getPolicyByName(policyURL)
+	existingPolicy, err := o.getPolicyByName(policyURL)
 	if err != nil {
 		return err
 	}
-	updatedPolicy, err := putUpdatedPolicy(opensearchEndpoint, &policy, existingPolicy)
+	updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, &policy, existingPolicy)
 	if err != nil {
 		return err
 	}
-	return addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+	return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
 }
 
-func getPolicyByName(policyURL string) (*ISMPolicy, error) {
+func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	req, err := http.NewRequest("GET", policyURL, nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doHTTP(http.DefaultClient, req)
+	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +96,7 @@ func getPolicyByName(policyURL string) (*ISMPolicy, error) {
 
 //putUpdatedPolicy updates a policy in place, if the update is required. If no update was necessary, the returned
 // ISMPolicy will be nil.
-func putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
+func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
 	if !policyNeedsUpdate(policy, existingPolicy) {
 		return nil, nil
 	}
@@ -165,7 +129,7 @@ func putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexMan
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	resp, err := doHTTP(http.DefaultClient, req)
+	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
 	}
@@ -179,6 +143,30 @@ func putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexMan
 	}
 
 	return updatedISMPolicy, nil
+}
+
+//addPolicyToExistingIndices updates any pre-existing cluster indices to be managed by the ISMPolicy
+func (o *OSClient) addPolicyToExistingIndices(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, updatedPolicy *ISMPolicy) error {
+	// If no policy was updated, then there is nothing to do
+	if updatedPolicy == nil {
+		return nil
+	}
+	url := fmt.Sprintf("%s/_plugins/_ism/add/%s", opensearchEndpoint, policy.IndexPattern)
+	body := strings.NewReader(fmt.Sprintf(`{"policy_id": "%s"}`, *updatedPolicy.ID))
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when updating indicies for policy %s", resp.StatusCode, policy.PolicyName)
+	}
+	return nil
 }
 
 //policyNeedsUpdate returns true if the policy has changed and requires an update
@@ -221,30 +209,6 @@ func policyNeedsUpdate(policy *vmcontrollerv1.IndexManagementPolicy, existingPol
 	}
 	// compare the index patterns
 	return policy.IndexPattern != existingPolicy.Policy.ISMTemplate[0].IndexPatterns[0]
-}
-
-//addPolicyToExistingIndices updates any pre-existing cluster indices to be managed by the ISMPolicy
-func addPolicyToExistingIndices(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, updatedPolicy *ISMPolicy) error {
-	// If no policy was updated, then there is nothing to do
-	if updatedPolicy == nil {
-		return nil
-	}
-	url := fmt.Sprintf("%s/_plugins/_ism/add/%s", opensearchEndpoint, policy.IndexPattern)
-	body := strings.NewReader(fmt.Sprintf(`{"policy_id": "%s"}`, *updatedPolicy.ID))
-	req, err := http.NewRequest("POST", url, body)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	resp, err := doHTTP(http.DefaultClient, req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("got status code %d when updating indicies for policy %s", resp.StatusCode, policy.PolicyName)
-	}
-	return nil
 }
 
 func createRolloverAction(rollover *vmcontrollerv1.RolloverPolicy) map[string]interface{} {

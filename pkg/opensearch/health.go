@@ -1,7 +1,7 @@
 // Copyright (C) 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package vmo
+package opensearch
 
 import (
 	"encoding/json"
@@ -32,33 +32,9 @@ const (
 	MinDataNodesForResize = 2
 )
 
-var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
-	return client.Do(request)
-}
-
-// This is for unit testing
-func resetDoHTTP() {
-	doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
-		return client.Do(request)
-	}
-}
-
-func IsOpenSearchResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
-		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
-	}
-	return opensearchHealth(vmo, true)
-}
-
-//IsOpenSearchUpdated verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
-// and that each node is running the expected version
-func IsOpenSearchUpdated(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return opensearchHealth(vmo, true)
-}
-
-func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {
+func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {
 	// Verify that the cluster is Green
-	clusterHealth, err := getOpenSearchClusterHealth(vmo)
+	clusterHealth, err := o.getOpenSearchClusterHealth(vmo)
 	if err != nil {
 		return err
 	}
@@ -67,7 +43,7 @@ func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNod
 	}
 
 	// Verify that the nodes are running the expected version
-	nodes, err := getOpenSearchNodes(vmo)
+	nodes, err := o.getOpenSearchNodes(vmo)
 	if err != nil {
 		return err
 	}
@@ -91,13 +67,13 @@ func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNod
 	return nil
 }
 
-func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Node, error) {
+func (o *OSClient) getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Node, error) {
 	url := resources.GetOpenSearchHTTPEndpoint(vmo) + "/_nodes/settings"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doHTTP(http.DefaultClient, req)
+	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
 	}
@@ -128,13 +104,13 @@ func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Nod
 	return nodes, nil
 }
 
-func getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*ClusterHealth, error) {
+func (o *OSClient) getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*ClusterHealth, error) {
 	url := resources.GetOpenSearchHTTPEndpoint(vmo) + "/_cluster/health"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doHTTP(http.DefaultClient, req)
+	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
 	}
