@@ -191,7 +191,53 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			corev1.EnvVar{Name: "node.ingest", Value: "false"},
 			corev1.EnvVar{Name: "node.data", Value: "true"},
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
+			corev1.EnvVar{Name: constants.ObjectStoreAccessKeyVarName,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: constants.VerrazzanoSecretName,
+						},
+						Key: constants.ObjectStoreAccessKey,
+						Optional: func(opt bool) *bool {
+							return &opt
+						}(true),
+					},
+				},
+			},
+			corev1.EnvVar{Name: constants.ObjectStoreCustomerKeyVarName,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: constants.VerrazzanoSecretName,
+						},
+						Key: constants.ObjectStoreCustomerKey,
+						Optional: func(opt bool) *bool {
+							return &opt
+						}(true),
+					},
+				},
+			},
 		)
+
+		// Adding command for add keystore values at pod bootup
+		elasticsearchDataDeployment.Spec.Template.Spec.Containers[0].Command = []string{
+			"sh",
+			"-c",
+			`#!/usr/bin/env bash -e
+
+# Updating elastic search keystore with keys
+# required for the repository-s3 plugin
+
+if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
+    echo "Updating object store access key..."
+	echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+fi
+if [ "${OBJECT_STORE_ACCESS_SECRET_KEY_ID:-}" ]; then
+    echo "Updating object store secret access key..."
+	echo $OBJECT_STORE_ACCESS_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+fi
+/usr/local/bin/docker-entrypoint.sh`,
+		}
 
 		// add the required istio annotations to allow inter-es component communication
 		if elasticsearchDataDeployment.Spec.Template.Annotations == nil {
