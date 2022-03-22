@@ -51,6 +51,25 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 	esMasterContainer.Ports[0].Name = "transport"
 	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
 
+	// Adding command for add keystore values at pod bootup
+	esMasterContainer.Command = []string{
+		"sh",
+		"-c",
+		`#!/usr/bin/env bash -e
+
+# Updating elastic search keystore with keys
+# required for the repository-s3 plugin
+
+if [ "${OCI_ACCESS_KEY_ID:-}" ]; then
+    echo "Updating oci access key..."
+	echo $OCI_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+fi
+if [ "${OCI_SECRET_ACCESS_KEY_ID:-}" ]; then
+    echo "Updating oci secret access key..."
+	echo OCI_SECRET_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+fi
+/usr/local/bin/docker-entrypoint.sh`,
+	}
 	var envVars = []corev1.EnvVar{
 		{
 			Name: "node.name",
@@ -64,6 +83,32 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
 		{Name: "HTTP_ENABLE", Value: "true"},
 		{Name: "logger.org.opensearch", Value: "info"},
+		{Name: constants.OciAccessKeyVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: constants.VerrazzanoSecretName,
+					},
+					Key: constants.OciAccessKey,
+					Optional: func(opt bool) *bool {
+						return &opt
+					}(true),
+				},
+			},
+		},
+		{Name: constants.OciSecretKeyVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: constants.VerrazzanoSecretName,
+					},
+					Key: constants.OciSecretKey,
+					Optional: func(opt bool) *bool {
+						return &opt
+					}(true),
+				},
+			},
+		},
 	}
 	if resources.IsSingleNodeESCluster(vmo) {
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
