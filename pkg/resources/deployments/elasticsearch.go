@@ -191,26 +191,26 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			corev1.EnvVar{Name: "node.ingest", Value: "false"},
 			corev1.EnvVar{Name: "node.data", Value: "true"},
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
-			corev1.EnvVar{Name: constants.OciAccessKeyVarName,
+			corev1.EnvVar{Name: constants.ObjectStoreAccessKeyVarName,
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: constants.VerrazzanoSecretName,
 						},
-						Key: constants.OciAccessKey,
+						Key: constants.ObjectStoreAccessKey,
 						Optional: func(opt bool) *bool {
 							return &opt
 						}(true),
 					},
 				},
 			},
-			corev1.EnvVar{Name: constants.OciSecretKeyVarName,
+			corev1.EnvVar{Name: constants.ObjectStoreSecretKeyVarName,
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: constants.VerrazzanoSecretName,
 						},
-						Key: constants.OciSecretKey,
+						Key: constants.ObjectStoreSecretKey,
 						Optional: func(opt bool) *bool {
 							return &opt
 						}(true),
@@ -228,11 +228,11 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 # Updating elastic search keystore with keys
 # required for the repository-s3 plugin
 
-if [ "${OCI_ACCESS_KEY_ID:-}" ]; then
+if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
     echo "Updating oci access key..."
 	echo $OCI_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
 fi
-if [ "${OCI_SECRET_ACCESS_KEY_ID:-}" ]; then
+if [ "${OBJECT_STORE_ACCESS_SECRET_KEY_ID:-}" ]; then
     echo "Updating oci secret access key..."
 	echo OCI_SECRET_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
 fi

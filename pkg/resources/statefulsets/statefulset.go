@@ -60,11 +60,11 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 # Updating elastic search keystore with keys
 # required for the repository-s3 plugin
 
-if [ "${OCI_ACCESS_KEY_ID:-}" ]; then
+if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
     echo "Updating oci access key..."
 	echo $OCI_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
 fi
-if [ "${OCI_SECRET_ACCESS_KEY_ID:-}" ]; then
+if [ "${OBJECT_STORE_ACCESS_SECRET_KEY_ID:-}" ]; then
     echo "Updating oci secret access key..."
 	echo OCI_SECRET_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
 fi
@@ -83,26 +83,26 @@ fi
 		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
 		{Name: "HTTP_ENABLE", Value: "true"},
 		{Name: "logger.org.opensearch", Value: "info"},
-		{Name: constants.OciAccessKeyVarName,
+		{Name: constants.ObjectStoreAccessKeyVarName,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: constants.VerrazzanoSecretName,
 					},
-					Key: constants.OciAccessKey,
+					Key: constants.ObjectStoreAccessKey,
 					Optional: func(opt bool) *bool {
 						return &opt
 					}(true),
 				},
 			},
 		},
-		{Name: constants.OciSecretKeyVarName,
+		{Name: constants.ObjectStoreSecretKeyVarName,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: constants.VerrazzanoSecretName,
 					},
-					Key: constants.OciSecretKey,
+					Key: constants.ObjectStoreSecretKey,
 					Optional: func(opt bool) *bool {
 						return &opt
 					}(true),
