@@ -37,7 +37,6 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		if err != nil {
 			return err
 		}
-		addKibanaUpgradeStrategy(osd, existingDeployment)
 		err = updateDeployment(controller, vmo, existingDeployment, osd)
 	}
 	if err != nil {
@@ -149,37 +148,6 @@ func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	}
 
 	return err
-}
-
-//addKibanaUpgradeStrategy updates the Kibana deployment with an appropriate update strategy,
-// whether the upgrade is a rolling upgrade or a recreate upgrade.
-func addKibanaUpgradeStrategy(newDeploy, oldDeploy *appsv1.Deployment) {
-	getKibanaImage := func(deploy *appsv1.Deployment) string {
-		kibanaImage := ""
-		for _, container := range deploy.Spec.Template.Spec.Containers {
-			if container.Name == config.Kibana.Name {
-				kibanaImage = container.Image
-				break
-			}
-		}
-		return kibanaImage
-	}
-	oldKibanaImage := getKibanaImage(oldDeploy)
-	newKibanaImage := getKibanaImage(newDeploy)
-
-	// Kibana/OSD should not have concurrent replicas with separate versions
-	// this can lead to race conditions and result in data corruption
-	newDeploy.Spec.Strategy = appsv1.DeploymentStrategy{
-		Type: getUpdateStrategy(newKibanaImage, oldKibanaImage),
-	}
-}
-
-//getUpdateStrategy returns a deployment strategy for recreate or rolling updates
-func getUpdateStrategy(newImage, oldImage string) appsv1.DeploymentStrategyType {
-	if newImage == oldImage {
-		return appsv1.RollingUpdateDeploymentStrategyType
-	}
-	return appsv1.RecreateDeploymentStrategyType
 }
 
 // Updates the *next* candidate deployment of the given deployments list.  A deployment is a candidate only if
