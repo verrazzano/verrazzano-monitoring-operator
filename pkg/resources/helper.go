@@ -38,6 +38,11 @@ func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance)
 	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHttpPort)
 }
 
+func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
+		constants.OSDashboardsHttpPort)
+}
+
 //GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
 func GetNewRandomID(size int) (string, error) {
 	builder := strings.Builder{}
@@ -509,4 +514,25 @@ func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componen
 			Ports:    []corev1.ServicePort{{Name: "oidc", Port: int32(constants.OidcProxyPort)}},
 		},
 	}
+}
+
+// convertToRegexp converts index pattern to a regular expression pattern.
+func ConvertToRegexp(pattern string) string {
+	var result strings.Builder
+	// Add ^ at the beginning
+	result.WriteString("^")
+	for i, literal := range strings.Split(pattern, "*") {
+
+		// Replace * with .*
+		if i > 0 {
+			result.WriteString(".*")
+		}
+
+		// Quote any regular expression meta characters in the
+		// literal text.
+		result.WriteString(regexp.QuoteMeta(literal))
+	}
+	// Add $ at the end
+	result.WriteString("$")
+	return result.String()
 }

@@ -104,6 +104,9 @@ const ESHttpPort = 9200
 // ESTransportPort default Elasticsearch transport port
 const ESTransportPort = 9300
 
+// OSDashboardsHttpPort default OpenSearch Dashboards HTTP port
+const OSDashboardsHttpPort = 5601
+
 // OidcProxyPort default OidcProxy HTTP port
 const OidcProxyPort = 8775
 
