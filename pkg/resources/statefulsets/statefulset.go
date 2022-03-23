@@ -87,7 +87,7 @@ fi
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: constants.VerrazzanoKubeObjectName,
+						Name: constants.VerrazzanoBackupScrtName,
 					},
 					Key: constants.ObjectStoreAccessKey,
 					Optional: func(opt bool) *bool {
@@ -100,7 +100,7 @@ fi
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: constants.VerrazzanoKubeObjectName,
+						Name: constants.VerrazzanoBackupScrtName,
 					},
 					Key: constants.ObjectStoreCustomerKey,
 					Optional: func(opt bool) *bool {
