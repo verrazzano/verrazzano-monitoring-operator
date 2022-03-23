@@ -14,6 +14,11 @@ import (
 )
 
 type (
+	PolicyList struct {
+		Policies      []ISMPolicy `json:"policies"`
+		TotalPolicies int         `json:"total_policies"`
+	}
+
 	ISMPolicy struct {
 		ID             *string      `json:"_id,omitempty"`
 		PrimaryTerm    *int         `json:"_primary_term,omitempty"`
@@ -58,7 +63,7 @@ const (
 	// Default amount of time before a policy-managed index is rolled over
 	defaultRolloverIndexAge = "1d"
 	// Descriptor to identify policies as being managed by the VMI
-	vmiManagedPolicy = "__vmi managed__"
+	vmiManagedPolicy = "__vmi-managed__"
 )
 
 //createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
@@ -169,46 +174,80 @@ func (o *OSClient) addPolicyToExistingIndices(opensearchEndpoint string, policy 
 	return nil
 }
 
-//policyNeedsUpdate returns true if the policy has changed and requires an update
-// If the ingest state or index template changed, the policy needs an update
-func policyNeedsUpdate(policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) bool {
-	getIngestState := func() *PolicyState {
-		for _, state := range existingPolicy.Policy.States {
-			if state.Name == "ingest" {
-				return &state
+func (o *OSClient) cleanupPolicies(opensearchEndpoint string, policies []vmcontrollerv1.IndexManagementPolicy) error {
+	policyList, err := o.getAllPolicies(opensearchEndpoint)
+	if err != nil {
+		return err
+	}
+
+	expectedPolicyMap := map[string]bool{}
+	for _, policy := range policies {
+		expectedPolicyMap[policy.PolicyName] = true
+	}
+
+	// A policy is eligible for deletion if it is marked as VMI managed, but the VMI no longer
+	// has a policy entry for it
+	for _, policy := range policyList.Policies {
+		if isEligibleForDeletion(policy, expectedPolicyMap) {
+			if err := o.deletePolicy(opensearchEndpoint, *policy.ID); err != nil {
+				return err
 			}
 		}
-		return nil
 	}
-	ingestState := getIngestState()
-	if ingestState == nil {
-		return true
-	}
+	return nil
+}
 
-	// compare the delete transition
-	var newMinIndexAge = defaultMinIndexAge
-	if policy.MinIndexAge != nil {
-		newMinIndexAge = *policy.MinIndexAge
+func (o *OSClient) getAllPolicies(opensearchEndpoint string) (*PolicyList, error) {
+	url := fmt.Sprintf("%s/_plugins/_ism/policies", opensearchEndpoint)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
 	}
-	if ingestState.Transitions[0].Conditions.MinIndexAge != newMinIndexAge {
-		return true
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		return nil, err
 	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got status code %d when querying policies for cleanup", resp.StatusCode)
+	}
+	policies := &PolicyList{}
+	if err := json.NewDecoder(resp.Body).Decode(policies); err != nil {
+		return nil, err
+	}
+	return policies, nil
+}
 
-	// compare the ingest state
-	rollover, ok := ingestState.Actions[0]["rollover"]
-	if !ok {
-		return true
+func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) error {
+	url := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policyName)
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
 	}
-	rolloverMap, ok := rollover.(map[string]interface{})
-	if !ok {
-		return true
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		return err
 	}
-	newRollover := createRolloverAction(&policy.Rollover)
-	if !reflect.DeepEqual(newRollover, rolloverMap) {
-		return true
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when deleting policy %s", resp.StatusCode, policyName)
 	}
-	// compare the index patterns
-	return policy.IndexPattern != existingPolicy.Policy.ISMTemplate[0].IndexPatterns[0]
+	return nil
+}
+
+func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) bool {
+	return policy.Policy.Description == vmiManagedPolicy &&
+		expectedPolicyMap[*policy.ID] == false
+}
+
+//policyNeedsUpdate returns true if the policy document has changed
+func policyNeedsUpdate(policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) bool {
+	newPolicyDocument := toISMPolicy(policy).Policy
+	oldPolicyDocument := existingPolicy.Policy
+
+	return newPolicyDocument.DefaultState != oldPolicyDocument.DefaultState ||
+		!reflect.DeepEqual(newPolicyDocument.States, oldPolicyDocument.States) ||
+		!reflect.DeepEqual(newPolicyDocument.ISMTemplate, oldPolicyDocument.ISMTemplate)
 }
 
 func createRolloverAction(rollover *vmcontrollerv1.RolloverPolicy) map[string]interface{} {

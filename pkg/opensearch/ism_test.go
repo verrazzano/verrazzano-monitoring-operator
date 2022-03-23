@@ -4,8 +4,10 @@
 package opensearch
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"io"
@@ -24,7 +26,7 @@ const (
     "_primary_term" : 1,
     "policy" : {
     "policy_id" : "verrazzano-system",
-    "description" : "Verrazzano Index policy to rollover and delete system indices",
+    "description" : "__vmi-managed__",
     "last_updated_time" : 1647551644420,
     "schema_version" : 12,
     "error_notification" : null,
@@ -71,6 +73,12 @@ const (
 }
 `
 )
+
+var testPolicyList = fmt.Sprintf(`{
+	"policies": [
+      %s
+    ]
+}`, testSystemPolicy)
 
 func createTestPolicy(age, rolloverAge, indexPattern, minSize string, minDocCount int) *vmcontrollerv1.IndexManagementPolicy {
 	return &vmcontrollerv1.IndexManagementPolicy{
@@ -121,10 +129,18 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		switch request.Method {
 		case "GET":
-			return &http.Response{
-				StatusCode: http.StatusNotFound,
-				Body:       io.NopCloser(strings.NewReader(testPolicyNotFound)),
-			}, nil
+			if strings.Contains(request.URL.Path, "verrazzano-system") {
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Body:       io.NopCloser(strings.NewReader(testPolicyNotFound)),
+				}, nil
+			} else {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(testPolicyList)),
+				}, nil
+			}
+
 		case "PUT":
 			return &http.Response{
 				StatusCode: http.StatusCreated,
@@ -265,6 +281,12 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 // THEN true is only returned if the new ISM policy has changed
 func TestPolicyNeedsUpdate(t *testing.T) {
 	basePolicy := createTestPolicy("7d", "1d", "verrazzano-system", "10gb", 1000)
+	policyExtraState := toISMPolicy(basePolicy)
+	policyExtraState.Policy.States = append(policyExtraState.Policy.States, PolicyState{
+		Name:        "warm",
+		Actions:     []map[string]interface{}{},
+		Transitions: []PolicyTransition{},
+	})
 	var tests = []struct {
 		name        string
 		p1          *vmcontrollerv1.IndexManagementPolicy
@@ -307,12 +329,120 @@ func TestPolicyNeedsUpdate(t *testing.T) {
 			toISMPolicy(createTestPolicy("7d", "1d", "verrazzano-system", "10gb", 5000)),
 			true,
 		},
+		{
+			"needs update when states changed",
+			basePolicy,
+			policyExtraState,
+			true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			needsUpdate := policyNeedsUpdate(tt.p1, tt.p2)
 			assert.Equal(t, tt.needsUpdate, needsUpdate)
+		})
+	}
+}
+
+// TestCleanupPolicies Tests cleaning up policies no longer managed by the VMI
+// GIVEN a list of expected policies
+// WHEN I call cleanupPolicies
+// THEN then the existing policies should be queried and any non-matching members removed
+func TestCleanupPolicies(t *testing.T) {
+	o := NewOSClient()
+
+	id1 := "myapp"
+	id2 := "anotherapp"
+
+	p1 := createTestPolicy("1d", "1d", id1, "1d", 1)
+	p1.PolicyName = id1
+	p2 := createTestPolicy("1d", "1d", id2, "1d", 1)
+	p2.PolicyName = id2
+	expectedPolicies := []vmcontrollerv1.IndexManagementPolicy{
+		*p1,
+	}
+
+	p1ISM := toISMPolicy(p1)
+	p1ISM.ID = &id1
+	p2ISM := toISMPolicy(p2)
+	p2ISM.ID = &id2
+	existingPolicies := &PolicyList{
+		Policies: []ISMPolicy{
+			*p1ISM,
+			*p2ISM,
+		},
+	}
+	existingPolicyJson, err := json.Marshal(existingPolicies)
+	assert.NoError(t, err)
+
+	var getCalls, deleteCalls int
+	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
+		switch request.Method {
+		case "GET":
+			getCalls++
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader(existingPolicyJson)),
+			}, nil
+		default:
+			deleteCalls++
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("")),
+			}, nil
+		}
+	}
+
+	err = o.cleanupPolicies("http://localhost:9200", expectedPolicies)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, getCalls)
+	assert.Equal(t, 1, deleteCalls)
+}
+
+// TestIsEligibleForDeletion Tests whether a policy is eligible for deletion or not
+// GIVEN a policy and the expected policy set
+// WHEN I call isEligibleForDeletion
+// THEN only managed policies that are not expected are eligible for deletion
+func TestIsEligibleForDeletion(t *testing.T) {
+	id1 := "id1"
+	p1 := ISMPolicy{ID: &id1, Policy: InlinePolicy{Description: vmiManagedPolicy}}
+	id2 := "id2"
+	p2 := ISMPolicy{ID: &id2}
+	var tests = []struct {
+		name     string
+		p        ISMPolicy
+		e        map[string]bool
+		eligible bool
+	}{
+		{
+			"eligible when policy is managed and policy isn't expected",
+			p1,
+			map[string]bool{},
+			true,
+		},
+		{
+			"ineligible when policy is not managed",
+			p2,
+			map[string]bool{
+				id1: true,
+			},
+			false,
+		},
+		{
+			"ineligible when policy is managed and policy is expected",
+			p1,
+			map[string]bool{
+				id1: true,
+			},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := isEligibleForDeletion(tt.p, tt.e)
+			assert.Equal(t, tt.eligible, res)
 		})
 	}
 }
