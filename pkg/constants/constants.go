@@ -230,9 +230,9 @@ const PrometheusClusterNameLabel = "verrazzano_cluster"
 
 const (
 	// Constants required for updating Opensearch keystore
-	VerrazzanoSecretName          = "verrazzano"
+	VerrazzanoKubeObjectName      = "verrazzano-backup"
 	ObjectStoreAccessKeyVarName   = "OBJECT_STORE_ACCESS_KEY_ID"
 	ObjectStoreAccessKey          = "object_store_access_key"
-	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_ACCESS_SECRET_KEY_ID"
-	ObjectStoreCustomerKey        = "object_store_access_secret_key"
+	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_SECRET_KEY_ID"
+	ObjectStoreCustomerKey        = "object_store_secret_key"
 )

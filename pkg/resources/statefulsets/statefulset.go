@@ -64,9 +64,9 @@ if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
     echo "Updating object store access key..."
 	echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
 fi
-if [ "${OBJECT_STORE_ACCESS_SECRET_KEY_ID:-}" ]; then
-    echo "Updating object store secret access key..."
-	echo $OBJECT_STORE_ACCESS_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
+    echo "Updating object store secret key..."
+	echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
 fi
 /usr/local/bin/docker-entrypoint.sh`,
 	}
@@ -87,7 +87,7 @@ fi
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: constants.VerrazzanoSecretName,
+						Name: constants.VerrazzanoKubeObjectName,
 					},
 					Key: constants.ObjectStoreAccessKey,
 					Optional: func(opt bool) *bool {
@@ -100,7 +100,7 @@ fi
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: constants.VerrazzanoSecretName,
+						Name: constants.VerrazzanoKubeObjectName,
 					},
 					Key: constants.ObjectStoreCustomerKey,
 					Optional: func(opt bool) *bool {
