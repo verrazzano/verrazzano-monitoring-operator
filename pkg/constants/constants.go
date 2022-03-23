@@ -227,3 +227,12 @@ const KeycloakCABundleData = "ca-bundle"
 // PrometheusClusterNameLabel - the label name attached to all metrics to indicate the Verrazzano
 // cluster name where the metric originated
 const PrometheusClusterNameLabel = "verrazzano_cluster"
+
+const (
+	// Constants required for updating Opensearch keystore
+	VerrazzanoSecretName          = "verrazzano"
+	ObjectStoreAccessKeyVarName   = "OBJECT_STORE_ACCESS_KEY_ID"
+	ObjectStoreAccessKey          = "object_store_access_key"
+	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_ACCESS_SECRET_KEY_ID"
+	ObjectStoreCustomerKey        = "object_store_access_secret_key"
+)

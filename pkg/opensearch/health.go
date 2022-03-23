@@ -1,17 +1,15 @@
 // Copyright (C) 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package vmo
+package opensearch
 
 import (
 	"encoding/json"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"net/http"
-	"os"
 )
 
 type (
@@ -30,31 +28,13 @@ type (
 )
 
 const (
-	MasterHTTPEndpoint    = "VMO_MASTER_HTTP_ENDPOINT"
 	HealthGreen           = "green"
 	MinDataNodesForResize = 2
 )
 
-var doHTTP = func(client *http.Client, request *http.Request) (*http.Response, error) {
-	return client.Do(request)
-}
-
-func IsOpenSearchResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
-		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
-	}
-	return opensearchHealth(vmo, true)
-}
-
-//IsOpenSearchUpdated verifies the of the OpenSearch Cluster is ready to use by checking the cluster status is green,
-// and that each node is running the expected version
-func IsOpenSearchUpdated(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return opensearchHealth(vmo, true)
-}
-
-func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {
+func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {
 	// Verify that the cluster is Green
-	clusterHealth, err := getOpenSearchClusterHealth(vmo)
+	clusterHealth, err := o.getOpenSearchClusterHealth(vmo)
 	if err != nil {
 		return err
 	}
@@ -63,7 +43,7 @@ func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNod
 	}
 
 	// Verify that the nodes are running the expected version
-	nodes, err := getOpenSearchNodes(vmo)
+	nodes, err := o.getOpenSearchNodes(vmo)
 	if err != nil {
 		return err
 	}
@@ -87,13 +67,13 @@ func opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNod
 	return nil
 }
 
-func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Node, error) {
-	url := getOpenSearchHTTPEndpoint(vmo) + "/_nodes/settings"
+func (o *OSClient) getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Node, error) {
+	url := resources.GetOpenSearchHTTPEndpoint(vmo) + "/_nodes/settings"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doHTTP(http.DefaultClient, req)
+	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
 	}
@@ -124,13 +104,13 @@ func getOpenSearchNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]Nod
 	return nodes, nil
 }
 
-func getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*ClusterHealth, error) {
-	url := getOpenSearchHTTPEndpoint(vmo) + "/_cluster/health"
+func (o *OSClient) getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (*ClusterHealth, error) {
+	url := resources.GetOpenSearchHTTPEndpoint(vmo) + "/_cluster/health"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doHTTP(http.DefaultClient, req)
+	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
 	}
@@ -144,15 +124,4 @@ func getOpenSearchClusterHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 		return nil, err
 	}
 	return clusterHealth, nil
-}
-
-func getOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
-	// The master HTTP port may be overridden if necessary.
-	// This can be useful in situations where the VMO does not have direct access to the cluster service,
-	// such as when you are using port-forwarding.
-	masterServiceEndpoint := os.Getenv(MasterHTTPEndpoint)
-	if len(masterServiceEndpoint) > 0 {
-		return masterServiceEndpoint
-	}
-	return fmt.Sprintf("http://%s-http:%d", resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHttpPort)
 }

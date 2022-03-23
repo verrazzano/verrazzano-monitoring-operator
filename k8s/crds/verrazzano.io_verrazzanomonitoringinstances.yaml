@@ -264,60 +264,44 @@ spec:
                     - name
                     - roles
                     type: object
-                  nodes:
+                  policies:
                     items:
-                      description: ElasticsearchNode Type details
+                      description: IndexManagementPolicy Defines a policy for managing
+                        indices
                       properties:
-                        javaOpts:
+                        indexPattern:
+                          description: Index pattern the policy will be matched to
                           type: string
-                        name:
+                        minIndexAge:
+                          description: Minimum age of an index before it is automatically
+                            deleted
+                          pattern: ^[0-9]+(d|h|m|s|ms|micros|nanos)$
                           type: string
-                        replicas:
-                          format: int32
-                          type: integer
-                        resources:
-                          description: Resources details
+                        policyName:
+                          description: Name of the policy
+                          type: string
+                        rollover:
+                          description: RolloverPolicy Settings for Index Management
+                            rollover
                           properties:
-                            limitCPU:
-                              pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                            minDocCount:
+                              description: Minimum count of documents in an index
+                                before it is rolled over
+                              type: integer
+                            minIndexAge:
+                              description: Minimum age of an index before it is rolled
+                                over
+                              pattern: ^[0-9]+(d|h|m|s|ms|micros|nanos)$
                               type: string
-                            limitMemory:
-                              pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                              type: string
-                            maxSizeDisk:
-                              description: These fields are not used anywhere
-                              pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                              type: string
-                            minSizeDisk:
-                              pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                              type: string
-                            requestCPU:
-                              pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                              type: string
-                            requestMemory:
-                              pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                              type: string
-                          type: object
-                        roles:
-                          items:
-                            type: string
-                          type: array
-                        storage:
-                          description: Storage details
-                          properties:
-                            availabilityDomain:
-                              type: string
-                            pvcNames:
-                              items:
-                                type: string
-                              type: array
-                            size:
+                            minSize:
+                              description: Minimum size of an index before it is rolled
+                                over e.g., 20mb, 5gb, etc.
+                              pattern: ^[0-9]+(b|kb|mb|gb|tb|pb)$
                               type: string
                           type: object
                       required:
-                      - javaOpts
-                      - name
-                      - roles
+                      - indexPattern
+                      - policyName
                       type: object
                     type: array
                   storage:

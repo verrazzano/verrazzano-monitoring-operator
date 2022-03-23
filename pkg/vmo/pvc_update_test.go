@@ -16,6 +16,26 @@ import (
 	"testing"
 )
 
+var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "system",
+		Namespace: constants.VerrazzanoSystemNamespace,
+	},
+	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+		Elasticsearch: vmcontrollerv1.Elasticsearch{
+			DataNode: vmcontrollerv1.ElasticsearchNode{
+				Replicas: 3,
+			},
+			IngestNode: vmcontrollerv1.ElasticsearchNode{
+				Replicas: 1,
+			},
+			MasterNode: vmcontrollerv1.ElasticsearchNode{
+				Replicas: 1,
+			},
+		},
+	},
+}
+
 func makePVC(name, quantity string) *corev1.PersistentVolumeClaim {
 	q, _ := resource.ParseQuantity(quantity)
 	return &corev1.PersistentVolumeClaim{
