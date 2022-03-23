@@ -134,12 +134,11 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 					StatusCode: http.StatusNotFound,
 					Body:       io.NopCloser(strings.NewReader(testPolicyNotFound)),
 				}, nil
-			} else {
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(strings.NewReader(testPolicyList)),
-				}, nil
 			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(testPolicyList)),
+			}, nil
 
 		case "PUT":
 			return &http.Response{
@@ -373,7 +372,7 @@ func TestCleanupPolicies(t *testing.T) {
 			*p2ISM,
 		},
 	}
-	existingPolicyJson, err := json.Marshal(existingPolicies)
+	existingPolicyJSON, err := json.Marshal(existingPolicies)
 	assert.NoError(t, err)
 
 	var getCalls, deleteCalls int
@@ -383,7 +382,7 @@ func TestCleanupPolicies(t *testing.T) {
 			getCalls++
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewReader(existingPolicyJson)),
+				Body:       io.NopCloser(bytes.NewReader(existingPolicyJSON)),
 			}, nil
 		default:
 			deleteCalls++

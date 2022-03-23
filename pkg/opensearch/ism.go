@@ -237,7 +237,7 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) error {
 
 func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) bool {
 	return policy.Policy.Description == vmiManagedPolicy &&
-		expectedPolicyMap[*policy.ID] == false
+		!expectedPolicyMap[*policy.ID]
 }
 
 //policyNeedsUpdate returns true if the policy document has changed
