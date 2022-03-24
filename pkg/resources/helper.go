@@ -23,24 +23,29 @@ import (
 )
 
 var (
-	runes              = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-	MasterHTTPEndpoint = "VMO_MASTER_HTTP_ENDPOINT"
+	runes                  = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
+	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 )
 
 func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 	// The master HTTP port may be overridden if necessary.
 	// This can be useful in situations where the VMO does not have direct access to the cluster service,
 	// such as when you are using port-forwarding.
-	masterServiceEndpoint := os.Getenv(MasterHTTPEndpoint)
+	masterServiceEndpoint := os.Getenv(masterHTTPEndpoint)
 	if len(masterServiceEndpoint) > 0 {
 		return masterServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHttpPort)
+	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHTTPPort)
 }
 
 func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	dashboardsServiceEndpoint := os.Getenv(dashboardsHTTPEndpoint)
+	if len(dashboardsServiceEndpoint) > 0 {
+		return dashboardsServiceEndpoint
+	}
 	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
-		constants.OSDashboardsHttpPort)
+		constants.OSDashboardsHTTPPort)
 }
 
 //GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}

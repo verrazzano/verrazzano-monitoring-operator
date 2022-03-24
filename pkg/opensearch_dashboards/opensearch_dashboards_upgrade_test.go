@@ -5,7 +5,6 @@ package dashboards
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"io"
 	"net/http"
 	"strings"
@@ -58,7 +57,7 @@ const openSearchDashboardsEP = "http://localhost:5601/"
 
 // TestGetPatterns tests the getPatterns function.
 func TestGetPatterns(t *testing.T) {
-	asrt := assert.New(t)
+	a := assert.New(t)
 
 	// GIVEN an OpenSearch Dashboards pod
 	//  WHEN getPatterns is called
@@ -71,11 +70,22 @@ func TestGetPatterns(t *testing.T) {
 			Body:       io.NopCloser(strings.NewReader(fakeGetPatternOutput)),
 		}, nil
 	}
-	patterns, err := od.getPatterns(vzlog.DefaultLogger(), openSearchDashboardsEP)
-	asrt.NoError(err, "Failed to get patterns from OpenSearch Dashboards")
-	expectedValue := map[string]string{"0f2ede70-8e15-11ec-abc1-6bc5e972b077": "verrazzano-namespace-bobs-books",
-		"1cb7fcc0-8e15-11ec-abc1-6bc5e972b077": "verrazzano-namespace-todo*"}
-	asrt.Equal(patterns, expectedValue)
+	savedObjects, err := od.getPatterns(openSearchDashboardsEP, 100)
+	a.NoError(err, "Failed to get patterns from OpenSearch Dashboards")
+	a.Equal(2, len(savedObjects))
+	a.Contains(savedObjects, SavedObject{
+		ID: "0f2ede70-8e15-11ec-abc1-6bc5e972b077",
+		Attributes: Attributes{
+			Title: "verrazzano-namespace-bobs-books",
+		},
+	})
+	a.Contains(savedObjects, SavedObject{
+		ID: "1cb7fcc0-8e15-11ec-abc1-6bc5e972b077",
+		Attributes: Attributes{
+			Title: "verrazzano-namespace-todo*",
+		},
+	})
+
 }
 
 // TestConstructUpdatedPattern tests the constructUpdatedPattern function.

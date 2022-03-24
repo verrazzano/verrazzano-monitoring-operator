@@ -4,7 +4,9 @@
 package upgrade
 
 import (
+	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -22,21 +24,31 @@ func MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.Verrazzan
 			ch <- nil
 			return
 		}
+
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		// During upgrade, reindex and delete old indices
-		if err := o.MigrateIndicesToDataStreams(log, vmi, openSearchEndpoint); err != nil {
-			ch <- err
-			return
-		}
-
-		// Update if any index patterns configured for old indices in OpenSearch Dashboards
-		err := od.UpdatePatterns(log, vmi)
+		// Make sure that the data stream template is created before re-indexing
+		exists, err := o.DataStreamExists(openSearchEndpoint, config.DataStreamName())
 		if err != nil {
-			ch <- log.ErrorfNewErr("Error in updating index patterns"+
-				" in OpenSearch Dashboards: %v", err)
+			ch <- fmt.Errorf("failed to verify existing of data stream: %v", err)
 			return
 		}
 
+		// If the migration data stream exists, the old backing indices must be reindexed
+		if exists {
+			// During upgrade, reindex and delete old indices
+			if err := o.MigrateIndicesToDataStreams(log, vmi, openSearchEndpoint); err != nil {
+				ch <- err
+				return
+			}
+
+			// Update if any index patterns configured for old indices in OpenSearch Dashboards
+			err = od.UpdatePatterns(log, vmi)
+			if err != nil {
+				ch <- log.ErrorfNewErr("Error in updating index patterns"+
+					" in OpenSearch Dashboards: %v", err)
+				return
+			}
+		}
 		ch <- nil
 	}()
 

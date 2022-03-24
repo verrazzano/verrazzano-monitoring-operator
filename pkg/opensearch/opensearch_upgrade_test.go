@@ -4,182 +4,261 @@
 package opensearch
 
 import (
+	"errors"
 	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 )
 
-const fakeCatIndicesOutput = `[
-  {
-    "index": "verrazzano-namespace-verrazzano-system"
-  },
-  {
-    "index": "verrazzano-logstash-2022.01.23"
-  },
-  {
-    "index": "verrazzano-namespace-kube-system"
-  },
-  {
-    "index": "verrazzano-namespace-fleet-system"
-  },
-  {
-    "index": "verrazzano-namespace-ingress-nginx"
-  },
-  {
-    "index": "verrazzano-systemd-journal"
-  },
-  {
-    "index": "verrazzano-namespace-todo-list"
-  },
-  {
-    "index": "verrazzano-namespace-bobs-books"
-  }
-]`
-
-const fakeGetTemplateOutput = `{
-  "index_templates": [
-    {
-      "name":"verrazzano-data-stream",
-      "index_template": {
-        "index_patterns": [
-          "verrazzano-system",
-          "verrazzano-application*"
-        ],
-        "template": {
-          "settings": {
-            "index": {
-              "mapping": {
-                "total_fields": {
-                  "limit": "2000"
-                }
-              },
-              "refresh_interval": "5s",
-              "number_of_shards": "1",
-              "auto_expand_replicas": "0-1",
-              "number_of_replicas": "0"
-            }
-          }
+const fakeIndicesResponse = `{
+	"verrazzano-namespace-dummyapp": {
+		"aliases": {}
+	},
+	"verrazzano-namespace-testapp": {
+		"aliases": {}
+	},
+    "verrazzano-namespace-metallb-system": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-verrazzano-system": {
+        "aliases": {}
+    },
+    "verrazzano-systemd-journal": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-keycloak": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-local-path-storage": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-istio-system": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-ingress-nginx": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-cert-manager": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-kube-system": {
+        "aliases": {}
+    },
+    "verrazzano-namespace-monitoring": {
+        "aliases": {}
+    },
+    ".kibana_1": {
+        "aliases": {
+            ".kibana": {}
         }
-      }
     }
-  ]
 }`
 
-const testTemplateNotFound = `{"error":{"root_cause":[{"type":"status_exception","reason":"Template not found"}],"type":"status_exception","reason":"Template not found"},"status":404}`
 const openSearchEP = "http://localhost:9200/"
 
-// TestGetSystemIndices tests the getSystemIndices function.
-func TestGetSystemIndices(t *testing.T) {
-	assert := assert.New(t)
-	// GIVEN an Elasticsearch pod
-	//  WHEN getSystemIndices is called
-	//  THEN a command should be executed to get the indices information
-	//   AND then Verrazzano system indices should be filtered
-	//   AND no error should be returned
+// TestGetIndices tests that indices can be fetched from the OpenSearch server
+// GIVEN an OpenSearch server with indices
+// WHEN I call getIndices, getSystemIndices, and getApplicationIndices
+// THEN I get back the expected indices, system indices, and application indices
+func TestGetIndices(t *testing.T) {
 	o := NewOSClient()
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader(fakeCatIndicesOutput)),
+			Body:       io.NopCloser(strings.NewReader(fakeIndicesResponse)),
 		}, nil
 	}
-	indices, err := o.getSystemIndices(vzlog.DefaultLogger(), openSearchEP)
-	assert.NoError(err, "Failed to get system indices")
-	assert.Contains(indices, "verrazzano-systemd-journal")
-	assert.Contains(indices, "verrazzano-namespace-kube-system")
-	assert.NotContains(indices, "verrazzano-namespace-bobs-books")
+	log := vzlog.DefaultLogger()
+	indices, err := o.getIndices(log, openSearchEP)
+	assert.NoError(t, err)
+	assert.Contains(t, indices, "verrazzano-namespace-keycloak")
+	assert.Contains(t, indices, "verrazzano-namespace-istio-system")
+	assert.Equal(t, 13, len(indices))
+
+	systemIndices := getSystemIndices(log, indices)
+	assert.Contains(t, systemIndices, "verrazzano-namespace-keycloak")
+	assert.Contains(t, systemIndices, "verrazzano-namespace-istio-system")
+	assert.Equal(t, 10, len(systemIndices))
+
+	applicationIndices := getApplicationIndices(log, indices)
+	assert.Contains(t, applicationIndices, "verrazzano-namespace-testapp")
+	assert.Contains(t, applicationIndices, "verrazzano-namespace-dummyapp")
+	assert.Equal(t, 2, len(applicationIndices))
 }
 
-// TestGetApplicationIndices tests the getApplicationIndices function.
-func TestGetApplicationIndices(t *testing.T) {
-	asrt := assert.New(t)
-
-	// GIVEN an Elasticsearch pod
-	//  WHEN getApplicationIndices is called
-	//  THEN a command should be executed to get the indices information
-	//   AND then Verrazzano application indices should be filtered
-	//   AND no error should be returned
+// TestDataStreamExists Tests the expected data streams can be retrieved on an OpenSearch cluster
+// GIVEN a cluster with data streams on it
+// WHEN I call DataStreamExists
+// THEN true is returned if the data stream is present
+func TestDataStreamExists(t *testing.T) {
+	a := assert.New(t)
 	o := NewOSClient()
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader(fakeCatIndicesOutput)),
-		}, nil
-	}
-	indices, err := o.getApplicationIndices(vzlog.DefaultLogger(), openSearchEP)
-	asrt.NoError(err, "Failed to get application indices")
-	asrt.Contains(indices, "verrazzano-namespace-bobs-books")
-	asrt.NotContains(indices, "verrazzano-systemd-journal")
-	asrt.NotContains(indices, "verrazzano-namespace-kube-system")
-}
-
-// TestVerifyDataStreamTemplateExists tests if the template exists for data streams
-func TestVerifyDataStreamTemplateExists(t *testing.T) {
-	asrt := assert.New(t)
-
-	// GIVEN an Elasticsearch pod
-	//  WHEN verifyDataStreamTemplateExists is called
-	//  THEN a command should be executed to get the specified template information
-	//   AND no error should be returned
-	o := NewOSClient()
-	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
-		if strings.Contains(request.URL.Path, dataStreamTemplateName) {
+		if strings.Contains(request.URL.Path, config.DataStreamName()) {
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(strings.NewReader(fakeGetTemplateOutput)),
+				Body:       io.NopCloser(strings.NewReader("")),
 			}, nil
 		}
 		return &http.Response{
 			StatusCode: http.StatusNotFound,
-			Body:       io.NopCloser(strings.NewReader(testTemplateNotFound)),
+			Body:       io.NopCloser(strings.NewReader("")),
 		}, nil
 	}
-	err := o.verifyDataStreamTemplateExists(vzlog.DefaultLogger(), openSearchEP,
-		dataStreamTemplateName, 2*time.Second,
-		1*time.Second)
-	asrt.NoError(err, "Failed to verify data stream template existence")
-	err = o.verifyDataStreamTemplateExists(vzlog.DefaultLogger(), openSearchEP, "test",
-		2*time.Second, 1*time.Second)
-	asrt.Error(err, "Error should be returned")
+	exists, err := o.DataStreamExists(openSearchEP, config.DataStreamName())
+	a.NoError(err)
+	a.True(exists)
+	exists, err = o.DataStreamExists(openSearchEP, "unknown")
+	a.NoError(err)
+	a.False(exists)
 }
 
-func TestFormatReindexPayload(t *testing.T) {
-	asrt := assert.New(t)
-	input := ReindexInput{SourceName: "verrazzano-namespace-bobs-books",
-		DestinationName: "verrazzano-application-bobs-books",
-		NumberOfSeconds: "60s"}
-	payload, err := formatReindexPayload(input, reindexPayload)
-	asrt.NoError(err, "Error not expected")
-	asrt.Contains(payload, "verrazzano-namespace-bobs-books")
-	asrt.Contains(payload, "verrazzano-application-bobs-books")
-	asrt.Contains(payload, "60s")
-}
-
+// TestCalculateSeconds Tests formatting of OpenSearch time units to seconds
+// GIVEN an aribtrary time unit string
+// WHEN I call calculateSeconds
+// THEN the number of seconds that the time unit string represents is returned
 func TestCalculateSeconds(t *testing.T) {
-	asrt := assert.New(t)
+	a := assert.New(t)
 	_, err := calculateSeconds("ww5s")
-	asrt.Error(err, "Error should be returned from exec")
+	a.Error(err, "Error should be returned from exec")
 	_, err = calculateSeconds("12y")
-	asrt.Error(err, "should fail for 'years'")
+	a.Error(err, "should fail for 'years'")
 	_, err = calculateSeconds("10M")
-	asrt.Error(err, "should fail for 'months'")
+	a.Error(err, "should fail for 'months'")
 	seconds, err := calculateSeconds("6d")
-	asrt.NoError(err, "Should not fail for valid day unit")
-	asrt.Equal(uint64(518400), seconds)
+	a.NoError(err, "Should not fail for valid day unit")
+	a.Equal(uint64(518400), seconds)
 	seconds, err = calculateSeconds("120m")
-	asrt.NoError(err, "Should not fail for valid minute unit")
-	asrt.Equal(uint64(7200), seconds)
+	a.NoError(err, "Should not fail for valid minute unit")
+	a.Equal(uint64(7200), seconds)
 	seconds, err = calculateSeconds("5h")
-	asrt.NoError(err, "Should not fail for valid hour unit")
-	asrt.Equal(uint64(18000), seconds)
+	a.NoError(err, "Should not fail for valid hour unit")
+	a.Equal(uint64(18000), seconds)
 	seconds, err = calculateSeconds("20s")
-	asrt.NoError(err, "Should not fail for valid second unit")
-	asrt.Equal(uint64(20), seconds)
+	a.NoError(err, "Should not fail for valid second unit")
+	a.Equal(uint64(20), seconds)
 	seconds, err = calculateSeconds("1w")
-	asrt.NoError(err, "Should not fail for valid week unit")
-	asrt.Equal(uint64(604800), seconds)
+	a.NoError(err, "Should not fail for valid week unit")
+	a.Equal(uint64(604800), seconds)
+}
+
+// TestReindexAndDeleteIndices Tests that indices are reindexed and deleted as expected
+// GIVEN a cluster with indices to reindex
+// WHEN I call reindexAndDeleteIndices
+// THEN those indices are reindexed and deleted
+func TestReindexAndDeleteIndices(t *testing.T) {
+	systemIndices := []string{"verrazzano-namespace-verrazzano-system"}
+	dummyOK := func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("")),
+		}, nil
+	}
+	var tests = []struct {
+		name          string
+		indices       []string
+		httpFunc      func(req *http.Request) (*http.Response, error)
+		isSystemIndex bool
+		isError       bool
+	}{
+		{
+			"should reindex system indices",
+			systemIndices,
+			dummyOK,
+			true,
+			false,
+		},
+		{
+			"should reindex application indices",
+			[]string{"verrazzano-namespace-bobs-books", "verrazzano-namespace-todo-app"},
+			dummyOK,
+			false,
+			false,
+		},
+		{
+			"should fail when reindex fails",
+			systemIndices,
+			func(req *http.Request) (*http.Response, error) {
+				return nil, errors.New("BOOM")
+			},
+			true,
+			true,
+		},
+		{
+			"should fail when delete not found",
+			systemIndices,
+			func(req *http.Request) (*http.Response, error) {
+				if req.Method == "POST" {
+					return dummyOK(req)
+				}
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, nil
+			},
+			true,
+			true,
+		},
+		{
+			"should fail when delete fails",
+			systemIndices,
+			func(req *http.Request) (*http.Response, error) {
+				if req.Method == "POST" {
+					return dummyOK(req)
+				}
+				return nil, errors.New("BOOM")
+			},
+			true,
+			true,
+		},
+		{
+			"should fail when reindex 5xx",
+			systemIndices,
+			func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, nil
+			},
+			true,
+			true,
+		},
+	}
+	vmi := createISMVMI("1d", true)
+	vmi.Spec.Elasticsearch.Policies = []vmcontrollerv1.IndexManagementPolicy{
+		*createTestPolicy("1d", "1d", "verrazzano-*", "1d", 1),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := NewOSClient()
+			o.DoHTTP = tt.httpFunc
+			err := o.reindexAndDeleteIndices(vzlog.DefaultLogger(), vmi, openSearchEP, tt.indices, tt.isSystemIndex)
+			if tt.isError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestReindexToDataStream Tests reindexing an index to a data stream
+// GIVENa cluster with an index to reindex
+// WHEN I call reindexToDataStream
+// THEN the index is reindex to a data stream
+func TestReindexToDataStream(t *testing.T) {
+	o := NewOSClient()
+	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("")),
+		}, nil
+	}
+	err := o.reindexToDataStream(vzlog.DefaultLogger(), openSearchEP, "src", "dest", "1s")
+	assert.NoError(t, err)
 }

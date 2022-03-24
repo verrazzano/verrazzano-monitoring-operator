@@ -7,11 +7,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"regexp"
 	"strings"
 	"text/template"
@@ -24,80 +24,77 @@ const updatePatternPayload = `{
  }
 `
 
-type PatternInput struct {
-	IndexPattern string
-}
+type (
+	IndexPatterns struct {
+		Total        int           `json:"total"`
+		Page         int           `json:"page"`
+		SavedObjects []SavedObject `json:"saved_objects,omitempty"`
+	}
 
-var (
-	systemNamespaces = []string{"kube-system", "verrazzano-system", "istio-system", "keycloak", "metallb-system",
-		"default", "cert-manager", "local-path-storage", "rancher-operator-system", "fleet-system", "ingress-nginx",
-		"cattle-system", "verrazzano-install", "monitoring"}
-)
+	SavedObject struct {
+		ID         string `json:"id"`
+		Attributes `json:"attributes"`
+	}
 
-const (
-	systemDataStreamName = "verrazzano-system"
+	Attributes struct {
+		Title string `json:"title"`
+	}
+
+	PatternInput struct {
+		IndexPattern string
+	}
 )
 
 func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger, dashboardsEndPoint string) error {
-	dashboardPatterns, err := od.getPatterns(log, dashboardsEndPoint)
+	savedObjects, err := od.getPatterns(dashboardsEndPoint, 100)
 	if err != nil {
 		return err
 	}
-	for id, originalPattern := range dashboardPatterns {
-		updatedPattern := constructUpdatedPattern(originalPattern)
-		if id == "" || (originalPattern == updatedPattern) {
+	for _, savedObject := range savedObjects {
+		updatedPattern := constructUpdatedPattern(savedObject.Title)
+		if updatedPattern == "" || (savedObject.Title == updatedPattern) {
 			continue
 		}
 		// Invoke update index pattern API
-		err = od.executeUpdate(log, dashboardsEndPoint, id, originalPattern, updatedPattern)
+		err = od.executeUpdate(log, dashboardsEndPoint, savedObject.ID, savedObject.Title, updatedPattern)
 		if err != nil {
-			log.Infof("OpenSearch Dashboards: Updating index pattern failed: %v", err)
-			return err
+			return fmt.Errorf("failed to updated index pattern %s: %v", savedObject.Title, err)
 		}
 	}
 	return nil
 }
 
-func (od *OSDashboardsClient) getPatterns(log vzlog.VerrazzanoLogger, dashboardsEndPoint string) (map[string]string, error) {
-	getPatternsURL := fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title", dashboardsEndPoint)
-	log.Debugf("OpenSearch Dashboards: Executing Get index patterns API %s", getPatternsURL)
-	req, err := http.NewRequest("GET", getPatternsURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	getResponse, err := od.DoHTTP(req)
-	if err != nil {
-		log.Errorf("OpenSearch Dashboards: Get index patterns failed")
-		return nil, err
-	}
-	if getResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got status code %d when getting index patterns", getResponse.StatusCode)
-	}
+func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int) ([]SavedObject, error) {
+	var savedObjects []SavedObject
+	currentPage := 1
 
-	responseBody, _ := ioutil.ReadAll(getResponse.Body)
-	if string(responseBody) == "" {
-		log.Debugf("OpenSearch Dashboards: Empty response for get index patterns")
-		return nil, nil
-	}
-	log.Debugf("OpenSearch Dashboards: Get index patterns response %v", string(responseBody))
-	var responseMap map[string]interface{}
-	if err := json.Unmarshal(responseBody, &responseMap); err != nil {
-		log.Errorf("OpenSearch Dashboards: Error unmarshalling index patterns response body: %v", err)
-	}
-	patterns := make(map[string]string)
-	if responseMap["saved_objects"] != nil {
-		savedObjects := reflect.ValueOf(responseMap["saved_objects"])
-		for i := 0; i < savedObjects.Len(); i++ {
-			log.Debugf("OpenSearch Dashboards: Index pattern details: %v", savedObjects.Index(i))
-			savedObject := savedObjects.Index(i).Interface().(map[string]interface{})
-			attributes := savedObject["attributes"].(map[string]interface{})
-			title := attributes["title"].(string)
-			id := savedObject["id"]
-			patterns[id.(string)] = title
+	for {
+		url := fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title&per_page=%d&page=%d", dashboardsEndPoint, perPage, currentPage)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := od.DoHTTP(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("got code %d when querying index patterns", resp.StatusCode)
+		}
+		indexPatterns := &IndexPatterns{}
+		if err := json.NewDecoder(resp.Body).Decode(indexPatterns); err != nil {
+			return nil, fmt.Errorf("failed to decode index pattern response body: %v", err)
+		}
+		currentPage++
+		savedObjects = append(savedObjects, indexPatterns.SavedObjects...)
+		// paginate responses until we have all the index patterns
+		if len(savedObjects) >= indexPatterns.Total {
+			break
 		}
 	}
-	log.Debugf("OpenSearch Dashboards: Found index patterns in OpenSearch Dashboards %v", patterns)
-	return patterns, nil
+
+	return savedObjects, nil
 }
 
 func (od *OSDashboardsClient) executeUpdate(log vzlog.VerrazzanoLogger, dashboardsEndPoint string,
@@ -114,6 +111,8 @@ func (od *OSDashboardsClient) executeUpdate(log vzlog.VerrazzanoLogger, dashboar
 	if err != nil {
 		return err
 	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("osd-xsrf", "true")
 	resp, err := od.DoHTTP(req)
 	if err != nil {
 		log.Errorf("OpenSearch Dashboards: Get index patterns failed")
@@ -151,7 +150,7 @@ func constructUpdatedPattern(originalPattern string) string {
 			regexpString := resources.ConvertToRegexp(eachPattern)
 			systemIndexMatch := isSystemIndexMatch(regexpString)
 			if systemIndexMatch {
-				updatedPattern = append(updatedPattern, systemDataStreamName)
+				updatedPattern = append(updatedPattern, config.DataStreamName())
 			}
 			isNamespaceIndexMatch, _ := regexp.MatchString(regexpString, "verrazzano-namespace-")
 			if isNamespaceIndexMatch {
@@ -177,7 +176,7 @@ func isSystemIndexMatch(pattern string) bool {
 	if logStashIndex || systemJournalIndex {
 		return true
 	}
-	for _, namespace := range systemNamespaces {
+	for _, namespace := range config.SystemNamespaces() {
 		systemIndex, _ := regexp.MatchString(pattern, "verrazzano-namespace-"+namespace)
 		if systemIndex {
 			return true

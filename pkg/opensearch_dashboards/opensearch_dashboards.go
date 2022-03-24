@@ -4,6 +4,7 @@
 package dashboards
 
 import (
+	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
@@ -38,7 +39,7 @@ func (od *OSDashboardsClient) UpdatePatterns(log vzlog.VerrazzanoLogger, vmi *vm
 	// Update index patterns in OpenSearch dashboards
 	err := od.updatePatternsInternal(log, openSearchDashboardsEndpoint)
 	if err != nil {
-		return log.ErrorfNewErr("OpenSearch Dashboards: Error in updating index patterns: %v", err)
+		return fmt.Errorf("failed to update index patterns: %v", err)
 	}
 	return nil
 }
