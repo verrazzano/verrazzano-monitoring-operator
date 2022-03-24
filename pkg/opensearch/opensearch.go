@@ -58,7 +58,8 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 				return
 			}
 		}
-		ch <- nil
+
+		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Elasticsearch.Policies)
 	}()
 
 	return ch
