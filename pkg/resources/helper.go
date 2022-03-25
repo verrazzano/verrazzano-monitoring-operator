@@ -36,7 +36,7 @@ func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance)
 	if len(masterServiceEndpoint) > 0 {
 		return masterServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHTTPPort)
+	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.OSHTTPPort)
 }
 
 func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {

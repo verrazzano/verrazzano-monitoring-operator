@@ -51,8 +51,8 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 	)
 
 	esContainer.Ports = []corev1.ContainerPort{
-		{Name: "http", ContainerPort: int32(constants.ESHTTPPort)},
-		{Name: "transport", ContainerPort: int32(constants.ESTransportPort)},
+		{Name: "http", ContainerPort: int32(constants.OSHTTPPort)},
+		{Name: "transport", ContainerPort: int32(constants.OSTransportPort)},
 	}
 
 	// Common Elasticsearch readiness and liveness settings
@@ -118,8 +118,8 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 	if elasticsearchIngestDeployment.Spec.Template.Annotations == nil {
 		elasticsearchIngestDeployment.Spec.Template.Annotations = make(map[string]string)
 	}
-	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
-	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
 	return []*appsv1.Deployment{elasticsearchIngestDeployment}
 }
@@ -243,8 +243,8 @@ fi
 		if elasticsearchDataDeployment.Spec.Template.Annotations == nil {
 			elasticsearchDataDeployment.Spec.Template.Annotations = make(map[string]string)
 		}
-		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
-		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
 		deployList = append(deployList, elasticsearchDataDeployment)
 	}
