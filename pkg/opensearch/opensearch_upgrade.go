@@ -66,7 +66,7 @@ type (
 
 // Reindex old style indices to data streams and delete it
 func (o *OSClient) MigrateIndicesToDataStreams(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, openSearchEndpoint string) error {
-	log.Info("OpenSearch: Migrating Verrazzano old indices if any to data streams")
+	log.Debugf("OpenSearch: Checking if there are any Verrazzano old indices to be migrated to data streams")
 	// Get the indices
 	indices, err := o.getIndices(log, openSearchEndpoint)
 	if err != nil {
@@ -74,6 +74,10 @@ func (o *OSClient) MigrateIndicesToDataStreams(log vzlog.VerrazzanoLogger, vmi *
 	}
 	systemIndices := getSystemIndices(log, indices)
 	appIndices := getApplicationIndices(log, indices)
+
+	if len(systemIndices) > 0 || len(appIndices) > 0 {
+		log.Info("OpenSearch: Migrating Verrazzano old indices to data streams")
+	}
 
 	// Reindex and delete old system indices
 	err = o.reindexAndDeleteIndices(log, vmi, openSearchEndpoint, systemIndices, true)
@@ -239,7 +243,7 @@ func (o *OSClient) reindexToDataStream(log vzlog.VerrazzanoLogger, openSearchEnd
 			destName)
 	}
 	responseBody, _ := ioutil.ReadAll(resp.Body)
-	log.Debugf("OpenSearch: Reindex from %s to %s API response %s", sourceName, destName, string(responseBody))
+	log.Infof("OpenSearch: Reindex from %s to %s completed successfully: %s", sourceName, destName, string(responseBody))
 	return nil
 }
 
