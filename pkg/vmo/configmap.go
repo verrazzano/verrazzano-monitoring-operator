@@ -183,24 +183,6 @@ func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.Ve
 	return nil
 }
 
-// Deletes the configmap specified, if it exists. If it does not exist, ignore the request and do not error
-func deleteConfigMapIfExists(controller *Controller, namespace string, configmapName string) error {
-	existingConfig, err := getConfigMap(controller, namespace, configmapName)
-	if err != nil {
-		controller.log.Oncef("Failed to get configmap %s/%s: %v", namespace, configmapName, err)
-		return nil
-	}
-	if existingConfig != nil {
-		err := controller.kubeclientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), configmapName, metav1.DeleteOptions{})
-		if err != nil {
-			controller.log.Errorf("Failed to delete configmap %s/%s: %v", namespace, configmapName, err)
-			return err
-		}
-		controller.log.Oncef("Deleted config map %s/%s", namespace, configmapName)
-	}
-	return nil
-}
-
 // This function is being called for configmaps which don't modify with spec changes
 func createAMConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)

@@ -7,11 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"time"
+
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"k8s.io/apimachinery/pkg/types"
-	"reflect"
-	"time"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -21,7 +22,6 @@ import (
 	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -600,15 +600,4 @@ func (c *Controller) IsHealthy() bool {
 		}
 	}
 	return crdExists
-}
-
-// PreStartCleanup will perform any tasks that should happen if the verrazzano-monitoring-operator is
-// restarted. Since VMO will only create the config map for prometheus if it doesn't already exist, when
-// there are changes to the default Prometheus config map (which there are in release 1.1), we should delete
-// the prometheus config map so that it can be re-created. Other operators that reconcile the config map will
-// eventually catch up and fix up the config map
-func (c *Controller) PreStartCleanup() {
-	c.log.Oncef("Deleting Prometheus config map at startup if it exists: %s/%s", constants.VerrazzanoSystemNamespace, constants.PrometheusConfig)
-	deleteConfigMapIfExists(c, constants.VerrazzanoSystemNamespace,
-		resources.GetMetaName(constants.VMODefaultName, constants.PrometheusConfig))
 }

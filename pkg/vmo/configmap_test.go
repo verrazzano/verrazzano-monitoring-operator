@@ -5,12 +5,11 @@ package vmo
 
 import (
 	"context"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"testing"
 
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 
 	"github.com/stretchr/testify/assert"
@@ -48,32 +47,6 @@ func TestCreateConfigmaps(t *testing.T) {
 	assert.Nil(t, err)
 	all, _ := client.CoreV1().ConfigMaps(vmo.Namespace).List(context.TODO(), metav1.ListOptions{})
 	assert.Equal(t, 8, len(all.Items))
-}
-
-// TestDeleteConfigMapIfExists tests the deleteConfigMapIfExists function
-func TestDeleteConfigMapIfExists(t *testing.T) {
-	configMap := &v1.ConfigMap{}
-	configMap.SetNamespace(constants.VerrazzanoSystemNamespace)
-	promConfigMapName := resources.GetMetaName(constants.VMODefaultName, config.Prometheus.Name)
-	configMap.SetName(promConfigMapName)
-	client := fake.NewSimpleClientset(configMap)
-	controller := &Controller{
-		kubeclientset:   client,
-		configMapLister: &simpleConfigMapLister{kubeClient: client},
-		secretLister:    &simpleSecretLister{kubeClient: client},
-		log:             vzlog.DefaultLogger(),
-	}
-	err := deleteConfigMapIfExists(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
-	assert.NoError(t, err)
-
-	//make sure config map was deleted
-	cm, _ := getConfigMap(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
-	assert.Nil(t, cm)
-
-	// Repeat the test with a non-existent config map and ensure that deleteConfigMapIfExists ignores rather than
-	// return error
-	err = deleteConfigMapIfExists(controller, constants.VerrazzanoSystemNamespace, "nonexistentCM")
-	assert.NoError(t, err)
 }
 
 // simple ConfigMapLister implementation
