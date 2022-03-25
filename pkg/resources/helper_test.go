@@ -4,6 +4,7 @@
 package resources
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -166,4 +167,26 @@ func TestIsValidMultiNodeESCluster(t *testing.T) {
 	vmo.Spec.Elasticsearch.DataNode.Replicas = 2
 	vmo.Spec.Elasticsearch.IngestNode.Replicas = 1
 	assert.True(t, IsValidMultiNodeESCluster(vmo), "IsValidMultiNodeESCluster true for valid configuration")
+}
+
+func TestGetOpenSearchDashboardsHTTPEndpoint(t *testing.T) {
+	vmi := &vmov1.VerrazzanoMonitoringInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "system",
+		},
+	}
+
+	osdEndpoint := GetOpenSearchDashboardsHTTPEndpoint(vmi)
+	assert.Equal(t, "http://vmi-system-kibana:5601", osdEndpoint)
+}
+
+func TestGetOpenSearchHTTPEndpoint(t *testing.T) {
+	vmi := &vmov1.VerrazzanoMonitoringInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "system",
+		},
+	}
+
+	osEndpoint := GetOpenSearchHTTPEndpoint(vmi)
+	assert.Equal(t, "http://vmi-system-es-master-http:9200", osEndpoint)
 }

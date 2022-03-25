@@ -4,7 +4,6 @@
 package dashboards
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -14,15 +13,9 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"text/template"
 )
 
-const updatePatternPayload = `{
-   "attributes": {
-     "title": "{{ .IndexPattern }}"
-   }
- }
-`
+const updatePatternPayload = `{"attributes":{"title":"%s"}}`
 
 type (
 	IndexPatterns struct {
@@ -38,10 +31,6 @@ type (
 
 	Attributes struct {
 		Title string `json:"title"`
-	}
-
-	PatternInput struct {
-		IndexPattern string
 	}
 )
 
@@ -69,6 +58,7 @@ func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int
 	var savedObjects []SavedObject
 	currentPage := 1
 
+	// Index Pattern is a paginated response type, so we need to page out all data
 	for {
 		url := fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title&per_page=%d&page=%d", dashboardsEndPoint, perPage, currentPage)
 		req, err := http.NewRequest("GET", url, nil)
@@ -100,11 +90,7 @@ func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int
 
 func (od *OSDashboardsClient) executeUpdate(log vzlog.VerrazzanoLogger, dashboardsEndPoint string,
 	id string, originalPattern string, updatedPattern string) error {
-	input := PatternInput{IndexPattern: updatedPattern}
-	payload, err := formatPatternPayload(input, updatePatternPayload)
-	if err != nil {
-		return err
-	}
+	payload := createIndexPatternPayload(updatedPattern)
 	log.Infof("OpenSearch Dashboards: Replacing index pattern %s with %s in OpenSearch Dashboards", originalPattern, updatedPattern)
 	updatedPatternURL := fmt.Sprintf("%s/api/saved_objects/index-pattern/%s", dashboardsEndPoint, id)
 	log.Debugf("OpenSearch Dashboards: Executing update saved object API %s", updatedPatternURL)
@@ -128,18 +114,8 @@ func (od *OSDashboardsClient) executeUpdate(log vzlog.VerrazzanoLogger, dashboar
 	return nil
 }
 
-func formatPatternPayload(input PatternInput, payload string) (string, error) {
-	tmpl, err := template.New("reindex").
-		Option("missingkey=error").
-		Parse(payload)
-	if err != nil {
-		return "", err
-	}
-	buffer := &bytes.Buffer{}
-	if err := tmpl.Execute(buffer, input); err != nil {
-		return "", err
-	}
-	return buffer.String(), nil
+func createIndexPatternPayload(indexPattern string) string {
+	return fmt.Sprintf(updatePatternPayload, indexPattern)
 }
 
 /*
