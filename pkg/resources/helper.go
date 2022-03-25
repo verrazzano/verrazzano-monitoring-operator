@@ -44,7 +44,7 @@ func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitorin
 	if len(dashboardsServiceEndpoint) > 0 {
 		return dashboardsServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
+	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
 		constants.OSDashboardsHTTPPort)
 }
 

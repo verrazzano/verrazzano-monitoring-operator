@@ -46,6 +46,7 @@ type (
 )
 
 func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger, dashboardsEndPoint string) error {
+	// Get index patterns configured in OpenSearch Dashboards
 	savedObjects, err := od.getPatterns(dashboardsEndPoint, 100)
 	if err != nil {
 		return err
@@ -141,6 +142,12 @@ func formatPatternPayload(input PatternInput, payload string) (string, error) {
 	return buffer.String(), nil
 }
 
+/*
+ * constructUpdatedPattern constructs the updated pattern as follows:
+ * - Update index patterns matching old system indices to match data stream verrazzano-system
+ * - Update index patterns matching old application indices verrazzano-namespace-<application namespace>
+ *   to match data stream verrazzano-application-<application namespace>
+ */
 func constructUpdatedPattern(originalPattern string) string {
 	var updatedPattern []string
 	patternList := strings.Split(originalPattern, ",")

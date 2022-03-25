@@ -28,11 +28,10 @@ func NewOSDashboardsClient() *OSDashboardsClient {
 	return od
 }
 
-// UpdatePatterns sets up the ISM Policies
-// The returned channel should be read for exactly one response, which tells whether ISM configuration succeeded.
+// UpdatePatterns updates the index patterns configured for old indices if any to match the corresponding data streams.
 func (od *OSDashboardsClient) UpdatePatterns(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	if !vmi.Spec.Kibana.Enabled {
-		log.Infof("OpenSearch Dashboards is not configured to run. Skipping the post upgrade step for OpenSearch Dashboards")
+		log.Debugf("OpenSearch Dashboards is not configured to run. Skipping the post upgrade step for OpenSearch Dashboards")
 		return nil
 	}
 	openSearchDashboardsEndpoint := resources.GetOpenSearchDashboardsHTTPEndpoint(vmi)

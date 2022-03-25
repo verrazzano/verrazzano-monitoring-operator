@@ -29,7 +29,7 @@ func MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.Verrazzan
 		// Make sure that the data stream template is created before re-indexing
 		exists, err := o.DataStreamExists(openSearchEndpoint, config.DataStreamName())
 		if err != nil {
-			ch <- fmt.Errorf("failed to verify existing of data stream: %v", err)
+			ch <- fmt.Errorf("failed to verify existence of data stream: %v", err)
 			return
 		}
 
@@ -44,7 +44,7 @@ func MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.Verrazzan
 			// Update if any index patterns configured for old indices in OpenSearch Dashboards
 			err = od.UpdatePatterns(log, vmi)
 			if err != nil {
-				ch <- log.ErrorfNewErr("Error in updating index patterns"+
+				ch <- fmt.Errorf("error in updating index patterns"+
 					" in OpenSearch Dashboards: %v", err)
 				return
 			}
