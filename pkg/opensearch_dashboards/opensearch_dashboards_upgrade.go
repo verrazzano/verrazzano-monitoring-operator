@@ -91,9 +91,9 @@ func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int
 func (od *OSDashboardsClient) executeUpdate(log vzlog.VerrazzanoLogger, dashboardsEndPoint string,
 	id string, originalPattern string, updatedPattern string) error {
 	payload := createIndexPatternPayload(updatedPattern)
-	log.Infof("OpenSearch Dashboards: Replacing index pattern %s with %s in OpenSearch Dashboards", originalPattern, updatedPattern)
+	log.Infof("Replacing index pattern %s with %s in OpenSearch Dashboards", originalPattern, updatedPattern)
 	updatedPatternURL := fmt.Sprintf("%s/api/saved_objects/index-pattern/%s", dashboardsEndPoint, id)
-	log.Debugf("OpenSearch Dashboards: Executing update saved object API %s", updatedPatternURL)
+	log.Debugf("Executing update saved object API %s", updatedPatternURL)
 	req, err := http.NewRequest("PUT", updatedPatternURL, strings.NewReader(payload))
 	if err != nil {
 		return err
@@ -102,15 +102,14 @@ func (od *OSDashboardsClient) executeUpdate(log vzlog.VerrazzanoLogger, dashboar
 	req.Header.Add("osd-xsrf", "true")
 	resp, err := od.DoHTTP(req)
 	if err != nil {
-		log.Errorf("OpenSearch Dashboards: Get index patterns failed")
-		return err
+		return fmt.Errorf("failed to get index patterns from OpenSearch dashboards: %v", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("got status code %d when getting index patterns", resp.StatusCode)
 	}
 
 	responseBody, _ := ioutil.ReadAll(resp.Body)
-	log.Debugf("OpenSearch Dashboards: Update index pattern API response %s", responseBody)
+	log.Debugf("Response from OpenSearch Dashboards update index API: %s", responseBody)
 	return nil
 }
 

@@ -66,7 +66,7 @@ type (
 
 // Reindex old style indices to data streams and delete it
 func (o *OSClient) MigrateIndicesToDataStreams(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, openSearchEndpoint string) error {
-	log.Debugf("OpenSearch: Checking if there are any Verrazzano old indices to be migrated to data streams")
+	log.Debugf("Checking for OpenSearch indices to migrate to data streams.")
 	// Get the indices
 	indices, err := o.getIndices(log, openSearchEndpoint)
 	if err != nil {
@@ -76,7 +76,7 @@ func (o *OSClient) MigrateIndicesToDataStreams(log vzlog.VerrazzanoLogger, vmi *
 	appIndices := getApplicationIndices(log, indices)
 
 	if len(systemIndices) > 0 || len(appIndices) > 0 {
-		log.Info("OpenSearch: Migrating Verrazzano old indices to data streams")
+		log.Info("Migrating Verrazzano indices to data streams")
 	}
 
 	// Reindex and delete old system indices
@@ -91,9 +91,9 @@ func (o *OSClient) MigrateIndicesToDataStreams(log vzlog.VerrazzanoLogger, vmi *
 		return fmt.Errorf("failed to migrate the Verrazzano application indices to data streams: %v", err)
 	}
 	if len(systemIndices) > 0 || len(appIndices) > 0 {
-		log.Info("OpenSearch: Migration of Verrazzano old indices to data streams completed successfully")
+		log.Info("Migration of Verrazzano indices to data streams completed successfully")
 	} else {
-		log.Debug("OpenSearch: Found no old indices to migrate to data streams")
+		log.Debug("Found no indices to migrate to data streams")
 	}
 	return nil
 }
@@ -134,7 +134,7 @@ func getSystemIndices(log vzlog.VerrazzanoLogger, indices []string) []string {
 			systemIndices = append(systemIndices, index)
 		}
 	}
-	log.Debugf("OpenSearch: Found Verrazzano system indices %v", systemIndices)
+	log.Debugf("Found Verrazzano system indices %v", systemIndices)
 	return systemIndices
 }
 
@@ -154,13 +154,13 @@ func getApplicationIndices(log vzlog.VerrazzanoLogger, indices []string) []strin
 			}
 		}
 	}
-	log.Debugf("OpenSearch: Found Verrazzano application indices %v", appIndices)
+	log.Debugf("Found Verrazzano application indices %v", appIndices)
 	return appIndices
 }
 
 func (o *OSClient) getIndices(log vzlog.VerrazzanoLogger, openSearchEndpoint string) ([]string, error) {
 	indicesURL := fmt.Sprintf("%s/_aliases", openSearchEndpoint)
-	log.Debugf("OpenSearch: Executing get indices API %s", indicesURL)
+	log.Debugf("Executing get indices API %s", indicesURL)
 	req, err := http.NewRequest("GET", indicesURL, nil)
 	if err != nil {
 		return nil, err
@@ -174,20 +174,17 @@ func (o *OSClient) getIndices(log vzlog.VerrazzanoLogger, openSearchEndpoint str
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("got status code %d when getting the indices in OpenSearch", resp.StatusCode)
 	}
-
-	log.Debugf("OpenSearch: Response body %v", resp.Body)
 	var indices map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&indices)
 	if err != nil {
-		log.Errorf("OpenSearch: Error unmarshalling indices response body: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshall indices response: %v", err)
 	}
 	var indexNames []string
 	for index := range indices {
 		indexNames = append(indexNames, index)
 
 	}
-	log.Debugf("OpenSearch: Found Verrazzano indices %v", indices)
+	log.Debugf("Found Verrazzano indices %v", indices)
 	return indexNames, nil
 }
 
@@ -204,17 +201,17 @@ func (o *OSClient) reindexAndDeleteIndices(log vzlog.VerrazzanoLogger, vmi *vmco
 		if err != nil {
 			return err
 		}
-		log.Infof("OpenSearch: Reindexing logs from index %v to data stream %s", index, dataStreamName)
+		log.Infof("Reindexing data from index %v to data stream %s", index, dataStreamName)
 		err = o.reindexToDataStream(log, openSearchEndpoint, index, dataStreamName, noOfSecs)
 		if err != nil {
 			return err
 		}
-		log.Infof("OpenSearch: Clean up index %v", index)
+		log.Infof("Cleaning up index %v", index)
 		err = o.deleteIndex(log, openSearchEndpoint, index)
 		if err != nil {
 			return err
 		}
-		log.Infof("OpenSearch: Cleaned up index %v successfully", index)
+		log.Infof("Successfully cleaned up index %v", index)
 	}
 	return nil
 }
@@ -226,7 +223,7 @@ func (o *OSClient) reindexToDataStream(log vzlog.VerrazzanoLogger, openSearchEnd
 		return err
 	}
 	reindexURL := fmt.Sprintf("%s/_reindex", openSearchEndpoint)
-	log.Debugf("OpenSearch: Executing Reindex API %s", reindexURL)
+	log.Debugf("Executing Reindex API %s", reindexURL)
 
 	req, err := http.NewRequest("POST", reindexURL, bytes.NewReader(payload))
 	if err != nil {
@@ -235,7 +232,7 @@ func (o *OSClient) reindexToDataStream(log vzlog.VerrazzanoLogger, openSearchEnd
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := o.DoHTTP(req)
 	if err != nil {
-		log.Errorf("OpenSearch: Reindex from %s to %s failed", sourceName, destName)
+		log.Errorf("Reindex from %s to %s failed", sourceName, destName)
 		return err
 	}
 	defer resp.Body.Close()
@@ -245,13 +242,13 @@ func (o *OSClient) reindexToDataStream(log vzlog.VerrazzanoLogger, openSearchEnd
 			destName, string(responseBody))
 	}
 
-	log.Infof("OpenSearch: Reindex from %s to %s completed successfully: %s", sourceName, destName, string(responseBody))
+	log.Infof("Reindex from %s to %s completed successfully: %s", sourceName, destName, string(responseBody))
 	return nil
 }
 
 func (o *OSClient) deleteIndex(log vzlog.VerrazzanoLogger, openSearchEndpoint string, indexName string) error {
 	deleteIndexURL := fmt.Sprintf("%s/%s", openSearchEndpoint, indexName)
-	log.Debugf("OpenSearch: Executing delete index API %s", deleteIndexURL)
+	log.Debugf("Executing delete index API %s", deleteIndexURL)
 	req, err := http.NewRequest("DELETE", deleteIndexURL, nil)
 	if err != nil {
 		return err
@@ -259,12 +256,11 @@ func (o *OSClient) deleteIndex(log vzlog.VerrazzanoLogger, openSearchEndpoint st
 
 	resp, err := o.DoHTTP(req)
 	if err != nil {
-		log.Debugf("OpenSearch: Delete API failed %v", err)
-		return err
+		return fmt.Errorf("failed to delete index %s: %v", indexName, err)
 	}
 	defer resp.Body.Close()
 	responseBody, _ := ioutil.ReadAll(resp.Body)
-	log.Debugf("OpenSearch: Delete API response %s", string(responseBody))
+	log.Debugf("Delete API response %s", string(responseBody))
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("got status code %d when deleting the indice %s in OpenSearch: %s", resp.StatusCode, indexName, string(responseBody))
 	}
