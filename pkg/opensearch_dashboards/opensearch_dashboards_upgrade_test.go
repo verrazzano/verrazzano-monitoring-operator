@@ -154,7 +154,7 @@ func TestExecuteUpdate(t *testing.T) {
 		{
 			"unsuccessful when PUT updated policy fails",
 			func(request *http.Request) (*http.Response, error) {
-				return nil, errors.New("boom!")
+				return nil, errors.New("boom")
 			},
 			false,
 		},

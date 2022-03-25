@@ -238,12 +238,36 @@ func (o *OSClient) reindexToDataStream(log vzlog.VerrazzanoLogger, openSearchEnd
 		log.Errorf("OpenSearch: Reindex from %s to %s failed", sourceName, destName)
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("got status code %d when reindexing from %s to %s failed", resp.StatusCode, sourceName,
-			destName)
-	}
+	defer resp.Body.Close()
 	responseBody, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when reindexing from %s to %s failed: %s", resp.StatusCode, sourceName,
+			destName, string(responseBody))
+	}
+
 	log.Infof("OpenSearch: Reindex from %s to %s completed successfully: %s", sourceName, destName, string(responseBody))
+	return nil
+}
+
+func (o *OSClient) deleteIndex(log vzlog.VerrazzanoLogger, openSearchEndpoint string, indexName string) error {
+	deleteIndexURL := fmt.Sprintf("%s/%s", openSearchEndpoint, indexName)
+	log.Debugf("OpenSearch: Executing delete index API %s", deleteIndexURL)
+	req, err := http.NewRequest("DELETE", deleteIndexURL, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		log.Debugf("OpenSearch: Delete API failed %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+	responseBody, _ := ioutil.ReadAll(resp.Body)
+	log.Debugf("OpenSearch: Delete API response %s", string(responseBody))
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when deleting the indice %s in OpenSearch: %s", resp.StatusCode, indexName, string(responseBody))
+	}
 	return nil
 }
 
@@ -270,27 +294,6 @@ func createReindexPayload(source, dest, retentionSeconds string) *ReindexPayload
 	}
 
 	return reindexPayload
-}
-
-func (o *OSClient) deleteIndex(log vzlog.VerrazzanoLogger, openSearchEndpoint string, indexName string) error {
-	deleteIndexURL := fmt.Sprintf("%s/%s", openSearchEndpoint, indexName)
-	log.Debugf("OpenSearch: Executing delete index API %s", deleteIndexURL)
-	req, err := http.NewRequest("DELETE", deleteIndexURL, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := o.DoHTTP(req)
-	if err != nil {
-		log.Debugf("OpenSearch: Delete API failed %v", err)
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("got status code %d when deleting the indice %s in OpenSearch", resp.StatusCode, indexName)
-	}
-	responseBody, _ := ioutil.ReadAll(resp.Body)
-	log.Debugf("OpenSearch: Delete API response %s", string(responseBody))
-	return nil
 }
 
 func getRetentionAgeInSeconds(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, indexName string) (string, error) {
