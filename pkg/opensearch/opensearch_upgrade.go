@@ -22,14 +22,11 @@ var (
 	secondsPerMinute = uint64(60)
 	secondsPerHour   = secondsPerMinute * 60
 	secondsPerDay    = secondsPerHour * 24
-	secondsPerWeek   = secondsPerDay * 7
 	unitMultipliers  = map[uint8]uint64{
 		's': 1,
 		'm': secondsPerMinute,
 		'h': secondsPerHour,
-		'H': secondsPerHour,
 		'd': secondsPerDay,
-		'w': secondsPerWeek,
 	}
 )
 

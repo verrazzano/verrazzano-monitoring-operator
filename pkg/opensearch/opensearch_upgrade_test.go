@@ -127,7 +127,7 @@ func TestCalculateSeconds(t *testing.T) {
 	_, err := calculateSeconds("ww5s")
 	a.Error(err, "Error should be returned from exec")
 	_, err = calculateSeconds("12y")
-	a.Error(err, "should fail for 'years'")
+	a.Error(err, "should fail for 'months'")
 	_, err = calculateSeconds("10M")
 	a.Error(err, "should fail for 'months'")
 	seconds, err := calculateSeconds("6d")
@@ -142,9 +142,6 @@ func TestCalculateSeconds(t *testing.T) {
 	seconds, err = calculateSeconds("20s")
 	a.NoError(err, "Should not fail for valid second unit")
 	a.Equal(uint64(20), seconds)
-	seconds, err = calculateSeconds("1w")
-	a.NoError(err, "Should not fail for valid week unit")
-	a.Equal(uint64(604800), seconds)
 }
 
 // TestReindexAndDeleteIndices Tests that indices are reindexed and deleted as expected
