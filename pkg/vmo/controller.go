@@ -117,6 +117,8 @@ type Controller struct {
 
 	// OpenSearchDashboards Client
 	osDashboardsClient *dashboards.OSDashboardsClient
+
+	indexUpgradeMonitor *upgrade.Monitor
 }
 
 // ClusterInfo has info like ContainerRuntime and managed cluster name
@@ -252,6 +254,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		log:                   vzlog.DefaultLogger(),
 		osClient:              osClient,
 		osDashboardsClient:    osDashboardsClient,
+		indexUpgradeMonitor:   &upgrade.Monitor{},
 	}
 
 	zap.S().Infow("Setting up event handlers")
@@ -457,7 +460,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/********************************************
 	 * Migrate old indices if any to Data streams
 	*********************************************/
-	migrateIndicesChannel := upgrade.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
+	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
+	if err != nil {
+		c.log.Errorf("Failed to migrate old indices to data stream: %v", err)
+		errorObserved = true
+	}
 
 	/*********************
 	 * Create RoleBindings
@@ -542,12 +549,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	ismErr := <-ismChannel
 	if ismErr != nil {
 		c.log.Errorf("Failed to configure ISM Policies: %v", ismErr)
-		errorObserved = true
-	}
-
-	migrateIndicesErr := <-migrateIndicesChannel
-	if migrateIndicesErr != nil {
-		c.log.Errorf("Failed to migrate old indices to data stream: %v", migrateIndicesErr)
 		errorObserved = true
 	}
 

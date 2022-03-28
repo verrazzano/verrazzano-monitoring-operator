@@ -4,6 +4,7 @@
 package upgrade
 
 import (
+	"errors"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -13,11 +14,58 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
-// MigrateOldIndices migrates old Verrazzano indices to data streams
-// The returned channel should be read for exactly one response, which tells whether migration succeeded.
-func MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance,
-	o *opensearch.OSClient, od *dashboards.OSDashboardsClient) chan error {
+type Monitor struct {
+	running bool
+	ch      chan error
+}
+
+func (m *Monitor) MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance,
+	o *opensearch.OSClient, od *dashboards.OSDashboardsClient) error {
+	// if not already migrating, start migrating indices
+	if !m.running {
+		m.run(log, vmi, o, od)
+		return nil
+	}
+
+	complete, err := m.isUpgradeComplete()
+	// an error occurred during reindex
+	if err != nil {
+		// reset the monitor so we can retry the upgrade
+		m.reset()
+		return err
+	}
+	// reindex is still in progress
+	if !complete {
+		return errors.New("reindex in progress")
+	}
+	// reindex was successful
+	m.reset()
+	return nil
+}
+
+func (m *Monitor) isUpgradeComplete() (bool, error) {
+	if m.ch == nil {
+		return false, nil
+	}
+
+	select {
+	case e := <-m.ch:
+		return true, e
+	default:
+		return false, nil
+	}
+}
+
+func (m *Monitor) reset() {
+	m.running = false
+	close(m.ch)
+}
+
+func (m *Monitor) run(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance,
+	o *opensearch.OSClient, od *dashboards.OSDashboardsClient) {
 	ch := make(chan error)
+	m.running = true
+	m.ch = ch
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
 		if !vmi.Spec.Elasticsearch.Enabled {
@@ -51,6 +99,4 @@ func MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.Verrazzan
 		}
 		ch <- nil
 	}()
-
-	return ch
 }
