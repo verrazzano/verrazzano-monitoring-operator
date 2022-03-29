@@ -78,7 +78,7 @@ func GetSpecID(vmoName string, componentName string) map[string]string {
 
 // GetServicePort returns service port
 func GetServicePort(componentDetails config.ComponentDetails) corev1.ServicePort {
-	return corev1.ServicePort{Name: componentDetails.Name, Port: int32(componentDetails.Port)}
+	return corev1.ServicePort{Name: "http-" + componentDetails.Name, Port: int32(componentDetails.Port)}
 }
 
 // GetOwnerReferences returns owner references
