@@ -48,16 +48,16 @@ func TestElasticsearchDevProfileDefaultServices(t *testing.T) {
 	expectedSelector := resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 
 	assert.Equal(t, ingestService.Spec.Selector, expectedSelector)
-	assert.EqualValues(t, ingestService.Spec.Ports[0].Port, constants.ESHttpPort)
+	assert.EqualValues(t, ingestService.Spec.Ports[0].Port, constants.OSHTTPPort)
 
-	assert.EqualValues(t, masterService.Spec.Ports[0].Port, constants.ESTransportPort)
+	assert.EqualValues(t, masterService.Spec.Ports[0].Port, constants.OSTransportPort)
 
-	assert.EqualValues(t, dataService.Spec.Ports[0].Port, constants.ESHttpPort)
-	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.ESHttpPort))
+	assert.EqualValues(t, dataService.Spec.Ports[0].Port, constants.OSHTTPPort)
+	assert.Equal(t, dataService.Spec.Ports[0].TargetPort, intstr.FromInt(constants.OSHTTPPort))
 	assert.Equal(t, dataService.Spec.Selector, expectedSelector)
 
-	assert.EqualValues(t, constants.ESHttpPort, masterHTTPService.Spec.Ports[0].Port)
-	assert.EqualValues(t, intstr.FromInt(constants.ESHttpPort), masterHTTPService.Spec.Ports[0].TargetPort)
+	assert.EqualValues(t, constants.OSHTTPPort, masterHTTPService.Spec.Ports[0].Port)
+	assert.EqualValues(t, intstr.FromInt(constants.OSHTTPPort), masterHTTPService.Spec.Ports[0].TargetPort)
 }
 
 func createDevProfileES() *vmcontrollerv1.VerrazzanoMonitoringInstance {

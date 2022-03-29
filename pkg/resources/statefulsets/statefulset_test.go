@@ -258,10 +258,10 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Len(sts.Spec.Template.Spec.Containers[0].Ports, 2, "Incorrect number of Ports")
 	assert.Equal("transport", sts.Spec.Template.Spec.Containers[0].Ports[0].Name, "Incorrect Container Port")
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[0].HostPort, "Incorrect Container HostPort")
-	assert.Equal(int32(constants.ESTransportPort), sts.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort, "Incorrect Container HostPort")
+	assert.Equal(int32(constants.OSTransportPort), sts.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort, "Incorrect Container HostPort")
 	assert.Equal("http", sts.Spec.Template.Spec.Containers[0].Ports[1].Name, "Incorrect Container Port")
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[1].HostPort, "Incorrect Container HostPort")
-	assert.Equal(int32(constants.ESHttpPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
+	assert.Equal(int32(constants.OSHTTPPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
 
 	var i int32
 	initialMasterNodes := make([]string, 0)
@@ -352,10 +352,10 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Len(sts.Spec.Template.Spec.Containers[0].Ports, 2, "Incorrect number of Ports")
 	assert.Equal("transport", sts.Spec.Template.Spec.Containers[0].Ports[0].Name, "Incorrect Container Port")
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[0].HostPort, "Incorrect Container HostPort")
-	assert.Equal(int32(constants.ESTransportPort), sts.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort, "Incorrect Container HostPort")
+	assert.Equal(int32(constants.OSTransportPort), sts.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort, "Incorrect Container HostPort")
 	assert.Equal("http", sts.Spec.Template.Spec.Containers[0].Ports[1].Name, "Incorrect Container Port")
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[1].HostPort, "Incorrect Container HostPort")
-	assert.Equal(int32(constants.ESHttpPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
+	assert.Equal(int32(constants.OSHTTPPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
 
 	assert.Len(sts.Spec.Template.Spec.Containers[0].Env, 11, "Incorrect number of Env Vars")
 	assert.Equal("node.name", sts.Spec.Template.Spec.Containers[0].Env[0].Name, "Incorrect Env[0].Name")

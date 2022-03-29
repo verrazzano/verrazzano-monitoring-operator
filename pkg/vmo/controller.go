@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
+	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -112,6 +114,11 @@ type Controller struct {
 
 	// OpenSearch Client
 	osClient *opensearch.OSClient
+
+	// OpenSearchDashboards Client
+	osDashboardsClient *dashboards.OSDashboardsClient
+
+	indexUpgradeMonitor *upgrade.Monitor
 }
 
 // ClusterInfo has info like ContainerRuntime and managed cluster name
@@ -202,6 +209,9 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	zap.S().Infow("Creating OpenSearch client")
 	osClient := opensearch.NewOSClient()
 
+	zap.S().Infow("Creating OpenSearchDashboards client")
+	osDashboardsClient := dashboards.NewOSDashboardsClient()
+
 	controller := &Controller{
 		namespace:        namespace,
 		watchNamespace:   watchNamespace,
@@ -243,6 +253,8 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		clusterInfo:           ClusterInfo{},
 		log:                   vzlog.DefaultLogger(),
 		osClient:              osClient,
+		osDashboardsClient:    osDashboardsClient,
+		indexUpgradeMonitor:   &upgrade.Monitor{},
 	}
 
 	zap.S().Infow("Setting up event handlers")
@@ -445,6 +457,15 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	ismChannel := c.osClient.ConfigureISM(vmo)
 
+	/********************************************
+	 * Migrate old indices if any to Data streams
+	*********************************************/
+	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
+	if err != nil {
+		c.log.Errorf("Failed to migrate old indices to data stream: %v", err)
+		errorObserved = true
+	}
+
 	/*********************
 	 * Create RoleBindings
 	 **********************/
@@ -530,6 +551,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.log.Errorf("Failed to configure ISM Policies: %v", ismErr)
 		errorObserved = true
 	}
+
 	if !errorObserved && !deploymentsDirty && len(c.buildVersion) > 0 && vmo.Spec.Versioning.CurrentVersion != c.buildVersion {
 		// The spec.versioning.currentVersion field should not be updated to the new value until a sync produces no
 		// changes.  This allows observers (e.g. the controlled rollout scripts used to put new versions of operator
