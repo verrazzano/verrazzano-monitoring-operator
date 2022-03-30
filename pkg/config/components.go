@@ -127,7 +127,7 @@ var ElasticsearchIngest = ComponentDetails{
 	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
-	Port:              constants.ESHttpPort,
+	Port:              constants.OSHTTPPort,
 	LivenessHTTPPath:  "/_cluster/health",
 	ReadinessHTTPPath: "/_cluster/health",
 	Privileged:        false,
@@ -139,7 +139,7 @@ var ElasticsearchMaster = ComponentDetails{
 	Name:            "es-master",
 	EnvName:         "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
-	Port:            constants.ESTransportPort,
+	Port:            constants.OSTransportPort,
 	Privileged:      false,
 }
 
@@ -148,7 +148,7 @@ var ElasticsearchData = ComponentDetails{
 	Name:              "es-data",
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
-	Port:              constants.ESHttpPort,
+	Port:              constants.OSHTTPPort,
 	DataDir:           "/usr/share/opensearch/data",
 	LivenessHTTPPath:  "/_cluster/health",
 	ReadinessHTTPPath: "/_cluster/health",

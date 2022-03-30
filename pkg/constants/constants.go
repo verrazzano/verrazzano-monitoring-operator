@@ -98,11 +98,14 @@ const MetricsNameSpace = "vmo_operator"
 // DefaultPrometheusRetentionPeriod default Prometheus retention configuration
 const DefaultPrometheusRetentionPeriod = 90
 
-// ESHttpPort default Elasticsearch HTTP port
-const ESHttpPort = 9200
+// OSHTTPPort default OpenSearch HTTP port
+const OSHTTPPort = 9200
 
-// ESTransportPort default Elasticsearch transport port
-const ESTransportPort = 9300
+// OSTransportPort default OpenSearch transport port
+const OSTransportPort = 9300
+
+// OSDashboardsHTTPPort default OpenSearch Dashboards HTTP port
+const OSDashboardsHTTPPort = 5601
 
 // OidcProxyPort default OidcProxy HTTP port
 const OidcProxyPort = 8775

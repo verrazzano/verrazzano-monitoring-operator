@@ -23,19 +23,29 @@ import (
 )
 
 var (
-	runes              = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-	MasterHTTPEndpoint = "VMO_MASTER_HTTP_ENDPOINT"
+	runes                  = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
+	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 )
 
 func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 	// The master HTTP port may be overridden if necessary.
 	// This can be useful in situations where the VMO does not have direct access to the cluster service,
 	// such as when you are using port-forwarding.
-	masterServiceEndpoint := os.Getenv(MasterHTTPEndpoint)
+	masterServiceEndpoint := os.Getenv(masterHTTPEndpoint)
 	if len(masterServiceEndpoint) > 0 {
 		return masterServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.ESHttpPort)
+	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.OSHTTPPort)
+}
+
+func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	dashboardsServiceEndpoint := os.Getenv(dashboardsHTTPEndpoint)
+	if len(dashboardsServiceEndpoint) > 0 {
+		return dashboardsServiceEndpoint
+	}
+	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
+		constants.OSDashboardsHTTPPort)
 }
 
 func GetOwnerLabels(owner string) map[string]string {
@@ -74,7 +84,7 @@ func GetSpecID(vmoName string, componentName string) map[string]string {
 
 // GetServicePort returns service port
 func GetServicePort(componentDetails config.ComponentDetails) corev1.ServicePort {
-	return corev1.ServicePort{Name: componentDetails.Name, Port: int32(componentDetails.Port)}
+	return corev1.ServicePort{Name: "http-" + componentDetails.Name, Port: int32(componentDetails.Port)}
 }
 
 // GetOwnerReferences returns owner references
@@ -499,4 +509,25 @@ func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componen
 			Ports:    []corev1.ServicePort{{Name: "oidc", Port: int32(constants.OidcProxyPort)}},
 		},
 	}
+}
+
+// convertToRegexp converts index pattern to a regular expression pattern.
+func ConvertToRegexp(pattern string) string {
+	var result strings.Builder
+	// Add ^ at the beginning
+	result.WriteString("^")
+	for i, literal := range strings.Split(pattern, "*") {
+
+		// Replace * with .*
+		if i > 0 {
+			result.WriteString(".*")
+		}
+
+		// Quote any regular expression meta characters in the
+		// literal text.
+		result.WriteString(regexp.QuoteMeta(literal))
+	}
+	// Add $ at the end
+	result.WriteString("$")
+	return result.String()
 }
