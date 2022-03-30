@@ -49,7 +49,7 @@ func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonito
 func createMasterServiceHTTP(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	masterHTTPService := createServiceElement(vmo, config.ElasticsearchMaster)
 	masterHTTPService.Name = masterHTTPService.Name + "-http"
-	masterHTTPService.Spec.Ports[0].Name = config.ElasticsearchMaster.Name + "-http"
+	masterHTTPService.Spec.Ports[0].Name = "http-" + config.ElasticsearchMaster.Name
 	masterHTTPService.Spec.Ports[0].Port = constants.OSHTTPPort
 	masterHTTPService.Spec.Ports[0].TargetPort = intstr.FromInt(constants.OSHTTPPort)
 	return masterHTTPService
