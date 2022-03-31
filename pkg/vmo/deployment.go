@@ -19,6 +19,34 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
+func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	if osd == nil {
+		return nil
+	}
+
+	var err error
+	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
+		} else {
+			return err
+		}
+	} else {
+		err = controller.osClient.IsOpenSearchUpdated(vmo)
+		if err != nil {
+			return err
+		}
+		err = updateDeployment(controller, vmo, existingDeployment, osd)
+	}
+	if err != nil {
+		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
+		return err
+	}
+
+	return nil
+}
+
 // CreateDeployments create/update VMO deployment k8s resources
 func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, vmoUsername string, vmoPassword string) (dirty bool, err error) {
 	// Assigning the following spec members seems like a hack; is any
@@ -60,15 +88,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				elasticsearchDataDeployments = append(elasticsearchDataDeployments, curDeployment)
 			} else {
-				if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.Kibana.Name) {
-					addKibanaUpgradeStrategy(curDeployment, existingDeployment)
-				}
-				specDiffs := diff.Diff(existingDeployment, curDeployment)
-				if specDiffs != "" {
-					controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
-					controller.log.Oncef("Updating deployment %s/%s", curDeployment.Namespace, curDeployment.Name)
-					_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
-				}
+				err = updateDeployment(controller, vmo, existingDeployment, curDeployment)
 			}
 		}
 		if err != nil {
@@ -86,6 +106,16 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	elasticsearchDirty, err := updateAllDeployment(controller, vmo, elasticsearchDataDeployments)
 	if err != nil {
 		return false, err
+	}
+
+	// Create the OSD deployment
+	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
+	if osd != nil {
+		deploymentNames = append(deploymentNames, osd.Name)
+		err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	// Delete deployments that shouldn't exist
@@ -108,35 +138,16 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	return prometheusDirty || elasticsearchDirty, nil
 }
 
-//addKibanaUpgradeStrategy updates the Kibana deployment with an appropriate update strategy,
-// whether the upgrade is a rolling upgrade or a recreate upgrade.
-func addKibanaUpgradeStrategy(newDeploy, oldDeploy *appsv1.Deployment) {
-	getKibanaImage := func(deploy *appsv1.Deployment) string {
-		kibanaImage := ""
-		for _, container := range deploy.Spec.Template.Spec.Containers {
-			if container.Name == config.Kibana.Name {
-				kibanaImage = container.Image
-				break
-			}
-		}
-		return kibanaImage
+func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
+	var err error
+	specDiffs := diff.Diff(existingDeployment, curDeployment)
+	if specDiffs != "" {
+		controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
+		controller.log.Oncef("Updating deployment %s/%s", curDeployment.Namespace, curDeployment.Name)
+		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 	}
-	oldKibanaImage := getKibanaImage(oldDeploy)
-	newKibanaImage := getKibanaImage(newDeploy)
 
-	// Kibana/OSD should not have concurrent replicas with separate versions
-	// this can lead to race conditions and result in data corruption
-	newDeploy.Spec.Strategy = appsv1.DeploymentStrategy{
-		Type: getUpdateStrategy(newKibanaImage, oldKibanaImage),
-	}
-}
-
-//getUpdateStrategy returns a deployment strategy for recreate or rolling updates
-func getUpdateStrategy(newImage, oldImage string) appsv1.DeploymentStrategyType {
-	if newImage == oldImage {
-		return appsv1.RollingUpdateDeploymentStrategyType
-	}
-	return appsv1.RecreateDeploymentStrategyType
+	return err
 }
 
 // Updates the *next* candidate deployment of the given deployments list.  A deployment is a candidate only if

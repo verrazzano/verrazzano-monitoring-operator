@@ -51,7 +51,7 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 	)
 
 	esContainer.Ports = []corev1.ContainerPort{
-		{Name: "http", ContainerPort: int32(constants.ESHttpPort)},
+		{Name: "http", ContainerPort: int32(constants.OSHTTPPort)},
 		{Name: "transport", ContainerPort: int32(constants.ESTransportPort)},
 	}
 
