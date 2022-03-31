@@ -98,11 +98,14 @@ const MetricsNameSpace = "vmo_operator"
 // DefaultPrometheusRetentionPeriod default Prometheus retention configuration
 const DefaultPrometheusRetentionPeriod = 90
 
-// ESHttpPort default Elasticsearch HTTP port
-const ESHttpPort = 9200
+// OSHTTPPort default OpenSearch HTTP port
+const OSHTTPPort = 9200
 
-// ESTransportPort default Elasticsearch transport port
-const ESTransportPort = 9300
+// OSTransportPort default OpenSearch transport port
+const OSTransportPort = 9300
+
+// OSDashboardsHTTPPort default OpenSearch Dashboards HTTP port
+const OSDashboardsHTTPPort = 5601
 
 // OidcProxyPort default OidcProxy HTTP port
 const OidcProxyPort = 8775
@@ -227,3 +230,12 @@ const KeycloakCABundleData = "ca-bundle"
 // PrometheusClusterNameLabel - the label name attached to all metrics to indicate the Verrazzano
 // cluster name where the metric originated
 const PrometheusClusterNameLabel = "verrazzano_cluster"
+
+const (
+	// Constants required for updating Opensearch keystore
+	VerrazzanoBackupScrtName      = "verrazzano-backup"
+	ObjectStoreAccessKeyVarName   = "OBJECT_STORE_ACCESS_KEY_ID"
+	ObjectStoreAccessKey          = "object_store_access_key"
+	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_SECRET_KEY_ID"
+	ObjectStoreCustomerKey        = "object_store_secret_key"
+)

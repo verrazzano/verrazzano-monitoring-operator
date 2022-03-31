@@ -1,14 +1,14 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package statefulsets
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
+	storagev1 "k8s.io/api/storage/v1"
 	"strings"
-
-	"go.uber.org/zap"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -22,7 +22,7 @@ import (
 )
 
 // New creates StatefulSet objects for a VMO resource
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSet, error) {
+func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
 	// Alert Manager
@@ -31,13 +31,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*appsv1.StatefulSe
 	}
 	// Elasticsearch Master
 	if vmo.Spec.Elasticsearch.Enabled {
-		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(vmo))
+		statefulSets = append(statefulSets, createElasticsearchMasterStatefulSet(log, vmo, storageClass))
 	}
 	return statefulSets, nil
 }
 
 // Creates StatefulSet for Elasticsearch Master
-func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass) *appsv1.StatefulSet {
 	var readinessProbeCondition string
 
 	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.Elasticsearch.MasterNode.Resources, config.ElasticsearchMaster, "")
@@ -49,15 +49,27 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 	esMasterContainer := &statefulSet.Spec.Template.Spec.Containers[0]
 	esMasterContainer.SecurityContext.RunAsUser = &elasticsearchUID
 	esMasterContainer.Ports[0].Name = "transport"
-	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
+	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.OSHTTPPort), Protocol: "TCP"})
 
-	// Set the default logging to INFO; this can be overridden later at runtime
-	esMasterContainer.Args = []string{
-		"elasticsearch",
-		"-E",
-		"logger.org.elasticsearch=INFO",
+	// Adding command for add keystore values at pod bootup
+	esMasterContainer.Command = []string{
+		"sh",
+		"-c",
+		`#!/usr/bin/env bash -e
+
+# Updating elastic search keystore with keys
+# required for the repository-s3 plugin
+
+if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
+    echo "Updating object store access key..."
+	echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+fi
+if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
+    echo "Updating object store secret key..."
+	echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+fi
+/usr/local/bin/docker-entrypoint.sh`,
 	}
-
 	var envVars = []corev1.EnvVar{
 		{
 			Name: "node.name",
@@ -70,13 +82,40 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 		{Name: "cluster.name", Value: vmo.Name},
 		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
 		{Name: "HTTP_ENABLE", Value: "true"},
+		{Name: "logger.org.opensearch", Value: "info"},
+		{Name: constants.ObjectStoreAccessKeyVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: constants.VerrazzanoBackupScrtName,
+					},
+					Key: constants.ObjectStoreAccessKey,
+					Optional: func(opt bool) *bool {
+						return &opt
+					}(true),
+				},
+			},
+		},
+		{Name: constants.ObjectStoreCustomerKeyVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: constants.VerrazzanoBackupScrtName,
+					},
+					Key: constants.ObjectStoreCustomerKey,
+					Optional: func(opt bool) *bool {
+						return &opt
+					}(true),
+				},
+			},
+		},
 	}
 	if resources.IsSingleNodeESCluster(vmo) {
-		zap.S().Infof("ES topology for %s indicates a single-node cluster (single master node only)")
+		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
 		javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.MasterNode.Resources.RequestMemory) // Default JVM heap settings if none provided
 		if err != nil {
 			javaOpts = constants.DefaultDevProfileESMemArgs
-			zap.S().Errorf("Unable to derive heap sizes from Master pod, using default %s.  Error: %v", javaOpts, err)
+			log.Errorf("Failed to derive heap sizes from Master pod, using default %s: %v", javaOpts, err)
 		}
 		if vmo.Spec.Elasticsearch.MasterNode.JavaOpts != "" {
 			javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
@@ -86,6 +125,7 @@ func createElasticsearchMasterStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitori
 			corev1.EnvVar{Name: "node.master", Value: "true"},
 			corev1.EnvVar{Name: "node.ingest", Value: "true"},
 			corev1.EnvVar{Name: "node.data", Value: "true"},
+			// supported via legacy compatibility
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 		)
 	} else {
@@ -168,7 +208,7 @@ fi`,
 		}
 
 	const esMasterVolName = "elasticsearch-master"
-	const esMasterData = "/usr/share/elasticsearch/data"
+	const esMasterData = "/usr/share/opensearch/data"
 
 	// Add the pv volume mount to the main container
 	esMasterContainer.VolumeMounts =
@@ -190,8 +230,7 @@ fi`,
 
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
-	storageSize := vmo.Spec.Elasticsearch.Storage.Size
-	if len(storageSize) > 0 {
+	if vmo.Spec.Elasticsearch.MasterNode.Storage != nil && len(vmo.Spec.Elasticsearch.MasterNode.Storage.Size) > 0 {
 		statefulSet.Spec.VolumeClaimTemplates =
 			[]corev1.PersistentVolumeClaim{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -201,10 +240,16 @@ fi`,
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(storageSize)},
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(vmo.Spec.Elasticsearch.MasterNode.Storage.Size)},
 					},
 				},
 			}}
+		// Only set the storage class name if one was explicitly specified by the user.
+		// This is to facilitate upgrades where storage class name is empty,
+		// since you cannot update this field of a statefulset
+		if storageClass != nil {
+			statefulSet.Spec.VolumeClaimTemplates[0].Spec.StorageClassName = &storageClass.Name
+		}
 	} else {
 		statefulSet.Spec.Template.Spec.Volumes = []corev1.Volume{
 			{
@@ -220,8 +265,8 @@ fi`,
 	if statefulSet.Spec.Template.Annotations == nil {
 		statefulSet.Spec.Template.Annotations = make(map[string]string)
 	}
-	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
-	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
+	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
 	return statefulSet
 }

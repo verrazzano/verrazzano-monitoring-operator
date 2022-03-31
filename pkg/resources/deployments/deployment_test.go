@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package deployments
@@ -55,6 +55,7 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 		},
 	}
 	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
 		t.Error(err)
 	}
@@ -91,6 +92,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 	assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 
 	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
 		t.Error(err)
 	}
@@ -290,6 +292,7 @@ func TestVMOWithReplicas(t *testing.T) {
 		},
 	}
 	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
 		t.Error(err)
 	}

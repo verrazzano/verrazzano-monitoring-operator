@@ -1,10 +1,12 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"regexp"
 	"strconv"
@@ -19,6 +21,45 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+var (
+	runes                  = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
+	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
+)
+
+func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	// The master HTTP port may be overridden if necessary.
+	// This can be useful in situations where the VMO does not have direct access to the cluster service,
+	// such as when you are using port-forwarding.
+	masterServiceEndpoint := os.Getenv(masterHTTPEndpoint)
+	if len(masterServiceEndpoint) > 0 {
+		return masterServiceEndpoint
+	}
+	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.OSHTTPPort)
+}
+
+func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	dashboardsServiceEndpoint := os.Getenv(dashboardsHTTPEndpoint)
+	if len(dashboardsServiceEndpoint) > 0 {
+		return dashboardsServiceEndpoint
+	}
+	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
+		constants.OSDashboardsHTTPPort)
+}
+
+//GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
+func GetNewRandomID(size int) (string, error) {
+	builder := strings.Builder{}
+	for i := 0; i < size; i++ {
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
+		if err != nil {
+			return "", err
+		}
+		builder.WriteRune(runes[idx.Int64()])
+	}
+	return builder.String(), nil
+}
 
 // GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {
@@ -37,7 +78,7 @@ func GetSpecID(vmoName string, componentName string) map[string]string {
 
 // GetServicePort returns service port
 func GetServicePort(componentDetails config.ComponentDetails) corev1.ServicePort {
-	return corev1.ServicePort{Name: componentDetails.Name, Port: int32(componentDetails.Port)}
+	return corev1.ServicePort{Name: "http-" + componentDetails.Name, Port: int32(componentDetails.Port)}
 }
 
 // GetOwnerReferences returns owner references
@@ -73,7 +114,7 @@ func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	case config.Prometheus.Name:
 		return &vmo.Spec.Prometheus.Storage
 	case config.ElasticsearchData.Name:
-		return &vmo.Spec.Elasticsearch.Storage
+		return vmo.Spec.Elasticsearch.DataNode.Storage
 	}
 	return nil
 }
@@ -198,7 +239,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 func GetElasticsearchMasterInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
 	elasticsearchInitContainer.Command =
-		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data; sysctl -w vm.max_map_count=262144"}
+		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/opensearch/data; sysctl -w vm.max_map_count=262144"}
 	elasticsearchInitContainer.Ports = nil
 	return &elasticsearchInitContainer
 }
@@ -478,4 +519,25 @@ func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componen
 			Ports:    []corev1.ServicePort{{Name: "oidc", Port: int32(constants.OidcProxyPort)}},
 		},
 	}
+}
+
+// convertToRegexp converts index pattern to a regular expression pattern.
+func ConvertToRegexp(pattern string) string {
+	var result strings.Builder
+	// Add ^ at the beginning
+	result.WriteString("^")
+	for i, literal := range strings.Split(pattern, "*") {
+
+		// Replace * with .*
+		if i > 0 {
+			result.WriteString(".*")
+		}
+
+		// Quote any regular expression meta characters in the
+		// literal text.
+		result.WriteString(regexp.QuoteMeta(literal))
+	}
+	// Add $ at the end
+	result.WriteString("$")
+	return result.String()
 }

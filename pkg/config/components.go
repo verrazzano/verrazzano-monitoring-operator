@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package config
@@ -127,7 +127,7 @@ var ElasticsearchIngest = ComponentDetails{
 	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
-	Port:              constants.ESHttpPort,
+	Port:              constants.OSHTTPPort,
 	LivenessHTTPPath:  "/_cluster/health",
 	ReadinessHTTPPath: "/_cluster/health",
 	Privileged:        false,
@@ -139,7 +139,7 @@ var ElasticsearchMaster = ComponentDetails{
 	Name:            "es-master",
 	EnvName:         "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
-	Port:            constants.ESTransportPort,
+	Port:            constants.OSTransportPort,
 	Privileged:      false,
 }
 
@@ -148,8 +148,8 @@ var ElasticsearchData = ComponentDetails{
 	Name:              "es-data",
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
-	Port:              constants.ESHttpPort,
-	DataDir:           "/usr/share/elasticsearch/data",
+	Port:              constants.OSHTTPPort,
+	DataDir:           "/usr/share/opensearch/data",
 	LivenessHTTPPath:  "/_cluster/health",
 	ReadinessHTTPPath: "/_cluster/health",
 	Privileged:        false,
@@ -201,7 +201,7 @@ func InitComponentDetails() error {
 			component.Image = os.Getenv(component.EnvName)
 			if len(component.Image) == 0 {
 				if !component.Optional {
-					return fmt.Errorf("The environment variable %s translated to an empty string for component %s", component.EnvName, component.Name)
+					return fmt.Errorf("Failed, the environment variable %s translated to an empty string for component %s", component.EnvName, component.Name)
 				}
 				// if no image is provided for an optional component then disable it
 				zap.S().Infof("The environment variable %s translated to an empty string for optional component %s.  Marking component disabled.", component.EnvName, component.Name)
@@ -214,7 +214,7 @@ func InitComponentDetails() error {
 	}
 	ESWaitTargetVersion = os.Getenv(eswaitTargetVersionEnv)
 	if len(ESWaitTargetVersion) == 0 {
-		return fmt.Errorf("The environment variable %s translated to an empty string", eswaitTargetVersionEnv)
+		return fmt.Errorf("Failed, the environment variable %s translated to an empty string", eswaitTargetVersionEnv)
 	}
 	return nil
 }

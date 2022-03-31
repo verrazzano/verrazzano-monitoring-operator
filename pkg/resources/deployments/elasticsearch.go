@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package deployments
@@ -46,18 +46,13 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 				},
 			},
 		},
-		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name})
-
-	// Set the default logging to INFO; this can be overridden later at runtime
-	esContainer.Args = []string{
-		"elasticsearch",
-		"-E",
-		"logger.org.elasticsearch=INFO",
-	}
+		corev1.EnvVar{Name: "cluster.name", Value: vmo.Name},
+		corev1.EnvVar{Name: "logger.org.opensearch", Value: "info"},
+	)
 
 	esContainer.Ports = []corev1.ContainerPort{
-		{Name: "http", ContainerPort: int32(constants.ESHttpPort)},
-		{Name: "transport", ContainerPort: int32(constants.ESTransportPort)},
+		{Name: "http", ContainerPort: int32(constants.OSHTTPPort)},
+		{Name: "transport", ContainerPort: int32(constants.OSTransportPort)},
 	}
 
 	// Common Elasticsearch readiness and liveness settings
@@ -91,7 +86,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.IngestNode.Resources.RequestMemory)
 	if err != nil {
 		javaOpts = constants.DefaultESIngestMemArgs
-		zap.S().Errorf("Unable to derive heap sizes from Ingest pod, using default %s.  Error: %v", javaOpts, err)
+		zap.S().Errorf("Failed to derive heap sizes from Ingest pod, using default %s: %v", javaOpts, err)
 	}
 	if vmo.Spec.Elasticsearch.IngestNode.JavaOpts != "" {
 		javaOpts = vmo.Spec.Elasticsearch.IngestNode.JavaOpts
@@ -123,8 +118,8 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 	if elasticsearchIngestDeployment.Spec.Template.Annotations == nil {
 		elasticsearchIngestDeployment.Spec.Template.Annotations = make(map[string]string)
 	}
-	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
-	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
+	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
 	return []*appsv1.Deployment{elasticsearchIngestDeployment}
 }
@@ -135,7 +130,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.DataNode.Resources.RequestMemory)
 	if err != nil {
 		javaOpts = constants.DefaultESDataMemArgs
-		zap.S().Errorf("Unable to derive heap sizes from Data pod, using default %s.  Error: %v", javaOpts, err)
+		zap.S().Errorf("Failed to derive heap sizes from Data pod, using default %s: %v", javaOpts, err)
 	}
 	if vmo.Spec.Elasticsearch.DataNode.JavaOpts != "" {
 		javaOpts = vmo.Spec.Elasticsearch.DataNode.JavaOpts
@@ -149,10 +144,10 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 	}
 	var deployList []*appsv1.Deployment
 	for i := 0; i < int(vmo.Spec.Elasticsearch.DataNode.Replicas); i++ {
-		elasticsearchDataDeployment := es.createElasticsearchCommonDeployment(vmo, &vmo.Spec.Elasticsearch.Storage, &vmo.Spec.Elasticsearch.DataNode.Resources, config.ElasticsearchData, i)
+		elasticsearchDataDeployment := es.createElasticsearchCommonDeployment(vmo, vmo.Spec.Elasticsearch.DataNode.Storage, &vmo.Spec.Elasticsearch.DataNode.Resources, config.ElasticsearchData, i)
 
 		elasticsearchDataDeployment.Spec.Replicas = resources.NewVal(1)
-		availabilityDomain := getAvailabilityDomainForPvcIndex(&vmo.Spec.Elasticsearch.Storage, pvcToAdMap, i)
+		availabilityDomain := getAvailabilityDomainForPvcIndex(vmo.Spec.Elasticsearch.DataNode.Storage, pvcToAdMap, i)
 		if availabilityDomain == "" {
 			// With shard allocation awareness, we must provide something for the AD, even in the case of the simple
 			// VMO with no persistence volumes
@@ -196,14 +191,60 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			corev1.EnvVar{Name: "node.ingest", Value: "false"},
 			corev1.EnvVar{Name: "node.data", Value: "true"},
 			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
+			corev1.EnvVar{Name: constants.ObjectStoreAccessKeyVarName,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: constants.VerrazzanoBackupScrtName,
+						},
+						Key: constants.ObjectStoreAccessKey,
+						Optional: func(opt bool) *bool {
+							return &opt
+						}(true),
+					},
+				},
+			},
+			corev1.EnvVar{Name: constants.ObjectStoreCustomerKeyVarName,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: constants.VerrazzanoBackupScrtName,
+						},
+						Key: constants.ObjectStoreCustomerKey,
+						Optional: func(opt bool) *bool {
+							return &opt
+						}(true),
+					},
+				},
+			},
 		)
+
+		// Adding command for add keystore values at pod bootup
+		elasticsearchDataDeployment.Spec.Template.Spec.Containers[0].Command = []string{
+			"sh",
+			"-c",
+			`#!/usr/bin/env bash -e
+
+# Updating elastic search keystore with keys
+# required for the repository-s3 plugin
+
+if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
+    echo "Updating object store access key..."
+	echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+fi
+if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
+    echo "Updating object store secret key..."
+	echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+fi
+/usr/local/bin/docker-entrypoint.sh`,
+		}
 
 		// add the required istio annotations to allow inter-es component communication
 		if elasticsearchDataDeployment.Spec.Template.Annotations == nil {
 			elasticsearchDataDeployment.Spec.Template.Annotations = make(map[string]string)
 		}
-		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
-		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.ESTransportPort)
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
+		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
 		deployList = append(deployList, elasticsearchDataDeployment)
 	}
