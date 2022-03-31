@@ -23,6 +23,7 @@ func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 		endpointName = componentDetails.Name
 	}
 	fqdn := fmt.Sprintf("%s.%s", endpointName, vmo.Spec.URI)
+	pathType := netv1.PathTypeImplementationSpecific
 
 	return netv1.IngressRule{
 		Host: fqdn,
@@ -30,7 +31,8 @@ func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 			HTTP: &netv1.HTTPIngressRuleValue{
 				Paths: []netv1.HTTPIngressPath{
 					{
-						Path: "/",
+						Path:     "/",
+						PathType: &pathType,
 						Backend: netv1.IngressBackend{
 							Service: &netv1.IngressServiceBackend{
 								Name: serviceName,
@@ -229,13 +231,15 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	}
 	serviceName := resources.AuthProxyMetaName()
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
+	pathType := netv1.PathTypeImplementationSpecific
 	ingressRule := netv1.IngressRule{
 		Host: ingressHost,
 		IngressRuleValue: netv1.IngressRuleValue{
 			HTTP: &netv1.HTTPIngressRuleValue{
 				Paths: []netv1.HTTPIngressPath{
 					{
-						Path: "/()(.*)",
+						Path:     "/()(.*)",
+						PathType: &pathType,
 						Backend: netv1.IngressBackend{
 							Service: &netv1.IngressServiceBackend{
 								Name: serviceName,
