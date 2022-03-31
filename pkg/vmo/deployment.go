@@ -27,6 +27,8 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
+	zap.S().Infof("USERNAME: %s --------------------", vmoUsername)
+	zap.S().Infof("PASSWORD: %s --------------------", vmoPassword)
 	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
 	if err != nil {
 		zap.S().Errorf("Failed to create Deployment specs for vmo: %s", err)

@@ -56,6 +56,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 			}...)
 		} else {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{Name: "GF_SECURITY_ADMIN_USER", Value: username},
+				{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
 				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
