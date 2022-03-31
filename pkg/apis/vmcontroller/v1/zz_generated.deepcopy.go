@@ -149,6 +149,13 @@ func (in *Elasticsearch) DeepCopyInto(out *Elasticsearch) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Nodes != nil {
+		in, out := &in.Nodes, &out.Nodes
+		*out = make([]ElasticsearchNode, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

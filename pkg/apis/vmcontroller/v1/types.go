@@ -127,6 +127,7 @@ type (
 		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
 		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
 		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
 	}
 
 	// ElasticsearchNode Type details

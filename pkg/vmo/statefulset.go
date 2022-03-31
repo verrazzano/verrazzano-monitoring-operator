@@ -7,10 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +26,9 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		controller.log.Errorf("Failed to determine storage class for VMI %s: %v", vmo.Name, err)
 		return err
 	}
-	statefulSetList, err := statefulsets.New(controller.log, vmo, storageClass)
+
+	initialMasterNodes, err := getInitialMasterNodes(controller, vmo)
+	expectedStatefulSets, err := statefulsets.New(controller.log, vmo, storageClass, initialMasterNodes)
 	if err != nil {
 		controller.log.Errorf("Failed to create StatefulSet specs for VMI %s: %v", vmo.Name, err)
 		return err
@@ -34,10 +37,10 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	// Loop through the existing stateful sets and create/update as needed
 	controller.log.Oncef("Creating/updating Statefulsets for VMI %s", vmo.Name)
 	var statefulSetNames []string
-	for _, curStatefulSet := range statefulSetList {
-		statefulSetName := curStatefulSet.Name
+	for _, expectedStatefulSet := range expectedStatefulSets {
+		statefulSetName := expectedStatefulSet.Name
 		statefulSetNames = append(statefulSetNames, statefulSetName)
-		if statefulSetName == "" && curStatefulSet.GenerateName == "" {
+		if statefulSetName == "" && expectedStatefulSet.GenerateName == "" {
 			// We choose to absorb the error here as the worker would requeue the
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
@@ -47,18 +50,18 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		controller.log.Debugf("Applying StatefulSet '%s' in namespace '%s' for VMI '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
 		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
 		if existingStatefulSet != nil {
-			// Changes to VolumeClaimTemplates are not supported without recreating the statefulset
-			curStatefulSet.Spec.VolumeClaimTemplates = existingStatefulSet.Spec.VolumeClaimTemplates
-			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
-			if specDiffs != "" {
-				controller.log.Oncef("Statefulset %s/%s has spec differences %s", curStatefulSet.Namespace, curStatefulSet.Name, specDiffs)
-				_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
+			// Existing statefulsets are updated one at a time, to prevent cluster failover
+			updated, err := updateStatefulSet(controller, expectedStatefulSet, existingStatefulSet, vmo)
+			// if we updated a statefulset, return to do any others in the next reconcile
+			if err != nil || updated {
+				return err
 			}
+
 		} else {
-			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), expectedStatefulSet, metav1.CreateOptions{})
 		}
 		if err != nil {
-			return controller.log.ErrorfNewErr("Failed to update StatefulSets %s%s: %v", curStatefulSet.Namespace, curStatefulSet.Name, err)
+			return controller.log.ErrorfNewErr("Failed to update StatefulSets %s%s: %v", expectedStatefulSet.Namespace, expectedStatefulSet.Name, err)
 		}
 	}
 
@@ -80,16 +83,78 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 		// Delete StatefulSets that shouldn't exist
 		if !contains(statefulSetNames, statefulSet.Name) {
-			controller.log.Debugf("Deleting StatefulSet %s", statefulSet.Name)
-			err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
-			if err != nil {
-				controller.log.Errorf("Failed to delete StatefulSet %s: %v", statefulSet.Name, err)
+			if err := scaleDownStatefulSet(controller, statefulSetNames, statefulSet, vmo); err != nil {
 				return err
 			}
+			// We only scale down one statefulset at a time. This gives the statefulset data
+			// time to migrate and the cluster to heal itself.
+			break
 		}
 	}
 
 	controller.log.Oncef("Successfully applied StatefulSets for VMI %s", vmo.Name)
+	return nil
+}
+
+//getInitialMasterNodes returns the initial master nodes string if the cluster is not already bootstrapped
+func getInitialMasterNodes(c *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (string, error) {
+	existing, err := c.statefulSetLister.StatefulSets(vmo.Namespace).List(labels.SelectorFromSet(resources.GetMetaLabels(vmo)))
+	if err != nil {
+		return "", err
+	}
+	if len(existing) > 0 {
+		return "", nil
+	}
+	return nodes.InitialMasterNodes(vmo.Name, nodes.StatefulSetNodes(vmo)), nil
+}
+
+func updateStatefulSet(c *Controller, current, existing *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
+	statefulsets.CopyFromExisting(current, existing)
+	specDiffs := diff.Diff(existing, current)
+	if specDiffs != "" {
+		// We should only update the cluster if it is healthy
+		if err := c.osClient.IsGreen(vmo); err != nil {
+			return false, err
+		}
+		c.log.Oncef("Statefulset %s/%s has spec differences %s", current.Namespace, current.Name, specDiffs)
+		if _, err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), current, metav1.UpdateOptions{}); err != nil {
+			return true, err
+		}
+	}
+	return false, nil
+}
+
+//scaleDownStatefulSet scales down a statefulset, and deletes the statefulset if it is already at 1 or fewer replicas.
+func scaleDownStatefulSet(c *Controller, statefulSetNames []string, statefulSet *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	deleteSTS := func() error {
+		err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
+		if err != nil {
+			c.log.Errorf("Failed to delete StatefulSet %s: %v", statefulSet.Name, err)
+			return err
+		}
+		return nil
+	}
+
+	// If the desired list of statefulsets is zero, we should delete without any checks
+	if len(statefulSetNames) < 1 {
+		return deleteSTS()
+	}
+
+	// The cluster should be at its current capacity before we issue a scaledown
+	if err := c.osClient.IsResizable(vmo); err != nil {
+		return err
+	}
+
+	// If the statefulset has multiple replicas, scale it down. this allows existing data to be migrated
+	// to another node on the cluster. If it's already on one replica, the STS can be deleted
+	if *statefulSet.Spec.Replicas <= 1 {
+		return deleteSTS()
+	} else {
+		*statefulSet.Spec.Replicas -= 1
+		if _, err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), statefulSet, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

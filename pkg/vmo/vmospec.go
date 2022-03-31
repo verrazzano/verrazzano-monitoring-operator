@@ -91,9 +91,6 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if vmo.Spec.AlertManager.Replicas == 0 {
 		vmo.Spec.AlertManager.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
-	if vmo.Spec.Elasticsearch.MasterNode.Replicas == 0 {
-		vmo.Spec.Elasticsearch.MasterNode.Replicas = int32(constants.DefaultElasticsearchMasterReplicas)
-	}
 
 	// Default roles for VMO components
 	initNode(&vmo.Spec.Elasticsearch.MasterNode, vmcontrollerv1.MasterRole)
@@ -148,12 +145,14 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRole) {
-	if len(node.Name) < 1 {
-		node.Name = "es" + string(role)
-	}
-	if len(node.Roles) < 1 {
-		node.Roles = []vmcontrollerv1.NodeRole{
-			role,
+	if node.Replicas > 0 {
+		if len(node.Name) < 1 {
+			node.Name = "es-" + string(role)
+		}
+		if len(node.Roles) < 1 {
+			node.Roles = []vmcontrollerv1.NodeRole{
+				role,
+			}
 		}
 	}
 }
