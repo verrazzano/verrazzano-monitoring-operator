@@ -48,7 +48,7 @@ func createElasticsearchMasterStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcon
 	esMasterContainer := &statefulSet.Spec.Template.Spec.Containers[0]
 	esMasterContainer.SecurityContext.RunAsUser = &elasticsearchUID
 	esMasterContainer.Ports[0].Name = "transport"
-	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.ESHttpPort), Protocol: "TCP"})
+	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.OSHTTPPort), Protocol: "TCP"})
 
 	var envVars = []corev1.EnvVar{
 		{

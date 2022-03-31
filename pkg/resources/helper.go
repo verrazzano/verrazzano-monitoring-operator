@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
@@ -19,6 +19,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+var (
+	masterHTTPEndpoint = "VMO_MASTER_HTTP_ENDPOINT"
+)
+
+func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	// The master HTTP port may be overridden if necessary.
+	// This can be useful in situations where the VMO does not have direct access to the cluster service,
+	// such as when you are using port-forwarding.
+	masterServiceEndpoint := os.Getenv(masterHTTPEndpoint)
+	if len(masterServiceEndpoint) > 0 {
+		return masterServiceEndpoint
+	}
+	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.OSHTTPPort)
+}
 
 // GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {

@@ -40,9 +40,18 @@ func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonito
 	if resources.IsSingleNodeESCluster(vmo) {
 		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
 		elasticsearchDataService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
-		elasticsearchDataService.Spec.Ports[0].TargetPort = intstr.FromInt(constants.ESHttpPort)
+		elasticsearchDataService.Spec.Ports[0].TargetPort = intstr.FromInt(constants.OSHTTPPort)
 	}
 	return elasticsearchDataService
+}
+
+func createMasterServiceHTTP(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
+	masterHTTPService := createServiceElement(vmo, config.ElasticsearchMaster)
+	masterHTTPService.Name = masterHTTPService.Name + "-http"
+	masterHTTPService.Spec.Ports[0].Name = config.ElasticsearchMaster.Name + "-http"
+	masterHTTPService.Spec.Ports[0].Port = constants.OSHTTPPort
+	masterHTTPService.Spec.Ports[0].TargetPort = intstr.FromInt(constants.OSHTTPPort)
+	return masterHTTPService
 }
 
 // Creates *all* Elasticsearch service elements
@@ -51,5 +60,6 @@ func createElasticsearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoring
 	services = append(services, createElasticsearchIngestServiceElements(vmo))
 	services = append(services, createElasticsearchMasterServiceElements(vmo))
 	services = append(services, createElasticsearchDataServiceElements(vmo))
+	services = append(services, createMasterServiceHTTP(vmo))
 	return services
 }
