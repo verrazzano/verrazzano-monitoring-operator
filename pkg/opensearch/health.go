@@ -9,6 +9,7 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	nodetool "github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"net/http"
 )
 
@@ -49,10 +50,9 @@ func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 	}
 
 	if checkNodeCount {
-		// Verify that the count of nodes matches the spec
-		opensearchSpec := vmo.Spec.Elasticsearch
-		expectedNodes := int(opensearchSpec.IngestNode.Replicas + opensearchSpec.MasterNode.Replicas + opensearchSpec.DataNode.Replicas)
-		if expectedNodes != len(nodes) {
+		// Verify the node count
+		expectedNodes := int(nodetool.GetNodeRoleCount(vmo).NodeCount)
+		if len(nodes) < expectedNodes {
 			return fmt.Errorf("Expected %d OpenSearch nodes, got %d", expectedNodes, len(nodes))
 		}
 	}

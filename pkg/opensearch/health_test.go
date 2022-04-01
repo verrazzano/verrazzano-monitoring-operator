@@ -185,7 +185,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := NewOSClient()
 			o.DoHTTP = tt.httpFunc
-			err := o.IsOpenSearchUpdated(&testvmo)
+			err := o.IsUpdated(&testvmo)
 			if tt.isError {
 				assert.Error(t, err)
 			} else {
@@ -216,5 +216,5 @@ func TestIsOpenSearchResizable(t *testing.T) {
 		},
 	}
 	o := NewOSClient()
-	assert.Error(t, o.IsOpenSearchResizable(&notEnoughNodesVMO))
+	assert.Error(t, o.IsResizable(&notEnoughNodesVMO))
 }

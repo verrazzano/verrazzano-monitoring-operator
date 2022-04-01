@@ -71,6 +71,9 @@ const DefaultNamespace = "default"
 // ServiceAppLabel label name for service app
 const ServiceAppLabel = "app"
 
+//ClusterInitialMasterNodes is the parameter for the OpenSearch cluster initial master nodes
+const ClusterInitialMasterNodes = "cluster.initial_master_nodes"
+
 // K8SAppLabel label name for k8s app
 const K8SAppLabel = "k8s-app"
 
