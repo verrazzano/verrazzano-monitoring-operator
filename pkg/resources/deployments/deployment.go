@@ -13,8 +13,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/security"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,13 +55,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "false"},
 			}...)
 		} else {
-			adminPassword, err := security.GeneratePassword(32)
-			if err != nil {
-				return nil, err
-			}
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
 				{Name: "GF_SECURITY_ADMIN_USER", Value: username},
-				{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: adminPassword},
+				{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
 				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
