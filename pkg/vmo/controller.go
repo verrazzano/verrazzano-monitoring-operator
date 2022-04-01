@@ -7,6 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
+	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"time"
 
@@ -18,17 +23,12 @@ import (
 	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
-	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
@@ -37,7 +37,7 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	appslistersv1 "k8s.io/client-go/listers/apps/v1"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
-	netlistersv1 "k8s.io/client-go/listers/networking/v1"
+	extensionslistersv1beta1 "k8s.io/client-go/listers/extensions/v1beta1"
 	rbacv1listers1 "k8s.io/client-go/listers/rbac/v1"
 	storagelisters1 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -63,7 +63,7 @@ type Controller struct {
 	configMapsSynced     cache.InformerSynced
 	deploymentLister     appslistersv1.DeploymentLister
 	deploymentsSynced    cache.InformerSynced
-	ingressLister        netlistersv1.IngressLister
+	ingressLister        extensionslistersv1beta1.IngressLister
 	ingressesSynced      cache.InformerSynced
 	nodeLister           corelistersv1.NodeLister
 	nodesSynced          cache.InformerSynced
@@ -185,7 +185,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	clusterRoleInformer := kubeInformerFactory.Rbac().V1().ClusterRoles()
 	configmapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-	ingressInformer := kubeInformerFactory.Networking().V1().Ingresses()
+	ingressInformer := kubeInformerFactory.Extensions().V1beta1().Ingresses()
 	nodeInformer := kubeInformerFactory.Core().V1().Nodes()
 	pvcInformer := kubeInformerFactory.Core().V1().PersistentVolumeClaims()
 	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
