@@ -145,14 +145,12 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRole) {
-	if node.Replicas > 0 {
-		if len(node.Name) < 1 {
-			node.Name = "es-" + string(role)
-		}
-		if len(node.Roles) < 1 {
-			node.Roles = []vmcontrollerv1.NodeRole{
-				role,
-			}
+	if len(node.Name) < 1 {
+		node.Name = "es-" + string(role)
+	}
+	if len(node.Roles) < 1 {
+		node.Roles = []vmcontrollerv1.NodeRole{
+			role,
 		}
 	}
 }

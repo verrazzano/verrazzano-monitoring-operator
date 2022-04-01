@@ -4,9 +4,7 @@
 package deployments
 
 import (
-	"errors"
 	"fmt"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"strconv"
 	"strings"
 
@@ -149,12 +147,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	//   data node and one separate ingest node
 	// - This will weed out creating separate pods for data/ingest in the single-node cluster configuration as well
 	if vmo.Spec.Elasticsearch.Enabled {
-		if nodes.IsValidMultiNodeESCluster(vmo) {
-			var es Elasticsearch = ElasticsearchBasic{}
-			deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
-		} else if !nodes.IsSingleNodeESCluster(vmo) {
-			err = errors.New("Invalid Elasticsearch cluster configuration, must be a valid single or multi-node cluster configuration")
-		}
+		var es Elasticsearch = ElasticsearchBasic{}
+		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
 	}
 
 	// API

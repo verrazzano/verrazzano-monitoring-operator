@@ -39,7 +39,9 @@ func createOpenSearchStatefulSets(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv
 	var statefulSets []*appsv1.StatefulSet
 	for _, node := range nodes.StatefulSetNodes(vmo) {
 		statefulSet := createOpenSearchStatefulSet(log, vmo, storageClass, node, initialMasterNodes)
-		statefulSets = append(statefulSets, statefulSet)
+		if *statefulSet.Spec.Replicas > 0 {
+			statefulSets = append(statefulSets, statefulSet)
+		}
 	}
 
 	return statefulSets

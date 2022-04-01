@@ -82,6 +82,7 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 
 // Creates all Elasticsearch Client deployment elements
 func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
+	var deployments []*appsv1.Deployment
 	// Default JVM heap settings if none provided
 	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.IngestNode.Resources.RequestMemory)
 	if err != nil {
@@ -121,7 +122,10 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 	elasticsearchIngestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
-	return []*appsv1.Deployment{elasticsearchIngestDeployment}
+	if *elasticsearchIngestDeployment.Spec.Replicas > 0 {
+		deployments = append(deployments, elasticsearchIngestDeployment)
+	}
+	return deployments
 }
 
 // Creates all Elasticsearch Data deployment elements
@@ -246,7 +250,9 @@ fi
 		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 		elasticsearchDataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
-		deployList = append(deployList, elasticsearchDataDeployment)
+		if *elasticsearchDataDeployment.Spec.Replicas > 0 {
+			deployList = append(deployList, elasticsearchDataDeployment)
+		}
 	}
 	return deployList
 }
