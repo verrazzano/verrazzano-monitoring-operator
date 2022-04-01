@@ -1,6 +1,6 @@
 module github.com/verrazzano/verrazzano-monitoring-operator
 
-go 1.13
+go 1.16
 
 require (
 	github.com/go-logr/logr v0.4.0 // indirect
