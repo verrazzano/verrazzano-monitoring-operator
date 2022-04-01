@@ -5,7 +5,6 @@ package vmo
 
 import (
 	"context"
-	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
@@ -121,7 +120,7 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 	// If the statefulset has multiple replicas, scale it down. this allows existing data to be migrated to another node on the cluster.
 	// If the statefulset already has one replica, then it can be deleted.
 	if *statefulSet.Spec.Replicas > 1 {
-		*statefulSet.Spec.Replicas -= 1
+		*statefulSet.Spec.Replicas--
 		if _, err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), statefulSet, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -140,7 +139,7 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
 // NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
 func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
-	pvcNames := getPVCNames(statefulSet)
+	pvcNames := statefulsets.GetPVCNames(statefulSet)
 	for _, pvcName := range pvcNames {
 		pvc, err := controller.pvcLister.PersistentVolumeClaims(vmoNamespace).Get(pvcName)
 		if err != nil {
@@ -163,17 +162,4 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 		}
 	}
 	return nil
-}
-
-func getPVCNames(statefulSet *appsv1.StatefulSet) []string {
-	var pvcNames []string
-	var i int32
-	replicas := *statefulSet.Spec.Replicas
-	for _, volumeClaimTemplate := range statefulSet.Spec.VolumeClaimTemplates {
-		for i = 0; i < replicas; i++ {
-			pvcName := fmt.Sprintf("%s-%s-%d", volumeClaimTemplate.Name, statefulSet.Name, i)
-			pvcNames = append(pvcNames, pvcName)
-		}
-	}
-	return pvcNames
 }

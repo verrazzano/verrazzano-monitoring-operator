@@ -85,8 +85,15 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.MasterRole,
+						vmcontrollerv1.IngestRole,
+						vmcontrollerv1.DataRole,
+					},
+				},
+				DataNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 			},
 		},
 	}
@@ -128,9 +135,6 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 		},
 	}
 	assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
-
-	_, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
-	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
 }
 
 func TestVMOWithCascadingDelete(t *testing.T) {

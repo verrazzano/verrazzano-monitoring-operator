@@ -125,7 +125,7 @@ fi
 	}
 	if nodes.IsSingleNodeESCluster(vmo) {
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
-		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory) // Default JVM heap settings if none provided
+		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
 		if err != nil {
 			javaOpts = constants.DefaultDevProfileESMemArgs
 			log.Errorf("Failed to derive heap sizes from Master pod, using default %s: %v", javaOpts, err)
@@ -204,7 +204,7 @@ fi`,
 				},
 			},
 			// TODO: Set back to 10
-			InitialDelaySeconds: 120,
+			InitialDelaySeconds: 30,
 			PeriodSeconds:       10,
 			TimeoutSeconds:      5,
 			FailureThreshold:    5,
@@ -362,10 +362,6 @@ func createAlertManagerStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources,
 	componentDetails config.ComponentDetails, serviceName, statefulSetName string) *appsv1.StatefulSet {
 	labels := resources.GetSpecID(vmo.Name, componentDetails.Name)
-	if serviceName == "" {
-		serviceName = statefulSetName
-	}
-
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          resources.GetMetaLabels(vmo),

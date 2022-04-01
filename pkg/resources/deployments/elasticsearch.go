@@ -84,7 +84,7 @@ func (es ElasticsearchBasic) createElasticsearchCommonDeployment(vmo *vmcontroll
 func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment {
 	var deployments []*appsv1.Deployment
 	// Default JVM heap settings if none provided
-	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.IngestNode.Resources.RequestMemory)
+	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.IngestNode.Resources.RequestMemory, constants.DefaultESIngestMemArgs)
 	if err != nil {
 		javaOpts = constants.DefaultESIngestMemArgs
 		zap.S().Errorf("Failed to derive heap sizes from Ingest pod, using default %s: %v", javaOpts, err)
@@ -131,7 +131,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 // Creates all Elasticsearch Data deployment elements
 func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	// Default JVM heap settings if none provided
-	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.DataNode.Resources.RequestMemory)
+	javaOpts, err := memory.PodMemToJvmHeapArgs(vmo.Spec.Elasticsearch.DataNode.Resources.RequestMemory, constants.DefaultESDataMemArgs)
 	if err != nil {
 		javaOpts = constants.DefaultESDataMemArgs
 		zap.S().Errorf("Failed to derive heap sizes from Data pod, using default %s: %v", javaOpts, err)

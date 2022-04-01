@@ -11,8 +11,6 @@ import (
 	"strings"
 )
 
-const SingleNodeClusterRole = "master,ingest,data"
-
 type NodeRoles struct {
 	// amount of nodes with 'master' role
 	Master int32
@@ -42,12 +40,6 @@ func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) boo
 	return nodeCount.Master == 1 && nodeCount.NodeCount == 1
 }
 
-// IsValidMultiNodeESCluster For a valid multi-node cluster that we have more than one node and each role is represented
-func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	nodeCount := GetNodeRoleCount(vmo)
-	return nodeCount.NodeCount > 1 && nodeCount.Master > 0 && nodeCount.Data > 0 && nodeCount.Ingest > 0
-}
-
 func GetNodeRoleCount(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *NodeRoles {
 	replicas := &NodeRoles{}
 	for _, node := range AllNodes(vmo) {
@@ -55,11 +47,11 @@ func GetNodeRoleCount(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *NodeRol
 		for _, role := range node.Roles {
 			switch role {
 			case vmcontrollerv1.IngestRole:
-				replicas.Ingest++
+				replicas.Ingest += node.Replicas
 			case vmcontrollerv1.DataRole:
-				replicas.Data++
+				replicas.Data += node.Replicas
 			default:
-				replicas.Master++
+				replicas.Master += node.Replicas
 			}
 		}
 	}

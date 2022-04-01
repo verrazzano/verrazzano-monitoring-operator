@@ -9,7 +9,11 @@ import (
 
 // PodMemToJvmHeapArgs converts a pod resource memory to the JVM heap setting
 // with same min/max, e.g: "-Xms512m -Xmx512m"
-func PodMemToJvmHeapArgs(size string) (string, error) {
+func PodMemToJvmHeapArgs(size, defaultValue string) (string, error) {
+	if size == "" {
+		size = defaultValue
+	}
+
 	s, err := PodMemToJvmHeap(size)
 	if err != nil {
 		return "", err

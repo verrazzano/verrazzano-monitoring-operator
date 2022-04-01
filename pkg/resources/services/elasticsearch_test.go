@@ -71,6 +71,11 @@ func createDevProfileES() *vmcontrollerv1.VerrazzanoMonitoringInstance {
 				Storage: vmcontrollerv1.Storage{Size: ""},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
 					Replicas: 1,
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.MasterRole,
+						vmcontrollerv1.IngestRole,
+						vmcontrollerv1.DataRole,
+					},
 				},
 			},
 		},
