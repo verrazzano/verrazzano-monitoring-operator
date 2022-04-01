@@ -57,7 +57,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "false"},
 			}...)
 		} else {
-			adminPassword, err := security.GeneratePassword(32)
+			adminPassword, err := security.GeneratePassword(16)
 			if err != nil {
 				return nil, err
 			}
