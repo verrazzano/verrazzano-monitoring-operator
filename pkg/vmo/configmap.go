@@ -15,6 +15,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -94,7 +95,8 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	if vzClusterName == "" {
 		vzClusterName, _ = GetClusterNameFromSecret(controller, vmo.Namespace)
 	}
-	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
+
+	err = reconcilePrometheusConfigMap(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
 	if err != nil {
 		return err
 	}
@@ -237,4 +239,80 @@ func getConfigMap(controller *Controller, namespace string, configmapName string
 		return nil, err
 	}
 	return configMap, nil
+}
+
+// reconcilePrometheusConfigMap reconciles the prometheus configmap data between restarts/upgrades
+func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
+	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)
+	if err != nil {
+		controller.log.Errorf("Failed to get configmap %s%s: %v", vmo.Namespace, configmap, err)
+		return err
+	}
+
+	if existingConfig == nil {
+		configMap := configmaps.NewConfig(vmo, configmap, data)
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+		if err != nil {
+			controller.log.Errorf("Failed to create configmap %s%s: %v", vmo.Namespace, configmap, err)
+			return err
+		}
+		return nil
+	}
+
+	if prometheusConfig, ok := existingConfig.Data["prometheus.yaml"]; ok {
+		var existingConfigYaml map[interface{}]interface{}
+		err := yaml.Unmarshal([]byte(prometheusConfig), &existingConfigYaml)
+		if err != nil {
+			controller.log.Errorf("Failed to read configmap %s%s: %v", vmo.Namespace, configmap, err)
+			return err
+		}
+
+		if existingScrapeConfigs, ok := existingConfigYaml["scrape_configs"]; ok {
+			var newConfig map[interface{}]interface{}
+			err := yaml.Unmarshal([]byte(data["prometheus.yaml"]), &newConfig)
+			if err != nil {
+				controller.log.Errorf("Failed to read new configmap data: %v", err)
+				return err
+			}
+
+			var customScrapConfigs []interface{}
+			var newScrapeConfigs []interface{}
+			if newScrapeConfigs, ok = newConfig["scrape_configs"].([]interface{}); ok {
+				for _, esc := range existingScrapeConfigs.([]interface{}) {
+					existingScrapeConfig := esc.(map[interface{}]interface{})
+					found := false
+					for _, nsc := range newScrapeConfigs {
+						newScrapeConfig := nsc.(map[interface{}]interface{})
+						if newScrapeConfig["job_name"] == existingScrapeConfig["job_name"] {
+							found = true
+							break
+						}
+					}
+					if !found {
+						customScrapConfigs = append(customScrapConfigs, existingScrapeConfig)
+					}
+				}
+			}
+
+			if len(customScrapConfigs) > 0 {
+				newScrapeConfigs = append(newScrapeConfigs, customScrapConfigs)
+				newConfig["scrape_configs"] = newScrapeConfigs
+				newConfigYaml, err := yaml.Marshal(&newConfig)
+				if err != nil {
+					controller.log.Errorf("Failed to update new configmap data: %v", err)
+					return err
+				}
+				data["prometheus.yaml"] = string(newConfigYaml)
+			}
+
+			existingConfig.Data = data
+			_, err = controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), existingConfig, metav1.UpdateOptions{})
+			if err != nil {
+				controller.log.Errorf("Failed to update configmap %s%s: %v", vmo.Namespace, existingConfig, err)
+				return err
+			}
+			return nil
+		}
+	}
+	return nil
 }
