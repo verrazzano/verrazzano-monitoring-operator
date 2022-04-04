@@ -2,11 +2,11 @@ github.com/verrazzano/verrazzano-monitoring-operator
 -------- Copyrights
 Copyright (c) 2020 Oracle America, Inc. and its affiliates. 
 Copyright (C) 2020, 2022, Oracle and/or its affiliates.
-Copyright (C) 2020, 2021, Oracle and/or its affiliates.
-Copyright (C) 2020, Oracle and/or its affiliates.
 Copyright (c) 2020, 2022, Oracle and/or its affiliates.
+Copyright (C) 2020, Oracle and/or its affiliates.
 Copyright 2019 The Kubernetes Authors.
 Copyright (C) 2022, Oracle and/or its affiliates.
+Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 Copyright (c) 2022, Oracle and/or its affiliates.
 Copyright (C) 2021, Oracle and/or its affiliates.
 Copyright (c) 2020, 2021, Oracle and/or its affiliates.
@@ -1444,4 +1444,4 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ATTRIBUTION-HELPER-GENERATED:
-License file based on go.mod with md5 sum: 0dbb5df54ce6df624a743ef37af3dcad
+License file based on go.mod with md5 sum: 74dd23c52b9edb84d1c998cb40dc4c80
