@@ -90,7 +90,6 @@ fi
 				},
 			},
 		},
-		{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 		{Name: "cluster.name", Value: vmo.Name},
 		// HTTP is enabled on the master here solely for our readiness check below (on _cluster/health)
 		{Name: "HTTP_ENABLE", Value: "true"},
@@ -133,6 +132,7 @@ fi
 			javaOpts = node.JavaOpts
 		}
 		envVars = append(envVars,
+			corev1.EnvVar{Name: "node.roles", Value: "master,data,ingest"},
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
 
 			// supported via legacy compatibility
@@ -140,6 +140,7 @@ fi
 		)
 	} else {
 		envVars = append(envVars,
+			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{
 				Name:  "discovery.seed_hosts",
 				Value: headlessService,

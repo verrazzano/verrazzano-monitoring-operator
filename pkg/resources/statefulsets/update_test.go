@@ -111,6 +111,30 @@ func TestCreatePlan(t *testing.T) {
 			},
 			&StatefulSetPlan{},
 		},
+		{
+			"scaling should be allowed on single node clusters",
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 1),
+			},
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 1),
+			},
+			&StatefulSetPlan{},
+		},
+		{
+			"changing single node cluster name is not allowed",
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 1),
+			},
+			[]*appsv1.StatefulSet{
+				createTestSTS("bar", 1),
+			},
+			&StatefulSetPlan{
+				Create: []*appsv1.StatefulSet{
+					createTestSTS("bar", 1),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

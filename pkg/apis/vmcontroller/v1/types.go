@@ -132,12 +132,12 @@ type (
 
 	// ElasticsearchNode Type details
 	ElasticsearchNode struct {
-		Name      string     `json:"name"`
+		Name      string     `json:"name,omitempty"`
 		Replicas  int32      `json:"replicas,omitempty"`
 		JavaOpts  string     `json:"javaOpts" yaml:"javaOpts,omitempty"`
 		Resources Resources  `json:"resources,omitempty"`
 		Storage   *Storage   `json:"storage,omitempty"`
-		Roles     []NodeRole `json:"roles"`
+		Roles     []NodeRole `json:"roles,omitempty"`
 	}
 
 	//IndexManagementPolicy Defines a policy for managing indices

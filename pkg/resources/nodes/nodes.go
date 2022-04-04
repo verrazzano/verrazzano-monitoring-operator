@@ -37,6 +37,12 @@ func GetRolesString(node *vmcontrollerv1.ElasticsearchNode) string {
 	return buf.String()
 }
 
+func AddNodeRoleLabels(node *vmcontrollerv1.ElasticsearchNode, labels map[string]string) {
+	for _, role := range node.Roles {
+		labels["role-"+string(role)] = "true"
+	}
+}
+
 // IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
 func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
 	nodeCount := GetNodeCount(vmo)

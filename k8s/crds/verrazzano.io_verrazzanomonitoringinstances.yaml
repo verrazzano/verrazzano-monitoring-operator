@@ -151,8 +151,6 @@ spec:
                         type: object
                     required:
                     - javaOpts
-                    - name
-                    - roles
                     type: object
                   enabled:
                     type: boolean
@@ -207,8 +205,6 @@ spec:
                         type: object
                     required:
                     - javaOpts
-                    - name
-                    - roles
                     type: object
                   masterNode:
                     description: ElasticsearchNode Type details
@@ -261,8 +257,6 @@ spec:
                         type: object
                     required:
                     - javaOpts
-                    - name
-                    - roles
                     type: object
                   nodes:
                     items:
@@ -316,8 +310,6 @@ spec:
                           type: object
                       required:
                       - javaOpts
-                      - name
-                      - roles
                       type: object
                     type: array
                   policies:
