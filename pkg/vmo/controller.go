@@ -505,11 +505,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Create Deployments
 	 **********************/
-	vmoUsername, vmoPassword, err := GetAuthSecrets(c, vmo)
+	secret, err := c.secretLister.Secrets(vmo.Namespace).Get(vmo.Spec.SecretsName)
 	if err != nil {
 		errorObserved = true
 	}
-	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, vmoUsername, vmoPassword)
+	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, secret)
 	if err != nil {
 		errorObserved = true
 	}

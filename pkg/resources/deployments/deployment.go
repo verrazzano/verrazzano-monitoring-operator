@@ -14,7 +14,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/security"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +27,7 @@ type Elasticsearch interface {
 
 // New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
 // the resource so handleObject can discover the VMO resource that 'owns' it.
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, vmoSecret *corev1.Secret) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
 	var err error
 
@@ -46,8 +45,28 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		}
 		if config.Grafana.OidcProxy == nil {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-				{Name: "GF_SECURITY_ADMIN_USER", Value: username},
-				{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
+				{
+					Name: "GF_SECURITY_ADMIN_USER",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vmoSecret.Name,
+							},
+							Key: constants.VMOSecretUsernameField,
+						},
+					},
+				},
+				{
+					Name: "GF_SECURITY_ADMIN_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vmoSecret.Name,
+							},
+							Key: constants.VMOSecretPasswordField,
+						},
+					},
+				},
 				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "true"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "true"},
@@ -57,13 +76,29 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				{Name: "GF_AUTH_DISABLE_SIGNOUT_MENU", Value: "false"},
 			}...)
 		} else {
-			adminPassword, err := security.GeneratePassword(16)
-			if err != nil {
-				return nil, err
-			}
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-				{Name: "GF_SECURITY_ADMIN_USER", Value: username},
-				{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: adminPassword},
+				{
+					Name: "GF_SECURITY_ADMIN_USER",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vmoSecret.Name,
+							},
+							Key: constants.VMOSecretUsernameField,
+						},
+					},
+				},
+				{
+					Name: "GF_SECURITY_ADMIN_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vmoSecret.Name,
+							},
+							Key: constants.VMOSecretPasswordField,
+						},
+					},
+				},
 				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
