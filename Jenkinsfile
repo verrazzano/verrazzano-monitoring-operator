@@ -180,34 +180,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Build ESWait Image') {
-            when {
-                not { buildingTag() }
-            }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-eswait DOCKER_IMAGE_NAME_ESWAIT=${DOCKER_IMAGE_NAME_ESWAIT}  DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
-                """
-            }
-        }
-
-        stage('Scan ESWait Image') {
-            when {
-                not { buildingTag() }
-            }
-            steps {
-                script {
-                    scanContainerImage "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG}"
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: '**/*scanning-report.json', allowEmptyArchive: true
-                }
-            }
-        }
     }
 
     post {

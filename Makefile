@@ -148,30 +148,6 @@ push-tag:
 	docker tag ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${TAG_NAME}
 	docker push ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${TAG_NAME}
 
-.PHONY: build-eswait
-build-eswait:
-	docker build --pull --no-cache \
-		--build-arg BUILDVERSION=${BUILDVERSION} \
-		--build-arg BUILDDATE=${BUILDDATE} \
-		-t ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} \
-		-f ${DOCKERFILE_ESWAIT} \
-		.
-
-.PHONY: push-eswait
-push-eswait: build-eswait
-	docker tag ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
-	docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
-
-	if [ "${CREATE_LATEST_TAG}" == "1" ]; then \
-		docker tag ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:latest; \
-		docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:latest; \
-	fi
-
-.PHONY: push-tag-eswait
-push-tag-eswait:
-	docker pull ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
-	docker tag ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${TAG_NAME}
-	docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${TAG_NAME}
 
 #
 # Tests-related tasks
