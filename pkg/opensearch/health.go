@@ -51,7 +51,7 @@ func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 
 	if checkNodeCount {
 		// Verify the node count
-		expectedNodes := int(nodetool.GetNodeRoleCount(vmo).NodeCount)
+		expectedNodes := int(nodetool.GetNodeCount(vmo).Replicas)
 		if len(nodes) < expectedNodes {
 			return fmt.Errorf("Expected %d OpenSearch nodes, got %d", expectedNodes, len(nodes))
 		}

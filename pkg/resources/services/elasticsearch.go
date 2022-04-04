@@ -24,18 +24,18 @@ func createElasticsearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMoni
 	return elasticsearchIngestService
 }
 
-// Creates Elasticsearch Master service element
+// Creates Elasticsearch MasterNodes service element
 func createElasticsearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	elasticSearchMasterService := createServiceElement(vmo, config.ElasticsearchMaster)
 	if !nodes.IsSingleNodeESCluster(vmo) {
-		// Master service is headless
+		// MasterNodes service is headless
 		elasticSearchMasterService.Spec.Type = corev1.ServiceTypeClusterIP
 		elasticSearchMasterService.Spec.ClusterIP = corev1.ClusterIPNone
 	}
 	return elasticSearchMasterService
 }
 
-// Creates Elasticsearch Data service element
+// Creates Elasticsearch DataNodes service element
 func createElasticsearchDataServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	var elasticsearchDataService = createServiceElement(vmo, config.ElasticsearchData)
 	if nodes.IsSingleNodeESCluster(vmo) {

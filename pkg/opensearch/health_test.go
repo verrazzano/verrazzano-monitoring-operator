@@ -216,5 +216,5 @@ func TestIsOpenSearchResizable(t *testing.T) {
 		},
 	}
 	o := NewOSClient()
-	assert.Error(t, o.IsResizable(&notEnoughNodesVMO))
+	assert.Error(t, o.IsDataResizable(&notEnoughNodesVMO))
 }

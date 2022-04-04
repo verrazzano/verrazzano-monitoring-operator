@@ -28,7 +28,7 @@ func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	if vmo.Spec.AlertManager.Enabled {
 		statefulSets = append(statefulSets, createAlertManagerStatefulSet(vmo))
 	}
-	// OpenSearch Master
+	// OpenSearch MasterNodes
 	if vmo.Spec.Elasticsearch.Enabled {
 		statefulSets = append(statefulSets, createOpenSearchStatefulSets(log, vmo, storageClass, initialMasterNodes)...)
 	}
@@ -128,7 +128,7 @@ fi
 		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
 		if err != nil {
 			javaOpts = constants.DefaultDevProfileESMemArgs
-			log.Errorf("Failed to derive heap sizes from Master pod, using default %s: %v", javaOpts, err)
+			log.Errorf("Failed to derive heap sizes from MasterNodes pod, using default %s: %v", javaOpts, err)
 		}
 		if node.JavaOpts != "" {
 			javaOpts = node.JavaOpts

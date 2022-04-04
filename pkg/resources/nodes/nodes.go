@@ -11,18 +11,21 @@ import (
 	"strings"
 )
 
-type NodeRoles struct {
+type NodeCount struct {
 	// amount of nodes with 'master' role
-	Master int32
+	MasterNodes int32
 	// amount of nodes with 'ingest' role
-	Ingest int32
+	IngestNodes int32
 	// amount of nodes with 'data' role
-	Data int32
+	DataNodes int32
 	// sum of node replicas
 	// this may be greater than the sum of master, data, and ingest, since nodes may have 1-3 roles.
-	NodeCount int32
+	Replicas int32
 }
 
+//GetRolesString turns a nodes role list into a role string
+// roles: [master, ingest, data] => "master,ingest,data"
+// we have to use a buffer because NodeRole is a type alias
 func GetRolesString(node *vmcontrollerv1.ElasticsearchNode) string {
 	var buf bytes.Buffer
 	for idx, role := range node.Roles {
@@ -36,28 +39,30 @@ func GetRolesString(node *vmcontrollerv1.ElasticsearchNode) string {
 
 // IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
 func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	nodeCount := GetNodeRoleCount(vmo)
-	return nodeCount.Master == 1 && nodeCount.NodeCount == 1
+	nodeCount := GetNodeCount(vmo)
+	return nodeCount.MasterNodes == 1 && nodeCount.Replicas == 1
 }
 
-func GetNodeRoleCount(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *NodeRoles {
-	replicas := &NodeRoles{}
+//GetNodeCount returns a struct containing the count of nodes of each role type, and the sum of all node replicas.
+func GetNodeCount(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *NodeCount {
+	nodeCount := &NodeCount{}
 	for _, node := range AllNodes(vmo) {
-		replicas.NodeCount += node.Replicas
+		nodeCount.Replicas += node.Replicas
 		for _, role := range node.Roles {
 			switch role {
 			case vmcontrollerv1.IngestRole:
-				replicas.Ingest += node.Replicas
+				nodeCount.IngestNodes += node.Replicas
 			case vmcontrollerv1.DataRole:
-				replicas.Data += node.Replicas
+				nodeCount.DataNodes += node.Replicas
 			default:
-				replicas.Master += node.Replicas
+				nodeCount.MasterNodes += node.Replicas
 			}
 		}
 	}
-	return replicas
+	return nodeCount
 }
 
+//InitialMasterNodes returns a comma separated list of master nodes for cluster bootstrapping
 func InitialMasterNodes(vmoName string, masterNodes []vmcontrollerv1.ElasticsearchNode) string {
 	var j int32
 	var initialMasterNodes []string
@@ -69,10 +74,12 @@ func InitialMasterNodes(vmoName string, masterNodes []vmcontrollerv1.Elasticsear
 	return strings.Join(initialMasterNodes, ",")
 }
 
+//AllNodes returns a list of all nodes that need to be created
 func AllNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
 	return append(vmo.Spec.Elasticsearch.Nodes, vmo.Spec.Elasticsearch.MasterNode, vmo.Spec.Elasticsearch.DataNode, vmo.Spec.Elasticsearch.IngestNode)
 }
 
+//StatefulSetNodes returns a list of nodes that should be created as statefulsets
 func StatefulSetNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
 	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.MasterNode}, filterNodes(vmo, func(role vmcontrollerv1.NodeRole) bool {
 		return role == vmcontrollerv1.MasterRole

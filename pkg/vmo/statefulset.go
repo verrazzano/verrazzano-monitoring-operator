@@ -113,7 +113,7 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 	}
 
 	// The cluster should be at its current capacity before we issue a scaledown
-	if err := c.osClient.IsResizable(vmo); err != nil {
+	if err := c.osClient.IsUpdated(vmo); err != nil {
 		return err
 	}
 

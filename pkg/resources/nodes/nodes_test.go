@@ -175,10 +175,10 @@ func TestStatefulSetNodes(t *testing.T) {
 }
 
 func TestGetNodeRoleCount(t *testing.T) {
-	nodeRoles := GetNodeRoleCount(&testMultiNodeVMI)
-	assert.EqualValues(t, 3, nodeRoles.Data)
-	assert.EqualValues(t, 3, nodeRoles.Master)
-	assert.EqualValues(t, 3, nodeRoles.Ingest)
-	assert.EqualValues(t, 5, nodeRoles.NodeCount)
+	nodeRoles := GetNodeCount(&testMultiNodeVMI)
+	assert.EqualValues(t, 3, nodeRoles.DataNodes)
+	assert.EqualValues(t, 3, nodeRoles.MasterNodes)
+	assert.EqualValues(t, 3, nodeRoles.IngestNodes)
+	assert.EqualValues(t, 5, nodeRoles.Replicas)
 
 }

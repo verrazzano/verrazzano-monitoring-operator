@@ -27,11 +27,11 @@ func NewOSClient() *OSClient {
 	return o
 }
 
-//IsResizable returns an error unless these conditions of the OpenSearch cluster are met
+//IsDataResizable returns an error unless these conditions of the OpenSearch cluster are met
 // - at least 2 data nodes
 // - 'green' health
 // - all expected nodes are present in the cluster status
-func (o *OSClient) IsResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+func (o *OSClient) IsDataResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
 		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
 	}
