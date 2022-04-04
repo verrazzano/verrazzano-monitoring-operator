@@ -505,11 +505,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Create Deployments
 	 **********************/
-	vmoUsername, vmoPassword, err := GetAuthSecrets(c, vmo)
-	if err != nil {
-		errorObserved = true
-	}
-	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, vmoUsername, vmoPassword)
+	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap)
 	if err != nil {
 		errorObserved = true
 	}
