@@ -15,16 +15,16 @@ import (
 // THEN ensure the result is a JVM formatted heap string like "-Xms512m -Xmx512m"
 func TestPodMemToJvmHeapArgs(t *testing.T) {
 	asserts := assert.New(t)
-	s, err := PodMemToJvmHeapArgs("500Mi", "100Mi")
+	s, err := PodMemToJvmHeapArgs("500Mi", "")
 	asserts.NoError(err, "error converting pod memory to JVM heap arg")
 	asserts.Equal("-Xms375m -Xmx375m", s, "incorrect JVM heap arg")
-	s, err = PodMemToJvmHeapArgs("1.4Gi", "200Mi")
+	s, err = PodMemToJvmHeapArgs("1.4Gi", "")
 	asserts.NoError(err, "error converting pod memory to JVM heap arg")
 	asserts.Equal("-Xms1076m -Xmx1076m", s, "incorrect JVM heap arg")
-	s, err = PodMemToJvmHeapArgs("", "500Mi")
+	s, err = PodMemToJvmHeapArgs("", "-Xms375m -Xmx375m")
 	asserts.NoError(err, "error converting pod memory to JVM heap arg")
 	asserts.Equal("-Xms375m -Xmx375m", s, "incorrect JVM heap arg")
-	_, err = PodMemToJvmHeapArgs("boom!", "500Mi")
+	_, err = PodMemToJvmHeapArgs("boom!", "-Xms375m -Xmx375m")
 	asserts.Error(err)
 }
 
