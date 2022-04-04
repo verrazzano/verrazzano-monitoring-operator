@@ -5,8 +5,7 @@ FROM ghcr.io/oracle/oraclelinux:7-slim AS build_base
 RUN yum update -y \
     && yum-config-manager --save --setopt=ol7_ociyum_config.skip_if_unavailable=true \
     && yum install -y oracle-golang-release-el7 \
-    && yum-config-manager --add-repo http://yum.oracle.com/repo/OracleLinux/OL7/developer/golang113/x86_64 \
-    && yum install -y golang-1.13.3-1.el7 \
+    && yum install -y golang-1.17.5-1.el7.x86_64 \
     && yum clean all \
     && go version
 
