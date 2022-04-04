@@ -33,7 +33,7 @@ const (
 	MinDataNodesForResize = 2
 )
 
-func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {
+func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool, waitForVersion bool) error {
 	// Verify that the cluster is Green
 	clusterHealth, err := o.getOpenSearchClusterHealth(vmo)
 	if err != nil {
@@ -57,10 +57,12 @@ func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 		}
 	}
 
-	// If any node is not running the expected version, the cluster is not ready
-	for _, node := range nodes {
-		if node.Version != config.ESWaitTargetVersion {
-			return fmt.Errorf("Not all OpenSearch nodes are upgrade to %s version", config.ESWaitTargetVersion)
+	if waitForVersion {
+		// If any node is not running the expected version, the cluster is not ready
+		for _, node := range nodes {
+			if node.Version != config.ESWaitTargetVersion {
+				return fmt.Errorf("Not all OpenSearch nodes are upgrade to %s version", config.ESWaitTargetVersion)
+			}
 		}
 	}
 

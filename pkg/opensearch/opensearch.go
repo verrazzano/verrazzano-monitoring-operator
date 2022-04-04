@@ -35,20 +35,20 @@ func (o *OSClient) IsDataResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
 		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
 	}
-	return o.opensearchHealth(vmo, true)
+	return o.opensearchHealth(vmo, true, true)
 }
 
 //IsUpdated returns an error unless these conditions of the OpenSearch cluster are met
 // - 'green' health
 // - all expected nodes are present in the cluster status
 func (o *OSClient) IsUpdated(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return o.opensearchHealth(vmo, true)
+	return o.opensearchHealth(vmo, true, true)
 }
 
 //IsGreen returns an error unless these conditions of the OpenSearch cluster are met
 // - 'green' health
 func (o *OSClient) IsGreen(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return o.opensearchHealth(vmo, false)
+	return o.opensearchHealth(vmo, false, false)
 }
 
 //ConfigureISM sets up the ISM Policies
