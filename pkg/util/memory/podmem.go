@@ -11,7 +11,7 @@ import (
 // with same min/max, e.g: "-Xms512m -Xmx512m"
 func PodMemToJvmHeapArgs(size, defaultValue string) (string, error) {
 	if size == "" {
-		size = defaultValue
+		return defaultValue, nil
 	}
 
 	s, err := PodMemToJvmHeap(size)

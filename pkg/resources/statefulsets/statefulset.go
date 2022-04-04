@@ -55,7 +55,6 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 	headlessService := resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)
 	statefulSetName := resources.GetMetaName(vmo.Name, node.Name)
 	statefulSet := createStatefulSetElement(vmo, &node.Resources, config.ElasticsearchMaster, headlessService, statefulSetName)
-
 	statefulSet.Spec.Replicas = resources.NewVal(node.Replicas)
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
@@ -203,7 +202,6 @@ fi`,
 					},
 				},
 			},
-			// TODO: Set back to 10
 			InitialDelaySeconds: 30,
 			PeriodSeconds:       10,
 			TimeoutSeconds:      5,
