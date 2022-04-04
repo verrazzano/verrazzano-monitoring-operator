@@ -92,7 +92,7 @@ func (c *FakeVerrazzanoMonitoringInstances) Update(ctx context.Context, verrazza
 // Delete takes name of the verrazzanoMonitoringInstance and deletes it. Returns an error if one occurs.
 func (c *FakeVerrazzanoMonitoringInstances) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(verrazzanomonitoringinstancesResource, c.ns, name), &vmcontrollerv1.VerrazzanoMonitoringInstance{})
+		Invokes(testing.NewDeleteActionWithOptions(verrazzanomonitoringinstancesResource, c.ns, name, opts), &vmcontrollerv1.VerrazzanoMonitoringInstance{})
 
 	return err
 }

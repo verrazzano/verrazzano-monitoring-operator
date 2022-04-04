@@ -14,14 +14,14 @@ DOCKER_IMAGE_TAG ?= local-$(shell git rev-parse --short HEAD)
 CREATE_LATEST_TAG=0
 
 ifeq ($(MAKECMDGOALS),$(filter $(MAKECMDGOALS),push push-tag push-eswait push-tag-eswait))
-	ifndef DOCKER_REPO
-		$(error DOCKER_REPO must be defined as the name of the docker repository where image will be pushed)
-	endif
-	ifndef DOCKER_NAMESPACE
-		$(error DOCKER_NAMESPACE must be defined as the name of the docker namespace where image will be pushed)
-	endif
-	DOCKER_IMAGE_FULLNAME_OPERATOR = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}
-	DOCKER_IMAGE_FULLNAME_ESWAIT = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}
+    ifndef DOCKER_REPO
+        $(error DOCKER_REPO must be defined as the name of the docker repository where image will be pushed)
+    endif
+    ifndef DOCKER_NAMESPACE
+        $(error DOCKER_NAMESPACE must be defined as the name of the docker namespace where image will be pushed)
+    endif
+    DOCKER_IMAGE_FULLNAME_OPERATOR = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}
+    DOCKER_IMAGE_FULLNAME_ESWAIT = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}
 endif
 
 ifdef INTEG_RUN_ID
