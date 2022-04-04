@@ -27,7 +27,7 @@ type Elasticsearch interface {
 
 // New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
 // the resource so handleObject can discover the VMO resource that 'owns' it.
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, vmoSecret *corev1.Secret) ([]*appsv1.Deployment, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
 	var err error
 
@@ -50,7 +50,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: vmoSecret.Name,
+								Name: vmo.Spec.SecretsName,
 							},
 							Key: constants.VMOSecretUsernameField,
 						},
@@ -61,7 +61,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: vmoSecret.Name,
+								Name: vmo.Spec.SecretsName,
 							},
 							Key: constants.VMOSecretPasswordField,
 						},
@@ -82,7 +82,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: vmoSecret.Name,
+								Name: vmo.Spec.SecretsName,
 							},
 							Key: constants.VMOSecretUsernameField,
 						},
@@ -93,7 +93,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: vmoSecret.Name,
+								Name: vmo.Spec.SecretsName,
 							},
 							Key: constants.VMOSecretPasswordField,
 						},

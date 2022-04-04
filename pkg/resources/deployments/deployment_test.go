@@ -22,7 +22,7 @@ import (
 func TestVMOEmptyDeploymentSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	operatorConfig := &config.OperatorConfig{}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), operatorConfig, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), operatorConfig, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -54,7 +54,7 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
 		t.Error(err)
@@ -91,7 +91,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 	}
 	assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
 		t.Error(err)
@@ -128,7 +128,7 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 	}
 	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
 
-	_, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	_, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
 }
 
@@ -156,7 +156,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -167,7 +167,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 
 	// Without CascadingDelete
 	vmo.Spec.CascadingDelete = false
-	deployments, err = New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err = New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -232,7 +232,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -291,7 +291,7 @@ func TestVMOWithReplicas(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
 		t.Error(err)
@@ -331,7 +331,7 @@ func TestAPIWithNatGatewayIPs(t *testing.T) {
 			NatGatewayIPs: []string{"1.1.1.1", "2.1.1.1"},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}

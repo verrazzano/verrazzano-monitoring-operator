@@ -13,7 +13,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -49,12 +48,12 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 }
 
 // CreateDeployments create/update VMO deployment k8s resources
-func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, vmoSecret *v1.Secret) (dirty bool, err error) {
+func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) (dirty bool, err error) {
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoSecret)
+	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap)
 	if err != nil {
 		controller.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
 		return false, err
