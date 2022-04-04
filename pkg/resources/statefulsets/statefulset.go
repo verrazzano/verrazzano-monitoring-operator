@@ -156,7 +156,7 @@ fi
 	// Customized Readiness and Liveness probes
 	esMasterContainer.ReadinessProbe =
 		&corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				Exec: &corev1.ExecAction{
 					Command: []string{
 						"sh",
@@ -194,7 +194,7 @@ fi`,
 
 	esMasterContainer.LivenessProbe =
 		&corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.IntOrString{
 						IntVal: int32(config.ElasticsearchMaster.Port),
