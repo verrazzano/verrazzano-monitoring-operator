@@ -19,16 +19,18 @@ const (
 
 type (
 	StatefulSetPlan struct {
-		Create   []*appsv1.StatefulSet
-		Update   []*appsv1.StatefulSet
-		Delete   []*appsv1.StatefulSet
-		Conflict error
+		Create          []*appsv1.StatefulSet
+		Update          []*appsv1.StatefulSet
+		Delete          []*appsv1.StatefulSet
+		Conflict        error
+		ExistingCluster bool
 	}
 
 	statefulSetMapping struct {
 		existing           map[string]*appsv1.StatefulSet
 		expected           map[string]*appsv1.StatefulSet
 		isScaleDownAllowed bool
+		existingSize       int32
 	}
 )
 
@@ -36,18 +38,20 @@ type (
 // if the cluster is not safe to scale down, updates/deletes will be rejected.
 func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1.StatefulSet) *StatefulSetPlan {
 	mapping := createStatefulSetMapping(existingList, expectedList)
-	plan := &StatefulSetPlan{}
-
+	plan := &StatefulSetPlan{
+		// There is no running cluster if the existing size is 0
+		ExistingCluster: mapping.existingSize > 0,
+	}
 	for name, expected := range mapping.expected {
 		existing, ok := mapping.existing[name]
 		if !ok {
 			// the STS should be created
 			plan.Create = append(plan.Create, expected)
-		} else if mapping.isScaleDownAllowed {
-			// the STS needs to be updated
+		} else if mapping.isScaleDownAllowed || !plan.ExistingCluster {
+			// The cluster is in a state that allows updates, so we check if the STS has changed
 			CopyFromExisting(expected, existing)
 			specDiffs := diff.Diff(expected, existing)
-			if specDiffs != "" {
+			if specDiffs != "" || *existing.Spec.Replicas != *expected.Spec.Replicas {
 				log.Oncef("Statefulset %s/%s has spec differences %s", expected.Namespace, expected.Name, specDiffs)
 				plan.Update = append(plan.Update, expected)
 			}
@@ -61,7 +65,7 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 		}
 	}
 
-	if !mapping.isScaleDownAllowed {
+	if !mapping.isScaleDownAllowed && plan.ExistingCluster {
 		plan.Conflict = errors.New("skipping OpenSearch StatefulSet delete/update, cluster cannot safely lose any master nodes")
 	}
 
@@ -98,7 +102,7 @@ func createStatefulSetMapping(existingList, expectedList []*appsv1.StatefulSet) 
 			expectedSize >= minClusterSize &&
 			expectedSize > existingSize/2
 	}
-
+	mapping.existingSize = existingSize
 	return mapping
 }
 

@@ -46,7 +46,7 @@ func TestCreatePlan(t *testing.T) {
 				createTestSTS("foo", 1),
 				createTestSTS("bar", 2),
 			},
-			&StatefulSetPlan{},
+			&StatefulSetPlan{ExistingCluster: true},
 		},
 		{
 			"create when expected, but not existing",
@@ -56,6 +56,7 @@ func TestCreatePlan(t *testing.T) {
 				createTestSTS("bar", 2),
 			},
 			&StatefulSetPlan{
+				ExistingCluster: false,
 				Create: []*appsv1.StatefulSet{
 					createTestSTS("foo", 1),
 					createTestSTS("bar", 2),
@@ -70,6 +71,7 @@ func TestCreatePlan(t *testing.T) {
 			},
 			nil,
 			&StatefulSetPlan{
+				ExistingCluster: true,
 				Delete: []*appsv1.StatefulSet{
 					createTestSTS("foo", 1),
 					createTestSTS("bar", 2),
@@ -85,8 +87,24 @@ func TestCreatePlan(t *testing.T) {
 				createTestSTS("foo", 4),
 			},
 			&StatefulSetPlan{
+				ExistingCluster: true,
 				Update: []*appsv1.StatefulSet{
 					createTestSTS("foo", 4),
+				},
+			},
+		},
+		{
+			"update allowed when existing cluster is down",
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 0),
+			},
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 3),
+			},
+			&StatefulSetPlan{
+				ExistingCluster: false,
+				Update: []*appsv1.StatefulSet{
+					createTestSTS("foo", 3),
 				},
 			},
 		},
@@ -98,7 +116,7 @@ func TestCreatePlan(t *testing.T) {
 			[]*appsv1.StatefulSet{
 				createTestSTS("foo", 2),
 			},
-			&StatefulSetPlan{},
+			&StatefulSetPlan{ExistingCluster: true},
 		},
 		{
 			"don't delete if the scaling would cause cluster downtime",
@@ -109,7 +127,7 @@ func TestCreatePlan(t *testing.T) {
 			[]*appsv1.StatefulSet{
 				createTestSTS("foo", 1),
 			},
-			&StatefulSetPlan{},
+			&StatefulSetPlan{ExistingCluster: true},
 		},
 		{
 			"scaling should be allowed on single node clusters",
@@ -119,7 +137,7 @@ func TestCreatePlan(t *testing.T) {
 			[]*appsv1.StatefulSet{
 				createTestSTS("foo", 1),
 			},
-			&StatefulSetPlan{},
+			&StatefulSetPlan{ExistingCluster: true},
 		},
 		{
 			"changing single node cluster name is not allowed",
@@ -130,6 +148,7 @@ func TestCreatePlan(t *testing.T) {
 				createTestSTS("bar", 1),
 			},
 			&StatefulSetPlan{
+				ExistingCluster: true,
 				Create: []*appsv1.StatefulSet{
 					createTestSTS("bar", 1),
 				},
@@ -143,6 +162,7 @@ func TestCreatePlan(t *testing.T) {
 			assert.Equal(t, len(tt.plan.Create), len(actualPlan.Create))
 			assert.Equal(t, len(tt.plan.Update), len(actualPlan.Update))
 			assert.Equal(t, len(tt.plan.Delete), len(actualPlan.Delete))
+			assert.Equal(t, tt.plan.ExistingCluster, actualPlan.ExistingCluster)
 		})
 	}
 }

@@ -57,7 +57,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 
 	for _, sts := range plan.Update {
-		if err := updateStatefulSet(controller, sts, vmo); err != nil {
+		if err := updateStatefulSet(controller, sts, vmo, plan.ExistingCluster); err != nil {
 			return logReturnError(controller.log, sts, err)
 		}
 	}
@@ -73,6 +73,8 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 
 	if plan.Conflict == nil {
 		controller.log.Oncef("Successfully applied StatefulSets for VMI %s", vmo.Name)
+	} else {
+		controller.log.Errorf("StatefulSet update plan conflict: %v", plan.Conflict)
 	}
 	return plan.Conflict
 }
@@ -89,11 +91,15 @@ func getInitialMasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, exi
 	return nodes.InitialMasterNodes(vmo.Name, nodes.StatefulSetNodes(vmo))
 }
 
-func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	// We should only update the cluster if it is healthy
-	if err := c.osClient.IsGreen(vmo); err != nil {
-		return err
+func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingCluster bool) error {
+	// if the cluster has no valid nodes, we should try to update it.
+	if existingCluster {
+		// We should only update an existing cluster if it is healthy
+		if err := c.osClient.IsGreen(vmo); err != nil {
+			return err
+		}
 	}
+
 	_, err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), sts, metav1.UpdateOptions{})
 	return err
 }
