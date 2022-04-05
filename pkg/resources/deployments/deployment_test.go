@@ -136,7 +136,7 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 	}
 	assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
 	_, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
-	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
+	assert.Nil(t, err)
 }
 
 func TestVMOWithCascadingDelete(t *testing.T) {
