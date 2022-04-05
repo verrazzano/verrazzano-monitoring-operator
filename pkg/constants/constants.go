@@ -234,6 +234,9 @@ const KeycloakCABundleData = "ca-bundle"
 // cluster name where the metric originated
 const PrometheusClusterNameLabel = "verrazzano_cluster"
 
+// GrafanaAdminSecret is the name of the secret used to to start Grafana
+const GrafanaAdminSecret = "grafana-admin" //nolint:gosec //#gosec G101
+
 const (
 	// Constants required for updating Opensearch keystore
 	VerrazzanoBackupScrtName      = "verrazzano-backup"
