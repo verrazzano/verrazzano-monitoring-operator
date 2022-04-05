@@ -270,7 +270,8 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 			return err
 		}
 		controller.log.Info("Step 1")
-		if existingScrapeConfigs, ok := existingConfigYaml["scrape_configs"]; ok {
+		var existingScrapeConfigs []interface{}
+		if existingScrapeConfigsData, ok := existingConfigYaml["scrape_configs"]; ok {
 			controller.log.Info("Step 2")
 			var newConfig map[interface{}]interface{}
 			err := yaml.Unmarshal([]byte(data["prometheus.yml"]), &newConfig)
@@ -282,9 +283,11 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 
 			var customScrapConfigs []interface{}
 			var newScrapeConfigs []interface{}
-			if newScrapeConfigs, ok = newConfig["scrape_configs"].([]interface{}); ok {
+			if newScrapeConfigsData, ok := newConfig["scrape_configs"]; ok {
+				newScrapeConfigs = newScrapeConfigsData.([]interface{})
 				controller.log.Info("Step 4")
-				for _, esc := range existingScrapeConfigs.([]interface{}) {
+				existingScrapeConfigs = existingScrapeConfigsData.([]interface{})
+				for _, esc := range existingScrapeConfigs {
 					existingScrapeConfig := esc.(map[interface{}]interface{})
 					found := false
 					controller.log.Info("Step 5")
