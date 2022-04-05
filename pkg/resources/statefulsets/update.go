@@ -4,6 +4,7 @@
 package statefulsets
 
 import (
+	"errors"
 	"github.com/verrazzano/pkg/diff"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -18,9 +19,10 @@ const (
 
 type (
 	StatefulSetPlan struct {
-		Create []*appsv1.StatefulSet
-		Update []*appsv1.StatefulSet
-		Delete []*appsv1.StatefulSet
+		Create   []*appsv1.StatefulSet
+		Update   []*appsv1.StatefulSet
+		Delete   []*appsv1.StatefulSet
+		Conflict error
 	}
 
 	statefulSetMapping struct {
@@ -60,7 +62,7 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 	}
 
 	if !mapping.isScaleDownAllowed {
-		log.Info("Skipping OpenSearch StatefulSet delete/update, cluster cannot safely lose any master nodes.")
+		plan.Conflict = errors.New("skipping OpenSearch StatefulSet delete/update, cluster cannot safely lose any master nodes")
 	}
 
 	return plan

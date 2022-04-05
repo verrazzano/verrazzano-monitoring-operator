@@ -71,8 +71,10 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		break
 	}
 
-	controller.log.Oncef("Successfully applied StatefulSets for VMI %s", vmo.Name)
-	return nil
+	if plan.Conflict == nil {
+		controller.log.Oncef("Successfully applied StatefulSets for VMI %s", vmo.Name)
+	}
+	return plan.Conflict
 }
 
 func logReturnError(log vzlog.VerrazzanoLogger, sts *appsv1.StatefulSet, err error) error {
