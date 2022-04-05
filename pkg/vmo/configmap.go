@@ -261,7 +261,7 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 		return nil
 	}
 
-	if prometheusConfig, ok := existingConfig.Data["prometheus.yaml"]; ok {
+	if prometheusConfig, ok := existingConfig.Data["prometheus.yml"]; ok {
 		controller.log.Info("Step 0")
 		var existingConfigYaml map[interface{}]interface{}
 		err := yaml.Unmarshal([]byte(prometheusConfig), &existingConfigYaml)
@@ -273,7 +273,7 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 		if existingScrapeConfigs, ok := existingConfigYaml["scrape_configs"]; ok {
 			controller.log.Info("Step 2")
 			var newConfig map[interface{}]interface{}
-			err := yaml.Unmarshal([]byte(data["prometheus.yaml"]), &newConfig)
+			err := yaml.Unmarshal([]byte(data["prometheus.yml"]), &newConfig)
 			if err != nil {
 				controller.log.Errorf("Failed to read new configmap data: %v", err)
 				return err
@@ -311,7 +311,7 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 					return err
 				}
 				controller.log.Info("Step 7")
-				data["prometheus.yaml"] = string(newConfigYaml)
+				data["prometheus.yml"] = string(newConfigYaml)
 				controller.log.Info("Step 8")
 			}
 
