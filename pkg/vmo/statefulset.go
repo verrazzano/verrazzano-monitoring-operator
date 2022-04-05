@@ -112,7 +112,7 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 		return deleteSTS()
 	}
 
-	// The cluster should be at its current capacity before we issue a scaledown
+	// The cluster should be in steady state before any nodes are removed
 	if err := c.osClient.IsUpdated(vmo); err != nil {
 		return err
 	}

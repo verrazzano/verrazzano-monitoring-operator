@@ -514,7 +514,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 * Create Deployments
 	 **********************/
 	var deploymentsDirty bool
-	if errorObserved {
+	if err == nil {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap)
 		if err != nil {
 			errorObserved = true
