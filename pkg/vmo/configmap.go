@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"html/template"
+	"reflect"
 	"strings"
 
 	"github.com/verrazzano/pkg/diff"
@@ -281,12 +282,14 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 			}
 			controller.log.Info("Step 3")
 
-			var customScrapConfigs []interface{}
+			var scrapeConfigs []interface{}
 			var newScrapeConfigs []interface{}
+			var scrapeConfigChanged bool
 			if newScrapeConfigsData, ok := newConfig["scrape_configs"]; ok {
 				newScrapeConfigs = newScrapeConfigsData.([]interface{})
 				controller.log.Info("Step 4")
 				existingScrapeConfigs = existingScrapeConfigsData.([]interface{})
+
 				for _, esc := range existingScrapeConfigs {
 					existingScrapeConfig := esc.(map[interface{}]interface{})
 					found := false
@@ -294,20 +297,42 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 					for _, nsc := range newScrapeConfigs {
 						newScrapeConfig := nsc.(map[interface{}]interface{})
 						if newScrapeConfig["job_name"] == existingScrapeConfig["job_name"] {
+							if !reflect.DeepEqual(newScrapeConfig, existingScrapeConfig) {
+								scrapeConfigChanged = true
+								scrapeConfigs = append(scrapeConfigs, newScrapeConfig)
+							}
+
 							found = true
 							break
 						}
 					}
 					if !found {
 						controller.log.Info("Step 6")
-						customScrapConfigs = append(customScrapConfigs, existingScrapeConfig)
+						scrapeConfigs = append(scrapeConfigs, existingScrapeConfig)
+					}
+				}
+
+				for _, nsc := range newScrapeConfigs {
+					newScrapeConfig := nsc.(map[interface{}]interface{})
+					found := false
+					controller.log.Info("Step 6.1")
+					for _, esc := range existingScrapeConfigs {
+						existingScrapeConfig := esc.(map[interface{}]interface{})
+						if newScrapeConfig["job_name"] == existingScrapeConfig["job_name"] {
+							found = true
+							break
+						}
+					}
+					if !found {
+						controller.log.Info("Step 6.2")
+						scrapeConfigChanged = true
+						scrapeConfigs = append(scrapeConfigs, newScrapeConfig)
 					}
 				}
 			}
 
-			if len(customScrapConfigs) > 0 {
-				newScrapeConfigs = append(newScrapeConfigs, customScrapConfigs)
-				newConfig["scrape_configs"] = newScrapeConfigs
+			if len(scrapeConfigs) != len(existingScrapeConfigs) || scrapeConfigChanged {
+				newConfig["scrape_configs"] = scrapeConfigs
 				newConfigYaml, err := yaml.Marshal(&newConfig)
 				if err != nil {
 					controller.log.Errorf("Failed to update new configmap data: %v", err)
@@ -316,18 +341,17 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 				controller.log.Info("Step 7")
 				data["prometheus.yml"] = string(newConfigYaml)
 				controller.log.Info("Step 8")
+				existingConfig.Data = data
+				controller.log.Info("Step 9")
+				controller.log.Infof("Step 10 %v", existingConfig.Data)
+				_, err = controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), existingConfig, metav1.UpdateOptions{})
+				if err != nil {
+					controller.log.Errorf("Failed to update configmap %s%s: %v", vmo.Namespace, existingConfig, err)
+					return err
+				}
+				controller.log.Info("Step 11")
+				return nil
 			}
-
-			existingConfig.Data = data
-			controller.log.Info("Step 9")
-			controller.log.Infof("Step 10 %v", existingConfig.Data)
-			_, err = controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), existingConfig, metav1.UpdateOptions{})
-			if err != nil {
-				controller.log.Errorf("Failed to update configmap %s%s: %v", vmo.Namespace, existingConfig, err)
-				return err
-			}
-			controller.log.Info("Step 11")
-			return nil
 		}
 	}
 	controller.log.Info("Step 12")
