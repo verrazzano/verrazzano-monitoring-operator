@@ -365,7 +365,8 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 	}
 	resourceLabel := resources.GetMetaLabels(vmo)
 	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
-	labels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+	podLabels := resources.GetSpecID(vmo.Name, componentDetails.Name)
+	podLabels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          resourceLabel,
@@ -384,7 +385,7 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: podLabels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
