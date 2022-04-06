@@ -63,12 +63,25 @@ func GetNewRandomID(size int) (string, error) {
 
 // GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {
+	// adding component specific labels
 	return constants.VMOServiceNamePrefix + vmoName + "-" + componentName
 }
 
 // GetMetaLabels returns k8s-app and vmo lables
 func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]string {
 	return map[string]string{constants.K8SAppLabel: constants.VMOGroup, constants.VMOLabel: vmo.Name}
+}
+
+// GetCompLabel returns a component value for opensearch
+func GetCompLabel(componentName string) string {
+	var componentLabelValue string
+	switch componentName {
+	case "es-master", "es-data", "es-ingest":
+		componentLabelValue = "opensearch"
+	default:
+		componentLabelValue = componentName
+	}
+	return componentLabelValue
 }
 
 // GetSpecID returns app label

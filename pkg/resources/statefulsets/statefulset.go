@@ -363,10 +363,12 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 	if serviceName == "" {
 		serviceName = statefulSetName
 	}
-
+	resourceLabel := resources.GetMetaLabels(vmo)
+	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+	labels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(vmo),
+			Labels:          resourceLabel,
 			Name:            statefulSetName,
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),

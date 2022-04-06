@@ -218,3 +218,34 @@ func TestConvertToRegexp(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCompLabel(t *testing.T) {
+	var tests = []struct {
+		compName     string
+		expectedName string
+	}{
+		{
+			"es-master",
+			"opensearch",
+		},
+		{
+			"es-data",
+			"opensearch",
+		},
+		{
+			"es-ingest",
+			"opensearch",
+		},
+		{
+			"foo",
+			"foo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("component name '%s' to expectedName '%s'", tt.compName, tt.expectedName), func(t *testing.T) {
+			r := GetCompLabel(tt.compName)
+			assert.Equal(t, tt.expectedName, r)
+		})
+	}
+}
