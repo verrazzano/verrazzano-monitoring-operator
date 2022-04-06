@@ -331,7 +331,7 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 				}
 			}
 
-			if len(scrapeConfigs) != len(existingScrapeConfigs) || scrapeConfigChanged {
+			if len(scrapeConfigs) > 0 && (len(scrapeConfigs) != len(existingScrapeConfigs) || scrapeConfigChanged) {
 				newConfig["scrape_configs"] = scrapeConfigs
 				newConfigYaml, err := yaml.Marshal(&newConfig)
 				if err != nil {
