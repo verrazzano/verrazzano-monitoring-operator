@@ -249,3 +249,22 @@ func TestGetCompLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestDeepCopyMap(t *testing.T) {
+	var tests = []struct {
+		srcMap map[string]string
+		dstMap map[string]string
+	}{
+		{
+			map[string]string{"foo": "bar"},
+			map[string]string{"foo": "bar"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("basic deepcopy test", func(t *testing.T) {
+			r := DeepCopyMap(tt.srcMap)
+			assert.Equal(t, tt.dstMap, r)
+		})
+	}
+}

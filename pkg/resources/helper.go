@@ -76,11 +76,20 @@ func GetCompLabel(componentName string) string {
 	var componentLabelValue string
 	switch componentName {
 	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name:
-		componentLabelValue = "opensearch"
+		componentLabelValue = constants.ComponentOpenSearchValue
 	default:
 		componentLabelValue = componentName
 	}
 	return componentLabelValue
+}
+
+// DeepCopyMap performs a deepcopy of a map
+func DeepCopyMap(srcMap map[string]string) map[string]string {
+	result := make(map[string]string, len(srcMap))
+	for k, v := range srcMap {
+		result[k] = v
+	}
+	return result
 }
 
 // GetSpecID returns app label

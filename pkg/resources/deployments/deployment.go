@@ -302,7 +302,7 @@ func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 
 	resourceLabel := resources.GetMetaLabels(vmo)
 	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
-	podLabels := resources.GetSpecID(vmo.Name, componentDetails.Name)
+	podLabels := resources.DeepCopyMap(labels)
 	podLabels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

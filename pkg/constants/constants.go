@@ -245,3 +245,6 @@ const (
 
 //ComponentLabel - the label for a specific component
 const ComponentLabel = "verrazzano-component"
+
+//ComponentOpenSearchValue - the value for opensearch component
+const ComponentOpenSearchValue = "opensearch"
