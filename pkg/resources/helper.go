@@ -77,6 +77,27 @@ func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]
 	return map[string]string{constants.K8SAppLabel: constants.VMOGroup, constants.VMOLabel: vmo.Name}
 }
 
+// GetCompLabel returns a component value for opensearch
+func GetCompLabel(componentName string) string {
+	var componentLabelValue string
+	switch componentName {
+	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name:
+		componentLabelValue = constants.ComponentOpenSearchValue
+	default:
+		componentLabelValue = componentName
+	}
+	return componentLabelValue
+}
+
+// DeepCopyMap performs a deepcopy of a map
+func DeepCopyMap(srcMap map[string]string) map[string]string {
+	result := make(map[string]string, len(srcMap))
+	for k, v := range srcMap {
+		result[k] = v
+	}
+	return result
+}
+
 // GetSpecID returns app label
 func GetSpecID(vmoName string, componentName string) map[string]string {
 	return map[string]string{constants.ServiceAppLabel: vmoName + "-" + componentName}

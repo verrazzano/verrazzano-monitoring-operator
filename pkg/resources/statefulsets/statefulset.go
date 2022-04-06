@@ -361,9 +361,13 @@ func createAlertManagerStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources,
 	componentDetails config.ComponentDetails, serviceName, statefulSetName string) *appsv1.StatefulSet {
 	labels := resources.GetSpecID(vmo.Name, componentDetails.Name)
+	resourceLabel := resources.GetMetaLabels(vmo)
+	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+	podLabels := resources.DeepCopyMap(labels)
+	podLabels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(vmo),
+			Labels:          resourceLabel,
 			Name:            statefulSetName,
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),
@@ -379,7 +383,7 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: podLabels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{

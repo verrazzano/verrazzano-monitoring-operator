@@ -245,3 +245,9 @@ const (
 	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_SECRET_KEY_ID"
 	ObjectStoreCustomerKey        = "object_store_secret_key"
 )
+
+//ComponentLabel - the label for a specific component
+const ComponentLabel = "verrazzano-component"
+
+//ComponentOpenSearchValue - the value for opensearch component
+const ComponentOpenSearchValue = "opensearch"
