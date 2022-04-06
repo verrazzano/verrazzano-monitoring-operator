@@ -249,10 +249,8 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 		controller.log.Errorf("Failed to get configmap %s%s: %v", vmo.Namespace, configmap, err)
 		return err
 	}
-	controller.log.Info("Step -2")
 
 	if existingConfig == nil {
-		controller.log.Info("Step -1")
 		configMap := configmaps.NewConfig(vmo, configmap, data)
 		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
@@ -263,46 +261,39 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 	}
 
 	if prometheusConfig, ok := existingConfig.Data["prometheus.yml"]; ok {
-		controller.log.Info("Step 0")
 		var existingConfigYaml map[interface{}]interface{}
 		err := yaml.Unmarshal([]byte(prometheusConfig), &existingConfigYaml)
 		if err != nil {
 			controller.log.Errorf("Failed to read configmap %s%s: %v", vmo.Namespace, configmap, err)
 			return err
 		}
-		controller.log.Info("Step 1")
+
 		var existingScrapeConfigs []interface{}
 		if existingScrapeConfigsData, ok := existingConfigYaml["scrape_configs"]; ok {
-			controller.log.Info("Step 2")
 			var newConfig map[interface{}]interface{}
 			err := yaml.Unmarshal([]byte(data["prometheus.yml"]), &newConfig)
 			if err != nil {
 				controller.log.Errorf("Failed to read new configmap data: %v", err)
 				return err
 			}
-			controller.log.Info("Step 3")
 
 			var scrapeConfigs []interface{}
 			var newScrapeConfigs []interface{}
 			var scrapeConfigChanged bool
 			if newScrapeConfigsData, ok := newConfig["scrape_configs"]; ok {
 				newScrapeConfigs = newScrapeConfigsData.([]interface{})
-				controller.log.Info("Step 4")
 				existingScrapeConfigs = existingScrapeConfigsData.([]interface{})
-
 				for _, esc := range existingScrapeConfigs {
 					existingScrapeConfig := esc.(map[interface{}]interface{})
 					found := false
-					controller.log.Info("Step 5")
 					for _, nsc := range newScrapeConfigs {
 						newScrapeConfig := nsc.(map[interface{}]interface{})
 						if newScrapeConfig["job_name"] == existingScrapeConfig["job_name"] {
+							// If the existing scrape config of a job is different than default, revert to default
 							if !reflect.DeepEqual(newScrapeConfig, existingScrapeConfig) {
-								controller.log.Info("Step 5.1")
 								scrapeConfigChanged = true
 								scrapeConfigs = append(scrapeConfigs, newScrapeConfig)
 							} else {
-								controller.log.Info("Step 5.2")
 								scrapeConfigs = append(scrapeConfigs, existingScrapeConfig)
 							}
 
@@ -310,16 +301,16 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 							break
 						}
 					}
+					// Preserve all scrape configs that are not part of default config
 					if !found {
-						controller.log.Info("Step 6")
 						scrapeConfigs = append(scrapeConfigs, existingScrapeConfig)
 					}
 				}
 
+				// Add all default configs that do not exist
 				for _, nsc := range newScrapeConfigs {
 					newScrapeConfig := nsc.(map[interface{}]interface{})
 					found := false
-					controller.log.Info("Step 6.1")
 					for _, sc := range scrapeConfigs {
 						scrapeConfig := sc.(map[interface{}]interface{})
 						if newScrapeConfig["job_name"] == scrapeConfig["job_name"] {
@@ -328,13 +319,13 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 						}
 					}
 					if !found {
-						controller.log.Info("Step 6.2")
 						scrapeConfigChanged = true
 						scrapeConfigs = append(scrapeConfigs, newScrapeConfig)
 					}
 				}
 			}
 
+			// Update the configmap only when there is a change to scrap config data
 			if len(scrapeConfigs) > 0 && (len(scrapeConfigs) != len(existingScrapeConfigs) || scrapeConfigChanged) {
 				newConfig["scrape_configs"] = scrapeConfigs
 				newConfigYaml, err := yaml.Marshal(&newConfig)
@@ -342,22 +333,17 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 					controller.log.Errorf("Failed to update new configmap data: %v", err)
 					return err
 				}
-				controller.log.Info("Step 7")
 				data["prometheus.yml"] = string(newConfigYaml)
-				controller.log.Info("Step 8")
 				existingConfig.Data = data
-				controller.log.Info("Step 9")
-				controller.log.Infof("Step 10 %v", existingConfig.Data)
 				_, err = controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), existingConfig, metav1.UpdateOptions{})
 				if err != nil {
 					controller.log.Errorf("Failed to update configmap %s%s: %v", vmo.Namespace, existingConfig, err)
 					return err
 				}
-				controller.log.Info("Step 11")
+
 				return nil
 			}
 		}
 	}
-	controller.log.Info("Step 12")
 	return nil
 }
