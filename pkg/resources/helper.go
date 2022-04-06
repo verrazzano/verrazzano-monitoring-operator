@@ -63,7 +63,6 @@ func GetNewRandomID(size int) (string, error) {
 
 // GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {
-	// adding component specific labels
 	return constants.VMOServiceNamePrefix + vmoName + "-" + componentName
 }
 
