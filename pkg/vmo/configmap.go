@@ -298,8 +298,12 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 						newScrapeConfig := nsc.(map[interface{}]interface{})
 						if newScrapeConfig["job_name"] == existingScrapeConfig["job_name"] {
 							if !reflect.DeepEqual(newScrapeConfig, existingScrapeConfig) {
+								controller.log.Info("Step 5.1")
 								scrapeConfigChanged = true
 								scrapeConfigs = append(scrapeConfigs, newScrapeConfig)
+							} else {
+								controller.log.Info("Step 5.2")
+								scrapeConfigs = append(scrapeConfigs, existingScrapeConfig)
 							}
 
 							found = true
@@ -316,9 +320,9 @@ func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.Ve
 					newScrapeConfig := nsc.(map[interface{}]interface{})
 					found := false
 					controller.log.Info("Step 6.1")
-					for _, esc := range existingScrapeConfigs {
-						existingScrapeConfig := esc.(map[interface{}]interface{})
-						if newScrapeConfig["job_name"] == existingScrapeConfig["job_name"] {
+					for _, sc := range scrapeConfigs {
+						scrapeConfig := sc.(map[interface{}]interface{})
+						if newScrapeConfig["job_name"] == scrapeConfig["job_name"] {
 							found = true
 							break
 						}
