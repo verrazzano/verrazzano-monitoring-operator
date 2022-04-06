@@ -300,9 +300,13 @@ func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		labels["index"] = strconv.Itoa(pvcIndex)
 	}
 
+	resourceLabel := resources.GetMetaLabels(vmo)
+	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+	podLabels := resources.DeepCopyMap(labels)
+	podLabels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(vmo),
+			Labels:          resourceLabel,
 			Name:            deploymentName,
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),
@@ -314,7 +318,7 @@ func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: podLabels,
 				},
 				Spec: corev1.PodSpec{
 					Volumes: volumes,
