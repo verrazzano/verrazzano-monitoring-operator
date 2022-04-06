@@ -48,10 +48,10 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			specDiffs := diff.Diff(existingIngress, curIngress)
 			if specDiffs != "" {
 				controller.log.Debugf("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
-				_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
+				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
 			}
 		} else if k8serrors.IsNotFound(err) {
-			_, err = controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
 			controller.log.Errorf("Failed getting existing Ingress %s/%s: %v", vmo.Namespace, ingName, err)
 			return err
@@ -73,7 +73,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
-			err := controller.kubeclientset.ExtensionsV1beta1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
+			err := controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
 				controller.log.Errorf("Failed to delete Ingress %s/%s: %v", vmo.Namespace, ingress.Name, err)
 				return err
