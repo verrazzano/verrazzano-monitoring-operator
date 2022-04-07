@@ -120,7 +120,7 @@ var OidcProxy = ComponentDetails{
 	Port:            constants.OidcProxyPort,
 }
 
-// ElasticsearchIngest is the default Elasticsearch Ingest configuration
+// ElasticsearchIngest is the default Elasticsearch IngestNodes configuration
 var ElasticsearchIngest = ComponentDetails{
 	Name:         "es-ingest",
 	EndpointName: "elasticsearch",
@@ -134,7 +134,7 @@ var ElasticsearchIngest = ComponentDetails{
 	OidcProxy:         &OidcProxy,
 }
 
-// ElasticsearchMaster is the default Elasticsearch Master configuration
+// ElasticsearchMaster is the default Elasticsearch MasterNodes configuration
 var ElasticsearchMaster = ComponentDetails{
 	Name:            "es-master",
 	EnvName:         "ELASTICSEARCH_IMAGE",
@@ -143,7 +143,7 @@ var ElasticsearchMaster = ComponentDetails{
 	Privileged:      false,
 }
 
-// ElasticsearchData is the default Elasticsearch Data configuration
+// ElasticsearchData is the default Elasticsearch DataNodes configuration
 var ElasticsearchData = ComponentDetails{
 	Name:              "es-data",
 	EnvName:           "ELASTICSEARCH_IMAGE",

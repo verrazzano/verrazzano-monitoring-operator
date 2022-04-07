@@ -33,7 +33,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 			return err
 		}
 	} else {
-		err = controller.osClient.IsOpenSearchUpdated(vmo)
+		err = controller.osClient.IsUpdated(vmo)
 		if err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"strings"
 	"testing"
 
@@ -84,12 +85,19 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.MasterRole,
+						vmcontrollerv1.IngestRole,
+						vmcontrollerv1.DataRole,
+					},
+				},
+				DataNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 			},
 		},
 	}
-	assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
+	assert.True(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 
 	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
@@ -126,10 +134,9 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 			},
 		},
 	}
-	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
-
+	assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
 	_, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
-	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
+	assert.Nil(t, err)
 }
 
 func TestVMOWithCascadingDelete(t *testing.T) {

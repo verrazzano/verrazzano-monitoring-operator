@@ -71,6 +71,9 @@ const DefaultNamespace = "default"
 // ServiceAppLabel label name for service app
 const ServiceAppLabel = "app"
 
+//ClusterInitialMasterNodes is the parameter for the OpenSearch cluster initial master nodes
+const ClusterInitialMasterNodes = "cluster.initial_master_nodes"
+
 // K8SAppLabel label name for k8s app
 const K8SAppLabel = "k8s-app"
 
@@ -113,10 +116,10 @@ const OidcProxyPort = 8775
 // DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
 const DefaultDevProfileESMemArgs = "-Xms700m -Xmx700m"
 
-// DefaultESIngestMemArgs default Elasticsearch Ingest memory settings
+// DefaultESIngestMemArgs default Elasticsearch IngestNodes memory settings
 const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
 
-// DefaultESDataMemArgs default Elasticsearch Data memory settings
+// DefaultESDataMemArgs default Elasticsearch DataNodes memory settings
 const DefaultESDataMemArgs = "-Xms4g -Xmx4g"
 
 // K8sTaintNoScheduleEffect constant for Noschedule

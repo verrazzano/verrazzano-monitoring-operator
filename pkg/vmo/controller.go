@@ -458,7 +458,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	ismChannel := c.osClient.ConfigureISM(vmo)
 
 	/********************************************
-	 * Migrate old indices if any to Data streams
+	 * Migrate old indices if any to data streams
 	*********************************************/
 	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
 	if err != nil {
@@ -503,19 +503,22 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 
 	/*********************
-	 * Create Deployments
-	 **********************/
-	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap)
-	if err != nil {
-		errorObserved = true
-	}
-
-	/*********************
 	 * Create StatefulSets
 	 **********************/
 	err = CreateStatefulSets(c, vmo)
 	if err != nil {
 		errorObserved = true
+	}
+
+	/*********************
+	 * Create Deployments
+	 **********************/
+	var deploymentsDirty bool
+	if err == nil {
+		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap)
+		if err != nil {
+			errorObserved = true
+		}
 	}
 
 	/*********************

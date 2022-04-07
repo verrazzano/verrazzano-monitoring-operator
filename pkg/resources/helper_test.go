@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
@@ -95,79 +95,6 @@ func getItem(key, value string, scrapeConfigs []interface{}) map[interface{}]int
 		}
 	}
 	return nil
-}
-
-func TestIsSingleNodeESCluster(t *testing.T) {
-	vmo := &vmov1.VerrazzanoMonitoringInstance{
-		Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-			CascadingDelete: true,
-			Grafana: vmov1.Grafana{
-				Enabled: true,
-			},
-			Prometheus: vmov1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmov1.AlertManager{
-				Enabled: true,
-			},
-			Kibana: vmov1.Kibana{
-				Enabled: true,
-			},
-			Elasticsearch: vmov1.Elasticsearch{
-				Enabled:    true,
-				IngestNode: vmov1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmov1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmov1.ElasticsearchNode{Replicas: 0},
-			},
-		},
-	}
-	assert.True(t, IsSingleNodeESCluster(vmo), "IsSingleNodeCluster false for valid configuration")
-
-	vmo.Spec.Elasticsearch.MasterNode.Replicas = 2
-	assert.False(t, IsSingleNodeESCluster(vmo), "IsSingleNodeCluster true for invalid configuration")
-
-	vmo.Spec.Elasticsearch.MasterNode.Replicas = 1
-	vmo.Spec.Elasticsearch.IngestNode.Replicas = 1
-	assert.False(t, IsSingleNodeESCluster(vmo), "IsSingleNodeCluster true for invalid configuration")
-}
-
-func TestIsValidMultiNodeESCluster(t *testing.T) {
-	vmo := &vmov1.VerrazzanoMonitoringInstance{
-		Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-			CascadingDelete: true,
-			Grafana: vmov1.Grafana{
-				Enabled: true,
-			},
-			Prometheus: vmov1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmov1.AlertManager{
-				Enabled: true,
-			},
-			Kibana: vmov1.Kibana{
-				Enabled: true,
-			},
-			Elasticsearch: vmov1.Elasticsearch{
-				Enabled:    true,
-				IngestNode: vmov1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmov1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmov1.ElasticsearchNode{Replicas: 0},
-			},
-		},
-	}
-	assert.False(t, IsValidMultiNodeESCluster(vmo), "IsValidMultiNodeESCluster true for single-node configuration")
-
-	vmo.Spec.Elasticsearch.MasterNode.Replicas = 1
-	vmo.Spec.Elasticsearch.DataNode.Replicas = 1
-	vmo.Spec.Elasticsearch.IngestNode.Replicas = 1
-	assert.True(t, IsValidMultiNodeESCluster(vmo), "IsValidMultiNodeESCluster false for valid configuration")
-
-	vmo.Spec.Elasticsearch.MasterNode.Replicas = 3
-	vmo.Spec.Elasticsearch.DataNode.Replicas = 2
-	vmo.Spec.Elasticsearch.IngestNode.Replicas = 1
-	assert.True(t, IsValidMultiNodeESCluster(vmo), "IsValidMultiNodeESCluster true for valid configuration")
 }
 
 func TestGetOpenSearchDashboardsHTTPEndpoint(t *testing.T) {

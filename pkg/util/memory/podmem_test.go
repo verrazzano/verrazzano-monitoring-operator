@@ -1,4 +1,4 @@
-// Copyright (C) 2021, Oracle and/or its affiliates.
+// Copyright (C) 2021, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package memory
@@ -15,12 +15,17 @@ import (
 // THEN ensure the result is a JVM formatted heap string like "-Xms512m -Xmx512m"
 func TestPodMemToJvmHeapArgs(t *testing.T) {
 	asserts := assert.New(t)
-	s, err := PodMemToJvmHeapArgs("500Mi")
+	s, err := PodMemToJvmHeapArgs("500Mi", "")
 	asserts.NoError(err, "error converting pod memory to JVM heap arg")
 	asserts.Equal("-Xms375m -Xmx375m", s, "incorrect JVM heap arg")
-	s, err = PodMemToJvmHeapArgs("1.4Gi")
+	s, err = PodMemToJvmHeapArgs("1.4Gi", "")
 	asserts.NoError(err, "error converting pod memory to JVM heap arg")
 	asserts.Equal("-Xms1076m -Xmx1076m", s, "incorrect JVM heap arg")
+	s, err = PodMemToJvmHeapArgs("", "-Xms375m -Xmx375m")
+	asserts.NoError(err, "error converting pod memory to JVM heap arg")
+	asserts.Equal("-Xms375m -Xmx375m", s, "incorrect JVM heap arg")
+	_, err = PodMemToJvmHeapArgs("boom!", "-Xms375m -Xmx375m")
+	asserts.Error(err)
 }
 
 // TestPodMemToJvmHeap tests the formatting of pod memory requests into JVM heap sizes

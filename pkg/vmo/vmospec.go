@@ -91,9 +91,13 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if vmo.Spec.AlertManager.Replicas == 0 {
 		vmo.Spec.AlertManager.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
-	if vmo.Spec.Elasticsearch.MasterNode.Replicas == 0 {
-		vmo.Spec.Elasticsearch.MasterNode.Replicas = int32(constants.DefaultElasticsearchMasterReplicas)
-	}
+
+	// Default roles for VMO components
+	initNode(&vmo.Spec.Elasticsearch.MasterNode, vmcontrollerv1.MasterRole)
+	initNode(&vmo.Spec.Elasticsearch.IngestNode, vmcontrollerv1.IngestRole)
+	initNode(&vmo.Spec.Elasticsearch.DataNode, vmcontrollerv1.DataRole)
+
+	// Setup default storage elements
 	for _, component := range config.StorageEnableComponents {
 		storageElement := resources.GetStorageElementForComponent(vmo, component)
 		replicas := int(resources.GetReplicasForComponent(vmo, component))
@@ -138,4 +142,15 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	// set label for managed-cluster-name
 	vmo.Labels[constants.ClusterNameData] = controller.clusterInfo.clusterName
+}
+
+func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRole) {
+	if len(node.Name) < 1 {
+		node.Name = "es-" + string(role)
+	}
+	if len(node.Roles) < 1 {
+		node.Roles = []vmcontrollerv1.NodeRole{
+			role,
+		}
+	}
 }
