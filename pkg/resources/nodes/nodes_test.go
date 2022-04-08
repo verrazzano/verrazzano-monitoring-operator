@@ -36,6 +36,19 @@ var testMultiNodeVMI = vmcontrollerv1.VerrazzanoMonitoringInstance{
 					},
 					Replicas: 2,
 				},
+				{
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.DataRole,
+						vmcontrollerv1.IngestRole,
+					},
+					Replicas: 2,
+				},
+				{
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.IngestRole,
+					},
+					Replicas: 1,
+				},
 			},
 			MasterNode: vmcontrollerv1.ElasticsearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
@@ -170,15 +183,24 @@ func TestIsSingleNodeCluster(t *testing.T) {
 }
 
 func TestStatefulSetNodes(t *testing.T) {
-	nodes := StatefulSetNodes(&testMultiNodeVMI)
+	nodes := MasterNodes(&testMultiNodeVMI)
+	assert.Equal(t, 2, len(nodes))
+}
+
+func TestDataNodes(t *testing.T) {
+	nodes := DataNodes(&testMultiNodeVMI)
+	assert.Equal(t, 2, len(nodes))
+}
+
+func TestIngestNodes(t *testing.T) {
+	nodes := IngestNodes(&testMultiNodeVMI)
 	assert.Equal(t, 2, len(nodes))
 }
 
 func TestGetNodeRoleCount(t *testing.T) {
 	nodeRoles := GetNodeCount(&testMultiNodeVMI)
-	assert.EqualValues(t, 3, nodeRoles.DataNodes)
+	assert.EqualValues(t, 5, nodeRoles.DataNodes)
 	assert.EqualValues(t, 3, nodeRoles.MasterNodes)
-	assert.EqualValues(t, 3, nodeRoles.IngestNodes)
-	assert.EqualValues(t, 5, nodeRoles.Replicas)
-
+	assert.EqualValues(t, 6, nodeRoles.IngestNodes)
+	assert.EqualValues(t, 8, nodeRoles.Replicas)
 }

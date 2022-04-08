@@ -7,6 +7,7 @@ import (
 	"context"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -60,7 +61,7 @@ func cleanupUnusedPVCs(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if err != nil {
 		return err
 	}
-	inUsePVCNames := getInUsePVCNames(deployments)
+	inUsePVCNames := getInUsePVCNames(deployments, vmo)
 	allPVCs, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).List(selector)
 	if err != nil {
 		return err
@@ -77,12 +78,20 @@ func cleanupUnusedPVCs(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 //getInUsePVCNames gets the names of PVCs that are currently used by VMO deployments
-func getInUsePVCNames(deployments []*appsv1.Deployment) []string {
-	var inUsePVCNames []string
+func getInUsePVCNames(deployments []*appsv1.Deployment, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]bool {
+	inUsePVCNames := map[string]bool{}
 	for _, deployment := range deployments {
 		for _, volume := range deployment.Spec.Template.Spec.Volumes {
 			if volume.PersistentVolumeClaim != nil {
-				inUsePVCNames = append(inUsePVCNames, volume.PersistentVolumeClaim.ClaimName)
+				inUsePVCNames[volume.PersistentVolumeClaim.ClaimName] = true
+			}
+		}
+	}
+
+	for _, node := range nodes.DataNodes(vmo) {
+		if node.Storage != nil {
+			for _, pvc := range node.Storage.PvcNames {
+				inUsePVCNames[pvc] = true
 			}
 		}
 	}
@@ -90,18 +99,10 @@ func getInUsePVCNames(deployments []*appsv1.Deployment) []string {
 }
 
 //getUnboundPVCs gets the VMO-managed PVCs which are not currently used by VMO deployments
-func getUnboundPVCs(pvcs []*corev1.PersistentVolumeClaim, boundPVCNames []string) []*corev1.PersistentVolumeClaim {
-	isPVCBound := func(pvc *corev1.PersistentVolumeClaim, boundPVCNames []string) bool {
-		for _, pvcName := range boundPVCNames {
-			if pvcName == pvc.Name {
-				return true
-			}
-		}
-		return false
-	}
+func getUnboundPVCs(pvcs []*corev1.PersistentVolumeClaim, inUsePVCNames map[string]bool) []*corev1.PersistentVolumeClaim {
 	var unboundPVCs []*corev1.PersistentVolumeClaim
 	for _, pvc := range pvcs {
-		if !isPVCBound(pvc, boundPVCNames) {
+		if _, ok := inUsePVCNames[pvc.Name]; !ok {
 			unboundPVCs = append(unboundPVCs, pvc)
 		}
 	}
