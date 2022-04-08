@@ -23,6 +23,21 @@ type NodeCount struct {
 	Replicas int32
 }
 
+//MasterNodes returns the list of master role containing nodes in the VMI spec. These nodes will be created as statefulsets.
+func MasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
+	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.MasterNode}, filterNodes(vmo, masterNodeMatcher)...)
+}
+
+//DataNodes returns the list of data nodes (that are not masters) in the VMI spec.
+func DataNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
+	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.DataNode}, filterNodes(vmo, dataNodeMatcher)...)
+}
+
+//IngestNodes returns the list of ingest nodes in the VMI spec. These nodes will have no other role but ingest.
+func IngestNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
+	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.IngestNode}, filterNodes(vmo, ingestNodeMatcher)...)
+}
+
 //GetRolesString turns a nodes role list into a role string
 // roles: [master, ingest, data] => "master,ingest,data"
 // we have to use a buffer because NodeRole is a type alias
@@ -37,7 +52,9 @@ func GetRolesString(node *vmcontrollerv1.ElasticsearchNode) string {
 	return buf.String()
 }
 
-func AddNodeRoleLabels(node *vmcontrollerv1.ElasticsearchNode, labels map[string]string) {
+//SetNodeRoleLabels adds node role labels to an existing label map
+// role labels follow the format: role-<role name>=true
+func SetNodeRoleLabels(node *vmcontrollerv1.ElasticsearchNode, labels map[string]string) {
 	for _, role := range node.Roles {
 		labels["role-"+string(role)] = "true"
 	}
@@ -85,39 +102,48 @@ func AllNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1
 	return append(vmo.Spec.Elasticsearch.Nodes, vmo.Spec.Elasticsearch.MasterNode, vmo.Spec.Elasticsearch.DataNode, vmo.Spec.Elasticsearch.IngestNode)
 }
 
-//StatefulSetNodes returns a list of nodes that should be created as statefulsets
-func StatefulSetNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.MasterNode}, filterNodes(vmo, func(role vmcontrollerv1.NodeRole) bool {
-		return role == vmcontrollerv1.MasterRole
-	})...)
-}
-
-func DeploymentNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.DataNode, vmo.Spec.Elasticsearch.IngestNode}, filterNodes(vmo, func(role vmcontrollerv1.NodeRole) bool {
-		return role != vmcontrollerv1.MasterRole
-	})...)
-}
-
-func IngestOnlyNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.IngestNode}, filterNodes(vmo, func(role vmcontrollerv1.NodeRole) bool {
-		return role == vmcontrollerv1.IngestRole
-	})...)
-}
-
-func filterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, roleMatcher func(role vmcontrollerv1.NodeRole) bool) []vmcontrollerv1.ElasticsearchNode {
-	isMatch := func(roles []vmcontrollerv1.NodeRole) bool {
-		for _, role := range roles {
-			if roleMatcher(role) {
-				return true
-			}
-		}
-		return false
-	}
+func filterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, matcher func(node vmcontrollerv1.ElasticsearchNode) bool) []vmcontrollerv1.ElasticsearchNode {
 	var nodes []vmcontrollerv1.ElasticsearchNode
 	for _, node := range vmo.Spec.Elasticsearch.Nodes {
-		if isMatch(node.Roles) {
+		if matcher(node) {
 			nodes = append(nodes, node)
 		}
 	}
 	return nodes
 }
+
+func matcherFactory(excluded, matched func(role vmcontrollerv1.NodeRole) bool) func(node vmcontrollerv1.ElasticsearchNode) bool {
+	return func(node vmcontrollerv1.ElasticsearchNode) bool {
+		var isMatch bool
+		for _, role := range node.Roles {
+			if excluded(role) {
+				return false
+			}
+			if matched(role) {
+				isMatch = true
+			}
+		}
+		return isMatch
+	}
+}
+
+var (
+	// matches any node with master role
+	masterNodeMatcher = matcherFactory(func(role vmcontrollerv1.NodeRole) bool {
+		return false
+	}, func(role vmcontrollerv1.NodeRole) bool {
+		return role == vmcontrollerv1.MasterRole
+	})
+	// matches nodes with data role, or data + ingest
+	dataNodeMatcher = matcherFactory(func(role vmcontrollerv1.NodeRole) bool {
+		return role == vmcontrollerv1.MasterRole
+	}, func(role vmcontrollerv1.NodeRole) bool {
+		return role == vmcontrollerv1.DataRole
+	})
+	// Matches only nodes who have ingest role, and nothing else
+	ingestNodeMatcher = matcherFactory(func(role vmcontrollerv1.NodeRole) bool {
+		return role == vmcontrollerv1.MasterRole || role == vmcontrollerv1.DataRole
+	}, func(role vmcontrollerv1.NodeRole) bool {
+		return role == vmcontrollerv1.IngestRole
+	})
+)

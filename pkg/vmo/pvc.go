@@ -68,9 +68,6 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 
 		// If the PVC already exists, we check if it needs resizing
 		if existingPvc != nil {
-			if existingPvc.Status.Phase != corev1.ClaimBound {
-				return nil, fmt.Errorf("not yet bound: %s", existingPvc.Name)
-			}
 			if pvcNeedsResize(existingPvc, expectedPVC) {
 				if newPVCName, err := resizePVC(controller, vmo, existingPvc, expectedPVC, storageClass); err != nil {
 					return nil, err
@@ -88,6 +85,8 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 				} else if isOpenSearchPVC(existingPvc) {
 					elasticsearchAdCounter.Inc(zone)
 				}
+			} else {
+				pvcToAdMap[pvcName] = ""
 			}
 		} else {
 			// If the StorageClass allows us to specify zone info on the PVC, we'll do that now

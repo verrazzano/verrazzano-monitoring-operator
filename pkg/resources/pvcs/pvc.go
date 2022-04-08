@@ -6,6 +6,7 @@ package pvcs
 import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,13 +23,16 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 		}
 		pvcList = append(pvcList, pvcs...)
 	}
-	dataNodeStorage := vmo.Spec.Elasticsearch.DataNode.Storage
-	if vmo.Spec.Elasticsearch.Enabled && dataNodeStorage != nil && dataNodeStorage.Size != "" {
-		pvcs, err := createPvcElements(vmo, vmo.Spec.Elasticsearch.DataNode.Storage, storageClassName)
-		if err != nil {
-			return pvcList, err
+	if vmo.Spec.Elasticsearch.Enabled {
+		for _, dataNode := range nodes.DataNodes(vmo) {
+			if dataNode.Storage != nil && dataNode.Storage.Size != "" {
+				pvcs, err := createPvcElements(vmo, dataNode.Storage, storageClassName)
+				if err != nil {
+					return pvcList, err
+				}
+				pvcList = append(pvcList, pvcs...)
+			}
 		}
-		pvcList = append(pvcList, pvcs...)
 	}
 	if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
 		pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)

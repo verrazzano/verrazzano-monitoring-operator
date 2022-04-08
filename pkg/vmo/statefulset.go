@@ -16,23 +16,23 @@ import (
 )
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
-func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
 	storageClass, err := getStorageClassOverride(controller, vmo.Spec.StorageClass)
 	if err != nil {
 		controller.log.Errorf("Failed to determine storage class for VMI %s: %v", vmo.Name, err)
-		return err
+		return false, err
 	}
 
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
 	if err != nil {
-		return err
+		return false, err
 	}
 	initialMasterNodes := getInitialMasterNodes(vmo, existingList)
 	expectedList, err := statefulsets.New(controller.log, vmo, storageClass, initialMasterNodes)
 	if err != nil {
 		controller.log.Errorf("Failed to create StatefulSet specs for VMI %s: %v", vmo.Name, err)
-		return err
+		return false, err
 	}
 
 	// Loop through the existing stateful sets and create/update as needed
@@ -41,30 +41,30 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 
 	for _, sts := range plan.Create {
 		if _, err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), sts, metav1.CreateOptions{}); err != nil {
-			return logReturnError(controller.log, sts, err)
+			return plan.ExistingCluster, logReturnError(controller.log, sts, err)
 		}
 	}
 
 	// Loop through existing statefulsets again to update PVC owner references
 	latestList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
 	if err != nil {
-		return nil
+		return plan.ExistingCluster, err
 	}
 	for _, sts := range latestList {
 		if err := updateOwnerForPVCs(controller, sts, vmo.Name, vmo.Namespace); err != nil {
-			return err
+			return plan.ExistingCluster, err
 		}
 	}
 
 	for _, sts := range plan.Update {
 		if err := updateStatefulSet(controller, sts, vmo, plan.ExistingCluster); err != nil {
-			return logReturnError(controller.log, sts, err)
+			return plan.ExistingCluster, logReturnError(controller.log, sts, err)
 		}
 	}
 
 	for _, sts := range plan.Delete {
 		if err := scaleDownStatefulSet(controller, expectedList, sts, vmo); err != nil {
-			return err
+			return plan.ExistingCluster, err
 		}
 		// We only scale down one statefulset at a time. This gives the statefulset data
 		// time to migrate and the cluster to heal itself.
@@ -76,11 +76,11 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	} else {
 		controller.log.Errorf("StatefulSet update plan conflict: %v", plan.Conflict)
 	}
-	return plan.Conflict
+	return plan.ExistingCluster, plan.Conflict
 }
 
 func logReturnError(log vzlog.VerrazzanoLogger, sts *appsv1.StatefulSet, err error) error {
-	return log.ErrorfNewErr("Failed to update StatefulSets %s%s: %v", sts.Namespace, sts.Name, err)
+	return log.ErrorfNewErr("Failed to update StatefulSets %s:%s: %v", sts.Namespace, sts.Name, err)
 }
 
 //getInitialMasterNodes returns the initial master nodes string if the cluster is not already bootstrapped
@@ -88,11 +88,11 @@ func getInitialMasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, exi
 	if len(existing) > 0 {
 		return ""
 	}
-	return nodes.InitialMasterNodes(vmo.Name, nodes.StatefulSetNodes(vmo))
+	return nodes.InitialMasterNodes(vmo.Name, nodes.MasterNodes(vmo))
 }
 
 func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingCluster bool) error {
-	// if the cluster has no valid nodes, we should try to update it.
+	// if the cluster is alive, but unhealthy we shouldn't do an update - may cause data loss/corruption
 	if existingCluster {
 		// We should only update an existing cluster if it is healthy
 		if err := c.osClient.IsGreen(vmo); err != nil {

@@ -505,7 +505,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Create StatefulSets
 	 **********************/
-	err = CreateStatefulSets(c, vmo)
+	existingCluster, err := CreateStatefulSets(c, vmo)
 	if err != nil {
 		errorObserved = true
 	}
@@ -514,11 +514,9 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 * Create Deployments
 	 **********************/
 	var deploymentsDirty bool
-	if err == nil {
-		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap)
-		if err != nil {
-			errorObserved = true
-		}
+	deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
+	if err != nil {
+		errorObserved = true
 	}
 
 	/*********************

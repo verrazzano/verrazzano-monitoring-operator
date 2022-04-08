@@ -37,9 +37,9 @@ func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 
 func createOpenSearchStatefulSets(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass, initialMasterNodes string) []*appsv1.StatefulSet {
 	var statefulSets []*appsv1.StatefulSet
-	for _, node := range nodes.StatefulSetNodes(vmo) {
-		statefulSet := createOpenSearchStatefulSet(log, vmo, storageClass, node, initialMasterNodes)
-		if *statefulSet.Spec.Replicas > 0 {
+	for _, node := range nodes.MasterNodes(vmo) {
+		if node.Replicas > 0 {
+			statefulSet := createOpenSearchStatefulSet(log, vmo, storageClass, node, initialMasterNodes)
 			statefulSets = append(statefulSets, statefulSet)
 		}
 	}
@@ -49,12 +49,16 @@ func createOpenSearchStatefulSets(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv
 
 // Creates StatefulSet for OpenSearch
 func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass, node vmcontrollerv1.ElasticsearchNode, initialMasterNodes string) *appsv1.StatefulSet {
-	var readinessProbeCondition string
-
 	// Headless service for OpenSearch
 	headlessService := resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)
 	statefulSetName := resources.GetMetaName(vmo.Name, node.Name)
+	// Create base statefulset object
 	statefulSet := createStatefulSetElement(vmo, &node.Resources, config.ElasticsearchMaster, headlessService, statefulSetName)
+	// Add node labels
+	statefulSet.Spec.Selector.MatchLabels[constants.NodeGroupLabel] = node.Name
+	statefulSet.Spec.Template.Labels[constants.NodeGroupLabel] = node.Name
+	nodes.SetNodeRoleLabels(&node, statefulSet.Spec.Template.Labels)
+
 	statefulSet.Spec.Replicas = resources.NewVal(node.Replicas)
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
@@ -121,6 +125,7 @@ fi
 			},
 		},
 	}
+	var readinessProbeCondition string
 	if nodes.IsSingleNodeESCluster(vmo) {
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
 		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
