@@ -175,6 +175,6 @@ integ-test: go-install
 .PHONY: golangci-lint
 golangci-lint:
 ifeq (, $(shell command -v golangci-lint))
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.41.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.42.1
 endif
 	golangci-lint run
