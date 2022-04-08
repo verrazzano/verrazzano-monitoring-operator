@@ -1,5 +1,6 @@
 module github.com/verrazzano/verrazzano-monitoring-operator
 
+
 go 1.17
 
 require (

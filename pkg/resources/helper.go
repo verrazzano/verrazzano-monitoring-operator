@@ -48,6 +48,12 @@ func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitorin
 		constants.OSDashboardsHTTPPort)
 }
 
+func GetOwnerLabels(owner string) map[string]string {
+	return map[string]string{
+		"owner": owner,
+	}
+}
+
 //GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
 func GetNewRandomID(size int) (string, error) {
 	builder := strings.Builder{}
@@ -69,6 +75,27 @@ func GetMetaName(vmoName string, componentName string) string {
 // GetMetaLabels returns k8s-app and vmo lables
 func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]string {
 	return map[string]string{constants.K8SAppLabel: constants.VMOGroup, constants.VMOLabel: vmo.Name}
+}
+
+// GetCompLabel returns a component value for opensearch
+func GetCompLabel(componentName string) string {
+	var componentLabelValue string
+	switch componentName {
+	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name:
+		componentLabelValue = constants.ComponentOpenSearchValue
+	default:
+		componentLabelValue = componentName
+	}
+	return componentLabelValue
+}
+
+// DeepCopyMap performs a deepcopy of a map
+func DeepCopyMap(srcMap map[string]string) map[string]string {
+	result := make(map[string]string, len(srcMap))
+	for k, v := range srcMap {
+		result[k] = v
+	}
+	return result
 }
 
 // GetSpecID returns app label
@@ -224,6 +251,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 					Weight: 100,
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
+							// TODO: pass selector in
 							MatchLabels: GetSpecID(vmoName, component),
 						},
 						TopologyKey: constants.K8sZoneLabel,
@@ -424,22 +452,6 @@ func NewVal(value int32) *int32 {
 func New64Val(value int64) *int64 {
 	var val = value
 	return &val
-}
-
-// IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
-func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return masterNodeReplicas == 1 && dataNodeReplicas == 0 && ingestNodeReplicas == 0
-}
-
-// IsValidMultiNodeESCluster For a valid multi-node cluster that we have a minimum of one master, one ingest, and one data node
-func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return dataNodeReplicas > 0 && ingestNodeReplicas > 0 && masterNodeReplicas > 0
 }
 
 // oidcProxyName returns OIDC Proxy name of the component. ex. es-ingest-oidc

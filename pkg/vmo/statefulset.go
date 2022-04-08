@@ -5,19 +5,14 @@ package vmo
 
 import (
 	"context"
-	"errors"
-	"fmt"
-
-	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
@@ -27,7 +22,14 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		controller.log.Errorf("Failed to determine storage class for VMI %s: %v", vmo.Name, err)
 		return err
 	}
-	statefulSetList, err := statefulsets.New(controller.log, vmo, storageClass)
+
+	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
+	existingList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
+	if err != nil {
+		return err
+	}
+	initialMasterNodes := getInitialMasterNodes(vmo, existingList)
+	expectedList, err := statefulsets.New(controller.log, vmo, storageClass, initialMasterNodes)
 	if err != nil {
 		controller.log.Errorf("Failed to create StatefulSet specs for VMI %s: %v", vmo.Name, err)
 		return err
@@ -35,63 +37,105 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 
 	// Loop through the existing stateful sets and create/update as needed
 	controller.log.Oncef("Creating/updating Statefulsets for VMI %s", vmo.Name)
-	var statefulSetNames []string
-	for _, curStatefulSet := range statefulSetList {
-		statefulSetName := curStatefulSet.Name
-		statefulSetNames = append(statefulSetNames, statefulSetName)
-		if statefulSetName == "" && curStatefulSet.GenerateName == "" {
-			// We choose to absorb the error here as the worker would requeue the
-			// resource otherwise. Instead, the next time the resource is updated
-			// the resource will be queued again.
-			runtime.HandleError(errors.New("statefulset name must be specified"))
-			return nil
-		}
-		controller.log.Debugf("Applying StatefulSet '%s' in namespace '%s' for VMI '%s'\n", statefulSetName, vmo.Namespace, vmo.Name)
-		existingStatefulSet, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSetName)
-		if existingStatefulSet != nil {
-			// Changes to VolumeClaimTemplates are not supported without recreating the statefulset
-			curStatefulSet.Spec.VolumeClaimTemplates = existingStatefulSet.Spec.VolumeClaimTemplates
-			specDiffs := diff.Diff(existingStatefulSet, curStatefulSet)
-			if specDiffs != "" {
-				controller.log.Oncef("Statefulset %s/%s has spec differences %s", curStatefulSet.Namespace, curStatefulSet.Name, specDiffs)
-				_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), curStatefulSet, metav1.UpdateOptions{})
-			}
-		} else {
-			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), curStatefulSet, metav1.CreateOptions{})
-		}
-		if err != nil {
-			return controller.log.ErrorfNewErr("Failed to update StatefulSets %s%s: %v", curStatefulSet.Namespace, curStatefulSet.Name, err)
+	plan := statefulsets.CreatePlan(controller.log, existingList, expectedList)
+
+	for _, sts := range plan.Create {
+		if _, err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), sts, metav1.CreateOptions{}); err != nil {
+			return logReturnError(controller.log, sts, err)
 		}
 	}
 
-	// Do a second pass through the stateful sets to update PVC ownership and clean up statesful sets as needed
-	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
-	existingStatefulSetsList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
+	// Loop through existing statefulsets again to update PVC owner references
+	latestList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
 	if err != nil {
-		return err
+		return nil
 	}
-	for _, statefulSet := range existingStatefulSetsList {
-		latestSts, _ := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(statefulSet.Name)
-		if latestSts == nil {
-			break
-		}
-		// Update the PVC owner ref if needed
-		err = updateOwnerForPVCs(controller, latestSts, vmo.Name, vmo.Namespace)
-		if err != nil {
+	for _, sts := range latestList {
+		if err := updateOwnerForPVCs(controller, sts, vmo.Name, vmo.Namespace); err != nil {
 			return err
 		}
-		// Delete StatefulSets that shouldn't exist
-		if !contains(statefulSetNames, statefulSet.Name) {
-			controller.log.Debugf("Deleting StatefulSet %s", statefulSet.Name)
-			err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
-			if err != nil {
-				controller.log.Errorf("Failed to delete StatefulSet %s: %v", statefulSet.Name, err)
-				return err
-			}
+	}
+
+	for _, sts := range plan.Update {
+		if err := updateStatefulSet(controller, sts, vmo, plan.ExistingCluster); err != nil {
+			return logReturnError(controller.log, sts, err)
 		}
 	}
 
-	controller.log.Oncef("Successfully applied StatefulSets for VMI %s", vmo.Name)
+	for _, sts := range plan.Delete {
+		if err := scaleDownStatefulSet(controller, expectedList, sts, vmo); err != nil {
+			return err
+		}
+		// We only scale down one statefulset at a time. This gives the statefulset data
+		// time to migrate and the cluster to heal itself.
+		break
+	}
+
+	if plan.Conflict == nil {
+		controller.log.Oncef("Successfully applied StatefulSets for VMI %s", vmo.Name)
+	} else {
+		controller.log.Errorf("StatefulSet update plan conflict: %v", plan.Conflict)
+	}
+	return plan.Conflict
+}
+
+func logReturnError(log vzlog.VerrazzanoLogger, sts *appsv1.StatefulSet, err error) error {
+	return log.ErrorfNewErr("Failed to update StatefulSets %s%s: %v", sts.Namespace, sts.Name, err)
+}
+
+//getInitialMasterNodes returns the initial master nodes string if the cluster is not already bootstrapped
+func getInitialMasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existing []*appsv1.StatefulSet) string {
+	if len(existing) > 0 {
+		return ""
+	}
+	return nodes.InitialMasterNodes(vmo.Name, nodes.StatefulSetNodes(vmo))
+}
+
+func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingCluster bool) error {
+	// if the cluster has no valid nodes, we should try to update it.
+	if existingCluster {
+		// We should only update an existing cluster if it is healthy
+		if err := c.osClient.IsGreen(vmo); err != nil {
+			return err
+		}
+	}
+
+	_, err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), sts, metav1.UpdateOptions{})
+	return err
+}
+
+//scaleDownStatefulSet scales down a statefulset, and deletes the statefulset if it is already at 1 or fewer replicas.
+func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, statefulSet *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	deleteSTS := func() error {
+		err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})
+		if err != nil {
+			c.log.Errorf("Failed to delete StatefulSet %s: %v", statefulSet.Name, err)
+			return err
+		}
+		return nil
+	}
+
+	// don't worry about cluster health if we are deleting the cluster
+	if len(expectedList) < 1 {
+		return deleteSTS()
+	}
+
+	// The cluster should be in steady state before any nodes are removed
+	if err := c.osClient.IsUpdated(vmo); err != nil {
+		return err
+	}
+
+	// If the statefulset has multiple replicas, scale it down. this allows existing data to be migrated to another node on the cluster.
+	// If the statefulset already has one replica, then it can be deleted.
+	if *statefulSet.Spec.Replicas > 1 {
+		*statefulSet.Spec.Replicas--
+		if _, err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Update(context.TODO(), statefulSet, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+
+	} else {
+		return deleteSTS()
+	}
 	return nil
 }
 
@@ -103,17 +147,12 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
 // NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
 func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
-
-	// Get the PVCs for this STS using the specID label. Each PVC metadata.label
-	// has the same specID label as the STS template.metadata.label.
-	// For example: " app: hello-world-binding-es-master"
-	idLabel := resources.GetSpecID(vmoName, config.ElasticsearchMaster.Name)
-	selector := labels.SelectorFromSet(idLabel)
-	existingPvcList, err := controller.pvcLister.PersistentVolumeClaims(vmoNamespace).List(selector)
-	if err != nil {
-		return err
-	}
-	for _, pvc := range existingPvcList {
+	pvcNames := statefulsets.GetPVCNames(statefulSet)
+	for _, pvcName := range pvcNames {
+		pvc, err := controller.pvcLister.PersistentVolumeClaims(vmoNamespace).Get(pvcName)
+		if err != nil {
+			return err
+		}
 		if len(pvc.OwnerReferences) != 0 {
 			continue
 		}
@@ -123,17 +162,12 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 			Name:       statefulSet.Name,
 			UID:        statefulSet.UID,
 		}}
-		controller.log.Debugf("Setting StatefuleSet owner reference for PVC %s", pvc.Name)
-		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
+		controller.log.Debugf("Setting StatefulSet owner reference for PVC %s", pvc.Name)
+		_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
 			controller.log.Errorf("Failed to update the owner reference in PVC %s: %v", pvc.Name, err)
 			return err
 		}
-	}
-	expectedNumPVCs := int(*statefulSet.Spec.Replicas) * len(statefulSet.Spec.VolumeClaimTemplates)
-	actualNumPVCs := len(existingPvcList)
-	if actualNumPVCs != expectedNumPVCs {
-		return fmt.Errorf("Failed, PVC owner reference set in %v of %v PVCs for VMI %s", actualNumPVCs, expectedNumPVCs, vmoName)
 	}
 	return nil
 }

@@ -33,7 +33,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 			return err
 		}
 	} else {
-		err = controller.osClient.IsOpenSearchUpdated(vmo)
+		err = controller.osClient.IsUpdated(vmo)
 		if err != nil {
 			return err
 		}
@@ -48,12 +48,12 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 }
 
 // CreateDeployments create/update VMO deployment k8s resources
-func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, vmoUsername string, vmoPassword string) (dirty bool, err error) {
+func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) (dirty bool, err error) {
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap, vmoUsername, vmoPassword)
+	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap)
 	if err != nil {
 		controller.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
 		return false, err

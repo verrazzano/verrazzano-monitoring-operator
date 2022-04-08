@@ -4,7 +4,6 @@
 package deployments
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +26,7 @@ type Elasticsearch interface {
 
 // New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
 // the resource so handleObject can discover the VMO resource that 'owns' it.
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string, username string, password string) ([]*appsv1.Deployment, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string) ([]*appsv1.Deployment, error) {
 	var deployments []*appsv1.Deployment
 	var err error
 
@@ -44,8 +44,28 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		}
 		if config.Grafana.OidcProxy == nil {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-				{Name: "GF_SECURITY_ADMIN_USER", Value: username},
-				{Name: "GF_SECURITY_ADMIN_PASSWORD", Value: password},
+				{
+					Name: "GF_SECURITY_ADMIN_USER",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: constants.GrafanaAdminSecret,
+							},
+							Key: constants.VMOSecretUsernameField,
+						},
+					},
+				},
+				{
+					Name: "GF_SECURITY_ADMIN_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: constants.GrafanaAdminSecret,
+							},
+							Key: constants.VMOSecretPasswordField,
+						},
+					},
+				},
 				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "true"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "true"},
@@ -56,6 +76,28 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 			}...)
 		} else {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{
+					Name: "GF_SECURITY_ADMIN_USER",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: constants.GrafanaAdminSecret,
+							},
+							Key: constants.VMOSecretUsernameField,
+						},
+					},
+				},
+				{
+					Name: "GF_SECURITY_ADMIN_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: constants.GrafanaAdminSecret,
+							},
+							Key: constants.VMOSecretPasswordField,
+						},
+					},
+				},
 				{Name: "GF_AUTH_ANONYMOUS_ENABLED", Value: "false"},
 				{Name: "GF_AUTH_BASIC_ENABLED", Value: "false"},
 				{Name: "GF_USERS_ALLOW_SIGN_UP", Value: "false"},
@@ -148,12 +190,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	//   data node and one separate ingest node
 	// - This will weed out creating separate pods for data/ingest in the single-node cluster configuration as well
 	if vmo.Spec.Elasticsearch.Enabled {
-		if resources.IsValidMultiNodeESCluster(vmo) {
-			var es Elasticsearch = ElasticsearchBasic{}
-			deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
-		} else if !resources.IsSingleNodeESCluster(vmo) {
-			err = errors.New("Invalid Elasticsearch cluster configuration, must be a valid single or multi-node cluster configuration")
-		}
+		var es Elasticsearch = ElasticsearchBasic{}
+		deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
 	}
 
 	// API
@@ -257,9 +295,13 @@ func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		labels["index"] = strconv.Itoa(pvcIndex)
 	}
 
+	resourceLabel := resources.GetMetaLabels(vmo)
+	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+	podLabels := resources.DeepCopyMap(labels)
+	podLabels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(vmo),
+			Labels:          resourceLabel,
 			Name:            deploymentName,
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),
@@ -271,7 +313,7 @@ func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: podLabels,
 				},
 				Spec: corev1.PodSpec{
 					Volumes: volumes,

@@ -29,7 +29,7 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,7 +60,7 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -95,7 +95,7 @@ func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
 		},
 	}
 
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -142,7 +142,7 @@ func TestPrometheusDeploymentsWithKeycloak(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, client, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err := New(vmo, client, &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -174,7 +174,7 @@ func TestPrometheusDeploymentsWithKeycloak(t *testing.T) {
 		t.Error(err)
 	}
 
-	deployments, err = New(vmo, client, &config.OperatorConfig{}, map[string]string{}, "vmo", "changeme")
+	deployments, err = New(vmo, client, &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}

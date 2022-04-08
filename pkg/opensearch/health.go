@@ -9,6 +9,7 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	nodetool "github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"net/http"
 )
 
@@ -32,7 +33,7 @@ const (
 	MinDataNodesForResize = 2
 )
 
-func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool) error {
+func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool, waitForVersion bool) error {
 	// Verify that the cluster is Green
 	clusterHealth, err := o.getOpenSearchClusterHealth(vmo)
 	if err != nil {
@@ -49,18 +50,19 @@ func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 	}
 
 	if checkNodeCount {
-		// Verify that the count of nodes matches the spec
-		opensearchSpec := vmo.Spec.Elasticsearch
-		expectedNodes := int(opensearchSpec.IngestNode.Replicas + opensearchSpec.MasterNode.Replicas + opensearchSpec.DataNode.Replicas)
-		if expectedNodes != len(nodes) {
+		// Verify the node count
+		expectedNodes := int(nodetool.GetNodeCount(vmo).Replicas)
+		if len(nodes) < expectedNodes {
 			return fmt.Errorf("Expected %d OpenSearch nodes, got %d", expectedNodes, len(nodes))
 		}
 	}
 
-	// If any node is not running the expected version, the cluster is not ready
-	for _, node := range nodes {
-		if node.Version != config.ESWaitTargetVersion {
-			return fmt.Errorf("Not all OpenSearch nodes are upgrade to %s version", config.ESWaitTargetVersion)
+	if waitForVersion {
+		// If any node is not running the expected version, the cluster is not ready
+		for _, node := range nodes {
+			if node.Version != config.ESWaitTargetVersion {
+				return fmt.Errorf("Not all OpenSearch nodes are upgrade to %s version", config.ESWaitTargetVersion)
+			}
 		}
 	}
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2021, Oracle and/or its affiliates.
+// Copyright (C) 2021, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package memory
@@ -9,7 +9,11 @@ import (
 
 // PodMemToJvmHeapArgs converts a pod resource memory to the JVM heap setting
 // with same min/max, e.g: "-Xms512m -Xmx512m"
-func PodMemToJvmHeapArgs(size string) (string, error) {
+func PodMemToJvmHeapArgs(size, defaultValue string) (string, error) {
+	if size == "" {
+		return defaultValue, nil
+	}
+
 	s, err := PodMemToJvmHeap(size)
 	if err != nil {
 		return "", err
