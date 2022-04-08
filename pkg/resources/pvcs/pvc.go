@@ -62,7 +62,7 @@ func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStor
 	for _, pvcName := range vmoStorage.PvcNames {
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:          resources.GetMetaLabels(vmo),
+				Labels:          resourceLabel,
 				Name:            pvcName,
 				Namespace:       vmo.Namespace,
 				OwnerReferences: resources.GetOwnerReferences(vmo),
