@@ -22,6 +22,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 		if err != nil {
 			return pvcList, err
 		}
+		for _, pvc := range pvcs {
+			pvc.Labels[constants.ComponentLabel] = resources.GetCompLabel(config.Prometheus.Name)
+		}
 		pvcList = append(pvcList, pvcs...)
 	}
 	dataNodeStorage := vmo.Spec.Elasticsearch.DataNode.Storage
@@ -30,12 +33,18 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 		if err != nil {
 			return pvcList, err
 		}
+		for _, pvc := range pvcs {
+			pvc.Labels[constants.ComponentLabel] = resources.GetCompLabel(config.ElasticsearchData.Name)
+		}
 		pvcList = append(pvcList, pvcs...)
 	}
 	if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
 		pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)
 		if err != nil {
 			return pvcList, err
+		}
+		for _, pvc := range pvcs {
+			pvc.Labels[constants.ComponentLabel] = resources.GetCompLabel(config.Grafana.Name)
 		}
 		pvcList = append(pvcList, pvcs...)
 	}
@@ -48,21 +57,11 @@ func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStor
 	if err != nil {
 		return nil, err
 	}
-	resourceLabel := resources.GetMetaLabels(vmo)
-	if vmo.Spec.Prometheus.Enabled {
-		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(config.Prometheus.Name)
-	}
-	if vmo.Spec.Elasticsearch.Enabled {
-		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(config.ElasticsearchData.Name)
-	}
-	if vmo.Spec.Grafana.Enabled {
-		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(config.Grafana.Name)
-	}
 	var pvcList []*corev1.PersistentVolumeClaim
 	for _, pvcName := range vmoStorage.PvcNames {
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:          resourceLabel,
+				Labels:          resources.GetMetaLabels(vmo),
 				Name:            pvcName,
 				Namespace:       vmo.Namespace,
 				OwnerReferences: resources.GetOwnerReferences(vmo),
