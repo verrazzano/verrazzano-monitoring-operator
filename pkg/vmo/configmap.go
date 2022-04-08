@@ -6,12 +6,13 @@ package vmo
 import (
 	"bytes"
 	"context"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"html/template"
 	"strings"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
