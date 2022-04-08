@@ -65,6 +65,7 @@ require (
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
+	github.com/fatih/color v1.12.0 //indirect
 	sigs.k8s.io/controller-tools v0.8.0 //indirect
 )
 
