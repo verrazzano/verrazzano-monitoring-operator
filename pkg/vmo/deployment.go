@@ -103,7 +103,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if err != nil {
 		return false, err
 	}
-	elasticsearchDirty, err := updateAllDeployment(controller, vmo, elasticsearchDataDeployments)
+	elasticsearchDirty, err := updateNextDeployment(controller, vmo, elasticsearchDataDeployments)
 	if err != nil {
 		return false, err
 	}
@@ -175,22 +175,6 @@ func updateNextDeployment(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		// If the (already updated) deployment is not fully up and running, then return
 		if existingDeployment.Status.Replicas != 1 || existingDeployment.Status.Replicas != existingDeployment.Status.AvailableReplicas {
 			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// Update all deployments in the list concurrently
-func updateAllDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployments []*appsv1.Deployment) (dirty bool, err error) {
-	for _, curDeployment := range deployments {
-		_, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(curDeployment.Name)
-		if err != nil {
-			return false, err
-		}
-
-		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
-		if err != nil {
-			return false, err
 		}
 	}
 	return false, nil
