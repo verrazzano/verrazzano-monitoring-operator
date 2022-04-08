@@ -5,6 +5,8 @@ package pvcs
 
 import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -45,6 +47,16 @@ func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStor
 	storageQuantity, err := resource.ParseQuantity(vmoStorage.Size)
 	if err != nil {
 		return nil, err
+	}
+	resourceLabel := resources.GetMetaLabels(vmo)
+	if vmo.Spec.Prometheus.Enabled {
+		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(config.Prometheus.Name)
+	}
+	if vmo.Spec.Elasticsearch.Enabled {
+		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(config.ElasticsearchData.Name)
+	}
+	if vmo.Spec.Grafana.Enabled {
+		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(config.Grafana.Name)
 	}
 	var pvcList []*corev1.PersistentVolumeClaim
 	for _, pvcName := range vmoStorage.PvcNames {
