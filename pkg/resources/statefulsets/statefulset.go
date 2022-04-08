@@ -126,7 +126,7 @@ fi
 		},
 	}
 	var readinessProbeCondition string
-	if nodes.IsSingleNodeESCluster(vmo) {
+	if nodes.IsSingleNodeCluster(vmo) {
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
 		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
 		if err != nil {
@@ -137,7 +137,7 @@ fi
 			javaOpts = node.JavaOpts
 		}
 		envVars = append(envVars,
-			corev1.EnvVar{Name: "node.roles", Value: "master,data,ingest"},
+			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
 
 			// supported via legacy compatibility

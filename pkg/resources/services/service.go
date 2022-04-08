@@ -15,7 +15,7 @@ import (
 // New creates a new Service for a VMO resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the VMO resource that 'owns' it.
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, useNodeRoleSelectors bool) ([]*corev1.Service, error) {
 	var services []*corev1.Service
 
 	if vmo.Spec.Grafana.Enabled {
@@ -37,7 +37,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 		services = append(services, alertManagerClusterService)
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
-		services = append(services, createElasticsearchServiceElements(vmo)...)
+		services = append(services, createOpenSearchServiceElements(vmo, useNodeRoleSelectors)...)
 	}
 	if vmo.Spec.Kibana.Enabled {
 		service := createServiceElement(vmo, config.Kibana)

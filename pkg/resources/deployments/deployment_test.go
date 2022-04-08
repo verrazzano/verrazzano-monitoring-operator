@@ -97,7 +97,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			},
 		},
 	}
-	assert.True(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
+	assert.True(t, nodes.IsSingleNodeCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
@@ -133,7 +133,7 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 			},
 		},
 	}
-	assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
+	assert.False(t, nodes.IsSingleNodeCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
 	_, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	assert.Nil(t, err)
 }

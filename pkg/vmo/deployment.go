@@ -217,7 +217,7 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 // data loss may occur.
 func isUpdateAllowed(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, current *appsv1.Deployment) bool {
 	// if current is an OpenSearch data node
-	if current.Spec.Template.Labels[constants.ServiceAppLabel] == vmo.Name+"-"+config.ElasticsearchData.Name {
+	if deployments.IsOpenSearchDataDeployment(vmo.Namespace, current) {
 		// if the node is down, we should try to fix it
 		if current.Status.ReadyReplicas == 0 {
 			return true
