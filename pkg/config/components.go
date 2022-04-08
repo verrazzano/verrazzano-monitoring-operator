@@ -35,7 +35,7 @@ type ComponentDetails struct {
 var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &AlertManager, &AlertManagerCluster, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
-var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus, &ElasticsearchData}
+var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus}
 
 // Grafana is the default Grafana configuration
 var Grafana = ComponentDetails{

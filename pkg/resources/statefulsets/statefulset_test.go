@@ -137,7 +137,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 		},
 	}
 
-	initialMasterNodes := nodes.InitialMasterNodes(vmo.Name, nodes.StatefulSetNodes(vmo))
+	initialMasterNodes := nodes.InitialMasterNodes(vmo.Name, nodes.MasterNodes(vmo))
 	// Create the stateful sets
 	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass, initialMasterNodes)
 	if err != nil {

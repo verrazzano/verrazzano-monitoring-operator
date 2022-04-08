@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -213,13 +214,13 @@ func TestCopyFromContainers(t *testing.T) {
 	}
 
 	assert.NotEqualValues(t, existing.Spec.VolumeClaimTemplates, expected.Spec.VolumeClaimTemplates)
-	existingInitialClusterMasters := getEnvVar(&existing.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
-	expectedInitialClusterMasters := getEnvVar(&expected.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
+	existingInitialClusterMasters := resources.GetEnvVar(&existing.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
+	expectedInitialClusterMasters := resources.GetEnvVar(&expected.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
 	assert.NotEqualValues(t, existingInitialClusterMasters, expectedInitialClusterMasters)
 	CopyFromExisting(expected, existing)
 
 	assert.EqualValues(t, existing.Spec.VolumeClaimTemplates, expected.Spec.VolumeClaimTemplates)
-	existingInitialClusterMasters = getEnvVar(&existing.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
-	expectedInitialClusterMasters = getEnvVar(&expected.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
+	existingInitialClusterMasters = resources.GetEnvVar(&existing.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
+	expectedInitialClusterMasters = resources.GetEnvVar(&expected.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
 	assert.EqualValues(t, existingInitialClusterMasters, expectedInitialClusterMasters)
 }

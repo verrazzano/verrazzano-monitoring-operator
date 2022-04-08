@@ -28,6 +28,53 @@ var (
 	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 )
 
+//CopyInitialMasterNodes copies the initial master node environment variable from an existing container to an expected container
+// cluster.initial_master_nodes shouldn't be changed after it's set.
+func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName string) {
+	getContainer := func(containers []corev1.Container) (int, *corev1.Container) {
+		for idx, c := range containers {
+			if c.Name == containerName {
+				return idx, &c
+			}
+		}
+		return -1, nil
+	}
+
+	// Initial master nodes should not change
+	idx, currentContainer := getContainer(expected)
+	_, existingContainer := getContainer(existing)
+	if currentContainer == nil || existingContainer == nil {
+		return
+	}
+	existingMasterNodesVar := GetEnvVar(existingContainer, constants.ClusterInitialMasterNodes)
+	if existingMasterNodesVar == nil {
+		return
+	}
+	SetEnvVar(currentContainer, existingMasterNodesVar)
+	expected[idx] = *currentContainer
+}
+
+//GetEnvVar retrieves a container EnvVar if it is present
+func GetEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
+	for _, envVar := range container.Env {
+		if envVar.Name == name {
+			return &envVar
+		}
+	}
+	return nil
+}
+
+//SetEnvVar sets a container EnvVar, overriding if it was laready present
+func SetEnvVar(container *corev1.Container, envVar *corev1.EnvVar) {
+	for idx, env := range container.Env {
+		if env.Name == envVar.Name {
+			container.Env[idx] = *envVar
+			return
+		}
+	}
+	container.Env = append(container.Env, *envVar)
+}
+
 func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 	// The master HTTP port may be overridden if necessary.
 	// This can be useful in situations where the VMO does not have direct access to the cluster service,
@@ -178,7 +225,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) corev1.Container {
 
 	var volumeMounts []corev1.VolumeMount
-	if vmoStorage != nil && vmoStorage.Size != "" {
+	if vmoStorage != nil && vmoStorage.PvcNames != nil && vmoStorage.Size != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: componentDetails.DataDir, Name: constants.StorageVolumeName})
 	}
 
