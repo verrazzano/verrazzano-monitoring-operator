@@ -15,6 +15,7 @@ require (
 	k8s.io/client-go v0.23.5
 	k8s.io/code-generator v0.23.5
 	sigs.k8s.io/controller-runtime v0.11.2
+	sigs.k8s.io/controller-tools v0.8.0
 )
 
 require (
@@ -66,7 +67,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 	github.com/fatih/color v1.12.0 //indirect
-	sigs.k8s.io/controller-tools v0.8.0 //indirect
+	github.com/gobuffalo/flect v0.2.3 //indirect
+
 )
 
 replace (
