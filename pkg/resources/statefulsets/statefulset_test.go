@@ -237,7 +237,7 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Equal(int32(5), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds,
 		"Incorrect Readiness Probe TimeoutSeconds")
 
-	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket.Port.IntVal,
+	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.IntVal,
 		"Incorrect LivenessProbe Probe Port")
 	assert.Equal(int32(30), sts.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds,
 		"Incorrect LivenessProbe Probe InitialDelaySeconds")
@@ -323,7 +323,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(int32(5), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds,
 		"Incorrect Readiness Probe TimeoutSeconds")
 
-	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket.Port.IntVal,
+	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.IntVal,
 		"Incorrect LivenessProbe Probe Port")
 	assert.Equal(int32(30), sts.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds,
 		"Incorrect LivenessProbe Probe InitialDelaySeconds")
