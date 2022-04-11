@@ -137,7 +137,7 @@ fi
 			javaOpts = node.JavaOpts
 		}
 		envVars = append(envVars,
-			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
+			corev1.EnvVar{Name: "node.roles", Value: "master,data,ingest"},
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
 
 			// supported via legacy compatibility
