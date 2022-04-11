@@ -5,6 +5,8 @@ package pvcs
 
 import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +19,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 	var pvcList []*corev1.PersistentVolumeClaim
 
 	if vmo.Spec.Prometheus.Enabled && vmo.Spec.Prometheus.Storage.Size != "" {
-		pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, storageClassName)
+		pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, config.Prometheus, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
@@ -26,7 +28,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 	if vmo.Spec.Elasticsearch.Enabled {
 		for _, dataNode := range nodes.DataNodes(vmo) {
 			if dataNode.Storage != nil && dataNode.Storage.Size != "" {
-				pvcs, err := createPvcElements(vmo, dataNode.Storage, storageClassName)
+				pvcs, err := createPvcElements(vmo, dataNode.Storage, config.ElasticsearchData, storageClassName)
 				if err != nil {
 					return pvcList, err
 				}
@@ -35,7 +37,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 		}
 	}
 	if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
-		pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)
+		pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, config.Grafana, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
@@ -45,16 +47,21 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 }
 
 // Returns slice of pvc elements
-func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
+func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage, componentDetails config.ComponentDetails, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	storageQuantity, err := resource.ParseQuantity(vmoStorage.Size)
 	if err != nil {
 		return nil, err
 	}
+
 	var pvcList []*corev1.PersistentVolumeClaim
 	for _, pvcName := range vmoStorage.PvcNames {
+
+		resourceLabel := resources.GetMetaLabels(vmo)
+		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:          resources.GetMetaLabels(vmo),
+				Labels:          resourceLabel,
 				Name:            pvcName,
 				Namespace:       vmo.Namespace,
 				OwnerReferences: resources.GetOwnerReferences(vmo),
