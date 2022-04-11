@@ -249,7 +249,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	var livenessProbe *corev1.Probe
 	if componentDetails.LivenessHTTPPath != "" {
 		livenessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   componentDetails.LivenessHTTPPath,
 					Port:   intstr.IntOrString{IntVal: int32(componentDetails.Port)},
@@ -262,7 +262,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	var readinessProbe *corev1.Probe
 	if componentDetails.ReadinessHTTPPath != "" {
 		readinessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   componentDetails.ReadinessHTTPPath,
 					Port:   intstr.IntOrString{IntVal: int32(componentDetails.Port)},
