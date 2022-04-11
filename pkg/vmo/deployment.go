@@ -133,10 +133,9 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 					continue
 				}
 				return false, deleteDeployment(controller, vmo, deployment)
-			} else {
-				if err := deleteDeployment(controller, vmo, deployment); err != nil {
-					return false, err
-				}
+			}
+			if err := deleteDeployment(controller, vmo, deployment); err != nil {
+				return false, err
 			}
 		}
 	}
@@ -151,18 +150,6 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 		controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
 	}
 	return nil
-}
-
-func isScaleDownAllowed(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment, expected *deployments.ExpectedDeployments) bool {
-	// if its an opensearch data deployment and we are not removing all data deployments
-	if deployments.IsOpenSearchDataDeployment(vmo.Name, deployment) && expected.OpenSearchDataDeployments > 0 {
-		// we should only scale down the data deployments if the cluster is green
-		if err := controller.osClient.IsGreen(vmo); err != nil {
-			controller.log.Oncef("Scale down of deployment %s not allowed: cluster health is not green", deployment.Name)
-			return false
-		}
-	}
-	return true
 }
 
 func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {

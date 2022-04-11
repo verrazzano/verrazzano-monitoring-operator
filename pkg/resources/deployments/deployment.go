@@ -53,7 +53,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 
 	// Grafana
 	if vmo.Spec.Grafana.Enabled {
-		expected.GrafanaDeployments += 1
+		expected.GrafanaDeployments++
 		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 
