@@ -26,19 +26,34 @@ type Elasticsearch interface {
 	createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment
 }
 
+type ExpectedDeployments struct {
+	Deployments                 []*appsv1.Deployment
+	GrafanaDeployments          int
+	PrometheusDeployments       int
+	OpenSearchDataDeployments   int
+	OpenSearchIngestDeployments int
+}
+
 // New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
 // the resource so handleObject can discover the VMO resource that 'owns' it.
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string) ([]*appsv1.Deployment, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, operatorConfig *config.OperatorConfig, pvcToAdMap map[string]string) (*ExpectedDeployments, error) {
+	expected := &ExpectedDeployments{}
 	var deployments []*appsv1.Deployment
 	var err error
 
 	if vmo.Spec.Elasticsearch.Enabled {
-		deployments = append(deployments, ElasticsearchBasic{}.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
+		basic := ElasticsearchBasic{}
+		ingestDeployments := basic.createElasticsearchIngestDeploymentElements(vmo)
+		dataDeployments := basic.createElasticsearchDataDeploymentElements(vmo, pvcToAdMap)
+		deployments = append(deployments, ingestDeployments...)
+		deployments = append(deployments, dataDeployments...)
+		expected.OpenSearchIngestDeployments += len(ingestDeployments)
+		expected.OpenSearchDataDeployments += len(dataDeployments)
 	}
 
 	// Grafana
 	if vmo.Spec.Grafana.Enabled {
-
+		expected.GrafanaDeployments += 1
 		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 
@@ -187,6 +202,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 			return nil, err
 		}
 		deployments = append(deployments, promDeployments...)
+		expected.PrometheusDeployments += len(promDeployments)
 	}
 
 	// API
@@ -212,12 +228,12 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployments = append(deployments, deployment)
 	}
 
-	return deployments, err
+	expected.Deployments = deployments
+	return expected, err
 }
 
 func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.Deployment {
 	var deployment *appsv1.Deployment
-	// Kibana
 	if vmo.Spec.Kibana.Enabled {
 		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
 		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.Kibana, config.Kibana.Name)

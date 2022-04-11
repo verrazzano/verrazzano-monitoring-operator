@@ -23,10 +23,11 @@ import (
 func TestVMOEmptyDeploymentSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	operatorConfig := &config.OperatorConfig{}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), operatorConfig, map[string]string{})
+	expected, err := New(vmo, fake.NewSimpleClientset(), operatorConfig, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
 	assert.Equal(t, 1, len(deployments), "Length of generated deployments")
 }
 
@@ -55,11 +56,12 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
-	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
+	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	assert.Equal(t, 6, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
@@ -98,11 +100,12 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 		},
 	}
 	assert.True(t, nodes.IsSingleNodeCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
-	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
+	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
@@ -162,10 +165,11 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
 	assert.True(t, len(deployments) > 0, "Non-zero length generated deployments")
 	for _, deployment := range deployments {
 		assert.Equal(t, 1, len(deployment.ObjectMeta.OwnerReferences), "OwnerReferences is not set with CascadingDelete true")
@@ -173,10 +177,11 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 
 	// Without CascadingDelete
 	vmo.Spec.CascadingDelete = false
-	deployments, err = New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
+	expected, err = New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments = expected.Deployments
 	assert.True(t, len(deployments) > 0, "Non-zero length generated deployments")
 	for _, deployment := range deployments {
 		assert.Equal(t, 0, len(deployment.ObjectMeta.OwnerReferences), "OwnerReferences is set even with CascadingDelete false")
@@ -247,12 +252,12 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
 
-	for _, deployment := range deployments {
+	for _, deployment := range expected.Deployments {
 		esDataName := resources.GetMetaName(vmo.Name, config.ElasticsearchData.Name)
 		if deployment.Name == resources.GetMetaName(vmo.Name, config.Grafana.Name) {
 			assert.Equal(t, resource.MustParse("500m"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
@@ -306,11 +311,12 @@ func TestVMOWithReplicas(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
-	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
+	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 	for _, deployment := range deployments {
 		if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
@@ -346,10 +352,11 @@ func TestAPIWithNatGatewayIPs(t *testing.T) {
 			NatGatewayIPs: []string{"1.1.1.1", "2.1.1.1"},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
 	apiDeployment, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-api", deployments)
 	if err != nil {
 		t.Error(err)

@@ -29,10 +29,11 @@ func TestPrometheusDeploymentsNoStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
 	promDeployment, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
@@ -60,10 +61,11 @@ func TestPrometheusDeploymentsWithStorage(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
 	promDeployment, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
@@ -95,12 +97,12 @@ func TestPrometheusDeploymentElementsWithMultiplePVCs(t *testing.T) {
 		},
 	}
 
-	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
+	expected, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
+	deployments := expected.Deployments
 	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
-
 	promDeployment0, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
@@ -142,11 +144,12 @@ func TestPrometheusDeploymentsWithKeycloak(t *testing.T) {
 			},
 		},
 	}
-	deployments, err := New(vmo, client, &config.OperatorConfig{}, map[string]string{})
+	expected, err := New(vmo, client, &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
 
+	deployments := expected.Deployments
 	promDeployment, err := getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
@@ -174,11 +177,11 @@ func TestPrometheusDeploymentsWithKeycloak(t *testing.T) {
 		t.Error(err)
 	}
 
-	deployments, err = New(vmo, client, &config.OperatorConfig{}, map[string]string{})
+	expected, err = New(vmo, client, &config.OperatorConfig{}, map[string]string{})
 	if err != nil {
 		t.Error(err)
 	}
-
+	deployments = expected.Deployments
 	promDeployment, err = getDeploymentByName(constants.VMOServiceNamePrefix+"my-vmo-prometheus-0", deployments)
 	if err != nil {
 		t.Error(err)
