@@ -18,16 +18,25 @@ import (
 )
 
 func TestIsOpenSearchDeployment(t *testing.T) {
-	createDeploy := func(labels map[string]string) *appsv1.Deployment {
+	createDeploy := func() *appsv1.Deployment {
 		return &appsv1.Deployment{
 			Spec: appsv1.DeploymentSpec{
 				Template: corev1.PodTemplateSpec{
-					ObjectMeta: v1.ObjectMeta{
-						Labels: labels,
-					},
+					ObjectMeta: v1.ObjectMeta{},
 				},
 			},
 		}
+	}
+
+	deployWrongLabels := createDeploy()
+	deployWrongLabels.Spec.Template.Labels = map[string]string{
+		"foo": "bar",
+		"app": "system-es-master",
+	}
+	deployRightLabels := createDeploy()
+	deployRightLabels.Spec.Template.Labels = map[string]string{
+		"a":   "b",
+		"app": "system-es-data",
 	}
 
 	var tests = []struct {
@@ -42,19 +51,13 @@ func TestIsOpenSearchDeployment(t *testing.T) {
 		},
 		{
 			"doesn't match deploy with wrong labels",
-			createDeploy(map[string]string{
-				"foo": "bar",
-				"app": "vmi-system-es-master",
-			}),
+			deployWrongLabels,
 			false,
 		},
 		{
 			"matches deploy with data deployment labels",
-			createDeploy(map[string]string{
-				"a":   "b",
-				"app": "vmi-system-es-data",
-			}),
-			false,
+			deployRightLabels,
+			true,
 		},
 	}
 
