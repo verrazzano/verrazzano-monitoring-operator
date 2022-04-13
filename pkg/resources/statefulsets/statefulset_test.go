@@ -274,6 +274,10 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	const esMasterVolName = "elasticsearch-master"
 	const esMasterData = "/usr/share/opensearch/data"
 
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleMaster])
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleData])
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleIngest])
+
 	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
