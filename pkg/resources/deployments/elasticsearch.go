@@ -21,6 +21,11 @@ import (
 type ElasticsearchBasic struct {
 }
 
+//IsOpenSearchDataDeployment checks template label to see if a given deployment is an OpenSearch data deployment
+func IsOpenSearchDataDeployment(vmoName string, deployment *appsv1.Deployment) bool {
+	return deployment.Spec.Template.Labels[constants.ServiceAppLabel] == vmoName+"-"+config.ElasticsearchData.Name
+}
+
 // Returns a common base deployment structure for all Elasticsearch components
 func (es ElasticsearchBasic) createCommonDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, node vmcontrollerv1.ElasticsearchNode, componentDetails config.ComponentDetails, index int) *appsv1.Deployment {
 

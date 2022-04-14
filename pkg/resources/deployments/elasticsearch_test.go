@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+	appsv1 "k8s.io/api/apps/v1"
 	"strconv"
 	"testing"
 
@@ -15,6 +16,57 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestIsOpenSearchDeployment(t *testing.T) {
+	createDeploy := func() *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Spec: appsv1.DeploymentSpec{
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: v1.ObjectMeta{},
+				},
+			},
+		}
+	}
+
+	deployWrongLabels := createDeploy()
+	deployWrongLabels.Spec.Template.Labels = map[string]string{
+		"foo": "bar",
+		"app": "system-es-master",
+	}
+	deployRightLabels := createDeploy()
+	deployRightLabels.Spec.Template.Labels = map[string]string{
+		"a":   "b",
+		"app": "system-es-data",
+	}
+
+	var tests = []struct {
+		name     string
+		deploy   *appsv1.Deployment
+		expected bool
+	}{
+		{
+			"doesn't match deploy with no labels",
+			&appsv1.Deployment{},
+			false,
+		},
+		{
+			"doesn't match deploy with wrong labels",
+			deployWrongLabels,
+			false,
+		},
+		{
+			"matches deploy with data deployment labels",
+			deployRightLabels,
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, IsOpenSearchDataDeployment("system", tt.deploy))
+		})
+	}
+}
 
 func TestElasticsearchDefaultDeployments1(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{

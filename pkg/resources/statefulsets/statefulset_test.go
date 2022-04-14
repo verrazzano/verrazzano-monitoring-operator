@@ -145,10 +145,10 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	if isDevProfileTest {
-		assert.True(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be true")
+		assert.True(t, nodes.IsSingleNodeCluster(vmo), "Single node ES setup, expected IsSingleNodeCluster to be true")
 		verifyDevProfileVMOComponents(t, statefulsets, vmo, masterNodeReplicas, storageSize)
 	} else {
-		assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be false")
+		assert.False(t, nodes.IsSingleNodeCluster(vmo), "Single node ES setup, expected IsSingleNodeCluster to be false")
 		verifyProdProfileVMOComponents(t, statefulsets, vmo, masterNodeReplicas, storageSize)
 	}
 }
@@ -273,6 +273,10 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert := assert.New(t)
 	const esMasterVolName = "elasticsearch-master"
 	const esMasterData = "/usr/share/opensearch/data"
+
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleMaster])
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleData])
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleIngest])
 
 	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)

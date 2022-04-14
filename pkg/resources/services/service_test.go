@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package services
@@ -34,7 +34,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	services, err := New(vmo)
+	services, err := New(vmo, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -45,7 +45,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 
 	// Without CascadingDelete
 	vmo.Spec.CascadingDelete = false
-	services, err = New(vmo)
+	services, err = New(vmo, false)
 	if err != nil {
 		t.Error(err)
 	}

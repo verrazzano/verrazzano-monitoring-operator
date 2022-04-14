@@ -53,16 +53,17 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	deployList, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap)
+	expected, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap)
 	if err != nil {
 		controller.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
 		return false, err
 	}
+	deployList := expected.Deployments
 
 	var prometheusDeployments []*appsv1.Deployment
 	var openSearchDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	controller.log.Oncef("Creating/updating Deployments for VMI %s", vmo.Name)
+	controller.log.Oncef("Creating/updating ExpectedDeployments for VMI %s", vmo.Name)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
 		deploymentNames = append(deploymentNames, deploymentName)
@@ -126,16 +127,29 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 	for _, deployment := range existingDeploymentsList {
 		if !contains(deploymentNames, deployment.Name) {
-			controller.log.Debugf("Deleting deployment %s", deployment.Name)
-			err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
-			if err != nil {
-				controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
+			if deployments.IsOpenSearchDataDeployment(vmo.Name, deployment) && expected.OpenSearchDataDeployments > 0 {
+				if err := controller.osClient.IsGreen(vmo); err != nil {
+					controller.log.Oncef("Scale down of deployment %s not allowed: cluster health is not green", deployment.Name)
+					continue
+				}
+				return false, deleteDeployment(controller, vmo, deployment)
+			}
+			if err := deleteDeployment(controller, vmo, deployment); err != nil {
 				return false, err
 			}
 		}
 	}
 
 	return prometheusDirty || openSearchDirty, nil
+}
+
+func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {
+	controller.log.Debugf("Deleting deployment %s", deployment.Name)
+	err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
+	if err != nil {
+		controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
+	}
+	return nil
 }
 
 func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
@@ -217,7 +231,7 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 // data loss may occur.
 func isUpdateAllowed(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, current *appsv1.Deployment) bool {
 	// if current is an OpenSearch data node
-	if current.Spec.Template.Labels[constants.ServiceAppLabel] == vmo.Name+"-"+config.ElasticsearchData.Name {
+	if deployments.IsOpenSearchDataDeployment(vmo.Namespace, current) {
 		// if the node is down, we should try to fix it
 		if current.Status.ReadyReplicas == 0 {
 			return true
