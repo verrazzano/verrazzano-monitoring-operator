@@ -4,7 +4,6 @@
 package deployments
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,6 +22,8 @@ import (
 // Elasticsearch interface
 type Elasticsearch interface {
 	createElasticsearchDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment
+	createElasticsearchDataDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment
+	createElasticsearchIngestDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []*appsv1.Deployment
 }
 
 // New function creates deployment objects for a VMO resource.  It also sets the appropriate OwnerReferences on
@@ -31,10 +32,14 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	var deployments []*appsv1.Deployment
 	var err error
 
+	if vmo.Spec.Elasticsearch.Enabled {
+		deployments = append(deployments, ElasticsearchBasic{}.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
+	}
+
 	// Grafana
 	if vmo.Spec.Grafana.Enabled {
 
-		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana)
+		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 
 		deployment.Spec.Strategy.Type = "Recreate"
@@ -184,24 +189,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployments = append(deployments, promDeployments...)
 	}
 
-	// Elasticsearch
-	// - V8O supports essentially 2 "known" configurations, a "prod" and a "dev" configuration for ES; while we want
-	//   to allow customizing topologies, we need to enforce certain constraints for now.
-	// - We are arbitrarily choosing to enforce that a "valid" multi-node cluster includes at least one separate
-	//   data node and one separate ingest node
-	// - This will weed out creating separate pods for data/ingest in the single-node cluster configuration as well
-	if vmo.Spec.Elasticsearch.Enabled {
-		if resources.IsValidMultiNodeESCluster(vmo) {
-			var es Elasticsearch = ElasticsearchBasic{}
-			deployments = append(deployments, es.createElasticsearchDeploymentElements(vmo, pvcToAdMap)...)
-		} else if !resources.IsSingleNodeESCluster(vmo) {
-			err = errors.New("Invalid Elasticsearch cluster configuration, must be a valid single or multi-node cluster configuration")
-		}
-	}
-
 	// API
 	if !config.API.Disabled {
-		deployment := createDeploymentElement(vmo, nil, nil, config.API)
+		deployment := createDeploymentElement(vmo, nil, nil, config.API, config.API.Name)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.API.ImagePullPolicy
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.API.Replicas)
 		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.API.Name)
@@ -230,7 +220,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	// Kibana
 	if vmo.Spec.Kibana.Enabled {
 		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
-		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.Kibana)
+		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.Kibana, config.Kibana.Name)
 
 		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 			Type: appsv1.RecreateDeploymentStrategyType,
@@ -275,34 +265,38 @@ func createVolumeElement(pvcName string) corev1.Volume {
 
 // Creates a deployment element for the given VMO and component.
 func createDeploymentElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage,
-	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) *appsv1.Deployment {
-	return createDeploymentElementByPvcIndex(vmo, vmoStorage, vmoResources, componentDetails, -1)
+	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, name string) *appsv1.Deployment {
+	return createDeploymentElementByPvcIndex(vmo, vmoStorage, vmoResources, componentDetails, -1, name)
 }
 
 // Creates a deployment element for the given VMO and component.  A non-negative pvcIndex is used to indicate which
 // PVC in the list of PVCs should be used for this particular deployment.
 func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage,
-	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, pvcIndex int) *appsv1.Deployment {
+	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails, pvcIndex int, name string) *appsv1.Deployment {
 
 	labels := resources.GetSpecID(vmo.Name, componentDetails.Name)
 	var deploymentName string
 	if pvcIndex < 0 {
-		deploymentName = resources.GetMetaName(vmo.Name, componentDetails.Name)
+		deploymentName = resources.GetMetaName(vmo.Name, name)
 		pvcIndex = 0
 	} else {
-		deploymentName = resources.GetMetaName(vmo.Name, fmt.Sprintf("%s-%d", componentDetails.Name, pvcIndex))
+		deploymentName = resources.GetMetaName(vmo.Name, fmt.Sprintf("%s-%d", name, pvcIndex))
 	}
 
 	var volumes []corev1.Volume
-	if vmoStorage != nil && vmoStorage.Size != "" {
+	if vmoStorage != nil && vmoStorage.PvcNames != nil && vmoStorage.Size != "" {
 		// Create volume element for this component, attaching to that component's current known PVC (if set)
 		volumes = append(volumes, createVolumeElement(vmoStorage.PvcNames[pvcIndex]))
 		labels["index"] = strconv.Itoa(pvcIndex)
 	}
 
+	resourceLabel := resources.GetMetaLabels(vmo)
+	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+	podLabels := resources.DeepCopyMap(labels)
+	podLabels[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(vmo),
+			Labels:          resourceLabel,
 			Name:            deploymentName,
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),
@@ -314,7 +308,7 @@ func createDeploymentElementByPvcIndex(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: podLabels,
 				},
 				Spec: corev1.PodSpec{
 					Volumes: volumes,

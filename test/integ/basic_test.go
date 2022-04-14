@@ -1246,7 +1246,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			if resp.StatusCode != http.StatusOK {
 				t.Fatalf("Expected response code %d from PUT but got %d: (%v)", http.StatusOK, resp.StatusCode, resp)
 			}
-			fmt.Println("  ==> Ingest Pipeline " + ingestPipelinePath + " created")
+			fmt.Println("  ==> IngestNodes Pipeline " + ingestPipelinePath + " created")
 		}
 
 		ElasticSearchService, err := testutil.WaitForService(f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name, testutil.DefaultRetry, f.KubeClient)
@@ -1307,7 +1307,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 				if resp.StatusCode != http.StatusOK {
 					t.Fatalf("Expected response code %d from GET but got %d: (%v)", http.StatusOK, resp.StatusCode, resp)
 				}
-				fmt.Println("  ==> Ingest pipeline " + docPath + " retrieved")
+				fmt.Println("  ==> IngestNodes pipeline " + docPath + " retrieved")
 			}
 		}
 
@@ -1348,7 +1348,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 				if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 					t.Fatalf("Expected response code %d or %d from DELETE on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, myURL, resp.StatusCode, resp)
 				}
-				fmt.Println("  ==> Ingest pipeline" + docPath + " deleted")
+				fmt.Println("  ==> IngestNodes pipeline" + docPath + " deleted")
 			}
 		}
 	}

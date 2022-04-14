@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -71,6 +71,9 @@ const DefaultNamespace = "default"
 // ServiceAppLabel label name for service app
 const ServiceAppLabel = "app"
 
+//ClusterInitialMasterNodes is the parameter for the OpenSearch cluster initial master nodes
+const ClusterInitialMasterNodes = "cluster.initial_master_nodes"
+
 // K8SAppLabel label name for k8s app
 const K8SAppLabel = "k8s-app"
 
@@ -113,10 +116,10 @@ const OidcProxyPort = 8775
 // DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
 const DefaultDevProfileESMemArgs = "-Xms700m -Xmx700m"
 
-// DefaultESIngestMemArgs default Elasticsearch Ingest memory settings
+// DefaultESIngestMemArgs default Elasticsearch IngestNodes memory settings
 const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
 
-// DefaultESDataMemArgs default Elasticsearch Data memory settings
+// DefaultESDataMemArgs default Elasticsearch DataNodes memory settings
 const DefaultESDataMemArgs = "-Xms4g -Xmx4g"
 
 // K8sTaintNoScheduleEffect constant for Noschedule
@@ -242,3 +245,12 @@ const (
 	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_SECRET_KEY_ID"
 	ObjectStoreCustomerKey        = "object_store_secret_key"
 )
+
+//ComponentLabel - the label for a specific component
+const ComponentLabel = "verrazzano-component"
+
+//ComponentOpenSearchValue - the value for opensearch component
+const ComponentOpenSearchValue = "opensearch"
+
+//NodeGroupLabel for specifying a node's group
+const NodeGroupLabel = "node-group"

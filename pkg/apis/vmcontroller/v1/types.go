@@ -12,6 +12,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+type NodeRole string
+
+const (
+	MasterRole NodeRole = "master"
+	DataRole   NodeRole = "data"
+	IngestRole NodeRole = "ingest"
+)
+
 type (
 
 	// VerrazzanoMonitoringInstanceSpec defines the attributes a user can specify when creating a VerrazzanoMonitoringInstance
@@ -119,14 +127,17 @@ type (
 		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
 		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
 		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
 	ElasticsearchNode struct {
-		Replicas  int32     `json:"replicas,omitempty"`
-		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
-		Resources Resources `json:"resources,omitempty"`
-		Storage   *Storage  `json:"storage,omitempty"`
+		Name      string     `json:"name,omitempty"`
+		Replicas  int32      `json:"replicas,omitempty"`
+		JavaOpts  string     `json:"javaOpts" yaml:"javaOpts,omitempty"`
+		Resources Resources  `json:"resources,omitempty"`
+		Storage   *Storage   `json:"storage,omitempty"`
+		Roles     []NodeRole `json:"roles,omitempty"`
 	}
 
 	//IndexManagementPolicy Defines a policy for managing indices

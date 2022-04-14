@@ -28,6 +28,53 @@ var (
 	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 )
 
+//CopyInitialMasterNodes copies the initial master node environment variable from an existing container to an expected container
+// cluster.initial_master_nodes shouldn't be changed after it's set.
+func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName string) {
+	getContainer := func(containers []corev1.Container) (int, *corev1.Container) {
+		for idx, c := range containers {
+			if c.Name == containerName {
+				return idx, &c
+			}
+		}
+		return -1, nil
+	}
+
+	// Initial master nodes should not change
+	idx, currentContainer := getContainer(expected)
+	_, existingContainer := getContainer(existing)
+	if currentContainer == nil || existingContainer == nil {
+		return
+	}
+	existingMasterNodesVar := GetEnvVar(existingContainer, constants.ClusterInitialMasterNodes)
+	if existingMasterNodesVar == nil {
+		return
+	}
+	SetEnvVar(currentContainer, existingMasterNodesVar)
+	expected[idx] = *currentContainer
+}
+
+//GetEnvVar retrieves a container EnvVar if it is present
+func GetEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
+	for _, envVar := range container.Env {
+		if envVar.Name == name {
+			return &envVar
+		}
+	}
+	return nil
+}
+
+//SetEnvVar sets a container EnvVar, overriding if it was laready present
+func SetEnvVar(container *corev1.Container, envVar *corev1.EnvVar) {
+	for idx, env := range container.Env {
+		if env.Name == envVar.Name {
+			container.Env[idx] = *envVar
+			return
+		}
+	}
+	container.Env = append(container.Env, *envVar)
+}
+
 func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
 	// The master HTTP port may be overridden if necessary.
 	// This can be useful in situations where the VMO does not have direct access to the cluster service,
@@ -46,6 +93,12 @@ func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitorin
 	}
 	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
 		constants.OSDashboardsHTTPPort)
+}
+
+func GetOwnerLabels(owner string) map[string]string {
+	return map[string]string{
+		"owner": owner,
+	}
 }
 
 //GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
@@ -69,6 +122,27 @@ func GetMetaName(vmoName string, componentName string) string {
 // GetMetaLabels returns k8s-app and vmo lables
 func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]string {
 	return map[string]string{constants.K8SAppLabel: constants.VMOGroup, constants.VMOLabel: vmo.Name}
+}
+
+// GetCompLabel returns a component value for opensearch
+func GetCompLabel(componentName string) string {
+	var componentLabelValue string
+	switch componentName {
+	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name:
+		componentLabelValue = constants.ComponentOpenSearchValue
+	default:
+		componentLabelValue = componentName
+	}
+	return componentLabelValue
+}
+
+// DeepCopyMap performs a deepcopy of a map
+func DeepCopyMap(srcMap map[string]string) map[string]string {
+	result := make(map[string]string, len(srcMap))
+	for k, v := range srcMap {
+		result[k] = v
+	}
+	return result
 }
 
 // GetSpecID returns app label
@@ -151,7 +225,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) corev1.Container {
 
 	var volumeMounts []corev1.VolumeMount
-	if vmoStorage != nil && vmoStorage.Size != "" {
+	if vmoStorage != nil && vmoStorage.PvcNames != nil && vmoStorage.Size != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: componentDetails.DataDir, Name: constants.StorageVolumeName})
 	}
 
@@ -175,7 +249,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	var livenessProbe *corev1.Probe
 	if componentDetails.LivenessHTTPPath != "" {
 		livenessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   componentDetails.LivenessHTTPPath,
 					Port:   intstr.IntOrString{IntVal: int32(componentDetails.Port)},
@@ -188,7 +262,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	var readinessProbe *corev1.Probe
 	if componentDetails.ReadinessHTTPPath != "" {
 		readinessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   componentDetails.ReadinessHTTPPath,
 					Port:   intstr.IntOrString{IntVal: int32(componentDetails.Port)},
@@ -224,6 +298,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 					Weight: 100,
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
+							// TODO: pass selector in
 							MatchLabels: GetSpecID(vmoName, component),
 						},
 						TopologyKey: constants.K8sZoneLabel,
@@ -424,22 +499,6 @@ func NewVal(value int32) *int32 {
 func New64Val(value int64) *int64 {
 	var val = value
 	return &val
-}
-
-// IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
-func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return masterNodeReplicas == 1 && dataNodeReplicas == 0 && ingestNodeReplicas == 0
-}
-
-// IsValidMultiNodeESCluster For a valid multi-node cluster that we have a minimum of one master, one ingest, and one data node
-func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return dataNodeReplicas > 0 && ingestNodeReplicas > 0 && masterNodeReplicas > 0
 }
 
 // oidcProxyName returns OIDC Proxy name of the component. ex. es-ingest-oidc

@@ -14,14 +14,14 @@ DOCKER_IMAGE_TAG ?= local-$(shell git rev-parse --short HEAD)
 CREATE_LATEST_TAG=0
 
 ifeq ($(MAKECMDGOALS),$(filter $(MAKECMDGOALS),push push-tag push-eswait push-tag-eswait))
-	ifndef DOCKER_REPO
-		$(error DOCKER_REPO must be defined as the name of the docker repository where image will be pushed)
-	endif
-	ifndef DOCKER_NAMESPACE
-		$(error DOCKER_NAMESPACE must be defined as the name of the docker namespace where image will be pushed)
-	endif
-	DOCKER_IMAGE_FULLNAME_OPERATOR = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}
-	DOCKER_IMAGE_FULLNAME_ESWAIT = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}
+    ifndef DOCKER_REPO
+        $(error DOCKER_REPO must be defined as the name of the docker repository where image will be pushed)
+    endif
+    ifndef DOCKER_NAMESPACE
+        $(error DOCKER_NAMESPACE must be defined as the name of the docker namespace where image will be pushed)
+    endif
+    DOCKER_IMAGE_FULLNAME_OPERATOR = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}
+    DOCKER_IMAGE_FULLNAME_ESWAIT = ${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}
 endif
 
 ifdef INTEG_RUN_ID
@@ -148,30 +148,6 @@ push-tag:
 	docker tag ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${TAG_NAME}
 	docker push ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${TAG_NAME}
 
-.PHONY: build-eswait
-build-eswait:
-	docker build --pull --no-cache \
-		--build-arg BUILDVERSION=${BUILDVERSION} \
-		--build-arg BUILDDATE=${BUILDDATE} \
-		-t ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} \
-		-f ${DOCKERFILE_ESWAIT} \
-		.
-
-.PHONY: push-eswait
-push-eswait: build-eswait
-	docker tag ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
-	docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
-
-	if [ "${CREATE_LATEST_TAG}" == "1" ]; then \
-		docker tag ${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:latest; \
-		docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:latest; \
-	fi
-
-.PHONY: push-tag-eswait
-push-tag-eswait:
-	docker pull ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG}
-	docker tag ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${TAG_NAME}
-	docker push ${DOCKER_IMAGE_FULLNAME_ESWAIT}:${TAG_NAME}
 
 #
 # Tests-related tasks
@@ -199,6 +175,6 @@ integ-test: go-install
 .PHONY: golangci-lint
 golangci-lint:
 ifeq (, $(shell command -v golangci-lint))
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.41.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.42.1
 endif
 	golangci-lint run

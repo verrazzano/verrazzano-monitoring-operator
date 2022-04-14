@@ -8,6 +8,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -91,39 +92,23 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if vmo.Spec.AlertManager.Replicas == 0 {
 		vmo.Spec.AlertManager.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
-	if vmo.Spec.Elasticsearch.MasterNode.Replicas == 0 {
-		vmo.Spec.Elasticsearch.MasterNode.Replicas = int32(constants.DefaultElasticsearchMasterReplicas)
-	}
+
+	// Default roles for VMO components
+	initNode(&vmo.Spec.Elasticsearch.MasterNode, vmcontrollerv1.MasterRole)
+	initNode(&vmo.Spec.Elasticsearch.IngestNode, vmcontrollerv1.IngestRole)
+	initNode(&vmo.Spec.Elasticsearch.DataNode, vmcontrollerv1.DataRole)
+
+	// Setup default storage elements
 	for _, component := range config.StorageEnableComponents {
 		storageElement := resources.GetStorageElementForComponent(vmo, component)
 		replicas := int(resources.GetReplicasForComponent(vmo, component))
-		if storageElement == nil || storageElement.Size == "" {
-			continue
-		}
-		// Initialize the current state of the storage element, if not already set
-		if storageElement.PvcNames == nil || len(storageElement.PvcNames) == 0 {
-			// Initialize slice of storageElement.PvcNames
-			storageElement.PvcNames = []string{}
-			pvcName := resources.GetMetaName(vmo.Name, component.Name)
-			storageElement.PvcNames = append(storageElement.PvcNames, pvcName)
-			// Base the rest of the PVC names on the format of the first
-			for i := 1; i < replicas; i++ {
-				pvcName = resources.GetNextStringInSequence(pvcName)
-				storageElement.PvcNames = append(storageElement.PvcNames, pvcName)
-			}
-		}
-		if len(storageElement.PvcNames) < replicas {
-			newPvcs := replicas - len(storageElement.PvcNames)
-			pvcName := storageElement.PvcNames[len(storageElement.PvcNames)-1]
-			for i := 0; i < newPvcs; i++ {
-				pvcName = resources.GetNextStringInSequence(pvcName)
-				storageElement.PvcNames = append(storageElement.PvcNames, pvcName)
-			}
-		}
-		// If we're over the expected number of PVCs, remove the extras from the VMO spec
-		for len(storageElement.PvcNames) > replicas {
-			storageElement.PvcNames = storageElement.PvcNames[:len(storageElement.PvcNames)-1]
-		}
+		pvcName := resources.GetMetaName(vmo.Name, component.Name)
+		initStorageElement(storageElement, replicas, pvcName)
+	}
+
+	// Setup data node storage elements
+	for _, node := range nodes.DataNodes(vmo) {
+		initStorageElement(node.Storage, int(node.Replicas), resources.GetMetaName(vmo.Name, node.Name))
 	}
 
 	// Prometheus TSDB retention period
@@ -138,4 +123,44 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	// set label for managed-cluster-name
 	vmo.Labels[constants.ClusterNameData] = controller.clusterInfo.clusterName
+}
+
+func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRole) {
+	if len(node.Name) < 1 {
+		node.Name = "es-" + string(role)
+	}
+	if len(node.Roles) < 1 {
+		node.Roles = []vmcontrollerv1.NodeRole{
+			role,
+		}
+	}
+}
+
+func initStorageElement(storageElement *vmcontrollerv1.Storage, replicas int, pvcName string) {
+	if storageElement == nil || storageElement.Size == "" {
+		return // No storage specified, so nothing to do
+	}
+	// Initialize the current state of the storage element, if not already set
+	if storageElement.PvcNames == nil || len(storageElement.PvcNames) == 0 {
+		// Initialize slice of storageElement.PvcNames
+		storageElement.PvcNames = []string{}
+		storageElement.PvcNames = append(storageElement.PvcNames, pvcName)
+		// Base the rest of the PVC names on the format of the first
+		for i := 1; i < replicas; i++ {
+			pvcName = resources.GetNextStringInSequence(pvcName)
+			storageElement.PvcNames = append(storageElement.PvcNames, pvcName)
+		}
+	}
+	if len(storageElement.PvcNames) < replicas {
+		newPvcs := replicas - len(storageElement.PvcNames)
+		pvcName := storageElement.PvcNames[len(storageElement.PvcNames)-1]
+		for i := 0; i < newPvcs; i++ {
+			pvcName = resources.GetNextStringInSequence(pvcName)
+			storageElement.PvcNames = append(storageElement.PvcNames, pvcName)
+		}
+	}
+	// If we're over the expected number of PVCs, remove the extras from the VMO spec
+	for len(storageElement.PvcNames) > replicas {
+		storageElement.PvcNames = storageElement.PvcNames[:len(storageElement.PvcNames)-1]
+	}
 }

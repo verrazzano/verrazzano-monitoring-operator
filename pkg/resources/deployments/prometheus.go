@@ -22,7 +22,7 @@ import (
 func createPrometheusNodeDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kubernetes.Interface, pvcToAdMap map[string]string) ([]*appsv1.Deployment, error) {
 	var prometheusNodeDeployments []*appsv1.Deployment
 	for i := 0; i < int(vmo.Spec.Prometheus.Replicas); i++ {
-		prometheusDeployment := createDeploymentElementByPvcIndex(vmo, &vmo.Spec.Prometheus.Storage, &vmo.Spec.Prometheus.Resources, config.Prometheus, i)
+		prometheusDeployment := createDeploymentElementByPvcIndex(vmo, &vmo.Spec.Prometheus.Storage, &vmo.Spec.Prometheus.Resources, config.Prometheus, i, config.Prometheus.Name)
 
 		prometheusDeployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 

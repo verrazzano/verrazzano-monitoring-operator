@@ -4,11 +4,10 @@
 package statefulsets
 
 import (
-	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -36,7 +35,7 @@ var storageClass = storagev1.StorageClass{
 //  THEN there should be no StatefulSets created
 func TestVMOEmptyStatefulSetSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass, "vmi-system-es-master-0")
 	if err != nil {
 		t.Error(err)
 	}
@@ -58,7 +57,7 @@ func TestVMODisabledSpecs(t *testing.T) {
 			},
 		},
 	}
-	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass, "vmi-system-es-master-0")
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,14 +85,12 @@ func TestVMODevProfile(t *testing.T) {
 
 func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	// Initialize
-	var alertManagerReplicas int32 = 3
 	var masterNodeReplicas int32 = 3
 	var dataNodeReplicas int32 = 2
 	var ingestNodeReplicas int32 = 1
 	storageSize := "50Gi"
 
 	if isDevProfileTest {
-		//alertManagerReplicas := 3
 		masterNodeReplicas = 1
 		dataNodeReplicas = 0
 		ingestNodeReplicas = 0
@@ -101,55 +98,66 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "system",
+		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			AlertManager: vmcontrollerv1.AlertManager{
-				Enabled:  true,
-				Replicas: alertManagerReplicas,
-			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Name:     "es-master",
 					Replicas: masterNodeReplicas,
 					Storage: &vmcontrollerv1.Storage{
 						Size: storageSize,
 					},
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.MasterRole,
+						vmcontrollerv1.DataRole,
+						vmcontrollerv1.IngestRole,
+					},
 				},
 				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Name:     "es-data",
 					Replicas: dataNodeReplicas,
 					Storage: &vmcontrollerv1.Storage{
 						Size: storageSize,
 					},
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.DataRole,
+					},
 				},
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: ingestNodeReplicas},
+				IngestNode: vmcontrollerv1.ElasticsearchNode{
+					Name:     "es-ingest",
+					Replicas: ingestNodeReplicas,
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.IngestRole,
+					},
+				},
 			},
 		},
 	}
 
+	initialMasterNodes := nodes.InitialMasterNodes(vmo.Name, nodes.MasterNodes(vmo))
 	// Create the stateful sets
-	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass)
+	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass, initialMasterNodes)
 	if err != nil {
 		t.Error(err)
 	}
 
 	if isDevProfileTest {
-		assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be true")
-		assert.False(t, resources.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be false")
-		verifyDevProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, masterNodeReplicas, storageSize)
+		assert.True(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be true")
+		verifyDevProfileVMOComponents(t, statefulsets, vmo, masterNodeReplicas, storageSize)
 	} else {
-		assert.False(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be false")
-		assert.True(t, resources.IsValidMultiNodeESCluster(vmo), "Single node ES setup, expected IsValidMultiNodeESCluster to be true")
-		verifyProdProfileVMOComponents(t, statefulsets, vmo, alertManagerReplicas, masterNodeReplicas, storageSize)
+		assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be false")
+		verifyProdProfileVMOComponents(t, statefulsets, vmo, masterNodeReplicas, storageSize)
 	}
 }
 
-func verifyProdProfileVMOComponents(t *testing.T, statefulsets []*appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance,
-	alertManagerReplicas int32, elasticSearchReplicas int32, storageSize string) {
+func verifyProdProfileVMOComponents(t *testing.T, statefulsets []*appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, elasticSearchReplicas int32, storageSize string) {
 	// Do assertions
-	assert.Equal(t, 2, len(statefulsets), "Incorrect number of statefulsets")
+	assert.Equal(t, 1, len(statefulsets), "Incorrect number of statefulsets")
 	for _, statefulset := range statefulsets {
 		switch statefulset.Name {
-		case resources.GetMetaName(vmo.Name, config.AlertManager.Name):
-			verifyAlertManager(t, vmo, statefulset, alertManagerReplicas)
 		case resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name):
 			verifyElasticSearch(t, vmo, statefulset, elasticSearchReplicas, storageSize)
 		default:
@@ -159,84 +167,17 @@ func verifyProdProfileVMOComponents(t *testing.T, statefulsets []*appsv1.Statefu
 }
 
 func verifyDevProfileVMOComponents(t *testing.T, statefulsets []*appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance,
-	alertManagerReplicas int32, elasticSearchReplicas int32, storageSize string) {
+	elasticSearchReplicas int32, storageSize string) {
 	// Do assertions
-	assert.Equal(t, 2, len(statefulsets), "Incorrect number of statefulsets")
+	assert.Equal(t, 1, len(statefulsets), "Incorrect number of statefulsets")
 	for _, statefulset := range statefulsets {
 		switch statefulset.Name {
-		case resources.GetMetaName(vmo.Name, config.AlertManager.Name):
-			verifyAlertManager(t, vmo, statefulset, alertManagerReplicas)
 		case resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name):
 			verifyElasticSearchDevProfile(t, vmo, statefulset, elasticSearchReplicas, storageSize)
 		default:
 			t.Error("Unknown Deployment Name: " + statefulset.Name)
 		}
 	}
-}
-
-// Verify the Statefulset used by Alert Manager
-func verifyAlertManager(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance,
-	sts *appsv1.StatefulSet, replicas int32) {
-
-	assert := assert.New(t)
-
-	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect AlertManager replicas count")
-	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.AlertManager.Name)
-	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect  affinity")
-
-	assert.Len(sts.Spec.Template.Spec.Containers, 2, "Incorrect number of Containers")
-	assert.Equal(config.AlertManager.ImagePullPolicy, sts.Spec.Template.Spec.Containers[0].ImagePullPolicy, "Incorrect Image Pull Policy")
-	assert.Len(sts.Spec.Template.Spec.Containers[0].Command, 1, "Incorrect number of Commands")
-	assert.Equal("/bin/alertmanager", sts.Spec.Template.Spec.Containers[0].Command[0], "Incorrect Command")
-
-	assert.Len(sts.Spec.Template.Spec.Containers[0].Args, 5, "Incorrect number of Args")
-	assert.Equal(fmt.Sprintf("--config.file=%s", constants.AlertManagerConfigContainerLocation),
-		sts.Spec.Template.Spec.Containers[0].Args[0], "Incorrect Arg[0]")
-	assert.Equal(fmt.Sprintf("--cluster.listen-address=0.0.0.0:%d", config.AlertManagerCluster.Port),
-		sts.Spec.Template.Spec.Containers[0].Args[1], "Incorrect Arg[1]")
-	assert.Equal(fmt.Sprintf("--cluster.advertise-address=$(POD_IP):%d", config.AlertManagerCluster.Port),
-		sts.Spec.Template.Spec.Containers[0].Args[2], "Incorrect Arg[2]")
-	assert.Equal("--cluster.pushpull-interval=10s",
-		sts.Spec.Template.Spec.Containers[0].Args[3], "Incorrect Arg[3]")
-	alertManagerClusterService := resources.GetMetaName(vmo.Name, config.AlertManagerCluster.Name)
-	firstReplicaName := fmt.Sprintf("%s-%d.%s", sts.Name, 0, alertManagerClusterService)
-	assert.Equal(fmt.Sprintf("--cluster.peer=%s:%d", firstReplicaName, config.AlertManagerCluster.Port),
-		sts.Spec.Template.Spec.Containers[0].Args[4], "Incorrect Arg[4]")
-
-	assert.Len(sts.Spec.Template.Spec.Containers[0].Env, 1, "Incorrect number of Env Vars")
-	assert.Equal("POD_IP", sts.Spec.Template.Spec.Containers[0].Env[0].Name, "Incorrect Env[0].Name")
-	assert.Equal("v1", sts.Spec.Template.Spec.Containers[0].Env[0].ValueFrom.FieldRef.APIVersion,
-		"Incorrect Env[0].ValueFrom.APIVersion")
-	assert.Equal("status.podIP", sts.Spec.Template.Spec.Containers[0].Env[0].ValueFrom.FieldRef.FieldPath,
-		"Incorrect Env[0].ValueFrom.FieldPath")
-
-	assert.Equal(int32(5), sts.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds,
-		"Incorrect LivenessProbe Probe InitialDelaySeconds")
-	assert.Equal(int32(1), sts.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds,
-		"Incorrect LivenessProbe Probe TimeoutSeconds")
-	assert.Equal(int32(10), sts.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds,
-		"Incorrect LivenessProbe Probe PeriodSeconds")
-
-	assert.Equal(int32(5), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
-		"Incorrect LivenessProbe Probe InitialDelaySeconds")
-	assert.Equal(int32(1), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds,
-		"Incorrect LivenessProbe Probe TimeoutSeconds")
-	assert.Equal(int32(10), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds,
-		"Incorrect LivenessProbe Probe PeriodSeconds")
-
-	const volName = "alert-config-volume"
-	assert.Len(sts.Spec.Template.Spec.Volumes, 1, "Incorrect number of VolumeMounts")
-	assert.Equal(volName, sts.Spec.Template.Spec.Volumes[0].Name, "Incorrect VolumeMount name")
-	assert.Equal(corev1.LocalObjectReference{Name: vmo.Spec.AlertManager.ConfigMap}, sts.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference,
-		"Incorrect VolumeMount VolumeSource.ConfigMap.LocalObjectReference")
-
-	assert.Len(sts.Spec.Template.Spec.Containers[0].VolumeMounts, 1, "Incorrect number of VolumeMounts")
-	assert.Equal(volName, sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name, "Incorrect VolumeMount name")
-	assert.Equal(constants.AlertManagerConfigMountPath, sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath, "Incorrect VolumeMount mount path")
-
-	assert.Len(sts.Spec.Template.Spec.Containers[1].Args, 2, "Incorrect number of Container[1] Args")
-	assert.Equal("-volume-dir="+constants.AlertManagerConfigMountPath, sts.Spec.Template.Spec.Containers[1].Args[0],
-		"Incorrect number of Container[1] Arg[0]")
 }
 
 // Verify the Statefulset used by Elasticsearch master
@@ -247,7 +188,7 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	const esMasterVolName = "elasticsearch-master"
 	const esMasterData = "/usr/share/opensearch/data"
 
-	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch Master replicas count")
+	assert.Equal(*resources.NewVal(replicas), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
 	var elasticsearchUID int64 = 1000
@@ -263,37 +204,29 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[1].HostPort, "Incorrect Container HostPort")
 	assert.Equal(int32(constants.OSHTTPPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
 
-	var i int32
-	initialMasterNodes := make([]string, 0)
-	for i = 0; i < *sts.Spec.Replicas; i++ {
-		initialMasterNodes = append(initialMasterNodes, resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)+"-"+fmt.Sprintf("%d", i))
-	}
-	assert.Len(sts.Spec.Template.Spec.Containers[0].Env, 11, "Incorrect number of Env Vars")
-	assert.Equal("node.name", sts.Spec.Template.Spec.Containers[0].Env[0].Name, "Incorrect Env[0].Name")
-	assert.Equal("metadata.name", sts.Spec.Template.Spec.Containers[0].Env[0].ValueFrom.FieldRef.FieldPath,
+	env := sts.Spec.Template.Spec.Containers[0].Env
+	assert.Len(env, 9, "Incorrect number of Env Vars")
+	assert.Equal("node.name", env[0].Name, "Incorrect Env[0].Name")
+	assert.Equal("metadata.name", env[0].ValueFrom.FieldRef.FieldPath,
 		"Incorrect Env[0].ValueFrom")
-	assert.Equal("cluster.name", sts.Spec.Template.Spec.Containers[0].Env[1].Name, "Incorrect Env[1].Name")
-	assert.Equal(vmo.Name, sts.Spec.Template.Spec.Containers[0].Env[1].Value, "Incorrect Env[1].Value")
-	assert.Equal("HTTP_ENABLE", sts.Spec.Template.Spec.Containers[0].Env[2].Name, "Incorrect Env[2].Name")
-	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[2].Value, "Incorrect Env[2].Value")
-	assert.Equal("logger.org.opensearch", sts.Spec.Template.Spec.Containers[0].Env[3].Name, "Incorrect Env[3].Name")
-	assert.Equal("info", sts.Spec.Template.Spec.Containers[0].Env[3].Value, "Incorrect Env[3].Value")
-	assert.Equal(constants.ObjectStoreAccessKeyVarName, sts.Spec.Template.Spec.Containers[0].Env[4].Name, "Incorrect Env[4].Name")
-	assert.Equal(constants.ObjectStoreAccessKey, sts.Spec.Template.Spec.Containers[0].Env[4].ValueFrom.SecretKeyRef.Key, "Incorrect Env[4] Secret Key name")
-	assert.Equal(constants.VerrazzanoBackupScrtName, sts.Spec.Template.Spec.Containers[0].Env[4].ValueFrom.SecretKeyRef.Name, "Incorrect Env[4] Secret name")
-	assert.Equal(constants.ObjectStoreCustomerKeyVarName, sts.Spec.Template.Spec.Containers[0].Env[5].Name, "Incorrect Env[5].Name")
-	assert.Equal(constants.ObjectStoreCustomerKey, sts.Spec.Template.Spec.Containers[0].Env[5].ValueFrom.SecretKeyRef.Key, "Incorrect Env[5] Secret Key name")
-	assert.Equal(constants.VerrazzanoBackupScrtName, sts.Spec.Template.Spec.Containers[0].Env[5].ValueFrom.SecretKeyRef.Name, "Incorrect Env[5] Secret name")
-	assert.Equal("discovery.seed_hosts", sts.Spec.Template.Spec.Containers[0].Env[6].Name, "Incorrect Env[6].Name")
-	assert.Equal(resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), sts.Spec.Template.Spec.Containers[0].Env[6].Value, "Incorrect Env[6].Value")
-	assert.Equal("node.master", sts.Spec.Template.Spec.Containers[0].Env[7].Name, "Incorrect Env[7].Name")
-	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[7].Value, "Incorrect Env[7].Value")
-	assert.Equal("node.ingest", sts.Spec.Template.Spec.Containers[0].Env[8].Name, "Incorrect Env[8].Name")
-	assert.Equal("false", sts.Spec.Template.Spec.Containers[0].Env[8].Value, "Incorrect Env[8].Value")
-	assert.Equal("node.data", sts.Spec.Template.Spec.Containers[0].Env[9].Name, "Incorrect Env[9].Name")
-	assert.Equal("false", sts.Spec.Template.Spec.Containers[0].Env[9].Value, "Incorrect Env[9].Value")
-	assert.Equal("cluster.initial_master_nodes", sts.Spec.Template.Spec.Containers[0].Env[10].Name, "Incorrect Env[10].Name")
-	assert.Equal(strings.Join(initialMasterNodes, ","), sts.Spec.Template.Spec.Containers[0].Env[10].Value, "Incorrect Env[10].Value")
+	assert.Equal("cluster.name", env[1].Name, "Incorrect Env[1].Name")
+	assert.Equal(vmo.Name, env[1].Value, "Incorrect Env[1].Value")
+	assert.Equal("HTTP_ENABLE", env[2].Name, "Incorrect Env[2].Name")
+	assert.Equal("true", env[2].Value, "Incorrect Env[2].Value")
+	assert.Equal("logger.org.opensearch", env[3].Name, "Incorrect Env[3].Name")
+	assert.Equal("info", env[3].Value, "Incorrect Env[3].Value")
+	assert.Equal(constants.ObjectStoreAccessKeyVarName, env[4].Name, "Incorrect Env[4].Name")
+	assert.Equal(constants.ObjectStoreAccessKey, env[4].ValueFrom.SecretKeyRef.Key, "Incorrect Env[4] Secret Key name")
+	assert.Equal(constants.VerrazzanoBackupScrtName, env[4].ValueFrom.SecretKeyRef.Name, "Incorrect Env[4] Secret name")
+	assert.Equal(constants.ObjectStoreCustomerKeyVarName, env[5].Name, "Incorrect Env[5].Name")
+	assert.Equal(constants.ObjectStoreCustomerKey, env[5].ValueFrom.SecretKeyRef.Key, "Incorrect Env[5] Secret Key name")
+	assert.Equal(constants.VerrazzanoBackupScrtName, env[5].ValueFrom.SecretKeyRef.Name, "Incorrect Env[5] Secret name")
+	assert.Equal("node.roles", env[6].Name, "Incorrect Env[6].Name")
+	assert.Equal("master,data,ingest", env[6].Value, "Incorrect Env[6].Value")
+	assert.Equal("discovery.seed_hosts", env[7].Name, "Incorrect Env[7].Name")
+	assert.Equal(resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), env[7].Value, "Incorrect Env[7].Value")
+	assert.Equal("cluster.initial_master_nodes", env[8].Name, "Incorrect Env[8].Name")
+	assert.Equal("vmi-system-es-master-0,vmi-system-es-master-1,vmi-system-es-master-2", env[8].Value, "Incorrect Env[8].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
 		"Incorrect Readiness Probe InitialDelaySeconds")
@@ -304,9 +237,9 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Equal(int32(5), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds,
 		"Incorrect Readiness Probe TimeoutSeconds")
 
-	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket.Port.IntVal,
+	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.IntVal,
 		"Incorrect LivenessProbe Probe Port")
-	assert.Equal(int32(10), sts.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds,
+	assert.Equal(int32(30), sts.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds,
 		"Incorrect LivenessProbe Probe InitialDelaySeconds")
 	assert.Equal(int32(10), sts.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds,
 		"Incorrect LivenessProbe Probe PeriodSeconds")
@@ -341,7 +274,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	const esMasterVolName = "elasticsearch-master"
 	const esMasterData = "/usr/share/opensearch/data"
 
-	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch Master replicas count")
+	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
 	var elasticsearchUID int64 = 1000
@@ -357,32 +290,29 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Zero(sts.Spec.Template.Spec.Containers[0].Ports[1].HostPort, "Incorrect Container HostPort")
 	assert.Equal(int32(constants.OSHTTPPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
 
-	assert.Len(sts.Spec.Template.Spec.Containers[0].Env, 11, "Incorrect number of Env Vars")
-	assert.Equal("node.name", sts.Spec.Template.Spec.Containers[0].Env[0].Name, "Incorrect Env[0].Name")
-	assert.Equal("metadata.name", sts.Spec.Template.Spec.Containers[0].Env[0].ValueFrom.FieldRef.FieldPath,
+	env := sts.Spec.Template.Spec.Containers[0].Env
+	assert.Len(env, 9, "Incorrect number of Env Vars")
+	assert.Equal("node.name", env[0].Name, "Incorrect Env[0].Name")
+	assert.Equal("metadata.name", env[0].ValueFrom.FieldRef.FieldPath,
 		"Incorrect Env[0].ValueFrom")
-	assert.Equal("cluster.name", sts.Spec.Template.Spec.Containers[0].Env[1].Name, "Incorrect Env[1].Name")
-	assert.Equal(vmo.Name, sts.Spec.Template.Spec.Containers[0].Env[1].Value, "Incorrect Env[1].Value")
-	assert.Equal("HTTP_ENABLE", sts.Spec.Template.Spec.Containers[0].Env[2].Name, "Incorrect Env[2].Name")
-	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[2].Value, "Incorrect Env[2].Value")
-	assert.Equal("logger.org.opensearch", sts.Spec.Template.Spec.Containers[0].Env[3].Name, "Incorrect Env[3].Name")
-	assert.Equal("info", sts.Spec.Template.Spec.Containers[0].Env[3].Value, "Incorrect Env[3].Value")
-	assert.Equal(constants.ObjectStoreAccessKeyVarName, sts.Spec.Template.Spec.Containers[0].Env[4].Name, "Incorrect Env[4].Name")
-	assert.Equal(constants.ObjectStoreAccessKey, sts.Spec.Template.Spec.Containers[0].Env[4].ValueFrom.SecretKeyRef.Key, "Incorrect Env[4] Secret Key name")
-	assert.Equal(constants.VerrazzanoBackupScrtName, sts.Spec.Template.Spec.Containers[0].Env[4].ValueFrom.SecretKeyRef.Name, "Incorrect Env[4] Secret name")
-	assert.Equal(constants.ObjectStoreCustomerKeyVarName, sts.Spec.Template.Spec.Containers[0].Env[5].Name, "Incorrect Env[5].Name")
-	assert.Equal(constants.ObjectStoreCustomerKey, sts.Spec.Template.Spec.Containers[0].Env[5].ValueFrom.SecretKeyRef.Key, "Incorrect Env[5] Secret Key name")
-	assert.Equal(constants.VerrazzanoBackupScrtName, sts.Spec.Template.Spec.Containers[0].Env[5].ValueFrom.SecretKeyRef.Name, "Incorrect Env[5] Secret name")
-	assert.Equal("discovery.type", sts.Spec.Template.Spec.Containers[0].Env[6].Name, "Incorrect Env[6].Name")
-	assert.Equal("single-node", sts.Spec.Template.Spec.Containers[0].Env[6].Value, "Incorrect Env[6].Value")
-	assert.Equal("node.master", sts.Spec.Template.Spec.Containers[0].Env[7].Name, "Incorrect Env[7].Name")
-	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[7].Value, "Incorrect Env[7].Value")
-	assert.Equal("node.ingest", sts.Spec.Template.Spec.Containers[0].Env[8].Name, "Incorrect Env[8].Name")
-	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[8].Value, "Incorrect Env[8].Value")
-	assert.Equal("node.data", sts.Spec.Template.Spec.Containers[0].Env[9].Name, "Incorrect Env[9].Name")
-	assert.Equal("true", sts.Spec.Template.Spec.Containers[0].Env[9].Value, "Incorrect Env[9].Value")
-	assert.Equal("ES_JAVA_OPTS", sts.Spec.Template.Spec.Containers[0].Env[10].Name, "Incorrect Env[10].Name")
-	assert.Equal("-Xms700m -Xmx700m", sts.Spec.Template.Spec.Containers[0].Env[10].Value, "Incorrect Env[10].Value")
+	assert.Equal("cluster.name", env[1].Name, "Incorrect Env[2].Name")
+	assert.Equal(vmo.Name, env[1].Value, "Incorrect Env[2].Value")
+	assert.Equal("HTTP_ENABLE", env[2].Name, "Incorrect Env[3].Name")
+	assert.Equal("true", env[2].Value, "Incorrect Env[3].Value")
+	assert.Equal("logger.org.opensearch", env[3].Name, "Incorrect Env[4].Name")
+	assert.Equal("info", env[3].Value, "Incorrect Env[4].Value")
+	assert.Equal(constants.ObjectStoreAccessKeyVarName, env[4].Name, "Incorrect Env[5].Name")
+	assert.Equal(constants.ObjectStoreAccessKey, env[4].ValueFrom.SecretKeyRef.Key, "Incorrect Env[5] Secret Key name")
+	assert.Equal(constants.VerrazzanoBackupScrtName, env[4].ValueFrom.SecretKeyRef.Name, "Incorrect Env[5] Secret name")
+	assert.Equal(constants.ObjectStoreCustomerKeyVarName, env[5].Name, "Incorrect Env[6].Name")
+	assert.Equal(constants.ObjectStoreCustomerKey, env[5].ValueFrom.SecretKeyRef.Key, "Incorrect Env[6] Secret Key name")
+	assert.Equal(constants.VerrazzanoBackupScrtName, env[5].ValueFrom.SecretKeyRef.Name, "Incorrect Env[6] Secret name")
+	assert.Equal("node.roles", env[6].Name, "Incorrect Env[6].Name")
+	assert.Equal("master,data,ingest", env[6].Value, "Incorrect Env[6].Value")
+	assert.Equal("discovery.type", env[7].Name, "Incorrect Env[7].Name")
+	assert.Equal("single-node", env[7].Value, "Incorrect Env[7].Value")
+	assert.Equal("ES_JAVA_OPTS", env[8].Name, "Incorrect Env[8].Name")
+	assert.Equal("-Xms700m -Xmx700m", env[8].Value, "Incorrect Env[8].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
 		"Incorrect Readiness Probe InitialDelaySeconds")
@@ -393,9 +323,9 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(int32(5), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds,
 		"Incorrect Readiness Probe TimeoutSeconds")
 
-	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket.Port.IntVal,
+	assert.Equal(int32(int32(config.ElasticsearchMaster.Port)), sts.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.IntVal,
 		"Incorrect LivenessProbe Probe Port")
-	assert.Equal(int32(10), sts.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds,
+	assert.Equal(int32(30), sts.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds,
 		"Incorrect LivenessProbe Probe InitialDelaySeconds")
 	assert.Equal(int32(10), sts.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds,
 		"Incorrect LivenessProbe Probe PeriodSeconds")

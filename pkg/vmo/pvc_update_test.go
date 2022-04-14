@@ -89,9 +89,9 @@ func TestGetUnboundPVCs(t *testing.T) {
 		makePVC("pvc3", "1Gi"),
 		makePVC("pvc4", "1Gi"),
 	}
-	boundPVCNames := []string{
-		"pvc2",
-		"pvc4",
+	boundPVCNames := map[string]bool{
+		"pvc2": true,
+		"pvc4": true,
 	}
 
 	unboundPVCNames := getUnboundPVCs(pvcs, boundPVCNames)
@@ -107,10 +107,10 @@ func TestGetInUsePVCNames(t *testing.T) {
 		makeDeploymentWithPVC(nil),
 	}
 
-	isUsePVCNames := getInUsePVCNames(deployments)
+	isUsePVCNames := getInUsePVCNames(deployments, &vmcontrollerv1.VerrazzanoMonitoringInstance{})
 	assert.Equal(t, 2, len(isUsePVCNames))
-	assert.Equal(t, isUsePVCNames[0], "pvc1")
-	assert.Equal(t, isUsePVCNames[1], "pvc2")
+	assert.Equal(t, isUsePVCNames["pvc1"], true)
+	assert.Equal(t, isUsePVCNames["pvc2"], true)
 }
 
 func TestNewPVCName(t *testing.T) {

@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"strings"
 	"testing"
 
@@ -84,13 +85,19 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Replicas: 1,
+					Roles: []vmcontrollerv1.NodeRole{
+						vmcontrollerv1.MasterRole,
+						vmcontrollerv1.IngestRole,
+						vmcontrollerv1.DataRole,
+					},
+				},
+				DataNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 			},
 		},
 	}
-	assert.True(t, resources.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
-
+	assert.True(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsDevProfile to be true")
 	deployments, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
 	if err != nil {
@@ -126,10 +133,9 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 			},
 		},
 	}
-	assert.False(t, resources.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
-
+	assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Invalid single node ES setup, expected IsDevProfile to be false")
 	_, err := New(vmo, fake.NewSimpleClientset(), &config.OperatorConfig{}, map[string]string{})
-	assert.NotNil(t, err, "Did not get an error for an invalid ES configuration")
+	assert.Nil(t, err)
 }
 
 func TestVMOWithCascadingDelete(t *testing.T) {
@@ -179,6 +185,9 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 
 func TestVMOWithResourceConstraints(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "system",
+		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
@@ -219,6 +228,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{
+					Name:     config.ElasticsearchIngest.Name,
 					Replicas: 1,
 					Resources: vmcontrollerv1.Resources{
 						LimitCPU:      "0.54",
@@ -226,8 +236,13 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 						RequestCPU:    "0.24",
 						RequestMemory: "64M",
 					},
+					Roles: []vmcontrollerv1.NodeRole{vmcontrollerv1.IngestRole},
 				},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Name:     config.ElasticsearchData.Name,
+					Replicas: 1,
+					Roles:    []vmcontrollerv1.NodeRole{vmcontrollerv1.DataRole},
+				},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
 		},
