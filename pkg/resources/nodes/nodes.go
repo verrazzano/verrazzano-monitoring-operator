@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"strings"
 )
@@ -60,11 +61,11 @@ func GetRolesString(node *vmcontrollerv1.ElasticsearchNode) string {
 }
 
 func GetRoleLabel(role vmcontrollerv1.NodeRole) string {
-	return "role-" + string(role)
+	return fmt.Sprintf("opensearch.%s/role-%s", constants.VMOGroup, string(role))
 }
 
 //SetNodeRoleLabels adds node role labels to an existing label map
-// role labels follow the format: role-<role name>=true
+// role labels follow the format: opensearch.verrazzano.io/role-<role name>=true
 func SetNodeRoleLabels(node *vmcontrollerv1.ElasticsearchNode, labels map[string]string) {
 	for _, role := range node.Roles {
 		labels[GetRoleLabel(role)] = RoleAssigned
