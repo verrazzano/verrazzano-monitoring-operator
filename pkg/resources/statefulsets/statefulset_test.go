@@ -355,3 +355,44 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	volumeSource := volumes[0].VolumeSource
 	assert.NotNil(volumeSource.EmptyDir, "volumeSource should be EmptyDir")
 }
+
+func TestCreateMultiMasterWithStorage(t *testing.T) {
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "os",
+		},
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled: true,
+				Nodes: []vmcontrollerv1.ElasticsearchNode{
+					{
+						Name:     "leader",
+						Replicas: 3,
+						Roles: []vmcontrollerv1.NodeRole{
+							vmcontrollerv1.MasterRole,
+							vmcontrollerv1.DataRole,
+							vmcontrollerv1.IngestRole,
+						},
+						Storage: &vmcontrollerv1.Storage{
+							Size: "3Gi",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	initialMasterNodes := nodes.InitialMasterNodes(vmi.Name, nodes.MasterNodes(vmi))
+	result, err := New(vzlog.DefaultLogger(), vmi, &storageClass, initialMasterNodes)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(result))
+	sts := result[0]
+	// Storage should be configured
+	assert.Equal(t, "3Gi", sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests.Storage().String())
+
+	// Expected labels must be present
+	assert.Equal(t, nodes.RoleAssigned, sts.Spec.Template.Labels[nodes.RoleMaster])
+	assert.Equal(t, nodes.RoleAssigned, sts.Spec.Template.Labels[nodes.RoleData])
+	assert.Equal(t, nodes.RoleAssigned, sts.Spec.Template.Labels[nodes.RoleIngest])
+	assert.Equal(t, constants.ComponentOpenSearchValue, sts.Spec.Template.Labels[constants.ComponentLabel])
+}
