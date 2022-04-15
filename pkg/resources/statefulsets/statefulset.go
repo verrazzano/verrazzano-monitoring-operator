@@ -241,7 +241,7 @@ fi`,
 
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
-	if vmo.Spec.Elasticsearch.MasterNode.Storage != nil && len(vmo.Spec.Elasticsearch.MasterNode.Storage.Size) > 0 {
+	if node.Storage != nil && len(node.Storage.Size) > 0 {
 		statefulSet.Spec.VolumeClaimTemplates =
 			[]corev1.PersistentVolumeClaim{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -251,7 +251,7 @@ fi`,
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(vmo.Spec.Elasticsearch.MasterNode.Storage.Size)},
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(node.Storage.Size)},
 					},
 				},
 			}}
