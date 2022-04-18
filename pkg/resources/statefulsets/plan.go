@@ -45,7 +45,7 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 		ExistingCluster: mapping.existingSize > 0,
 		// Bounce the master node if it's a single node cluster and we're scaling up to a healthy size.
 		// This removes of the single node property in the pod environment.
-		BounceNodes: mapping.existingSize == 1 && mapping.expectedSize > 2,
+		BounceNodes: mapping.existingSize == 1 && mapping.expectedSize >= minClusterSize,
 	}
 	for name, expected := range mapping.expected {
 		existing, ok := mapping.existing[name]
