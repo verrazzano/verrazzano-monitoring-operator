@@ -38,6 +38,22 @@ func TestCreatePlan(t *testing.T) {
 		plan         *StatefulSetPlan
 	}{
 		{
+			"should bounce nodes when scaling up single node cluster",
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 1),
+			},
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 3),
+			},
+			&StatefulSetPlan{
+				ExistingCluster: true,
+				BounceNodes:     true,
+				Update: []*appsv1.StatefulSet{
+					createTestSTS("foo", 3),
+				},
+			},
+		},
+		{
 			"do nothing when expected and existing are the same",
 			[]*appsv1.StatefulSet{
 				createTestSTS("foo", 1),
@@ -164,6 +180,7 @@ func TestCreatePlan(t *testing.T) {
 			assert.Equal(t, len(tt.plan.Update), len(actualPlan.Update))
 			assert.Equal(t, len(tt.plan.Delete), len(actualPlan.Delete))
 			assert.Equal(t, tt.plan.ExistingCluster, actualPlan.ExistingCluster)
+			assert.Equal(t, tt.plan.BounceNodes, actualPlan.BounceNodes)
 		})
 	}
 }

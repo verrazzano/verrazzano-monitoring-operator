@@ -24,6 +24,7 @@ type (
 		Delete          []*appsv1.StatefulSet
 		Conflict        error
 		ExistingCluster bool
+		BounceNodes     bool
 	}
 
 	statefulSetMapping struct {
@@ -31,6 +32,7 @@ type (
 		expected           map[string]*appsv1.StatefulSet
 		isScaleDownAllowed bool
 		existingSize       int32
+		expectedSize       int32
 	}
 )
 
@@ -41,6 +43,9 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 	plan := &StatefulSetPlan{
 		// There is no running cluster if the existing size is 0
 		ExistingCluster: mapping.existingSize > 0,
+		// Bounce the master node if it's a single node cluster and we're scaling up.
+		// This removes of the single node property in the pod environment.
+		BounceNodes: mapping.existingSize == 1 && mapping.expectedSize > 1,
 	}
 	for name, expected := range mapping.expected {
 		existing, ok := mapping.existing[name]
@@ -103,6 +108,7 @@ func createStatefulSetMapping(existingList, expectedList []*appsv1.StatefulSet) 
 			expectedSize > existingSize/2
 	}
 	mapping.existingSize = existingSize
+	mapping.expectedSize = expectedSize
 	return mapping
 }
 
