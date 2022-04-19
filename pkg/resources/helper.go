@@ -28,6 +28,8 @@ var (
 	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 )
 
+const serviceClusterLocal = ".svc.cluster.local"
+
 //CopyInitialMasterNodes copies the initial master node environment variable from an existing container to an expected container
 // cluster.initial_master_nodes shouldn't be changed after it's set.
 func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName string) {
@@ -83,7 +85,11 @@ func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance)
 	if len(masterServiceEndpoint) > 0 {
 		return masterServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s-http:%d", GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), constants.OSHTTPPort)
+	return fmt.Sprintf("http://%s-http.%s%s:%d",
+		GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
+		vmo.Namespace,
+		serviceClusterLocal,
+		constants.OSHTTPPort)
 }
 
 func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
@@ -91,7 +97,9 @@ func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitorin
 	if len(dashboardsServiceEndpoint) > 0 {
 		return dashboardsServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
+	return fmt.Sprintf("http://%s.%s%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
+		vmo.Namespace,
+		serviceClusterLocal,
 		constants.OSDashboardsHTTPPort)
 }
 

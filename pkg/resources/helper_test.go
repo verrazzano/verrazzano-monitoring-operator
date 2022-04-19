@@ -16,6 +16,15 @@ import (
 	vmov1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
+func createTestVMI() *vmov1.VerrazzanoMonitoringInstance {
+	return &vmov1.VerrazzanoMonitoringInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "system",
+			Namespace: "test",
+		},
+	}
+}
+
 func TestGetDefaultPrometheusConfiguration(t *testing.T) {
 	vmi := &vmov1.VerrazzanoMonitoringInstance{}
 	configText := GetDefaultPrometheusConfiguration(vmi, "myclustername")
@@ -98,25 +107,13 @@ func getItem(key, value string, scrapeConfigs []interface{}) map[interface{}]int
 }
 
 func TestGetOpenSearchDashboardsHTTPEndpoint(t *testing.T) {
-	vmi := &vmov1.VerrazzanoMonitoringInstance{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "system",
-		},
-	}
-
-	osdEndpoint := GetOpenSearchDashboardsHTTPEndpoint(vmi)
-	assert.Equal(t, "http://vmi-system-kibana:5601", osdEndpoint)
+	osdEndpoint := GetOpenSearchDashboardsHTTPEndpoint(createTestVMI())
+	assert.Equal(t, "http://vmi-system-kibana.test.svc.cluster.local:5601", osdEndpoint)
 }
 
 func TestGetOpenSearchHTTPEndpoint(t *testing.T) {
-	vmi := &vmov1.VerrazzanoMonitoringInstance{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "system",
-		},
-	}
-
-	osEndpoint := GetOpenSearchHTTPEndpoint(vmi)
-	assert.Equal(t, "http://vmi-system-es-master-http:9200", osEndpoint)
+	osEndpoint := GetOpenSearchHTTPEndpoint(createTestVMI())
+	assert.Equal(t, "http://vmi-system-es-master-http.test.svc.cluster.local:9200", osEndpoint)
 }
 
 func TestConvertToRegexp(t *testing.T) {
