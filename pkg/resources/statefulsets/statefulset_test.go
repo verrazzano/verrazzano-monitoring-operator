@@ -145,10 +145,10 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 	}
 
 	if isDevProfileTest {
-		assert.True(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be true")
+		assert.True(t, nodes.IsSingleNodeCluster(vmo), "Single node ES setup, expected IsSingleNodeCluster to be true")
 		verifyDevProfileVMOComponents(t, statefulsets, vmo, masterNodeReplicas, storageSize)
 	} else {
-		assert.False(t, nodes.IsSingleNodeESCluster(vmo), "Single node ES setup, expected IsSingleNodeESCluster to be false")
+		assert.False(t, nodes.IsSingleNodeCluster(vmo), "Single node ES setup, expected IsSingleNodeCluster to be false")
 		verifyProdProfileVMOComponents(t, statefulsets, vmo, masterNodeReplicas, storageSize)
 	}
 }
@@ -274,6 +274,10 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	const esMasterVolName = "elasticsearch-master"
 	const esMasterData = "/usr/share/opensearch/data"
 
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleMaster])
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleData])
+	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleIngest])
+
 	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
@@ -350,4 +354,45 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(esMasterVolName, volumes[0].Name, "Incorrect name for master volume")
 	volumeSource := volumes[0].VolumeSource
 	assert.NotNil(volumeSource.EmptyDir, "volumeSource should be EmptyDir")
+}
+
+func TestCreateMultiMasterWithStorage(t *testing.T) {
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "os",
+		},
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled: true,
+				Nodes: []vmcontrollerv1.ElasticsearchNode{
+					{
+						Name:     "leader",
+						Replicas: 3,
+						Roles: []vmcontrollerv1.NodeRole{
+							vmcontrollerv1.MasterRole,
+							vmcontrollerv1.DataRole,
+							vmcontrollerv1.IngestRole,
+						},
+						Storage: &vmcontrollerv1.Storage{
+							Size: "3Gi",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	initialMasterNodes := nodes.InitialMasterNodes(vmi.Name, nodes.MasterNodes(vmi))
+	result, err := New(vzlog.DefaultLogger(), vmi, &storageClass, initialMasterNodes)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(result))
+	sts := result[0]
+	// Storage should be configured
+	assert.Equal(t, "3Gi", sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests.Storage().String())
+
+	// Expected labels must be present
+	assert.Equal(t, nodes.RoleAssigned, sts.Spec.Template.Labels[nodes.RoleMaster])
+	assert.Equal(t, nodes.RoleAssigned, sts.Spec.Template.Labels[nodes.RoleData])
+	assert.Equal(t, nodes.RoleAssigned, sts.Spec.Template.Labels[nodes.RoleIngest])
+	assert.Equal(t, constants.ComponentOpenSearchValue, sts.Spec.Template.Labels[constants.ComponentLabel])
 }

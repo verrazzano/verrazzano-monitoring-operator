@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"strings"
 )
@@ -22,6 +23,13 @@ type NodeCount struct {
 	// this may be greater than the sum of master, data, and ingest, since nodes may have 1-3 roles.
 	Replicas int32
 }
+
+var (
+	RoleMaster   = GetRoleLabel(vmcontrollerv1.MasterRole)
+	RoleData     = GetRoleLabel(vmcontrollerv1.DataRole)
+	RoleIngest   = GetRoleLabel(vmcontrollerv1.IngestRole)
+	RoleAssigned = "true"
+)
 
 //MasterNodes returns the list of master role containing nodes in the VMI spec. These nodes will be created as statefulsets.
 func MasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
@@ -52,16 +60,20 @@ func GetRolesString(node *vmcontrollerv1.ElasticsearchNode) string {
 	return buf.String()
 }
 
+func GetRoleLabel(role vmcontrollerv1.NodeRole) string {
+	return fmt.Sprintf("opensearch.%s/role-%s", constants.VMOGroup, string(role))
+}
+
 //SetNodeRoleLabels adds node role labels to an existing label map
-// role labels follow the format: role-<role name>=true
+// role labels follow the format: opensearch.verrazzano.io/role-<role name>=true
 func SetNodeRoleLabels(node *vmcontrollerv1.ElasticsearchNode, labels map[string]string) {
 	for _, role := range node.Roles {
-		labels["role-"+string(role)] = "true"
+		labels[GetRoleLabel(role)] = RoleAssigned
 	}
 }
 
-// IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
-func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
+// IsSingleNodeCluster Returns true if only a single master node is requested; single-node ES cluster
+func IsSingleNodeCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
 	nodeCount := GetNodeCount(vmo)
 	return nodeCount.MasterNodes == 1 && nodeCount.Replicas == 1
 }

@@ -6,7 +6,6 @@ package vmo
 import (
 	"context"
 	"errors"
-
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -18,7 +17,13 @@ import (
 
 // CreateServices creates/updates/deletes VMO service k8s resources
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	svcList, err := services.New(vmo)
+	useNodeRoleSelectors, err := clusterHasNodeRoleSelectors(controller, vmo)
+	if err != nil {
+		controller.log.Errorf("Failed to check node role selectors when creating services for VMI %s: %s", vmo.Name, err)
+		return err
+	}
+
+	svcList, err := services.New(vmo, useNodeRoleSelectors)
 	if err != nil {
 		controller.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
 		return err
@@ -77,4 +82,13 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 	}
 
 	return nil
+}
+
+func clusterHasNodeRoleSelectors(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
+	selector := services.OpenSearchPodSelector(vmo.Name)
+	pods, err := controller.kubeclientset.CoreV1().Pods(vmo.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return false, err
+	}
+	return services.UseNodeRoleSelector(pods), nil
 }

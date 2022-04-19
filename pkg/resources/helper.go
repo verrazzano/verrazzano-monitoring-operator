@@ -298,7 +298,6 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 					Weight: 100,
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
-							// TODO: pass selector in
 							MatchLabels: GetSpecID(vmoName, component),
 						},
 						TopologyKey: constants.K8sZoneLabel,

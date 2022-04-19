@@ -57,7 +57,6 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 	// Add node labels
 	statefulSet.Spec.Selector.MatchLabels[constants.NodeGroupLabel] = node.Name
 	statefulSet.Spec.Template.Labels[constants.NodeGroupLabel] = node.Name
-	nodes.SetNodeRoleLabels(&node, statefulSet.Spec.Template.Labels)
 
 	statefulSet.Spec.Replicas = resources.NewVal(node.Replicas)
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
@@ -126,7 +125,12 @@ fi
 		},
 	}
 	var readinessProbeCondition string
-	if nodes.IsSingleNodeESCluster(vmo) {
+	if nodes.IsSingleNodeCluster(vmo) {
+		node.Roles = []vmcontrollerv1.NodeRole{
+			vmcontrollerv1.MasterRole,
+			vmcontrollerv1.DataRole,
+			vmcontrollerv1.IngestRole,
+		}
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
 		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
 		if err != nil {
@@ -137,7 +141,7 @@ fi
 			javaOpts = node.JavaOpts
 		}
 		envVars = append(envVars,
-			corev1.EnvVar{Name: "node.roles", Value: "master,data,ingest"},
+			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
 
 			// supported via legacy compatibility
@@ -237,7 +241,7 @@ fi`,
 
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
-	if vmo.Spec.Elasticsearch.MasterNode.Storage != nil && len(vmo.Spec.Elasticsearch.MasterNode.Storage.Size) > 0 {
+	if node.Storage != nil && len(node.Storage.Size) > 0 {
 		statefulSet.Spec.VolumeClaimTemplates =
 			[]corev1.PersistentVolumeClaim{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -247,7 +251,7 @@ fi`,
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(vmo.Spec.Elasticsearch.MasterNode.Storage.Size)},
+						Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(node.Storage.Size)},
 					},
 				},
 			}}
@@ -275,6 +279,8 @@ fi`,
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 
+	// set Node Role labels for role based selectors
+	nodes.SetNodeRoleLabels(&node, statefulSet.Spec.Template.Labels)
 	return statefulSet
 }
 
