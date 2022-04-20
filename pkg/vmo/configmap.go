@@ -8,6 +8,7 @@ import (
 	"context"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"html/template"
+	"reflect"
 	"strings"
 
 	"github.com/verrazzano/pkg/diff"
@@ -16,6 +17,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,7 +97,8 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	if vzClusterName == "" {
 		vzClusterName, _ = GetClusterNameFromSecret(controller, vmo.Namespace)
 	}
-	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
+
+	err = reconcilePrometheusConfigMap(controller, vmo, vmo.Spec.Prometheus.ConfigMap, map[string]string{"prometheus.yml": resources.GetDefaultPrometheusConfiguration(vmo, vzClusterName)})
 	if err != nil {
 		return err
 	}
@@ -184,24 +187,6 @@ func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.Ve
 	return nil
 }
 
-// Deletes the configmap specified, if it exists. If it does not exist, ignore the request and do not error
-func deleteConfigMapIfExists(controller *Controller, namespace string, configmapName string) error {
-	existingConfig, err := getConfigMap(controller, namespace, configmapName)
-	if err != nil {
-		controller.log.Oncef("Failed to get configmap %s/%s: %v", namespace, configmapName, err)
-		return nil
-	}
-	if existingConfig != nil {
-		err := controller.kubeclientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), configmapName, metav1.DeleteOptions{})
-		if err != nil {
-			controller.log.Errorf("Failed to delete configmap %s/%s: %v", namespace, configmapName, err)
-			return err
-		}
-		controller.log.Oncef("Deleted config map %s/%s", namespace, configmapName)
-	}
-	return nil
-}
-
 // This function is being called for configmaps which don't modify with spec changes
 func createAMConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)
@@ -256,4 +241,110 @@ func getConfigMap(controller *Controller, namespace string, configmapName string
 		return nil, err
 	}
 	return configMap, nil
+}
+
+// reconcilePrometheusConfigMap reconciles the prometheus configmap data between restarts/upgrades
+func reconcilePrometheusConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
+	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmap)
+	if err != nil {
+		controller.log.Errorf("Failed to get configmap %s%s: %v", vmo.Namespace, configmap, err)
+		return err
+	}
+
+	if existingConfig == nil {
+		configMap := configmaps.NewConfig(vmo, configmap, data)
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+		if err != nil {
+			controller.log.Errorf("Failed to create configmap %s%s: %v", vmo.Namespace, configmap, err)
+			return err
+		}
+		return nil
+	}
+
+	if prometheusConfig, ok := existingConfig.Data["prometheus.yml"]; ok {
+		var existingConfigYaml map[interface{}]interface{}
+		err := yaml.Unmarshal([]byte(prometheusConfig), &existingConfigYaml)
+		if err != nil {
+			controller.log.Errorf("Failed to read configmap %s%s: %v", vmo.Namespace, configmap, err)
+			return err
+		}
+
+		var existingScrapeConfigs []interface{}
+		if existingScrapeConfigsData, ok := existingConfigYaml["scrape_configs"]; ok {
+			var newConfig map[interface{}]interface{}
+			err := yaml.Unmarshal([]byte(data["prometheus.yml"]), &newConfig)
+			if err != nil {
+				controller.log.Errorf("Failed to read new configmap data: %v", err)
+				return err
+			}
+
+			var scrapeConfigs []interface{}
+			var newScrapeConfigs []interface{}
+			var scrapeConfigChanged bool
+			if newScrapeConfigsData, ok := newConfig["scrape_configs"]; ok {
+				newScrapeConfigs = newScrapeConfigsData.([]interface{})
+				existingScrapeConfigs = existingScrapeConfigsData.([]interface{})
+				for _, esc := range existingScrapeConfigs {
+					existingScrapeConfig := esc.(map[interface{}]interface{})
+					found := false
+					for _, nsc := range newScrapeConfigs {
+						newScrapeConfig := nsc.(map[interface{}]interface{})
+						if newScrapeConfig["job_name"] == existingScrapeConfig["job_name"] {
+							// If the existing scrape config of a job is different than default, revert to default
+							if !reflect.DeepEqual(newScrapeConfig, existingScrapeConfig) {
+								scrapeConfigChanged = true
+								scrapeConfigs = append(scrapeConfigs, newScrapeConfig)
+							} else {
+								scrapeConfigs = append(scrapeConfigs, existingScrapeConfig)
+							}
+
+							found = true
+							break
+						}
+					}
+					// Preserve all scrape configs that are not part of default config
+					if !found {
+						scrapeConfigs = append(scrapeConfigs, existingScrapeConfig)
+					}
+				}
+
+				// Add all default configs that do not exist
+				for _, nsc := range newScrapeConfigs {
+					newScrapeConfig := nsc.(map[interface{}]interface{})
+					found := false
+					for _, sc := range scrapeConfigs {
+						scrapeConfig := sc.(map[interface{}]interface{})
+						if newScrapeConfig["job_name"] == scrapeConfig["job_name"] {
+							found = true
+							break
+						}
+					}
+					if !found {
+						scrapeConfigChanged = true
+						scrapeConfigs = append(scrapeConfigs, newScrapeConfig)
+					}
+				}
+			}
+
+			// Update the configmap only when there is a change to scrap config data
+			if len(scrapeConfigs) > 0 && (len(scrapeConfigs) != len(existingScrapeConfigs) || scrapeConfigChanged) {
+				newConfig["scrape_configs"] = scrapeConfigs
+				newConfigYaml, err := yaml.Marshal(&newConfig)
+				if err != nil {
+					controller.log.Errorf("Failed to update new configmap data: %v", err)
+					return err
+				}
+				data["prometheus.yml"] = string(newConfigYaml)
+				existingConfig.Data = data
+				_, err = controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), existingConfig, metav1.UpdateOptions{})
+				if err != nil {
+					controller.log.Errorf("Failed to update configmap %s%s: %v", vmo.Namespace, existingConfig, err)
+					return err
+				}
+
+				return nil
+			}
+		}
+	}
+	return nil
 }

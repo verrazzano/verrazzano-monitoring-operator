@@ -5,12 +5,12 @@ package vmo
 
 import (
 	"context"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"testing"
 
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"gopkg.in/yaml.v2"
+
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 
 	"github.com/stretchr/testify/assert"
@@ -48,32 +48,6 @@ func TestCreateConfigmaps(t *testing.T) {
 	assert.Nil(t, err)
 	all, _ := client.CoreV1().ConfigMaps(vmo.Namespace).List(context.TODO(), metav1.ListOptions{})
 	assert.Equal(t, 8, len(all.Items))
-}
-
-// TestDeleteConfigMapIfExists tests the deleteConfigMapIfExists function
-func TestDeleteConfigMapIfExists(t *testing.T) {
-	configMap := &v1.ConfigMap{}
-	configMap.SetNamespace(constants.VerrazzanoSystemNamespace)
-	promConfigMapName := resources.GetMetaName(constants.VMODefaultName, config.Prometheus.Name)
-	configMap.SetName(promConfigMapName)
-	client := fake.NewSimpleClientset(configMap)
-	controller := &Controller{
-		kubeclientset:   client,
-		configMapLister: &simpleConfigMapLister{kubeClient: client},
-		secretLister:    &simpleSecretLister{kubeClient: client},
-		log:             vzlog.DefaultLogger(),
-	}
-	err := deleteConfigMapIfExists(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
-	assert.NoError(t, err)
-
-	//make sure config map was deleted
-	cm, _ := getConfigMap(controller, constants.VerrazzanoSystemNamespace, promConfigMapName)
-	assert.Nil(t, cm)
-
-	// Repeat the test with a non-existent config map and ensure that deleteConfigMapIfExists ignores rather than
-	// return error
-	err = deleteConfigMapIfExists(controller, constants.VerrazzanoSystemNamespace, "nonexistentCM")
-	assert.NoError(t, err)
 }
 
 // simple ConfigMapLister implementation
@@ -192,4 +166,133 @@ func (s simpleSecretNamespaceLister) List(selector labels.Selector) ([]*v1.Secre
 // Get retrieves the Secret for a given namespace and name.
 func (s simpleSecretNamespaceLister) Get(name string) (*v1.Secret, error) {
 	return s.kubeClient.CoreV1().Secrets(s.namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+//TestReconcileConfigmapsDefaultScrapeConfigsRestoredAfterReconcile tests that any changes to default scrape configs will be restored after reconcile
+func TestReconcileConfigmapsDefaultScrapeConfigsRestoredAfterReconcile(t *testing.T) {
+	client := fake.NewSimpleClientset()
+	controller := &Controller{
+		kubeclientset:   client,
+		configMapLister: &simpleConfigMapLister{kubeClient: client},
+		secretLister:    &simpleSecretLister{kubeClient: client},
+		log:             vzlog.DefaultLogger(),
+	}
+	vmo := &vmctl.VerrazzanoMonitoringInstance{}
+	vmo.Name = constants.VMODefaultName
+	vmo.Namespace = constants.VerrazzanoSystemNamespace
+	vmo.Spec.URI = "vmi.system.v8o-env.oracledx.com"
+	vmo.Spec.Prometheus.ConfigMap = "myPrometheusConfigMap"
+
+	err := CreateConfigmaps(controller, vmo)
+	t.Logf("Error is %v", err)
+	assert.Nil(t, err)
+	cm, _ := client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), vmo.Spec.Prometheus.ConfigMap, metav1.GetOptions{})
+	prometheusConfig, ok := cm.Data["prometheus.yml"]
+	assert.True(t, ok)
+	var configYaml map[interface{}]interface{}
+	err = yaml.Unmarshal([]byte(prometheusConfig), &configYaml)
+	assert.NoError(t, err)
+	scrapeConfigsData, ok := configYaml["scrape_configs"]
+	assert.True(t, ok)
+	scrapeConfigs := scrapeConfigsData.([]interface{})
+	var originalScrapeInterval string
+	for _, nsc := range scrapeConfigs {
+		scrapeConfig := nsc.(map[interface{}]interface{})
+		if scrapeConfig["job_name"] == "prometheus" {
+			originalScrapeInterval = scrapeConfig["scrape_interval"].(string)
+			scrapeConfig["scrape_interval"] = "10000000s"
+			break
+		}
+	}
+
+	configYaml["scrape_configs"] = scrapeConfigs
+	newConfigYaml, err := yaml.Marshal(&configYaml)
+	assert.NoError(t, err)
+	cm.Data["prometheus.yml"] = string(newConfigYaml)
+	_, err = client.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	assert.NoError(t, err)
+
+	err = CreateConfigmaps(controller, vmo)
+	t.Logf("Error is %v", err)
+	assert.Nil(t, err)
+	cm, _ = client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), vmo.Spec.Prometheus.ConfigMap, metav1.GetOptions{})
+	prometheusConfig, ok = cm.Data["prometheus.yml"]
+	assert.True(t, ok)
+	err = yaml.Unmarshal([]byte(prometheusConfig), &configYaml)
+	assert.NoError(t, err)
+	scrapeConfigsData, ok = configYaml["scrape_configs"]
+	assert.True(t, ok)
+	scrapeConfigs = scrapeConfigsData.([]interface{})
+	found := false
+	var afterReconcileScrapeInterval string
+	for _, nsc := range scrapeConfigs {
+		scrapeConfig := nsc.(map[interface{}]interface{})
+		if scrapeConfig["job_name"] == "prometheus" {
+			found = true
+			afterReconcileScrapeInterval = scrapeConfig["scrape_interval"].(string)
+			break
+		}
+	}
+	assert.True(t, found)
+	assert.Equal(t, originalScrapeInterval, afterReconcileScrapeInterval)
+}
+
+//TestReconcileConfigmapsNewScrapeConfigsIntactAfterReconcile tests that any new scrape configs will be intact after reconcile
+func TestReconcileConfigmapsNewScrapeConfigsIntactAfterReconcile(t *testing.T) {
+	client := fake.NewSimpleClientset()
+	controller := &Controller{
+		kubeclientset:   client,
+		configMapLister: &simpleConfigMapLister{kubeClient: client},
+		secretLister:    &simpleSecretLister{kubeClient: client},
+		log:             vzlog.DefaultLogger(),
+	}
+	vmo := &vmctl.VerrazzanoMonitoringInstance{}
+	vmo.Name = constants.VMODefaultName
+	vmo.Namespace = constants.VerrazzanoSystemNamespace
+	vmo.Spec.URI = "vmi.system.v8o-env.oracledx.com"
+	vmo.Spec.Prometheus.ConfigMap = "myPrometheusConfigMap"
+
+	err := CreateConfigmaps(controller, vmo)
+	t.Logf("Error is %v", err)
+	assert.Nil(t, err)
+	cm, _ := client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), vmo.Spec.Prometheus.ConfigMap, metav1.GetOptions{})
+	prometheusConfig, ok := cm.Data["prometheus.yml"]
+	assert.True(t, ok)
+	var configYaml map[interface{}]interface{}
+	err = yaml.Unmarshal([]byte(prometheusConfig), &configYaml)
+	assert.NoError(t, err)
+	scrapeConfigsData, ok := configYaml["scrape_configs"]
+	assert.True(t, ok)
+	scrapeConfigs := scrapeConfigsData.([]interface{})
+
+	dummyScrapConfig := make(map[interface{}]interface{})
+	dummyScrapConfig["job_name"] = "dummy_job"
+	scrapeConfigs = append(scrapeConfigs, dummyScrapConfig)
+	configYaml["scrape_configs"] = scrapeConfigs
+	newConfigYaml, err := yaml.Marshal(&configYaml)
+	assert.NoError(t, err)
+	cm.Data["prometheus.yml"] = string(newConfigYaml)
+	_, err = client.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	assert.NoError(t, err)
+
+	err = CreateConfigmaps(controller, vmo)
+	t.Logf("Error is %v", err)
+	assert.Nil(t, err)
+	cm, _ = client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), vmo.Spec.Prometheus.ConfigMap, metav1.GetOptions{})
+	prometheusConfig, ok = cm.Data["prometheus.yml"]
+	assert.True(t, ok)
+	err = yaml.Unmarshal([]byte(prometheusConfig), &configYaml)
+	assert.NoError(t, err)
+	scrapeConfigsData, ok = configYaml["scrape_configs"]
+	assert.True(t, ok)
+	scrapeConfigs = scrapeConfigsData.([]interface{})
+	found := false
+	for _, nsc := range scrapeConfigs {
+		scrapeConfig := nsc.(map[interface{}]interface{})
+		if scrapeConfig["job_name"] == "dummy_job" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
 }
