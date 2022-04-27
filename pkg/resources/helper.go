@@ -490,7 +490,7 @@ scrape_configs:
    relabel_configs:
    - source_labels: [__meta_kubernetes_service_name]
      action: keep
-     regex: vmi-system-es-data
+     regex: vmi-system-es-*
    - source_labels: [__meta_kubernetes_service_name]
      target_label: service
    - source_labels: null
