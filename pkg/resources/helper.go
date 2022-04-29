@@ -471,7 +471,7 @@ scrape_configs:
    - source_labels: null
      action: replace
      target_label: ` + constants.PrometheusClusterNameLabel + `
-     replacement: ` + vzClusterName + `"
+     replacement: ` + vzClusterName + `
 
  # Scrape config for opensearch
  - job_name: 'opensearch'
@@ -502,7 +502,7 @@ scrape_configs:
      target_label: kubernetes_pod_name
    - source_labels: null
      action: replace
-     target_label: ` + constants.PrometheusClusterNameLabel + `"
+     target_label: ` + constants.PrometheusClusterNameLabel + `
      replacement: ` + vzClusterName)
 
 	return string(prometheusConfig)
