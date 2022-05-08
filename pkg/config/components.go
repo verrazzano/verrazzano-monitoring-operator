@@ -32,7 +32,7 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &AlertManager, &AlertManagerCluster, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &AlertManager, &AlertManagerCluster, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &ElasticsearchBackupInit, &API, &ConfigReloader, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus}
@@ -159,6 +159,14 @@ var ElasticsearchData = ComponentDetails{
 var ElasticsearchInit = ComponentDetails{
 	Name:            "elasticsearch-init",
 	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
+	ImagePullPolicy: constants.DefaultImagePullPolicy,
+	Privileged:      true,
+}
+
+// ElasticsearchBackupInit contains Elasticsearch init container info
+var ElasticsearchBackupInit = ComponentDetails{
+	Name:            "elasticsearch-backup-init",
+	EnvName:         "ELASTICSEARCH_BACKUP_INIT_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	Privileged:      true,
 }

@@ -326,6 +326,12 @@ func GetElasticsearchMasterInitContainer() *corev1.Container {
 	return &elasticsearchInitContainer
 }
 
+func GetElasticsearchBackupInitContainer() *corev1.Container {
+	elasticsearchBackupInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchBackupInit)
+	elasticsearchBackupInitContainer.Ports = nil
+	return &elasticsearchBackupInitContainer
+}
+
 // GetElasticsearchInitContainer returns an Elasticsearch Init container object
 func GetElasticsearchInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
