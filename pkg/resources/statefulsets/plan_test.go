@@ -38,6 +38,19 @@ func TestCreatePlan(t *testing.T) {
 		plan         *StatefulSetPlan
 	}{
 		{
+			"should delete nodes when expected is empty",
+			[]*appsv1.StatefulSet{
+				createTestSTS("foo", 1),
+			},
+			[]*appsv1.StatefulSet{},
+			&StatefulSetPlan{
+				ExistingCluster: true,
+				Delete: []*appsv1.StatefulSet{
+					createTestSTS("foo", 1),
+				},
+			},
+		},
+		{
 			"should bounce nodes when scaling up single node cluster",
 			[]*appsv1.StatefulSet{
 				createTestSTS("foo", 1),
