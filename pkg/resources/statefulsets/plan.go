@@ -98,7 +98,7 @@ func createStatefulSetMapping(existingList, expectedList []*appsv1.StatefulSet) 
 
 	// if expected size is one, we have a single node cluster. By definition these are
 	// less resilient, so updates/restarts are allowed (otherwise they would never be possible).
-	if (existingSize == 1 && expectedList[0].Name == existingList[0].Name) || expectedSize == 0 {
+	if expectedSize == 0 || (existingSize == 1 && expectedList[0].Name == existingList[0].Name) {
 		// if we have a single node cluster, or the desired outcome is to scale everything down to 0,
 		// scale down is allowed
 		mapping.isScaleDownAllowed = true
