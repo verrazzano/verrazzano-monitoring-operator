@@ -127,7 +127,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 	for _, deployment := range existingDeploymentsList {
 		if !contains(deploymentNames, deployment.Name) {
-			if deployments.IsOpenSearchDataDeployment(vmo.Name, deployment) && (expected.OpenSearchDataDeployments > 0 || deployment.Status.ReadyReplicas < 1) {
+			if deployments.IsOpenSearchDataDeployment(vmo.Name, deployment) && (expected.OpenSearchDataDeployments > 0 || deployment.Status.ReadyReplicas > 0) {
 				if err := controller.osClient.IsGreen(vmo); err != nil {
 					controller.log.Oncef("Scale down of deployment %s not allowed: cluster health is not green", deployment.Name)
 					continue
