@@ -55,7 +55,7 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 		} else if mapping.isScaleDownAllowed || !plan.ExistingCluster {
 			// The cluster is in a state that allows updates, so we check if the STS has changed
 			CopyFromExisting(expected, existing)
-			specDiffs := diff.Diff(expected, existing)
+			specDiffs := diff.Diff(existing, expected)
 			if specDiffs != "" || *existing.Spec.Replicas != *expected.Spec.Replicas {
 				log.Oncef("Statefulset %s/%s has spec differences %s", expected.Namespace, expected.Name, specDiffs)
 				plan.Update = append(plan.Update, expected)

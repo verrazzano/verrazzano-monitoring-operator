@@ -127,6 +127,8 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 	for _, deployment := range existingDeploymentsList {
 		if !contains(deploymentNames, deployment.Name) {
+			// if processing an OpenSearch data node, and the data node is expected and running
+			// An OpenSearch health check should be made to prevent unexpected shard allocation
 			if deployments.IsOpenSearchDataDeployment(vmo.Name, deployment) && (expected.OpenSearchDataDeployments > 0 || deployment.Status.ReadyReplicas > 0) {
 				if err := controller.osClient.IsGreen(vmo); err != nil {
 					controller.log.Oncef("Scale down of deployment %s not allowed: cluster health is not green", deployment.Name)
