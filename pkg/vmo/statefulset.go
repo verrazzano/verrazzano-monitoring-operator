@@ -93,7 +93,7 @@ func getInitialMasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, exi
 
 func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingCluster, bounceNodes bool) error {
 	// if the cluster is alive, but unhealthy we shouldn't do an update - may cause data loss/corruption
-	if existingCluster && !bounceNodes {
+	if (existingCluster && !bounceNodes) || sts.Status.ReadyReplicas > 0 {
 		// We should only update an existing cluster if it is healthy
 		if err := c.osClient.IsGreen(vmo); err != nil {
 			return err
@@ -121,8 +121,8 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 		return nil
 	}
 
-	// don't worry about cluster health if we are deleting the cluster
-	if len(expectedList) < 1 {
+	// don't worry about cluster health if we are deleting the cluster or the statefulset is unhealthy
+	if len(expectedList) < 1 || statefulSet.Status.ReadyReplicas < 1 {
 		return deleteSTS()
 	}
 
