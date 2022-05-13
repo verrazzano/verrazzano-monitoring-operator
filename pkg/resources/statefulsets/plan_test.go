@@ -45,6 +45,7 @@ func TestCreatePlan(t *testing.T) {
 			[]*appsv1.StatefulSet{},
 			&StatefulSetPlan{
 				ExistingCluster: true,
+				BounceNodes:     true,
 				Delete: []*appsv1.StatefulSet{
 					createTestSTS("foo", 1),
 				},
@@ -167,7 +168,10 @@ func TestCreatePlan(t *testing.T) {
 			[]*appsv1.StatefulSet{
 				createTestSTS("foo", 1),
 			},
-			&StatefulSetPlan{ExistingCluster: true},
+			&StatefulSetPlan{
+				BounceNodes:     true,
+				ExistingCluster: true,
+			},
 		},
 		{
 			"changing single node cluster name is not allowed",
@@ -178,6 +182,7 @@ func TestCreatePlan(t *testing.T) {
 				createTestSTS("bar", 1),
 			},
 			&StatefulSetPlan{
+				BounceNodes:     true,
 				ExistingCluster: true,
 				Create: []*appsv1.StatefulSet{
 					createTestSTS("bar", 1),
