@@ -103,8 +103,7 @@ func createStatefulSetMapping(existingList, expectedList []*appsv1.StatefulSet) 
 		// scale down is allowed
 		mapping.isScaleDownAllowed = true
 	} else {
-		mapping.isScaleDownAllowed = existingSize >= minClusterSize &&
-			expectedSize >= minClusterSize &&
+		mapping.isScaleDownAllowed = expectedSize >= minClusterSize &&
 			expectedSize > existingSize/2
 	}
 	mapping.existingSize = existingSize
