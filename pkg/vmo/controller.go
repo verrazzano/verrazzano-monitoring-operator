@@ -513,11 +513,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 * Create Deployments
 	 **********************/
 	var deploymentsDirty bool
-	deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
-	if err != nil {
-		errorObserved = true
+	if !errorObserved {
+		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
+		if err != nil {
+			errorObserved = true
+		}
 	}
-
 	/*********************
 	 * Create Ingresses
 	 **********************/
