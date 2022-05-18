@@ -117,5 +117,5 @@ func CopyFromExisting(expected, existing *appsv1.StatefulSet) {
 	expected.Spec.VolumeClaimTemplates = existing.Spec.VolumeClaimTemplates
 	// Changes to selector are forbidden
 	expected.Spec.Selector = existing.Spec.Selector
-	resources.CopyInitialMasterNodes(expected.Spec.Template.Spec.Containers, existing.Spec.Template.Spec.Containers, config.ElasticsearchMaster.Name)
+	resources.CopyImmutableEnvVars(expected.Spec.Template.Spec.Containers, existing.Spec.Template.Spec.Containers, config.ElasticsearchMaster.Name)
 }

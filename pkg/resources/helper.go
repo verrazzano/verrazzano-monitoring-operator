@@ -30,9 +30,9 @@ var (
 
 const serviceClusterLocal = ".svc.cluster.local"
 
-//CopyInitialMasterNodes copies the initial master node environment variable from an existing container to an expected container
+//CopyImmutableEnvVars copies the initial master node environment variable from an existing container to an expected container
 // cluster.initial_master_nodes shouldn't be changed after it's set.
-func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName string) {
+func CopyImmutableEnvVars(expected, existing []corev1.Container, containerName string) {
 	getContainer := func(containers []corev1.Container) (int, *corev1.Container) {
 		for idx, c := range containers {
 			if c.Name == containerName {
@@ -48,11 +48,16 @@ func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName
 	if currentContainer == nil || existingContainer == nil {
 		return
 	}
-	existingMasterNodesVar := GetEnvVar(existingContainer, constants.ClusterInitialMasterNodes)
-	if existingMasterNodesVar == nil {
-		return
+
+	getAndSetVar := func(varName string) {
+		envVar := GetEnvVar(existingContainer, varName)
+		if envVar != nil {
+			SetEnvVar(currentContainer, envVar)
+		}
 	}
-	SetEnvVar(currentContainer, existingMasterNodesVar)
+
+	getAndSetVar(constants.ClusterInitialMasterNodes)
+	getAndSetVar("node.roles")
 	expected[idx] = *currentContainer
 }
 
