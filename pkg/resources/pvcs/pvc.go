@@ -1,11 +1,14 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package pvcs
 
 import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,21 +19,25 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 	var pvcList []*corev1.PersistentVolumeClaim
 
 	if vmo.Spec.Prometheus.Enabled && vmo.Spec.Prometheus.Storage.Size != "" {
-		pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, storageClassName)
+		pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, config.Prometheus, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
 		pvcList = append(pvcList, pvcs...)
 	}
-	if vmo.Spec.Elasticsearch.Enabled && vmo.Spec.Elasticsearch.Storage.Size != "" {
-		pvcs, err := createPvcElements(vmo, &vmo.Spec.Elasticsearch.Storage, storageClassName)
-		if err != nil {
-			return pvcList, err
+	if vmo.Spec.Elasticsearch.Enabled {
+		for _, dataNode := range nodes.DataNodes(vmo) {
+			if dataNode.Storage != nil && dataNode.Storage.Size != "" {
+				pvcs, err := createPvcElements(vmo, dataNode.Storage, config.ElasticsearchData, storageClassName)
+				if err != nil {
+					return pvcList, err
+				}
+				pvcList = append(pvcList, pvcs...)
+			}
 		}
-		pvcList = append(pvcList, pvcs...)
 	}
 	if vmo.Spec.Grafana.Enabled && vmo.Spec.Grafana.Storage.Size != "" {
-		pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, storageClassName)
+		pvcs, err := createPvcElements(vmo, &vmo.Spec.Grafana.Storage, config.Grafana, storageClassName)
 		if err != nil {
 			return pvcList, err
 		}
@@ -40,16 +47,21 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName stri
 }
 
 // Returns slice of pvc elements
-func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
+func createPvcElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoStorage *vmcontrollerv1.Storage, componentDetails config.ComponentDetails, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	storageQuantity, err := resource.ParseQuantity(vmoStorage.Size)
 	if err != nil {
 		return nil, err
 	}
+
 	var pvcList []*corev1.PersistentVolumeClaim
 	for _, pvcName := range vmoStorage.PvcNames {
+
+		resourceLabel := resources.GetMetaLabels(vmo)
+		resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
+
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:          resources.GetMetaLabels(vmo),
+				Labels:          resourceLabel,
 				Name:            pvcName,
 				Namespace:       vmo.Namespace,
 				OwnerReferences: resources.GetOwnerReferences(vmo),

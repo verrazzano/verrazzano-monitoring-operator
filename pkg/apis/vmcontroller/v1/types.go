@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package v1
@@ -9,7 +9,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+type NodeRole string
+
+const (
+	MasterRole NodeRole = "master"
+	DataRole   NodeRole = "data"
+	IngestRole NodeRole = "ingest"
+)
+
 type (
+
 	// VerrazzanoMonitoringInstanceSpec defines the attributes a user can specify when creating a VerrazzanoMonitoringInstance
 	VerrazzanoMonitoringInstanceSpec struct {
 
@@ -63,6 +72,9 @@ type (
 		ContactEmail string `json:"contactemail,omitempty" yaml:"contactemail,omitempty"`
 
 		NatGatewayIPs []string `json:"natGatewayIPs,omitempty" yaml:"natGatewayIPs,omitempty"`
+
+		// +optional
+		StorageClass *string `json:"storageClass,omitempty"`
 	}
 
 	// Versioning details
@@ -91,6 +103,7 @@ type (
 		Resources              Resources `json:"resources,omitempty"`
 		RetentionPeriod        int32     `json:"retentionPeriod,omitempty"`
 		Replicas               int32     `json:"replicas,omitempty"`
+		HTTP2Enabled           bool      `json:"http2Enabled,omitempty" yaml:"http2Enabled"`
 	}
 
 	// AlertManager details
@@ -105,18 +118,48 @@ type (
 
 	// Elasticsearch details
 	Elasticsearch struct {
-		Enabled    bool              `json:"enabled" yaml:"enabled"`
-		Storage    Storage           `json:"storage,omitempty"`
-		IngestNode ElasticsearchNode `json:"ingestNode,omitempty"`
-		MasterNode ElasticsearchNode `json:"masterNode,omitempty"`
-		DataNode   ElasticsearchNode `json:"dataNode,omitempty"`
+		Enabled    bool                    `json:"enabled" yaml:"enabled"`
+		Storage    Storage                 `json:"storage,omitempty"`
+		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
 	ElasticsearchNode struct {
-		Replicas  int32     `json:"replicas,omitempty"`
-		JavaOpts  string    `json:"javaOpts" yaml:"javaOpts,omitempty"`
-		Resources Resources `json:"resources,omitempty"`
+		Name      string     `json:"name,omitempty"`
+		Replicas  int32      `json:"replicas,omitempty"`
+		JavaOpts  string     `json:"javaOpts" yaml:"javaOpts,omitempty"`
+		Resources Resources  `json:"resources,omitempty"`
+		Storage   *Storage   `json:"storage,omitempty"`
+		Roles     []NodeRole `json:"roles,omitempty"`
+	}
+
+	//IndexManagementPolicy Defines a policy for managing indices
+	IndexManagementPolicy struct {
+		// Name of the policy
+		PolicyName string `json:"policyName"`
+		// Index pattern the policy will be matched to
+		IndexPattern string `json:"indexPattern"`
+		// Minimum age of an index before it is automatically deleted
+		// +kubebuilder:validation:Pattern:=^[0-9]+(d|h|m|s|ms|micros|nanos)$
+		MinIndexAge *string        `json:"minIndexAge,omitempty"`
+		Rollover    RolloverPolicy `json:"rollover,omitempty"`
+	}
+
+	//RolloverPolicy Settings for Index Management rollover
+	RolloverPolicy struct {
+		// Minimum age of an index before it is rolled over
+		// +kubebuilder:validation:Pattern:=^[0-9]+(d|h|m|s|ms|micros|nanos)$
+		MinIndexAge *string `json:"minIndexAge,omitempty"`
+		// Minimum size of an index before it is rolled over
+		// e.g., 20mb, 5gb, etc.
+		// +kubebuilder:validation:Pattern:=^[0-9]+(b|kb|mb|gb|tb|pb)$
+		MinSize *string `json:"minSize,omitempty"`
+		// Minimum count of documents in an index before it is rolled over
+		MinDocCount *int `json:"minDocCount,omitempty"`
 	}
 
 	// Kibana details
@@ -148,12 +191,20 @@ type (
 
 	// Resources details
 	Resources struct {
-		LimitCPU      string `json:"limitCPU,omitempty"`
-		LimitMemory   string `json:"limitMemory,omitempty"`
-		RequestCPU    string `json:"requestCPU,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		LimitCPU string `json:"limitCPU,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		LimitMemory string `json:"limitMemory,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		RequestCPU string `json:"requestCPU,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 		RequestMemory string `json:"requestMemory,omitempty"`
-		MaxSizeDisk   string `json:"maxSizeDisk,omitempty" yaml:"maxSizeDisk,omitempty"`
-		MinSizeDisk   string `json:"minSizeDisk,omitempty" yaml:"minSizeDisk,omitempty"`
+
+		// These fields are not used anywhere
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		MaxSizeDisk string `json:"maxSizeDisk,omitempty" yaml:"maxSizeDisk,omitempty"`
+		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+		MinSizeDisk string `json:"minSizeDisk,omitempty" yaml:"minSizeDisk,omitempty"`
 	}
 
 	// ContainerSpec represents a container image that needs to be run periodically
@@ -215,6 +266,7 @@ type (
 	// +genclient
 	// +genclient:noStatus
 	// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+	// +kubebuilder:resource:shortName=vmi
 	VerrazzanoMonitoringInstance struct {
 		metav1.TypeMeta   `json:",inline"`
 		metav1.ObjectMeta `json:"metadata"`

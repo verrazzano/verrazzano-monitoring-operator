@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package util
@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"gopkg.in/resty.v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -102,9 +101,9 @@ func WaitForService(namespace string, serviceName string, backoff wait.Backoff,
 		if err != nil {
 			return false, err
 		}
-		for _, service := range services.Items {
+		for i, service := range services.Items {
 			if service.Name == serviceName {
-				latest = &service
+				latest = &services.Items[i]
 				return true, nil
 			}
 		}
@@ -122,7 +121,7 @@ func WaitForElasticSearchIndexDocCount(ElasticSearchIndexDocCountURL string, cou
 	var err error
 	fmt.Println("Getting index doc count from elasticsearch url: " + ElasticSearchIndexDocCountURL)
 	err = Retry(backoff, func() (bool, error) {
-		resp, err := http.Get(ElasticSearchIndexDocCountURL)
+		resp, err := http.Get(ElasticSearchIndexDocCountURL) //nolint:gosec //#gosec G107
 		if err != nil {
 			return false, err
 		}
@@ -165,7 +164,7 @@ func WaitForEndpointAvailableWithAuth(
 	startTime := time.Now()
 
 	tr := &http.Transport{
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, //nolint:gosec //#gosec G402
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: 20 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
@@ -230,7 +229,7 @@ func WaitForEndpointAvailable(name string, externalIP string, port int32, urlPat
 	var err error
 	endpointURL := fmt.Sprintf("http://%s:%d%s", externalIP, port, urlPath)
 	fmt.Printf("Waiting for %s (%s) to reach status code %d...\n", name, endpointURL, expectedStatusCode)
-	restyClient := resty.New()
+	restyClient := GetClient()
 	restyClient.SetTimeout(10 * time.Second)
 	startTime := time.Now()
 	err = Retry(backoff, func() (bool, error) {

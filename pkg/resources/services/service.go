@@ -6,6 +6,7 @@ package services
 import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,22 +15,16 @@ import (
 // New creates a new Service for a VMO resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the VMO resource that 'owns' it.
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, useNodeRoleSelectors bool) ([]*corev1.Service, error) {
 	var services []*corev1.Service
 
 	if vmo.Spec.Grafana.Enabled {
 		service := createServiceElement(vmo, config.Grafana)
 		services = append(services, service)
-		if config.Grafana.OidcProxy != nil {
-			services = append(services, resources.OidcProxyService(vmo, &config.Grafana))
-		}
 	}
 	if vmo.Spec.Prometheus.Enabled {
 		service := createServiceElement(vmo, config.Prometheus)
 		services = append(services, service)
-		if config.Prometheus.OidcProxy != nil {
-			services = append(services, resources.OidcProxyService(vmo, &config.Prometheus))
-		}
 	}
 	if vmo.Spec.AlertManager.Enabled {
 		alertManagerService := createServiceElement(vmo, config.AlertManager)
@@ -42,14 +37,11 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 		services = append(services, alertManagerClusterService)
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
-		services = append(services, createElasticsearchServiceElements(vmo)...)
+		services = append(services, createOpenSearchServiceElements(vmo, useNodeRoleSelectors)...)
 	}
 	if vmo.Spec.Kibana.Enabled {
 		service := createServiceElement(vmo, config.Kibana)
 		services = append(services, service)
-		if config.Kibana.OidcProxy != nil {
-			services = append(services, resources.OidcProxyService(vmo, &config.Kibana))
-		}
 	}
 	if !config.API.Disabled {
 		services = append(services, createServiceElement(vmo, config.API))
@@ -58,9 +50,11 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*corev1.Service, e
 	return services, nil
 }
 func createServiceElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) *corev1.Service {
+	resourceLabel := resources.GetMetaLabels(vmo)
+	resourceLabel[constants.ComponentLabel] = resources.GetCompLabel(componentDetails.Name)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:          resources.GetMetaLabels(vmo),
+			Labels:          resourceLabel,
 			Name:            resources.GetMetaName(vmo.Name, componentDetails.Name),
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),

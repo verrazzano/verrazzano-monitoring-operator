@@ -1,4 +1,4 @@
-// Copyright (c) 2020, Oracle and/or its affiliates.
+// Copyright (c) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 def DOCKER_IMAGE_TAG
@@ -20,7 +20,7 @@ pipeline {
     environment {
         DOCKER_CI_IMAGE_NAME_OPERATOR = 'verrazzano-monitoring-operator-jenkins'
         DOCKER_PUBLISH_IMAGE_NAME_OPERATOR = 'verrazzano-monitoring-operator'
-        DOCKER_IMAGE_NAME_OPERATOR = "${env.BRANCH_NAME == 'master' ? env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR : env.DOCKER_CI_IMAGE_NAME_OPERATOR}"
+        DOCKER_IMAGE_NAME_OPERATOR = "${env.BRANCH_NAME ==~ /^release-.*/ || env.BRANCH_NAME == 'master' ? env.DOCKER_PUBLISH_IMAGE_NAME_OPERATOR : env.DOCKER_CI_IMAGE_NAME_OPERATOR}"
 
         DOCKER_CI_IMAGE_NAME_ESWAIT = 'verrazzano-monitoring-instance-eswait-jenkins'
         DOCKER_PUBLISH_IMAGE_NAME_ESWAIT = 'verrazzano-monitoring-instance-eswait'
@@ -63,7 +63,7 @@ pipeline {
                 }
             }
         }
-       
+
         stage('Build') {
             when { not { buildingTag() } }
             steps {
@@ -74,42 +74,12 @@ pipeline {
             }
         }
 
-        stage('gofmt Check') {
+        stage('golangci-lint Check') {
             when { not { buildingTag() } }
             steps {
                 sh """
                     cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-fmt
-                """
-            }
-        }
-
-        stage('go vet Check') {
-            when { not { buildingTag() } }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-vet
-                """
-            }
-        }
-
-        stage('golint Check') {
-            when { not { buildingTag() } }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-lint
-                """
-            }
-        }
-
-        stage('ineffassign Check') {
-            when { not { buildingTag() } }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make go-ineffassign
+                    make golangci-lint
                 """
             }
         }
@@ -136,7 +106,7 @@ pipeline {
                     make unit-test
                     make -B coverage
                     cp coverage.html ${WORKSPACE}
-                    build/scripts/copy-junit-output.sh ${WORKSPACE} 
+                    build/scripts/copy-junit-output.sh ${WORKSPACE}
                 """
             }
 	        post {
@@ -201,38 +171,8 @@ pipeline {
             when { not { buildingTag() } }
             steps {
                 script {
-                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG}"
+                    scanContainerImage "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG}"
                 }
-                sh "mv scanning-report.json verrazzano-monitoring-operator.scanning-report.json"
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: '**/*scanning-report.json', allowEmptyArchive: true
-                }
-            }
-        }
-
-        stage('Build ESWait Image') {
-            when {
-                not { buildingTag() }
-            }
-            steps {
-                sh """
-                    cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
-                    make push-eswait DOCKER_IMAGE_NAME_ESWAIT=${DOCKER_IMAGE_NAME_ESWAIT}  DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} CREATE_LATEST_TAG=${CREATE_LATEST_TAG}
-                """
-            }
-        }
-
-        stage('Scan ESWait Image') {
-            when {
-                not { buildingTag() }
-            }
-            steps {
-                script {
-                    clairScanTemp "${env.DOCKER_REPO}/${env.DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_ESWAIT}:${DOCKER_IMAGE_TAG}"
-                }
-                sh "mv scanning-report.json verrazzano-monitoring-instance-eswait.scanning-report.json"
             }
             post {
                 always {
@@ -244,10 +184,12 @@ pipeline {
 
     post {
         failure {
-            mail to: "${env.BUILD_NOTIFICATION_TO_EMAIL}", from: "${env.BUILD_NOTIFICATION_FROM_EMAIL}",
-            subject: "Verrazzano: ${env.JOB_NAME} - Failed",
-            body: "Job Failed - \"${env.JOB_NAME}\" build: ${env.BUILD_NUMBER}\n\nView the log at:\n ${env.BUILD_URL}\n\nBlue Ocean:\n${env.RUN_DISPLAY_URL}"
+            script {
+                if (env.BRANCH_NAME == "master" || env.BRANCH_NAME ==~ "release-.*" || env.BRANCH_NAME ==~ "mark/*") {
+                    slackSend ( message: "Job Failed - \"${env.JOB_NAME}\" build: ${env.BUILD_NUMBER}\n\nView the log at:\n ${env.BUILD_URL}\n\nBlue Ocean:\n${env.RUN_DISPLAY_URL}" )
+                }
+            }
         }
     }
-    
+
 }

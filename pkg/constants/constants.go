@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -56,6 +56,12 @@ const ResyncPeriod = 30 * time.Second
 // VMOServiceNamePrefix to be applied to all VMO services
 const VMOServiceNamePrefix = "vmi-"
 
+// VMODefaultName is the default value (and currently only possible value) for the VMO name
+const VMODefaultName = "system"
+
+// VerrazzanoSystemNamespace is the Verrazzano System namespace
+const VerrazzanoSystemNamespace = "verrazzano-system"
+
 // StorageVolumeName constant for storage volume
 const StorageVolumeName = "storage-volume"
 
@@ -64,6 +70,9 @@ const DefaultNamespace = "default"
 
 // ServiceAppLabel label name for service app
 const ServiceAppLabel = "app"
+
+//ClusterInitialMasterNodes is the parameter for the OpenSearch cluster initial master nodes
+const ClusterInitialMasterNodes = "cluster.initial_master_nodes"
 
 // K8SAppLabel label name for k8s app
 const K8SAppLabel = "k8s-app"
@@ -92,11 +101,14 @@ const MetricsNameSpace = "vmo_operator"
 // DefaultPrometheusRetentionPeriod default Prometheus retention configuration
 const DefaultPrometheusRetentionPeriod = 90
 
-// ESHttpPort default Elasticsearch HTTP port
-const ESHttpPort = 9200
+// OSHTTPPort default OpenSearch HTTP port
+const OSHTTPPort = 9200
 
-// ESTransportPort default Elasticsearch transport port
-const ESTransportPort = 9300
+// OSTransportPort default OpenSearch transport port
+const OSTransportPort = 9300
+
+// OSDashboardsHTTPPort default OpenSearch Dashboards HTTP port
+const OSDashboardsHTTPPort = 5601
 
 // OidcProxyPort default OidcProxy HTTP port
 const OidcProxyPort = 8775
@@ -104,10 +116,10 @@ const OidcProxyPort = 8775
 // DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
 const DefaultDevProfileESMemArgs = "-Xms700m -Xmx700m"
 
-// DefaultESIngestMemArgs default Elasticsearch Ingest memory settings
+// DefaultESIngestMemArgs default Elasticsearch IngestNodes memory settings
 const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
 
-// DefaultESDataMemArgs default Elasticsearch Data memory settings
+// DefaultESDataMemArgs default Elasticsearch DataNodes memory settings
 const DefaultESDataMemArgs = "-Xms4g -Xmx4g"
 
 // K8sTaintNoScheduleEffect constant for Noschedule
@@ -203,7 +215,11 @@ const K8sDefaultStorageClassBetaAnnotation = "storageclass.beta.kubernetes.io/is
 const MonitoringNamespace = "monitoring"
 
 // MCRegistrationSecret - the name of the secret that contains the cluster registration information
-const MCRegistrationSecret = "verrazzano-cluster-registration"
+const MCRegistrationSecret = "verrazzano-cluster-registration" //nolint:gosec //#gosec G101
+
+// MCLocalRegistrationSecret - the name of the secret that contains the local cluster info (used when the cluster
+// is not registered as a managed cluster)
+const MCLocalRegistrationSecret = "verrazzano-local-registration" //nolint:gosec //#gosec G101
 
 // ClusterNameData - the field name in MCRegistrationSecret that contains this managed cluster's name
 const ClusterNameData = "managed-cluster-name"
@@ -213,3 +229,28 @@ const KeycloakURLData = "keycloak-url"
 
 // KeycloakCABundleData - the field name in MCRegistrationSecret that contains the admin cluster's Keycloak ca-bundle
 const KeycloakCABundleData = "ca-bundle"
+
+// PrometheusClusterNameLabel - the label name attached to all metrics to indicate the Verrazzano
+// cluster name where the metric originated
+const PrometheusClusterNameLabel = "verrazzano_cluster"
+
+// GrafanaAdminSecret is the name of the secret used to to start Grafana
+const GrafanaAdminSecret = "grafana-admin" //nolint:gosec //#gosec G101
+
+const (
+	// Constants required for updating Opensearch keystore
+	VerrazzanoBackupScrtName      = "verrazzano-backup"
+	ObjectStoreAccessKeyVarName   = "OBJECT_STORE_ACCESS_KEY_ID"
+	ObjectStoreAccessKey          = "object_store_access_key"
+	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_SECRET_KEY_ID"
+	ObjectStoreCustomerKey        = "object_store_secret_key"
+)
+
+//ComponentLabel - the label for a specific component
+const ComponentLabel = "verrazzano-component"
+
+//ComponentOpenSearchValue - the value for opensearch component
+const ComponentOpenSearchValue = "opensearch"
+
+//NodeGroupLabel for specifying a node's group
+const NodeGroupLabel = "node-group"

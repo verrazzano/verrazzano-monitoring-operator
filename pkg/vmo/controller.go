@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -18,11 +18,16 @@ import (
 	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
+	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
@@ -30,9 +35,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	appslistersv1 "k8s.io/client-go/listers/apps/v1"
-	batchlistersv1beta1 "k8s.io/client-go/listers/batch/v1beta1"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
-	extensionslistersv1beta1 "k8s.io/client-go/listers/extensions/v1beta1"
+	netlistersv1 "k8s.io/client-go/listers/networking/v1"
 	rbacv1listers1 "k8s.io/client-go/listers/rbac/v1"
 	storagelisters1 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
@@ -56,11 +60,9 @@ type Controller struct {
 	clusterRolesSynced   cache.InformerSynced
 	configMapLister      corelistersv1.ConfigMapLister
 	configMapsSynced     cache.InformerSynced
-	cronJobLister        batchlistersv1beta1.CronJobLister
-	cronJobsSynced       cache.InformerSynced
 	deploymentLister     appslistersv1.DeploymentLister
 	deploymentsSynced    cache.InformerSynced
-	ingressLister        extensionslistersv1beta1.IngressLister
+	ingressLister        netlistersv1.IngressLister
 	ingressesSynced      cache.InformerSynced
 	nodeLister           corelistersv1.NodeLister
 	nodesSynced          cache.InformerSynced
@@ -105,6 +107,17 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+
+	// VerrazzanoLogger is used to log
+	log vzlog.VerrazzanoLogger
+
+	// OpenSearch Client
+	osClient *opensearch.OSClient
+
+	// OpenSearchDashboards Client
+	osDashboardsClient *dashboards.OSDashboardsClient
+
+	indexUpgradeMonitor *upgrade.Monitor
 }
 
 // ClusterInfo has info like ContainerRuntime and managed cluster name
@@ -170,9 +183,8 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	// types.
 	clusterRoleInformer := kubeInformerFactory.Rbac().V1().ClusterRoles()
 	configmapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
-	cronJobInformer := kubeInformerFactory.Batch().V1beta1().CronJobs()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-	ingressInformer := kubeInformerFactory.Extensions().V1beta1().Ingresses()
+	ingressInformer := kubeInformerFactory.Networking().V1().Ingresses()
 	nodeInformer := kubeInformerFactory.Core().V1().Nodes()
 	pvcInformer := kubeInformerFactory.Core().V1().PersistentVolumeClaims()
 	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
@@ -193,6 +205,12 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
+	zap.S().Infow("Creating OpenSearch client")
+	osClient := opensearch.NewOSClient()
+
+	zap.S().Infow("Creating OpenSearchDashboards client")
+	osDashboardsClient := dashboards.NewOSDashboardsClient()
+
 	controller := &Controller{
 		namespace:        namespace,
 		watchNamespace:   watchNamespace,
@@ -205,8 +223,6 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		clusterRolesSynced:    clusterRoleInformer.Informer().HasSynced,
 		configMapLister:       configmapInformer.Lister(),
 		configMapsSynced:      configmapInformer.Informer().HasSynced,
-		cronJobLister:         cronJobInformer.Lister(),
-		cronJobsSynced:        cronJobInformer.Informer().HasSynced,
 		deploymentLister:      deploymentInformer.Lister(),
 		deploymentsSynced:     deploymentInformer.Informer().HasSynced,
 		ingressLister:         ingressInformer.Lister(),
@@ -234,6 +250,10 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		operatorConfig:        operatorConfig,
 		latestConfigMap:       operatorConfigMap,
 		clusterInfo:           ClusterInfo{},
+		log:                   vzlog.DefaultLogger(),
+		osClient:              osClient,
+		osDashboardsClient:    osDashboardsClient,
+		indexUpgradeMonitor:   &upgrade.Monitor{},
 	}
 
 	zap.S().Infow("Setting up event handlers")
@@ -289,7 +309,7 @@ func (c *Controller) Run(threadiness int) error {
 
 	// Wait for the caches to be synced before starting workers
 	zap.S().Infow("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(c.stopCh, c.clusterRolesSynced, c.configMapsSynced, c.cronJobsSynced,
+	if ok := cache.WaitForCacheSync(c.stopCh, c.clusterRolesSynced, c.configMapsSynced,
 		c.deploymentsSynced, c.ingressesSynced, c.nodesSynced, c.pvcsSynced, c.roleBindingsSynced, c.secretsSynced,
 		c.servicesSynced, c.statefulSetsSynced, c.vmosSynced, c.storageClassesSynced); !ok {
 		return errors.New("failed to wait for caches to sync")
@@ -381,13 +401,26 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Get the VMO resource with this namespace/name
-	zap.S().Infof("[VMO] Name: %s  NameSpace: %s", name, namespace)
 	vmo, err := c.vmoLister.VerrazzanoMonitoringInstances(namespace).Get(name)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("error getting VMO %s in namespace %s: %v", name, namespace, err))
 		return err
 	}
 
+	// Get the resource logger needed to log message using 'progress' and 'once' methods
+	log, err := vzlog.EnsureResourceLogger(&vzlog.ResourceConfig{
+		Name:           vmo.Name,
+		Namespace:      vmo.Namespace,
+		ID:             string(vmo.UID),
+		Generation:     vmo.Generation,
+		ControllerName: "vmi",
+	})
+	if err != nil {
+		zap.S().Errorf("Failed to create controller logger for VMO controller", err)
+	}
+	c.log = log
+
+	log.Progressf("Reconciling vmi resource %v, generation %v", types.NamespacedName{Namespace: vmo.Namespace, Name: vmo.Name}, vmo.Generation)
 	return c.syncHandlerStandardMode(vmo)
 }
 
@@ -398,7 +431,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	originalVMO := vmo.DeepCopy()
 
 	// populate clusterInfo
-	clusterSecret, err := c.secretLister.Secrets("verrazzano-system").Get(constants.MCRegistrationSecret)
+	clusterSecret, err := c.secretLister.Secrets(constants.VerrazzanoSystemNamespace).Get(constants.MCRegistrationSecret)
 	if err == nil {
 		c.clusterInfo.clusterName = string(clusterSecret.Data[constants.ClusterNameData])
 		c.clusterInfo.KeycloakURL = string(clusterSecret.Data[constants.KeycloakURLData])
@@ -407,7 +440,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	// If lock, controller will not sync/process the VMO env
 	if vmo.Spec.Lock {
-		zap.S().Infof("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
+		c.log.Progressf("[%s/%s] Lock is set to true, this VMO env will not be synced/processed.", vmo.Name, vmo.Namespace)
 		return nil
 	}
 
@@ -419,11 +452,25 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	errorObserved := false
 
 	/*********************
+	 * Configure ISM
+	 **********************/
+	ismChannel := c.osClient.ConfigureISM(vmo)
+
+	/********************************************
+	 * Migrate old indices if any to data streams
+	*********************************************/
+	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
+	if err != nil {
+		c.log.Errorf("Failed to migrate old indices to data stream: %v", err)
+		errorObserved = true
+	}
+
+	/*********************
 	 * Create RoleBindings
 	 **********************/
 	err = CreateRoleBindings(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Role Bindings for vmo: %v", err)
+		c.log.Errorf("Failed to create Role Bindings for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -432,7 +479,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create config maps for vmo: %v", err)
+		c.log.Errorf("Failed to create config maps for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -441,47 +488,43 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateServices(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Services for vmo: %v", err)
+		c.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
 	/*********************
 	 * Create Persistent Volume Claims
 	 **********************/
-	pvcToAdMap, err := createPersistentVolumeClaims(c, vmo)
+	pvcToAdMap, err := CreatePersistentVolumeClaims(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create PVCs for vmo: %v", err)
+		c.log.Errorf("Failed to create/update PVCs for VMI %s: %v", vmo.Name, err)
+		errorObserved = true
+	}
+
+	/*********************
+	 * Create StatefulSets
+	 **********************/
+	existingCluster, err := CreateStatefulSets(c, vmo)
+	if err != nil {
 		errorObserved = true
 	}
 
 	/*********************
 	 * Create Deployments
 	 **********************/
-	vmoUsername, vmoPassword, err := GetAuthSecrets(c, vmo)
-	if err != nil {
-		zap.S().Errorf("Failed to extract VMO Secrets for vmo: %v", err)
-		errorObserved = true
+	var deploymentsDirty bool
+	if !errorObserved {
+		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
+		if err != nil {
+			errorObserved = true
+		}
 	}
-	deploymentsDirty, err := CreateDeployments(c, vmo, pvcToAdMap, vmoUsername, vmoPassword)
-	if err != nil {
-		zap.S().Errorf("Failed to create Deployments for vmo: %v", err)
-		errorObserved = true
-	}
-	/*********************
-	 * Create StatefulSets
-	 **********************/
-	err = CreateStatefulSets(c, vmo)
-	if err != nil {
-		zap.S().Errorf("Failed to create StatefulSets for vmo: %v", err)
-		errorObserved = true
-	}
-
 	/*********************
 	 * Create Ingresses
 	 **********************/
 	err = CreateIngresses(c, vmo)
 	if err != nil {
-		zap.S().Errorf("Failed to create Ingresses for vmo: %v", err)
+		c.log.Errorf("Failed to create Ingresses for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -490,15 +533,22 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	specDiffs := diff.Diff(originalVMO, vmo)
 	if specDiffs != "" {
-		zap.S().Debugf("Acquired lock in namespace: %s", vmo.Namespace)
-		zap.S().Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
-		zap.S().Infof("Updating VMO")
+		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
+		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
+		c.log.Oncef("Updating VMO")
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to update status for vmo: %v", err)
+			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
 			errorObserved = true
 		}
 	}
+
+	ismErr := <-ismChannel
+	if ismErr != nil {
+		c.log.Errorf("Failed to configure ISM Policies: %v", ismErr)
+		errorObserved = true
+	}
+
 	if !errorObserved && !deploymentsDirty && len(c.buildVersion) > 0 && vmo.Spec.Versioning.CurrentVersion != c.buildVersion {
 		// The spec.versioning.currentVersion field should not be updated to the new value until a sync produces no
 		// changes.  This allows observers (e.g. the controlled rollout scripts used to put new versions of operator
@@ -507,14 +557,13 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		vmo.Spec.Versioning.CurrentVersion = c.buildVersion
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
-			zap.S().Errorf("Failed to update currentVersion for vmo %s: %v", vmo.Name, err)
+			c.log.Errorf("Failed to update currentVersion for VMI %s: %v", vmo.Name, err)
 		} else {
-			zap.S().Infof("Updated VMO %s currentVersion to %s", vmo.Name, c.buildVersion)
+			c.log.Oncef("Updated VMI currentVersion to %s", c.buildVersion)
 		}
 	}
 
-	zap.S().Infof("Successfully synced '%s/%s'", vmo.Namespace, vmo.Name)
-
+	c.log.Oncef("Successfully synced VMI'%s/%s'", vmo.Namespace, vmo.Name)
 	return nil
 }
 
@@ -545,7 +594,7 @@ func (c *Controller) IsHealthy() bool {
 	}
 
 	// Make sure the controller can talk to the API server and its CRD is defined.
-	crds, err := c.kubeextclientset.ApiextensionsV1beta1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
+	crds, err := c.kubeextclientset.ApiextensionsV1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
 	// Error getting CRD from API server
 	if err != nil {
 		return false

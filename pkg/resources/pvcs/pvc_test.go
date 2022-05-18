@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package pvcs
@@ -77,10 +77,12 @@ func TestVMOWithStorageVolumes2(t *testing.T) {
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
-				Storage: vmcontrollerv1.Storage{
-					Size:               "50Gi",
-					AvailabilityDomain: "AD1",
-					PvcNames:           []string{"elasticsearch-pvc"},
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Storage: &vmcontrollerv1.Storage{
+						Size:               "50Gi",
+						AvailabilityDomain: "AD1",
+						PvcNames:           []string{"elasticsearch-pvc"},
+					},
 				},
 			},
 		},
@@ -90,6 +92,44 @@ func TestVMOWithStorageVolumes2(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Equal(t, 1, len(pvcs), "Length of generated PVCs")
+}
+
+func TestVMOWithStorageVolumes3(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Elasticsearch: vmcontrollerv1.Elasticsearch{
+				Enabled: true,
+				Nodes: []vmcontrollerv1.ElasticsearchNode{
+					{
+						Name: "data",
+						Roles: []vmcontrollerv1.NodeRole{
+							vmcontrollerv1.DataRole,
+						},
+						Storage: &vmcontrollerv1.Storage{
+							Size:               "100Gi",
+							AvailabilityDomain: "AD1",
+							PvcNames: []string{
+								"p1",
+								"p2",
+							},
+						},
+					},
+				},
+				DataNode: vmcontrollerv1.ElasticsearchNode{
+					Storage: &vmcontrollerv1.Storage{
+						Size:               "50Gi",
+						AvailabilityDomain: "AD1",
+						PvcNames:           []string{"elasticsearch-pvc"},
+					},
+				},
+			},
+		},
+	}
+	pvcs, err := New(vmo, constants.OciFlexVolumeProvisioner)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, 3, len(pvcs), "Length of generated PVCs")
 }
 
 func TestVMODevModeWithStorageVolumes(t *testing.T) {

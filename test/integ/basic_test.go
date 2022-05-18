@@ -29,7 +29,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/framework"
 	testutil "github.com/verrazzano/verrazzano-monitoring-operator/test/integ/util"
-	"gopkg.in/resty.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -659,7 +658,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 		// Test1 - Accessing the grafana endpoint root URL using NGINX basic auth should return 200.
 		//         This validates backward compatability, Users can continue to use VMO basic auth
 		fmt.Println("Dashboard API Token tests")
-		resp, err := resty.R().SetBasicAuth(username, password).
+		restyClient := testutil.GetClient()
+		resp, err := restyClient.R().SetBasicAuth(username, password).
 			Get(fmt.Sprintf("http://%s:%d%s",
 				f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/"))
 		if err != nil {
@@ -672,7 +672,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 		fmt.Println("Test1 - Accessing the grafana endpoint root URL using NGINX basic auth should return 200 - Passed")
 
 		// Test2: Get a Admin API Token via Grafana HTTP API
-		resp2, err2 := resty.R().SetHeader("Content-Type", "application/json").
+		restyClient = testutil.GetClient()
+		resp2, err2 := restyClient.R().SetHeader("Content-Type", "application/json").
 			SetBody(`{"name":"adminTestApiKey", "role": "Admin"}`).SetBasicAuth(username, password).
 			Post(fmt.Sprintf("http://%s:%d%s",
 				f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/auth/keys"))
@@ -697,7 +698,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 
 		// Test3: Get a View API Token via Grafana HTTP API
 		var jsonResp3 map[string]string
-		resp3, err3 := resty.R().SetHeader("Content-Type", "application/json").
+		restyClient = testutil.GetClient()
+		resp3, err3 := restyClient.R().SetHeader("Content-Type", "application/json").
 			SetBody(`{"name":"viewTestApiKey", "role": "Viewer"}`).SetBasicAuth(username, password).
 			Post(fmt.Sprintf("http://%s:%d%s",
 				f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/auth/keys"))
@@ -721,7 +723,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 		fmt.Println("Test3: Get a View API Token via Grafana HTTP API - PASSED")
 
 		//Test4: Validate that any Grafana API call fails if No Valid API Token is passed
-		resp4, err4 := resty.R().
+		restyClient = testutil.GetClient()
+		resp4, err4 := restyClient.R().
 			Get(fmt.Sprintf("http://%s:%d%s",
 				f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/org"))
 		if err4 != nil {
@@ -734,7 +737,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 		fmt.Println("Test4: Validate that any Grafana API call fails if No Valid API Token is passed - PASSED")
 
 		//Test5: Validate that View Only operation PASSES with a Viewer role API Token.
-		resp5, err5 := resty.R().SetHeader("Authorization", "Bearer "+viewAPIToken).
+		restyClient = testutil.GetClient()
+		resp5, err5 := restyClient.R().SetHeader("Authorization", "Bearer "+viewAPIToken).
 			Get(fmt.Sprintf("http://%s:%d%s",
 				f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/org"))
 		if err5 != nil {
@@ -748,7 +752,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 
 		//Test6: Validate that Admin Operation FAILS with a Viewer Role API Token
 		var jsonResp6 map[string]string
-		resp6, err6 := resty.R().SetHeader("Content-Type", "application/json").
+		restyClient = testutil.GetClient()
+		resp6, err6 := restyClient.R().SetHeader("Content-Type", "application/json").
 			SetHeader("Authorization", "Bearer "+viewAPIToken).SetBody(`{"name":"Main org."}`).
 			Put(fmt.Sprintf("http://%s:%d%s",
 				f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/org"))
@@ -773,7 +778,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 
 		//Test7: Validate that Admin Operation PASSES with ONLY a Admin Role API Token
 		var jsonResp7 map[string]string
-		resp7, err7 := resty.R().SetHeader("Content-Type", "application/json").
+		restyClient = testutil.GetClient()
+		resp7, err7 := restyClient.R().SetHeader("Content-Type", "application/json").
 			SetHeader("Authorization", "Bearer "+adminToken).SetBody(`{"name":"Main org."}`).
 			Put(fmt.Sprintf("http://%s:%d%s",
 				f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/org"))
@@ -801,7 +807,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 		if !testutil.SkipTeardown(f) {
 			//Delete The API token keys created.
 			//Test 8: Delete the API Viewer Token
-			resp8, err8 := resty.R().SetBasicAuth(username, password).
+			restyClient := testutil.GetClient()
+			resp8, err8 := restyClient.R().SetBasicAuth(username, password).
 				Delete(fmt.Sprintf("http://%s:%d%s",
 					f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/auth/keys/1"))
 			if err8 != nil {
@@ -814,7 +821,8 @@ func verifyGrafanaAPITokenOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzan
 			fmt.Println("Test8: Delete the API Viewer Token - PASSED")
 
 			//Test 9: Delete API Admin Token
-			resp9, err9 := resty.R().SetBasicAuth(username, password).
+			restyClient = testutil.GetClient()
+			resp9, err9 := restyClient.R().SetBasicAuth(username, password).
 				Delete(fmt.Sprintf("http://%s:%d%s",
 					f.ExternalIP, grafanaSvc.Spec.Ports[0].NodePort, "/api/auth/keys/1"))
 			if err9 != nil {
@@ -1238,7 +1246,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			if resp.StatusCode != http.StatusOK {
 				t.Fatalf("Expected response code %d from PUT but got %d: (%v)", http.StatusOK, resp.StatusCode, resp)
 			}
-			fmt.Println("  ==> Ingest Pipeline " + ingestPipelinePath + " created")
+			fmt.Println("  ==> IngestNodes Pipeline " + ingestPipelinePath + " created")
 		}
 
 		ElasticSearchService, err := testutil.WaitForService(f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name, testutil.DefaultRetry, f.KubeClient)
@@ -1299,7 +1307,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 				if resp.StatusCode != http.StatusOK {
 					t.Fatalf("Expected response code %d from GET but got %d: (%v)", http.StatusOK, resp.StatusCode, resp)
 				}
-				fmt.Println("  ==> Ingest pipeline " + docPath + " retrieved")
+				fmt.Println("  ==> IngestNodes pipeline " + docPath + " retrieved")
 			}
 		}
 
@@ -1340,7 +1348,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 				if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 					t.Fatalf("Expected response code %d or %d from DELETE on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, myURL, resp.StatusCode, resp)
 				}
-				fmt.Println("  ==> Ingest pipeline" + docPath + " deleted")
+				fmt.Println("  ==> IngestNodes pipeline" + docPath + " deleted")
 			}
 		}
 	}
@@ -1643,34 +1651,6 @@ func waitForStringInResponse(host string, externalIP string, port int32, urlPath
 	return err
 }
 
-// waitForPrometheusMetric waits until the given metric appears in Prometheus (from some time in the last day)
-func waitForPrometheusMetric(domain, prometheusURL string, metricName string) error {
-	var err error
-	var body string
-	var headers = map[string]string{}
-
-	endpointURL := fmt.Sprintf("%s/api/v1/query?query=avg_over_time(%s[1d])", prometheusURL, metricName)
-	err = testutil.Retry(testutil.DefaultRetry, func() (bool, error) {
-
-		_, body, err = sendRequest("GET", endpointURL, "prometheus."+domain, false, headers, "")
-		var jsonResp map[string]interface{}
-		if err := json.Unmarshal([]byte(body), &jsonResp); err == nil {
-			dataJSON := jsonResp["data"]
-			// Need to convert the [data] element into an interface in order to process it
-			switch vv := dataJSON.(type) {
-			case map[string]interface{}:
-				// A non-empty list means the metric exists
-				return fmt.Sprint(vv["result"]) != "[]", nil
-			case []interface{}:
-				return false, nil
-			}
-		}
-		return false, nil
-	})
-	return err
-
-}
-
 // readTestDashboardConfig returns a dashboard as a JSON-encoded string whose title is the specified id.
 func readTestDashboardConfig(id string) (string, error) {
 	dashboardConfig, readErr := ioutil.ReadFile("files/grafana.dashboard.json")
@@ -1752,7 +1732,7 @@ func sendRequestWithUserPassword(action, myURL, host string, useAuth bool, heade
 	var err error
 
 	tr := &http.Transport{
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true}, //nolint:gosec //#gosec G402
 		TLSHandshakeTimeout: 10 * time.Second,
 		// Match Cirith's default timeouts
 		ResponseHeaderTimeout: 20 * time.Second,

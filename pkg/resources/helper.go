@@ -1,10 +1,13 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,6 +22,106 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+var (
+	runes                  = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
+	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
+)
+
+const serviceClusterLocal = ".svc.cluster.local"
+
+//CopyInitialMasterNodes copies the initial master node environment variable from an existing container to an expected container
+// cluster.initial_master_nodes shouldn't be changed after it's set.
+func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName string) {
+	getContainer := func(containers []corev1.Container) (int, *corev1.Container) {
+		for idx, c := range containers {
+			if c.Name == containerName {
+				return idx, &c
+			}
+		}
+		return -1, nil
+	}
+
+	// Initial master nodes should not change
+	idx, currentContainer := getContainer(expected)
+	_, existingContainer := getContainer(existing)
+	if currentContainer == nil || existingContainer == nil {
+		return
+	}
+	existingMasterNodesVar := GetEnvVar(existingContainer, constants.ClusterInitialMasterNodes)
+	if existingMasterNodesVar == nil {
+		return
+	}
+	SetEnvVar(currentContainer, existingMasterNodesVar)
+	expected[idx] = *currentContainer
+}
+
+//GetEnvVar retrieves a container EnvVar if it is present
+func GetEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
+	for _, envVar := range container.Env {
+		if envVar.Name == name {
+			return &envVar
+		}
+	}
+	return nil
+}
+
+//SetEnvVar sets a container EnvVar, overriding if it was laready present
+func SetEnvVar(container *corev1.Container, envVar *corev1.EnvVar) {
+	for idx, env := range container.Env {
+		if env.Name == envVar.Name {
+			container.Env[idx] = *envVar
+			return
+		}
+	}
+	container.Env = append(container.Env, *envVar)
+}
+
+func GetOpenSearchHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	// The master HTTP port may be overridden if necessary.
+	// This can be useful in situations where the VMO does not have direct access to the cluster service,
+	// such as when you are using port-forwarding.
+	masterServiceEndpoint := os.Getenv(masterHTTPEndpoint)
+	if len(masterServiceEndpoint) > 0 {
+		return masterServiceEndpoint
+	}
+	return fmt.Sprintf("http://%s-http.%s%s:%d",
+		GetMetaName(vmo.Name, config.ElasticsearchMaster.Name),
+		vmo.Namespace,
+		serviceClusterLocal,
+		constants.OSHTTPPort)
+}
+
+func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	dashboardsServiceEndpoint := os.Getenv(dashboardsHTTPEndpoint)
+	if len(dashboardsServiceEndpoint) > 0 {
+		return dashboardsServiceEndpoint
+	}
+	return fmt.Sprintf("http://%s.%s%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
+		vmo.Namespace,
+		serviceClusterLocal,
+		constants.OSDashboardsHTTPPort)
+}
+
+func GetOwnerLabels(owner string) map[string]string {
+	return map[string]string{
+		"owner": owner,
+	}
+}
+
+//GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
+func GetNewRandomID(size int) (string, error) {
+	builder := strings.Builder{}
+	for i := 0; i < size; i++ {
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
+		if err != nil {
+			return "", err
+		}
+		builder.WriteRune(runes[idx.Int64()])
+	}
+	return builder.String(), nil
+}
+
 // GetMetaName returns name
 func GetMetaName(vmoName string, componentName string) string {
 	return constants.VMOServiceNamePrefix + vmoName + "-" + componentName
@@ -29,6 +132,27 @@ func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]
 	return map[string]string{constants.K8SAppLabel: constants.VMOGroup, constants.VMOLabel: vmo.Name}
 }
 
+// GetCompLabel returns a component value for opensearch
+func GetCompLabel(componentName string) string {
+	var componentLabelValue string
+	switch componentName {
+	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name:
+		componentLabelValue = constants.ComponentOpenSearchValue
+	default:
+		componentLabelValue = componentName
+	}
+	return componentLabelValue
+}
+
+// DeepCopyMap performs a deepcopy of a map
+func DeepCopyMap(srcMap map[string]string) map[string]string {
+	result := make(map[string]string, len(srcMap))
+	for k, v := range srcMap {
+		result[k] = v
+	}
+	return result
+}
+
 // GetSpecID returns app label
 func GetSpecID(vmoName string, componentName string) map[string]string {
 	return map[string]string{constants.ServiceAppLabel: vmoName + "-" + componentName}
@@ -36,7 +160,7 @@ func GetSpecID(vmoName string, componentName string) map[string]string {
 
 // GetServicePort returns service port
 func GetServicePort(componentDetails config.ComponentDetails) corev1.ServicePort {
-	return corev1.ServicePort{Name: componentDetails.Name, Port: int32(componentDetails.Port)}
+	return corev1.ServicePort{Name: "http-" + componentDetails.Name, Port: int32(componentDetails.Port)}
 }
 
 // GetOwnerReferences returns owner references
@@ -72,7 +196,7 @@ func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	case config.Prometheus.Name:
 		return &vmo.Spec.Prometheus.Storage
 	case config.ElasticsearchData.Name:
-		return &vmo.Spec.Elasticsearch.Storage
+		return vmo.Spec.Elasticsearch.DataNode.Storage
 	}
 	return nil
 }
@@ -109,7 +233,7 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	vmoResources *vmcontrollerv1.Resources, componentDetails config.ComponentDetails) corev1.Container {
 
 	var volumeMounts []corev1.VolumeMount
-	if vmoStorage != nil && vmoStorage.Size != "" {
+	if vmoStorage != nil && vmoStorage.PvcNames != nil && vmoStorage.Size != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: componentDetails.DataDir, Name: constants.StorageVolumeName})
 	}
 
@@ -130,10 +254,10 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 		}
 	}
 
-	var livenessProbe *corev1.Probe = nil
+	var livenessProbe *corev1.Probe
 	if componentDetails.LivenessHTTPPath != "" {
 		livenessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   componentDetails.LivenessHTTPPath,
 					Port:   intstr.IntOrString{IntVal: int32(componentDetails.Port)},
@@ -143,10 +267,10 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 		}
 	}
 
-	var readinessProbe *corev1.Probe = nil
+	var readinessProbe *corev1.Probe
 	if componentDetails.ReadinessHTTPPath != "" {
 		readinessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   componentDetails.ReadinessHTTPPath,
 					Port:   intstr.IntOrString{IntVal: int32(componentDetails.Port)},
@@ -197,7 +321,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 func GetElasticsearchMasterInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
 	elasticsearchInitContainer.Command =
-		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data; sysctl -w vm.max_map_count=262144"}
+		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/opensearch/data; sysctl -w vm.max_map_count=262144"}
 	elasticsearchInitContainer.Ports = nil
 	return &elasticsearchInitContainer
 }
@@ -211,7 +335,7 @@ func GetElasticsearchInitContainer() *corev1.Container {
 }
 
 // GetDefaultPrometheusConfiguration returns the default Prometheus configuration for a VMO instance
-func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+func GetDefaultPrometheusConfiguration(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vzClusterName string) string {
 	alertmanagerURL := fmt.Sprintf(GetMetaName(vmo.Name, config.AlertManager.Name)+":%d", config.AlertManager.Port)
 	// Prometheus does not allow any special characters in their label names, So they need to be removed using reg exp
 	re := regexp.MustCompile("[^a-zA-Z0-9_]")
@@ -235,6 +359,8 @@ scrape_configs:
    scrape_timeout: 15s
    static_configs:
    - targets: ['localhost:9090']
+     labels:
+       ` + constants.PrometheusClusterNameLabel + ": " + vzClusterName + `
 
  - job_name: 'node-exporter'
    scrape_interval: 20s
@@ -245,6 +371,10 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_endpoints_name]
      regex: 'node-exporter'
      action: keep
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName + `
 
  - job_name: 'cadvisor'
    scrape_interval: 20s
@@ -265,6 +395,10 @@ scrape_configs:
      regex: (.+)
      target_label: __metrics_path__
      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName + `
 
  - job_name: 'nginx-ingress-controller'
    kubernetes_sd_configs:
@@ -289,6 +423,10 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_pod_name]
      action: replace
      target_label: kubernetes_pod_name
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName + `
 
  # Scrape config for Istio envoy stats
  - job_name: 'envoy-stats'
@@ -312,6 +450,10 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_pod_name]
      action: replace
      target_label: pod_name
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName + `
 
  # Scrape config for Istio - mesh and istiod metrics
  - job_name: 'pilot'
@@ -325,7 +467,43 @@ scrape_configs:
      action: keep
      regex: istiod;http-monitoring
    - source_labels: [__meta_kubernetes_service_label_app]
-     target_label: app`)
+     target_label: app
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName + `
+
+ # Scrape config for opensearch
+ - job_name: 'opensearch'
+   scheme: https
+   tls_config:
+     ca_file: /etc/istio-certs/root-cert.pem
+     cert_file: /etc/istio-certs/cert-chain.pem
+     key_file: /etc/istio-certs/key.pem
+     insecure_skip_verify: true
+   metrics_path: "/_prometheus/metrics"
+   kubernetes_sd_configs:
+   - role: pod
+     namespaces:
+       names:
+         - "` + constants.VerrazzanoSystemNamespace + `"
+   relabel_configs:
+   - source_labels: [__meta_kubernetes_pod_name]
+     action: keep
+     regex: 'vmi-system-es-.*'
+   - source_labels: [__meta_kubernetes_pod_container_port_number]
+     action: keep
+     regex: '9200'
+   - source_labels: [__meta_kubernetes_namespace]
+     action: replace
+     target_label: namespace
+   - source_labels: [__meta_kubernetes_pod_name]
+     action: replace
+     target_label: kubernetes_pod_name
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName)
 
 	return string(prometheusConfig)
 }
@@ -362,22 +540,6 @@ func New64Val(value int64) *int64 {
 	return &val
 }
 
-// IsSingleNodeESCluster Returns true if only a single master node is requested; single-node ES cluster
-func IsSingleNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return masterNodeReplicas == 1 && dataNodeReplicas == 0 && ingestNodeReplicas == 0
-}
-
-// IsValidMultiNodeESCluster For a valid multi-node cluster that we have a minimum of one master, one ingest, and one data node
-func IsValidMultiNodeESCluster(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
-	masterNodeReplicas := vmo.Spec.Elasticsearch.MasterNode.Replicas
-	dataNodeReplicas := vmo.Spec.Elasticsearch.DataNode.Replicas
-	ingestNodeReplicas := vmo.Spec.Elasticsearch.IngestNode.Replicas
-	return dataNodeReplicas > 0 && ingestNodeReplicas > 0 && masterNodeReplicas > 0
-}
-
 // oidcProxyName returns OIDC Proxy name of the component. ex. es-ingest-oidc
 func oidcProxyName(componentName string) string {
 	return componentName + "-" + config.OidcProxy.Name
@@ -386,6 +548,17 @@ func oidcProxyName(componentName string) string {
 // OidcProxyMetaName returns OIDC Proxy meta name of the component. ex. vmi-system-es-ingest-oidc
 func OidcProxyMetaName(vmoName string, component string) string {
 	return GetMetaName(vmoName, oidcProxyName(component))
+}
+
+// AuthProxyMetaName returns Auth Proxy service name
+// TESTING: should be passed in from hel chart as s
+func AuthProxyMetaName() string {
+	return os.Getenv("AUTH_PROXY_SERVICE_NAME")
+}
+
+// AuthProxyMetaName returns Auth Proxy service name
+func AuthProxyPort() string {
+	return os.Getenv("AUTH_PROXY_SERVICE_PORT")
 }
 
 // OidcProxyConfigName returns OIDC Proxy ConfigMap name of the component. ex. vmi-system-es-ingest-oidc-config
@@ -444,4 +617,25 @@ func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componen
 			Ports:    []corev1.ServicePort{{Name: "oidc", Port: int32(constants.OidcProxyPort)}},
 		},
 	}
+}
+
+// convertToRegexp converts index pattern to a regular expression pattern.
+func ConvertToRegexp(pattern string) string {
+	var result strings.Builder
+	// Add ^ at the beginning
+	result.WriteString("^")
+	for i, literal := range strings.Split(pattern, "*") {
+
+		// Replace * with .*
+		if i > 0 {
+			result.WriteString(".*")
+		}
+
+		// Quote any regular expression meta characters in the
+		// literal text.
+		result.WriteString(regexp.QuoteMeta(literal))
+	}
+	// Add $ at the end
+	result.WriteString("$")
+	return result.String()
 }

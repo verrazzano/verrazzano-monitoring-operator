@@ -1,10 +1,11 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/pvcs"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,95 +21,106 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-// Creates PVCs for the given VMO instance.  Returns a pvc->AD map, which is populated *only if* AD information
+//CreatePersistentVolumeClaims Creates PVCs for the given VMO instance.  Returns a pvc->AD map, which is populated *only if* AD information
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
-func createPersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+	// Update storage with the new API
+	setPerNodeStorage(vmo)
 	// Inspect the Storage Class to use
-	storageClass, err := determineStorageClass(controller)
+	storageClass, err := determineStorageClass(controller, vmo.Spec.StorageClass)
 	if err != nil {
 		return nil, err
 	}
 	storageClassInfo := parseStorageClassInfo(storageClass, controller.operatorConfig)
 
-	pvcList, err := pvcs.New(vmo, storageClass.Name)
+	expectedPVCs, err := pvcs.New(vmo, storageClass.Name)
 	if err != nil {
-		zap.S().Errorf("Failed to create PVC specs for vmo: %s", err)
+		controller.log.Errorf("Failed to create PVC specs for VMI %s: %v", vmo.Name, err)
 		return nil, err
 	}
-	deploymentToAdMap := map[string]string{}
+	pvcToAdMap := map[string]string{}
 
-	zap.S().Infof("Creating/updating PVCs for vmo '%s' in namespace '%s'", vmo.Name, vmo.Namespace)
+	controller.log.Oncef("Creating/updating PVCs for VMI %s", vmo.Name)
 
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
 	if err != nil {
-		return deploymentToAdMap, err
+		return pvcToAdMap, err
 	}
 
 	// Keep track of ADs for Prometheus and Elasticsearch PVCs, to ensure they land on all different ADs
 	prometheusAdCounter := NewAdPvcCounter(schedulableADs)
 	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
 
-	var pvcNames []string
-	for _, currPvc := range pvcList {
-		pvcName := currPvc.Name
-		pvcNames = append(pvcNames, pvcName)
+	for _, expectedPVC := range expectedPVCs {
+		pvcName := expectedPVC.Name
 		if pvcName == "" {
 			// We choose to absorb the error here as the worker would requeue the
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
-			runtime.HandleError(fmt.Errorf("PVC name must be specified"))
-			return deploymentToAdMap, nil
+			runtime.HandleError(errors.New(("Failed, PVC name must be specified")))
+			return pvcToAdMap, nil
 		}
 
-		zap.S().Debugf("Applying PVC '%s' in namespace '%s' for vmo '%s'\n", pvcName, vmo.Namespace, vmo.Name)
+		controller.log.Debugf("Applying PVC '%s' in namespace '%s' for VMI '%s'\n", pvcName, vmo.Namespace, vmo.Name)
 		existingPvc, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).Get(pvcName)
 
-		// If the PVC already exists, we *only* read its current AD, *if possible* (this is not possible for all storage classes and situations)
+		// If the PVC already exists, we check if it needs resizing
 		if existingPvc != nil {
+			if pvcNeedsResize(existingPvc, expectedPVC) {
+				if newPVCName, err := resizePVC(controller, vmo, existingPvc, expectedPVC, storageClass); err != nil {
+					return nil, err
+				} else if newPVCName != nil {
+					// we need to wait until the PVC is bound
+					return pvcToAdMap, nil
+				}
+			}
+
 			if storageClassInfo.PvcAcceptsZone {
 				zone := getZoneFromExistingPvc(storageClassInfo, existingPvc)
-				deploymentToAdMap[pvcName] = zone
+				pvcToAdMap[pvcName] = zone
 				if strings.Contains(existingPvc.Name, config.Prometheus.Name) {
 					prometheusAdCounter.Inc(zone)
-				} else if strings.Contains(existingPvc.Name, "elasticsearch") {
+				} else if isOpenSearchPVC(existingPvc) {
 					elasticsearchAdCounter.Inc(zone)
 				}
+			} else {
+				pvcToAdMap[pvcName] = ""
 			}
 		} else {
 			// If the StorageClass allows us to specify zone info on the PVC, we'll do that now
 			var newAd string
 			if storageClassInfo.PvcAcceptsZone {
-				if strings.Contains(currPvc.Name, config.Prometheus.Name) {
+				if strings.Contains(expectedPVC.Name, config.Prometheus.Name) {
 					newAd = prometheusAdCounter.GetLeastUsedAd()
 					prometheusAdCounter.Inc(newAd)
-				} else if strings.Contains(currPvc.Name, "elasticsearch") {
+				} else if isOpenSearchPVC(expectedPVC) {
 					newAd = elasticsearchAdCounter.GetLeastUsedAd()
 					elasticsearchAdCounter.Inc(newAd)
 				} else {
 					newAd = chooseRandomElementFromSlice(schedulableADs)
 				}
-				currPvc.Spec.Selector = &metav1.LabelSelector{MatchLabels: map[string]string{storageClassInfo.PvcZoneMatchLabel: newAd}}
+				expectedPVC.Spec.Selector = &metav1.LabelSelector{MatchLabels: map[string]string{storageClassInfo.PvcZoneMatchLabel: newAd}}
 			}
-			zap.S().Infof("Creating PVC %s in AD %s", currPvc.Name, newAd)
+			controller.log.Oncef("Creating PVC %s in AD %s", expectedPVC.Name, newAd)
 
-			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), currPvc, metav1.CreateOptions{})
+			_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Create(context.TODO(), expectedPVC, metav1.CreateOptions{})
 
 			if err != nil {
-				return deploymentToAdMap, err
+				return pvcToAdMap, err
 			}
 
-			deploymentToAdMap[pvcName] = newAd
+			pvcToAdMap[pvcName] = newAd
 
 		}
 		if err != nil {
-			return deploymentToAdMap, err
+			return pvcToAdMap, err
 		}
-		zap.S().Debugf("Successfully applied PVC '%s'\n", pvcName)
+		controller.log.Debugf("Successfully applied PVC '%s'\n", pvcName)
 	}
 
-	return deploymentToAdMap, nil
+	return pvcToAdMap, cleanupUnusedPVCs(controller, vmo)
 }
 
 // AdPvcCounter type for AD PVC counts
@@ -153,27 +164,41 @@ func (p *AdPvcCounter) GetLeastUsedAd() string {
 }
 
 // Determines the storage class to use for the current environment
-func determineStorageClass(controller *Controller) (*storagev1.StorageClass, error) {
-	var storageClass *storagev1.StorageClass
-	var err error
-
-	// If a storage class was explicitly specified, use that
-	if controller.operatorConfig.Pvcs.StorageClass != "" {
-		storageClass, err = controller.storageClassLister.Get(controller.operatorConfig.Pvcs.StorageClass)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to fetch storage class %s: %v", controller.operatorConfig.Pvcs.StorageClass, err)
-		}
-	} else { // Otherwise we'll use the "default"
-		storageClasses, err := controller.storageClassLister.List(labels.Everything())
-		if err != nil {
-			return nil, err
-		}
-		storageClass, err = getDefaultStorageClass(storageClasses)
-		if err != nil {
-			return nil, err
-		}
+func determineStorageClass(controller *Controller, className *string) (*storagev1.StorageClass, error) {
+	storageClass, err := getStorageClassOverride(controller, className)
+	if err != nil {
+		return nil, err
 	}
-	return storageClass, nil
+	if storageClass != nil {
+		return storageClass, nil
+	}
+
+	// Otherwise we'll use the "default" storage class
+	storageClasses, err := controller.storageClassLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	return getDefaultStorageClass(storageClasses)
+}
+
+func getStorageClassOverride(controller *Controller, className *string) (*storagev1.StorageClass, error) {
+	if className != nil {
+		// If a storage class was explicitly specified via the VMO API, use that
+		return getStorageClassByName(controller, *className)
+	} else if controller.operatorConfig.Pvcs.StorageClass != "" {
+		// if a storageclass was configured in the operator, use that
+		return getStorageClassByName(controller, controller.operatorConfig.Pvcs.StorageClass)
+	}
+	return nil, nil
+}
+
+func getStorageClassByName(controller *Controller, className string) (*storagev1.StorageClass, error) {
+	storageClass, err := controller.storageClassLister.Get(className)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch storage class %s: %v", className, err)
+	}
+
+	return storageClass, err
 }
 
 // Parses the given storage class into a StorageClassInfo objects
