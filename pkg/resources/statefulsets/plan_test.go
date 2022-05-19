@@ -204,6 +204,7 @@ func TestCreatePlan(t *testing.T) {
 }
 
 func TestCopyFromContainers(t *testing.T) {
+	nodeRoleVar := "node.roles"
 	existing := createTestSTS("foo", 1)
 	existing.Spec = appsv1.StatefulSetSpec{
 		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
@@ -223,6 +224,10 @@ func TestCopyFromContainers(t *testing.T) {
 								Name:  constants.ClusterInitialMasterNodes,
 								Value: "z",
 							},
+							{
+								Name:  nodeRoleVar,
+								Value: "a",
+							},
 						},
 					},
 				},
@@ -241,6 +246,10 @@ func TestCopyFromContainers(t *testing.T) {
 								Name:  "x",
 								Value: "y",
 							},
+							{
+								Name:  nodeRoleVar,
+								Value: "b",
+							},
 						},
 					},
 				},
@@ -252,10 +261,16 @@ func TestCopyFromContainers(t *testing.T) {
 	existingInitialClusterMasters := resources.GetEnvVar(&existing.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
 	expectedInitialClusterMasters := resources.GetEnvVar(&expected.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
 	assert.NotEqualValues(t, existingInitialClusterMasters, expectedInitialClusterMasters)
+	existingNodeRoles := resources.GetEnvVar(&existing.Spec.Template.Spec.Containers[0], nodeRoleVar)
+	expectedNodeRoles := resources.GetEnvVar(&expected.Spec.Template.Spec.Containers[0], nodeRoleVar)
+	assert.NotEqualValues(t, existingNodeRoles, expectedNodeRoles)
 	CopyFromExisting(expected, existing)
 
 	assert.EqualValues(t, existing.Spec.VolumeClaimTemplates, expected.Spec.VolumeClaimTemplates)
 	existingInitialClusterMasters = resources.GetEnvVar(&existing.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
 	expectedInitialClusterMasters = resources.GetEnvVar(&expected.Spec.Template.Spec.Containers[0], constants.ClusterInitialMasterNodes)
 	assert.EqualValues(t, existingInitialClusterMasters, expectedInitialClusterMasters)
+	existingNodeRoles = resources.GetEnvVar(&existing.Spec.Template.Spec.Containers[0], nodeRoleVar)
+	expectedNodeRoles = resources.GetEnvVar(&expected.Spec.Template.Spec.Containers[0], nodeRoleVar)
+	assert.EqualValues(t, existingNodeRoles, expectedNodeRoles)
 }
