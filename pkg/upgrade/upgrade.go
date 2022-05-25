@@ -4,7 +4,6 @@
 package upgrade
 
 import (
-	"errors"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -36,7 +35,8 @@ func (m *Monitor) MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrolle
 	}
 	// reindex is still in progress
 	if !complete {
-		return errors.New("reindex in progress")
+		log.Info("Data stream reindex is in progress.")
+		return nil
 	}
 	// reindex was successful
 	m.reset()
