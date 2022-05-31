@@ -8,13 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
-
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

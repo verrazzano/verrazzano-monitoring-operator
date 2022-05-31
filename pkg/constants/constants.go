@@ -134,9 +134,6 @@ const DashboardConfig = "dashboards"
 // DatasourceConfig dashboard datasource config
 const DatasourceConfig = "datasource"
 
-// IstioCertsMountPath Istio certs mountpath
-const IstioCertsMountPath = "/etc/istio-certs"
-
 // ExternalDNSTTLSeconds value used for ingress annotation
 const ExternalDNSTTLSeconds = 60
 
