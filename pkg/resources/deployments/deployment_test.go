@@ -5,9 +5,10 @@ package deployments
 
 import (
 	"fmt"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"strings"
 	"testing"
+
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -38,13 +39,6 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
-				Enabled: true,
-			},
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
@@ -62,7 +56,7 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 	}
 	deployments := expected.Deployments
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
-	assert.Equal(t, 6, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 5, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
@@ -72,13 +66,6 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
-				Enabled: true,
-			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
 				Enabled: true,
 			},
 			Kibana: vmcontrollerv1.Kibana{
@@ -106,7 +93,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 	}
 	deployments := expected.Deployments
 	deployments = append(deployments, NewOpenSearchDashboardsDeployment(vmo))
-	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
@@ -116,13 +103,6 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
-				Enabled: true,
-			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
 				Enabled: true,
 			},
 			Kibana: vmcontrollerv1.Kibana{
@@ -147,13 +127,6 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			CascadingDelete: true,
 			Grafana: vmcontrollerv1.Grafana{
-				Enabled: true,
-			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
 				Enabled: true,
 			},
 			Kibana: vmcontrollerv1.Kibana{
@@ -203,24 +176,6 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 					RequestMemory: "60Mi",
 				},
 			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled: true,
-				Resources: vmcontrollerv1.Resources{
-					LimitCPU:      "0.51",
-					LimitMemory:   "121M",
-					RequestCPU:    "0.21",
-					RequestMemory: "61M",
-				},
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
-				Enabled: true,
-				Resources: vmcontrollerv1.Resources{
-					LimitCPU:      "0.52",
-					LimitMemory:   "122M",
-					RequestCPU:    "0.22",
-					RequestMemory: "62M",
-				},
-			},
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 				Resources: vmcontrollerv1.Resources{
@@ -264,16 +219,6 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 			assert.Equal(t, resource.MustParse("120Mi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
 			assert.Equal(t, resource.MustParse("200m"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
 			assert.Equal(t, resource.MustParse("60Mi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
-		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Prometheus.Name) {
-			assert.Equal(t, resource.MustParse("0.51"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
-			assert.Equal(t, resource.MustParse("121M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
-			assert.Equal(t, resource.MustParse("0.21"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
-			assert.Equal(t, resource.MustParse("61M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
-		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.AlertManager.Name) {
-			assert.Equal(t, resource.MustParse("0.52"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
-			assert.Equal(t, resource.MustParse("122M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")
-			assert.Equal(t, resource.MustParse("0.22"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "Granfana Request CPU")
-			assert.Equal(t, resource.MustParse("62M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "Granfana Request Memory")
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Kibana.Name) {
 			assert.Equal(t, resource.MustParse("0.53"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), "Granfana Limit CPU")
 			assert.Equal(t, resource.MustParse("123M"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "Granfana Limit Memory")

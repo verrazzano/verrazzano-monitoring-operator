@@ -98,9 +98,6 @@ const TLSKeyName = "tls.key"
 // MetricsNameSpace constant for metrics namespace
 const MetricsNameSpace = "vmo_operator"
 
-// DefaultPrometheusRetentionPeriod default Prometheus retention configuration
-const DefaultPrometheusRetentionPeriod = 90
-
 // OSHTTPPort default OpenSearch HTTP port
 const OSHTTPPort = 9200
 
@@ -137,47 +134,8 @@ const DashboardConfig = "dashboards"
 // DatasourceConfig dashboard datasource config
 const DatasourceConfig = "datasource"
 
-// AlertrulesConfig canary alert rules config
-const AlertrulesConfig = "alertrules"
-
-// AlertrulesVersionsConfig canary alert rules config versions
-const AlertrulesVersionsConfig = "alertrules-versions"
-
-// AlertManagerYaml alertmanager yaml
-const AlertManagerYaml = "alertmanager.yml"
-
-// AlertManagerConfig alertmanager config
-const AlertManagerConfig = "alertmanager-config"
-
-// AlertManagerConfigVersions alertmanager config versions
-const AlertManagerConfigVersions = "alertmanager-config-versions"
-
-// AlertManagerConfigMountPath alertmanager config mountpath
-const AlertManagerConfigMountPath = "/etc/alertmanager/config"
-
-// AlertManagerWebhookURL alertmanager webhook URL
-const AlertManagerWebhookURL = "http://localhost:9093/-/reload"
-
-// AlertManagerConfigContainerLocation alertmanager config inside container
-const AlertManagerConfigContainerLocation = "/etc/alertmanager/config/" + AlertManagerYaml
-
-// PrometheusConfig Prometheus config
-const PrometheusConfig = "prometheus-config"
-
-// PrometheusConfigVersions Prometheus config versions
-const PrometheusConfigVersions = "prometheus-config-versions"
-
-// PrometheusConfigMountPath Prometheus config mountpath
-const PrometheusConfigMountPath = "/etc/prometheus/config"
-
 // IstioCertsMountPath Istio certs mountpath
 const IstioCertsMountPath = "/etc/istio-certs"
-
-// PrometheusRulesMountPath Prometheus rules mountpath
-const PrometheusRulesMountPath = "/etc/prometheus/rules"
-
-// PrometheusConfigContainerLocation Prometheus config inside container
-const PrometheusConfigContainerLocation = "/etc/prometheus/config/prometheus.yml"
 
 // ExternalDNSTTLSeconds value used for ingress annotation
 const ExternalDNSTTLSeconds = 60
@@ -229,10 +187,6 @@ const KeycloakURLData = "keycloak-url"
 
 // KeycloakCABundleData - the field name in MCRegistrationSecret that contains the admin cluster's Keycloak ca-bundle
 const KeycloakCABundleData = "ca-bundle"
-
-// PrometheusClusterNameLabel - the label name attached to all metrics to indicate the Verrazzano
-// cluster name where the metric originated
-const PrometheusClusterNameLabel = "verrazzano_cluster"
 
 // GrafanaAdminSecret is the name of the secret used to to start Grafana
 const GrafanaAdminSecret = "grafana-admin" //nolint:gosec //#gosec G101

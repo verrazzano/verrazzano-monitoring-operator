@@ -88,14 +88,6 @@ func NewVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInst
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
-				Enabled:  true,
-				Replicas: 1,
-			},
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled:  true,
 				Replicas: 1,
@@ -135,12 +127,6 @@ func NewGrafanaOnlyVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMon
 			ServiceType:     corev1.ServiceTypeNodePort,
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
-			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled: false,
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
-				Enabled: false,
 			},
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: false,

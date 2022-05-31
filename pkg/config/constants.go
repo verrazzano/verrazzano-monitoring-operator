@@ -8,7 +8,6 @@ type OperatorConfig struct {
 	EnvName                        string   `yaml:"envName"`
 	DefaultIngressTargetDNSName    string   `yaml:"defaultIngressTargetDNSName,omitempty"`
 	DefaultSimpleComponentReplicas *int     `yaml:"defaultSimpleCompReplicas"`
-	DefaultPrometheusReplicas      *int     `yaml:"defaultPrometheusReplicas"`
 	MetricsPort                    *int     `yaml:"metricsPort"`
 	NatGatewayIPs                  []string `yaml:"natGatewayIPs"`
 	Pvcs                           Pvcs     `yaml:"pvcs"`
@@ -25,5 +24,4 @@ const DefaultOperatorConfigmapName = "verrazzano-monitoring-operator-config"
 
 const configKeyValue = "config"
 const defaultSimpleComponentReplicas = 1
-const defaultPrometheusReplicas = 3
 const defaultMetricsPort = 8090

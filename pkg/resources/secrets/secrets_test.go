@@ -10,33 +10,6 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
-func TestVMONoSecret(t *testing.T) {
-	/*
-		vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
-			Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-				Grafana: vmcontrollerv1.Grafana{
-					Enabled: true,
-				},
-				Prometheus: vmcontrollerv1.Prometheus{
-					Enabled: true,
-				},
-				Kibana: vmcontrollerv1.Kibana{
-					Enabled: true,
-				},
-				Elasticsearch: vmcontrollerv1.Elasticsearch{
-					Enabled: true,
-				},
-			},
-		}
-
-		secrets, err := New(vmo)
-		if err != nil {
-			t.Error(err)
-		}
-		assert.Equal(t, 0, len(secrets), "Length of generated Ingresses")
-	*/
-}
-
 func TestVMOWithCascadingDelete(t *testing.T) {
 	// With CascadingDelete
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{

@@ -63,34 +63,10 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	if vmo.Spec.Grafana.DatasourcesConfigMap == "" {
 		vmo.Spec.Grafana.DatasourcesConfigMap = resources.GetMetaName(vmo.Name, constants.DatasourceConfig)
 	}
-	if vmo.Spec.Prometheus.ConfigMap == "" {
-		vmo.Spec.Prometheus.ConfigMap = resources.GetMetaName(vmo.Name, constants.PrometheusConfig)
-	}
-	if vmo.Spec.Prometheus.VersionsConfigMap == "" {
-		vmo.Spec.Prometheus.VersionsConfigMap = resources.GetMetaName(vmo.Name, constants.PrometheusConfigVersions)
-	}
-	if vmo.Spec.Prometheus.RulesConfigMap == "" {
-		vmo.Spec.Prometheus.RulesConfigMap = resources.GetMetaName(vmo.Name, constants.AlertrulesConfig)
-	}
-	if vmo.Spec.Prometheus.RulesVersionsConfigMap == "" {
-		vmo.Spec.Prometheus.RulesVersionsConfigMap = resources.GetMetaName(vmo.Name, constants.AlertrulesVersionsConfig)
-	}
-	if vmo.Spec.AlertManager.ConfigMap == "" {
-		vmo.Spec.AlertManager.ConfigMap = resources.GetMetaName(vmo.Name, constants.AlertManagerConfig)
-	}
-	if vmo.Spec.AlertManager.VersionsConfigMap == "" {
-		vmo.Spec.AlertManager.VersionsConfigMap = resources.GetMetaName(vmo.Name, constants.AlertManagerConfigVersions)
-	}
 
 	// Number of replicas for each component
 	if vmo.Spec.Kibana.Replicas == 0 {
 		vmo.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
-	}
-	if vmo.Spec.Prometheus.Replicas == 0 {
-		vmo.Spec.Prometheus.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
-	}
-	if vmo.Spec.AlertManager.Replicas == 0 {
-		vmo.Spec.AlertManager.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
 
 	// Default roles for VMO components
@@ -109,11 +85,6 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// Setup data node storage elements
 	for _, node := range nodes.DataNodes(vmo) {
 		initStorageElement(node.Storage, int(node.Replicas), resources.GetMetaName(vmo.Name, node.Name))
-	}
-
-	// Prometheus TSDB retention period
-	if vmo.Spec.Prometheus.RetentionPeriod == 0 {
-		vmo.Spec.Prometheus.RetentionPeriod = constants.DefaultPrometheusRetentionPeriod
 	}
 
 	// Overall status

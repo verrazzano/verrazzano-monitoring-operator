@@ -4,11 +4,12 @@
 package statefulsets
 
 import (
+	"testing"
+
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
@@ -30,7 +31,7 @@ var storageClass = storagev1.StorageClass{
 }
 
 // TestVMOEmptyStatefulSetSize tests the creation of a VMI without StatefulSets
-// GIVEN a VMI spec with empty AlertManager and ElasticSearch specs
+// GIVEN a VMI spec with an empty ElasticSearch spec
 //  WHEN I call New
 //  THEN there should be no StatefulSets created
 func TestVMOEmptyStatefulSetSize(t *testing.T) {
@@ -43,15 +44,12 @@ func TestVMOEmptyStatefulSetSize(t *testing.T) {
 }
 
 // TestVMOEmptyStatefulSetSize tests the creation of a VMI without StatefulSets
-// GIVEN a VMI spec with both AlertManager and ElasticSearch specs having 'enabled' set to false
+// GIVEN a VMI spec with an ElasticSearch spec having 'enabled' set to false
 //  WHEN I call New
 //  THEN there should be no StatefulSets created
 func TestVMODisabledSpecs(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			AlertManager: vmcontrollerv1.AlertManager{
-				Enabled: false,
-			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: false,
 			},
@@ -65,19 +63,19 @@ func TestVMODisabledSpecs(t *testing.T) {
 }
 
 // TestVMOProdProfile tests the creation of a VMI StatefulSets for a Production profile
-// GIVEN a VMI spec with an AlertManager spec and an ElasticSearch spec
+// GIVEN a VMI spec with an ElasticSearch spec
 //  WHEN I call New
-//  THEN there should a StatefulSet for AlertManager and one for ElasticSearch
-//   AND those objects should have the expected values
+//  THEN there should a StatefulSet for ElasticSearch
+//   AND the object should have the expected values
 func TestVMOProdProfile(t *testing.T) {
 	runTestVMO(t, false)
 }
 
 // TestVMODevProfile tests the creation of a VMI StatefulSets for a Development/small-memory profile
-// GIVEN a VMI spec with an AlertManager spec and an ElasticSearch spec
+// GIVEN a VMI spec with an ElasticSearch spec
 //  WHEN I call New
-//  THEN there should a StatefulSet for AlertManager and one for ElasticSearch
-//   AND those objects should have the expected values
+//  THEN there should a StatefulSet for ElasticSearch
+//   AND the object should have the expected values
 //   AND ElasticSearch should be configured for a single-node cluster type
 func TestVMODevProfile(t *testing.T) {
 	runTestVMO(t, true)
