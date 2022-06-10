@@ -6,13 +6,13 @@ package vmo
 import (
 	"bytes"
 	"context"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"html/template"
 	"reflect"
 	"strings"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -41,7 +41,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.Grafana.DashboardsConfigMap)
 
 	//configmap for grafana datasources
-	replaceMap := map[string]string{constants.GrafanaTmplPrometheusURI: resources.GetMetaName(vmo.Name, config.Prometheus.Name),
+	replaceMap := map[string]string{constants.GrafanaTmplPrometheusURI: "prometheus-operator-kube-p-prometheus.verrazzano-monitoring",
 		constants.GrafanaTmplAlertManagerURI: resources.GetMetaName(vmo.Name, config.AlertManager.Name)}
 	dataSourceTemplate, err := asDashboardTemplate(constants.DataSourcesTmpl, replaceMap)
 	if err != nil {
