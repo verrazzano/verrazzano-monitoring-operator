@@ -126,6 +126,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 }
 
 // Creates all Elasticsearch DataNodes deployment elements
+// this is a comment
 func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment {
 	var deployments []*appsv1.Deployment
 	nodeList := nodes.DataNodes(vmo)
