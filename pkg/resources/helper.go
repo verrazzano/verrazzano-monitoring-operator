@@ -508,6 +508,38 @@ scrape_configs:
    - source_labels: null
      action: replace
      target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName + `
+
+ # Scrape config for authproxy
+ - job_name: 'authproxy'
+   scheme: https
+   tls_config:
+     ca_file: /etc/istio-certs/root-cert.pem
+     cert_file: /etc/istio-certs/cert-chain.pem
+     key_file: /etc/istio-certs/key.pem
+     insecure_skip_verify: true
+   metrics_path: "/metrics"
+   kubernetes_sd_configs:
+   - role: pod
+     namespaces:
+       names:
+         - "` + constants.VerrazzanoSystemNamespace + `"
+   relabel_configs:
+   - source_labels: [__meta_kubernetes_pod_name]
+     action: keep
+     regex: 'verrazzano-authproxy-.*'
+   - source_labels: [__meta_kubernetes_pod_container_port_number]
+     action: keep
+     regex: '9113'
+   - source_labels: [__meta_kubernetes_namespace]
+     action: replace
+     target_label: namespace
+   - source_labels: [__meta_kubernetes_pod_name]
+     action: replace
+     target_label: kubernetes_pod_name
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
      replacement: ` + vzClusterName)
 
 	return string(prometheusConfig)
