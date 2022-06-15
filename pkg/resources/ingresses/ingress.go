@@ -143,32 +143,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 			ingresses = append(ingresses, ingress)
 		}
 	}
-	if vmo.Spec.Prometheus.Enabled {
-		if config.Prometheus.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Prometheus))
-		} else {
-			// Create Ingress Rule for Prometheus Endpoint
-			ingRule := createIngressRuleElement(vmo, config.Prometheus)
-			host := config.Prometheus.Name + "." + vmo.Spec.URI
-			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Prometheus)
-			ingress, err := createIngressElement(vmo, host, config.Prometheus, ingRule, healthLocations)
-			if err != nil {
-				return ingresses, err
-			}
-			ingresses = append(ingresses, ingress)
-		}
-	}
-	if vmo.Spec.AlertManager.Enabled {
-		// Create Ingress Rule for AlertManager Endpoint
-		ingRule := createIngressRuleElement(vmo, config.AlertManager)
-		host := config.AlertManager.Name + "." + vmo.Spec.URI
-		healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.AlertManager)
-		ingress, err := createIngressElement(vmo, host, config.AlertManager, ingRule, healthLocations)
-		if err != nil {
-			return ingresses, err
-		}
-		ingresses = append(ingresses, ingress)
-	}
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
 			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Kibana))
