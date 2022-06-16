@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -14,17 +16,93 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/pvcs"
+	v1alpha1 "github.com/verrazzano/verrazzano/platform-operator/apis/verrazzano/v1alpha1"
+	vpoClient "github.com/verrazzano/verrazzano/platform-operator/clients/verrazzano/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
+
+// EnvVarKubeConfig Name of Environment Variable for KUBECONFIG
+const EnvVarKubeConfig = "KUBECONFIG"
+
+// EnvVarTestKubeConfig Name of Environment Variable for test KUBECONFIG
+const EnvVarTestKubeConfig = "TEST_KUBECONFIG"
+
+// GetKubeConfigLocation Helper function to obtain the default kubeConfig location
+func GetKubeConfigLocation() (string, error) {
+	if testKubeConfig := os.Getenv(EnvVarTestKubeConfig); len(testKubeConfig) > 0 {
+		return testKubeConfig, nil
+	}
+
+	if kubeConfig := os.Getenv(EnvVarKubeConfig); len(kubeConfig) > 0 {
+		return kubeConfig, nil
+	}
+
+	if home := homedir.HomeDir(); home != "" {
+		return filepath.Join(home, ".kube", "config"), nil
+	}
+
+	return "", errors.New("unable to find kubeconfig")
+}
+
+// GetKubeConfigGivenPath GetKubeConfig will get the kubeconfig from the given kubeconfigPath
+func GetKubeConfig() (*restclient.Config, error) {
+	kubeconfigPath, err := GetKubeConfigLocation()
+	if err != nil {
+		return nil, err
+	}
+
+	return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+}
+
+// GetVerrazzanoCR returns the installed Verrazzano CR in the given cluster
+// (there should only be 1 per cluster)
+func GetVerrazzanoCR() (*v1alpha1.Verrazzano, error) {
+	config, err := GetKubeConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := vpoClient.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	vzClient := client.VerrazzanoV1alpha1().Verrazzanos("")
+	vzList, err := vzClient.List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing out Verrazzano instances: %v", err)
+	}
+
+	numVzs := len(vzList.Items)
+	if numVzs == 0 {
+		return nil, fmt.Errorf("did not find installed Verrazzano instance")
+	}
+
+	vz := vzList.Items[0]
+	return &vz, nil
+}
 
 //CreatePersistentVolumeClaims Creates PVCs for the given VMO instance.  Returns a pvc->AD map, which is populated *only if* AD information
 // can be specified for new PVCs or determined from existing PVCs.  A pvc-AD map with empty AD values instructs the
 // subsequent deployment processing logic to do the job of choosing ADs.
 func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (map[string]string, error) {
+	// Get Verrazzano CR
+	cr, err := GetVerrazzanoCR()
+	if err != nil {
+		return nil, err
+	}
+	// Exit if Verrazzano uses EmptyDir as VolumeSource
+	if cr.Spec.DefaultVolumeSource == nil || cr.Spec.DefaultVolumeSource.EmptyDir != nil {
+		controller.log.Info("Verrazzano is using EmptyDir as VolumeSource. Discarding PVC creation.")
+		return map[string]string{}, nil
+	}
 	// Update storage with the new API
 	setPerNodeStorage(vmo)
 	// Inspect the Storage Class to use
