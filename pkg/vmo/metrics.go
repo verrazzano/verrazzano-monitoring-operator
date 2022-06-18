@@ -15,7 +15,8 @@ func StartMetricsServer(controller *Controller, certdir string) {
 
 	go wait.Until(func() {
 		controller.log.Oncef("Starting metrics server")
-		err := http.ListenAndServeTLS(":9100/metrics", path.Join(certdir, "tls.crt"), path.Join(certdir, "tls.key"), promhttp.Handler())
+		http.Handle("/metrics", promhttp.Handler())
+		err := http.ListenAndServeTLS(":9100", path.Join(certdir, "tls.crt"), path.Join(certdir, "tls.key"), nil)
 		if err != nil {
 			controller.log.Errorf("Failed to start metrics server for VMI: %v", err)
 		}
