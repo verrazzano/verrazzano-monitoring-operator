@@ -43,9 +43,9 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 	plan := &StatefulSetPlan{
 		// There is no running cluster if the existing size is 0
 		ExistingCluster: mapping.existingSize > 0,
-		// Bounce the master node if it's a single node cluster and we're scaling up to a healthy size.
-		// This removes of the single node property in the pod environment.
-		BounceNodes: mapping.existingSize == 1 && mapping.expectedSize >= minClusterSize,
+		// Always bounce the master node if we are running a single node cluster
+		// This permits modifications to single node clusters, which are inherently unstable
+		BounceNodes: mapping.existingSize == 1,
 	}
 	for name, expected := range mapping.expected {
 		existing, ok := mapping.existing[name]
@@ -55,7 +55,7 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 		} else if mapping.isScaleDownAllowed || !plan.ExistingCluster {
 			// The cluster is in a state that allows updates, so we check if the STS has changed
 			CopyFromExisting(expected, existing)
-			specDiffs := diff.Diff(expected, existing)
+			specDiffs := diff.Diff(existing, expected)
 			if specDiffs != "" || *existing.Spec.Replicas != *expected.Spec.Replicas {
 				log.Oncef("Statefulset %s/%s has spec differences %s", expected.Namespace, expected.Name, specDiffs)
 				plan.Update = append(plan.Update, expected)
@@ -98,13 +98,12 @@ func createStatefulSetMapping(existingList, expectedList []*appsv1.StatefulSet) 
 
 	// if expected size is one, we have a single node cluster. By definition these are
 	// less resilient, so updates/restarts are allowed (otherwise they would never be possible).
-	if (existingSize == 1 && expectedList[0].Name == existingList[0].Name) || expectedSize == 0 {
+	if expectedSize == 0 || (existingSize == 1 && expectedList[0].Name == existingList[0].Name) {
 		// if we have a single node cluster, or the desired outcome is to scale everything down to 0,
 		// scale down is allowed
 		mapping.isScaleDownAllowed = true
 	} else {
-		mapping.isScaleDownAllowed = existingSize >= minClusterSize &&
-			expectedSize >= minClusterSize &&
+		mapping.isScaleDownAllowed = expectedSize >= minClusterSize &&
 			expectedSize > existingSize/2
 	}
 	mapping.existingSize = existingSize
@@ -118,5 +117,5 @@ func CopyFromExisting(expected, existing *appsv1.StatefulSet) {
 	expected.Spec.VolumeClaimTemplates = existing.Spec.VolumeClaimTemplates
 	// Changes to selector are forbidden
 	expected.Spec.Selector = existing.Spec.Selector
-	resources.CopyInitialMasterNodes(expected.Spec.Template.Spec.Containers, existing.Spec.Template.Spec.Containers, config.ElasticsearchMaster.Name)
+	resources.CopyImmutableEnvVars(expected.Spec.Template.Spec.Containers, existing.Spec.Template.Spec.Containers, config.ElasticsearchMaster.Name)
 }

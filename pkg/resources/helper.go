@@ -30,9 +30,9 @@ var (
 
 const serviceClusterLocal = ".svc.cluster.local"
 
-//CopyInitialMasterNodes copies the initial master node environment variable from an existing container to an expected container
+//CopyImmutableEnvVars copies the initial master node environment variable from an existing container to an expected container
 // cluster.initial_master_nodes shouldn't be changed after it's set.
-func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName string) {
+func CopyImmutableEnvVars(expected, existing []corev1.Container, containerName string) {
 	getContainer := func(containers []corev1.Container) (int, *corev1.Container) {
 		for idx, c := range containers {
 			if c.Name == containerName {
@@ -48,11 +48,16 @@ func CopyInitialMasterNodes(expected, existing []corev1.Container, containerName
 	if currentContainer == nil || existingContainer == nil {
 		return
 	}
-	existingMasterNodesVar := GetEnvVar(existingContainer, constants.ClusterInitialMasterNodes)
-	if existingMasterNodesVar == nil {
-		return
+
+	getAndSetVar := func(varName string) {
+		envVar := GetEnvVar(existingContainer, varName)
+		if envVar != nil {
+			SetEnvVar(currentContainer, envVar)
+		}
 	}
-	SetEnvVar(currentContainer, existingMasterNodesVar)
+
+	getAndSetVar(constants.ClusterInitialMasterNodes)
+	getAndSetVar("node.roles")
 	expected[idx] = *currentContainer
 }
 
@@ -501,6 +506,38 @@ scrape_configs:
    - source_labels: [__meta_kubernetes_pod_container_port_number]
      action: keep
      regex: '9200'
+   - source_labels: [__meta_kubernetes_namespace]
+     action: replace
+     target_label: namespace
+   - source_labels: [__meta_kubernetes_pod_name]
+     action: replace
+     target_label: kubernetes_pod_name
+   - source_labels: null
+     action: replace
+     target_label: ` + constants.PrometheusClusterNameLabel + `
+     replacement: ` + vzClusterName + `
+
+ # Scrape config for authproxy
+ - job_name: 'authproxy'
+   scheme: https
+   tls_config:
+     ca_file: /etc/istio-certs/root-cert.pem
+     cert_file: /etc/istio-certs/cert-chain.pem
+     key_file: /etc/istio-certs/key.pem
+     insecure_skip_verify: true
+   metrics_path: "/metrics"
+   kubernetes_sd_configs:
+   - role: pod
+     namespaces:
+       names:
+         - "` + constants.VerrazzanoSystemNamespace + `"
+   relabel_configs:
+   - source_labels: [__meta_kubernetes_pod_name]
+     action: keep
+     regex: 'verrazzano-authproxy-.*'
+   - source_labels: [__meta_kubernetes_pod_container_port_number]
+     action: keep
+     regex: '9113'
    - source_labels: [__meta_kubernetes_namespace]
      action: replace
      target_label: namespace

@@ -57,7 +57,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 
 	for _, sts := range plan.Update {
-		if err := updateStatefulSet(controller, sts, vmo, plan.ExistingCluster, plan.BounceNodes); err != nil {
+		if err := updateStatefulSet(controller, sts, vmo, plan); err != nil {
 			return plan.ExistingCluster, logReturnError(controller.log, sts, err)
 		}
 	}
@@ -91,9 +91,9 @@ func getInitialMasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, exi
 	return nodes.InitialMasterNodes(vmo.Name, nodes.MasterNodes(vmo))
 }
 
-func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingCluster, bounceNodes bool) error {
+func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, plan *statefulsets.StatefulSetPlan) error {
 	// if the cluster is alive, but unhealthy we shouldn't do an update - may cause data loss/corruption
-	if existingCluster && !bounceNodes {
+	if !plan.BounceNodes && plan.ExistingCluster {
 		// We should only update an existing cluster if it is healthy
 		if err := c.osClient.IsGreen(vmo); err != nil {
 			return err
@@ -104,7 +104,7 @@ func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontroller
 		return err
 	}
 	// if it was a single node cluster, delete the pod to ensure it picks up the updated settings.
-	if bounceNodes {
+	if plan.BounceNodes {
 		return c.kubeclientset.CoreV1().Pods(vmo.Namespace).Delete(context.TODO(), sts.Name+"-0", metav1.DeleteOptions{})
 	}
 	return nil
@@ -121,8 +121,8 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 		return nil
 	}
 
-	// don't worry about cluster health if we are deleting the cluster
-	if len(expectedList) < 1 {
+	// don't worry about cluster health if we are deleting the cluster or the statefulset is unhealthy
+	if len(expectedList) < 1 || statefulSet.Status.ReadyReplicas < 1 {
 		return deleteSTS()
 	}
 
