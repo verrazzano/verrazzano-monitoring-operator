@@ -172,14 +172,18 @@ func TestGetDefaultStorageClass3(t *testing.T) {
 	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2"}}
 	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3"}}
 	result, err := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
-	var expectedStorageClass *storagev1.StorageClass = &storagev1.StorageClass{}
-	assert.Equal(t, *expectedStorageClass, *result, "Expect an empty storage class")
-	assert.NotEqual(t, nil, err, "Error from no default storage class")
+	var expectedStorageClassName string = "storageclass-default"
+	var expectedStorageClassAnnotation = map[string]string{constants.K8sDefaultStorageClassAnnotation: "true"}
+	assert.Equal(t, expectedStorageClassName, result.ObjectMeta.Name, "Expect name to be same")
+	assert.Equal(t, expectedStorageClassAnnotation, result.ObjectMeta.Annotations, "Expect annotations to be same")
+	assert.NotEqual(t, nil, err, "Error fetching default storage class")
 }
 
 func TestGetDefaultStorageClass4(t *testing.T) {
 	result, err := getDefaultStorageClass([]*storagev1.StorageClass{})
-	var expectedStorageClass *storagev1.StorageClass = &storagev1.StorageClass{}
-	assert.Equal(t, *expectedStorageClass, *result, "No storage classes")
-	assert.NotEqual(t, nil, err, "Error from no storage classes")
+	var expectedStorageClassName string = "storageclass-default"
+	var expectedStorageClassAnnotations = map[string]string{constants.K8sDefaultStorageClassAnnotation: "true"}
+	assert.Equal(t, expectedStorageClassName, result.ObjectMeta.Name, "Expect name to be same")
+	assert.Equal(t, expectedStorageClassAnnotations, result.ObjectMeta.Annotations, "Expect annotations to be same")
+	assert.NotEqual(t, nil, err, "Error fetching default storage classes")
 }
