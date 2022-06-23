@@ -9,7 +9,7 @@ import (
 )
 
 // StartMetricsServer starts the metrics endpoint. See StartHTTPsServer for the original implementation from which this function is derived.
-func StartMetricsServer(controller *Controller, certdir string) {
+func StartMetricsServer(controller *Controller) {
 
 	go wait.Until(func() {
 		controller.log.Oncef("Starting metrics server")

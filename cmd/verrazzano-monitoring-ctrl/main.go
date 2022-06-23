@@ -62,7 +62,7 @@ func main() {
 
 	vmo.StartHTTPServer(controller, certdir, port)
 
-	vmo.StartMetricsServer(controller, certdir) //might add arguments for easier configuration
+	vmo.StartMetricsServer(controller)
 
 	if err = controller.Run(1); err != nil {
 		zap.S().Fatalf("Error running controller: %s", err.Error())
