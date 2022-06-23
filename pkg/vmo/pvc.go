@@ -242,7 +242,6 @@ func getDefaultStorageClass(storageClasses []*storagev1.StorageClass) (*storagev
 			return storageClass, nil
 		}
 	}
-	fmt.Printf("Failed to find a default storage class. Returning an empty storage class.")
-	var defaultStorageClass = storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass-default", Annotations: map[string]string{constants.K8sDefaultStorageClassAnnotation: "true"}}}
-	return &defaultStorageClass, nil
+	fmt.Println("Failed to find a default storage class. Returning an empty storage class.")
+	return &storagev1.StorageClass{}, nil
 }
