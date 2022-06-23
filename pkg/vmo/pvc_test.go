@@ -172,14 +172,14 @@ func TestGetDefaultStorageClass3(t *testing.T) {
 	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2"}}
 	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3"}}
 	result, err := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
-	var expectedStorageClass *storagev1.StorageClass
-	assert.Equal(t, expectedStorageClass, result, "No default storage class")
+	var expectedStorageClass *storagev1.StorageClass = &storagev1.StorageClass{}
+	assert.Equal(t, *expectedStorageClass, *result, "Expect an empty storage class")
 	assert.NotEqual(t, nil, err, "Error from no default storage class")
 }
 
 func TestGetDefaultStorageClass4(t *testing.T) {
 	result, err := getDefaultStorageClass([]*storagev1.StorageClass{})
-	var expectedStorageClass *storagev1.StorageClass
-	assert.Equal(t, expectedStorageClass, result, "No storage classes")
+	var expectedStorageClass *storagev1.StorageClass = &storagev1.StorageClass{}
+	assert.Equal(t, *expectedStorageClass, *result, "No storage classes")
 	assert.NotEqual(t, nil, err, "Error from no storage classes")
 }
