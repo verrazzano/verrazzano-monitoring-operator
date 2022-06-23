@@ -178,7 +178,12 @@ func determineStorageClass(controller *Controller, className *string) (*storagev
 	if err != nil {
 		return nil, err
 	}
-	return getDefaultStorageClass(storageClasses)
+	emptyStorageClass := &storagev1.StorageClass{}
+	defaultStorageClass := getDefaultStorageClass(storageClasses)
+	if defaultStorageClass == emptyStorageClass {
+		controller.log.Info("Failed to find a default storage class. Returning an empty storage class.")
+	}
+	return defaultStorageClass, nil
 }
 
 func getStorageClassOverride(controller *Controller, className *string) (*storagev1.StorageClass, error) {
@@ -235,13 +240,12 @@ func getZoneFromExistingPvc(storageClassInfo StorageClassInfo, existingPvc *core
 }
 
 // Determines the "default" storage class from a list of storage classes.
-func getDefaultStorageClass(storageClasses []*storagev1.StorageClass) (*storagev1.StorageClass, error) {
+func getDefaultStorageClass(storageClasses []*storagev1.StorageClass) *storagev1.StorageClass {
 	for _, storageClass := range storageClasses {
 		if storageClass.ObjectMeta.Annotations[constants.K8sDefaultStorageClassAnnotation] == "true" ||
 			storageClass.ObjectMeta.Annotations[constants.K8sDefaultStorageClassBetaAnnotation] == "true" {
-			return storageClass, nil
+			return storageClass
 		}
 	}
-	fmt.Println("Failed to find a default storage class. Returning an empty storage class.")
-	return &storagev1.StorageClass{}, nil
+	return &storagev1.StorageClass{}
 }

@@ -155,7 +155,7 @@ func TestGetDefaultStorageClass1(t *testing.T) {
 	storageClass1 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass1"}}
 	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2", Annotations: map[string]string{constants.K8sDefaultStorageClassAnnotation: "true"}}}
 	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3"}}
-	result, _ := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
+	result := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
 	assert.Equal(t, result, &storageClass2, "Default storage class found based on standard label")
 }
 
@@ -163,7 +163,7 @@ func TestGetDefaultStorageClass2(t *testing.T) {
 	storageClass1 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass1"}}
 	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2"}}
 	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3", Annotations: map[string]string{constants.K8sDefaultStorageClassBetaAnnotation: "true"}}}
-	result, _ := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
+	result := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
 	assert.Equal(t, result, &storageClass3, "Default storage class found based on beta label")
 }
 
@@ -171,13 +171,11 @@ func TestGetDefaultStorageClass3(t *testing.T) {
 	storageClass1 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass1"}}
 	storageClass2 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass2"}}
 	storageClass3 := storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "storageclass3"}}
-	result, err := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
+	result := getDefaultStorageClass([]*storagev1.StorageClass{&storageClass1, &storageClass2, &storageClass3})
 	assert.Equal(t, &storagev1.StorageClass{}, result, "Expect name to be same")
-	assert.Equal(t, nil, err, "Error fetching default storage class")
 }
 
 func TestGetDefaultStorageClass4(t *testing.T) {
-	result, err := getDefaultStorageClass([]*storagev1.StorageClass{})
+	result := getDefaultStorageClass([]*storagev1.StorageClass{})
 	assert.Equal(t, &storagev1.StorageClass{}, result, "Expect name to be same")
-	assert.Equal(t, nil, err, "Error fetching default storage class")
 }
