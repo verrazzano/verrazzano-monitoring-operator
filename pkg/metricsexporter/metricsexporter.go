@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// StartMetricsServer starts the metrics endpoint. See StartHTTPsServer for the original implementation from which this function is derived.
 func StartMetricsServer() {
 
 	go wait.Until(func() {
