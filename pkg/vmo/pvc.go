@@ -33,26 +33,26 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		return nil, err
 	}
 	storageClassInfo := parseStorageClassInfo(storageClass, controller.operatorConfig)
-	
+
 	expectedPVCs, err := pvcs.New(vmo, storageClass.Name)
 	if err != nil {
 		controller.log.Errorf("Failed to create PVC specs for VMI %s: %v", vmo.Name, err)
 		return nil, err
 	}
 	pvcToAdMap := map[string]string{}
-	
+
 	controller.log.Oncef("Creating/updating PVCs for VMI %s", vmo.Name)
-	
+
 	// Get total list of all possible schedulable ADs
 	schedulableADs, err := getSchedulableADs(controller)
 	if err != nil {
 		return pvcToAdMap, err
 	}
-	
+
 	// Keep track of ADs for Prometheus and Elasticsearch PVCs, to ensure they land on all different ADs
 	prometheusAdCounter := NewAdPvcCounter(schedulableADs)
 	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
-	
+
 	emptyStorageClass := &storagev1.StorageClass{}
 	if len(expectedPVCs) > 0 && storageClass == emptyStorageClass {
 		return nil, fmt.Errorf("cannot create PVCs when the cluster has no storage class")
