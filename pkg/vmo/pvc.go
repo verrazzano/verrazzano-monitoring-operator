@@ -32,10 +32,6 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	if err != nil {
 		return nil, err
 	}
-	emptyStorageClass := &storagev1.StorageClass{}
-	if storageClass == emptyStorageClass {
-		controller.log.Info("Failed to find a default storage class. Returning an empty storage class.")
-	}
 	storageClassInfo := parseStorageClassInfo(storageClass, controller.operatorConfig)
 
 	expectedPVCs, err := pvcs.New(vmo, storageClass.Name)
@@ -57,6 +53,10 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	prometheusAdCounter := NewAdPvcCounter(schedulableADs)
 	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
 
+	emptyStorageClass := &storagev1.StorageClass{}
+	if len(expectedPVCs) > 0 && storageClass == emptyStorageClass {
+		return nil, fmt.Errorf("cannot create PVCs when the cluster has no storage class")
+	}
 	for _, expectedPVC := range expectedPVCs {
 		pvcName := expectedPVC.Name
 		if pvcName == "" {
