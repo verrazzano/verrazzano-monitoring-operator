@@ -53,6 +53,9 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	prometheusAdCounter := NewAdPvcCounter(schedulableADs)
 	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
 
+	if len(expectedPVCs) > 0 && storageClassInfo.Name == "" {
+		return nil, fmt.Errorf("cannot create PVCs when the cluster has no storage class")
+	}
 	for _, expectedPVC := range expectedPVCs {
 		pvcName := expectedPVC.Name
 		if pvcName == "" {
@@ -178,7 +181,7 @@ func determineStorageClass(controller *Controller, className *string) (*storagev
 	if err != nil {
 		return nil, err
 	}
-	return getDefaultStorageClass(storageClasses)
+	return getDefaultStorageClass(storageClasses), nil
 }
 
 func getStorageClassOverride(controller *Controller, className *string) (*storagev1.StorageClass, error) {
@@ -235,12 +238,12 @@ func getZoneFromExistingPvc(storageClassInfo StorageClassInfo, existingPvc *core
 }
 
 // Determines the "default" storage class from a list of storage classes.
-func getDefaultStorageClass(storageClasses []*storagev1.StorageClass) (*storagev1.StorageClass, error) {
+func getDefaultStorageClass(storageClasses []*storagev1.StorageClass) *storagev1.StorageClass {
 	for _, storageClass := range storageClasses {
 		if storageClass.ObjectMeta.Annotations[constants.K8sDefaultStorageClassAnnotation] == "true" ||
 			storageClass.ObjectMeta.Annotations[constants.K8sDefaultStorageClassBetaAnnotation] == "true" {
-			return storageClass, nil
+			return storageClass
 		}
 	}
-	return nil, fmt.Errorf("Failed to find a default storage class")
+	return &storagev1.StorageClass{}
 }
