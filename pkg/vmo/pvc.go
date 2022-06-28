@@ -56,6 +56,7 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	// Keep track of ADs for Prometheus and Elasticsearch PVCs, to ensure they land on all different ADs
 	prometheusAdCounter := NewAdPvcCounter(schedulableADs)
 	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
+
 	for _, expectedPVC := range expectedPVCs {
 		pvcName := expectedPVC.Name
 		if pvcName == "" {
