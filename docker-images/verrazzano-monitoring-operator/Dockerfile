@@ -6,7 +6,7 @@ RUN yum update -y \
     && yum-config-manager --save --setopt=ol7_ociyum_config.skip_if_unavailable=true \
     && yum install -y oracle-golang-release-el7 \
     && yum-config-manager --disable ol7_developer_golang\* \
-    && yum-config-manager --enable ol7_developer_golang117 &&
+    && yum-config-manager --enable ol7_developer_golang117 \
     && yum -y install golang \
     && yum clean all \
     && go version
