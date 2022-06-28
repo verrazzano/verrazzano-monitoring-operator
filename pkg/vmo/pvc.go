@@ -32,6 +32,10 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	if err != nil {
 		return nil, err
 	}
+	emptyStorageClass := &storagev1.StorageClass{}
+	if storageClass == emptyStorageClass {
+		return nil, fmt.Errorf("Found an empty storage class")
+	}
 	storageClassInfo := parseStorageClassInfo(storageClass, controller.operatorConfig)
 
 	expectedPVCs, err := pvcs.New(vmo, storageClass.Name)
@@ -52,7 +56,6 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	// Keep track of ADs for Prometheus and Elasticsearch PVCs, to ensure they land on all different ADs
 	prometheusAdCounter := NewAdPvcCounter(schedulableADs)
 	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
-
 	for _, expectedPVC := range expectedPVCs {
 		pvcName := expectedPVC.Name
 		if pvcName == "" {
@@ -178,12 +181,7 @@ func determineStorageClass(controller *Controller, className *string) (*storagev
 	if err != nil {
 		return nil, err
 	}
-	emptyStorageClass := &storagev1.StorageClass{}
-	defaultStorageClass := getDefaultStorageClass(storageClasses)
-	if defaultStorageClass == emptyStorageClass {
-		controller.log.Info("Failed to find a default storage class. Returning an empty storage class.")
-	}
-	return defaultStorageClass, nil
+	return getDefaultStorageClass(storageClasses), nil
 }
 
 func getStorageClassOverride(controller *Controller, className *string) (*storagev1.StorageClass, error) {
