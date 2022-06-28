@@ -34,7 +34,7 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 	}
 	emptyStorageClass := &storagev1.StorageClass{}
 	if storageClass == emptyStorageClass {
-		return nil, fmt.Errorf("Found an empty storage class")
+		return nil, fmt.Errorf("found an empty storage class")
 	}
 	storageClassInfo := parseStorageClassInfo(storageClass, controller.operatorConfig)
 
