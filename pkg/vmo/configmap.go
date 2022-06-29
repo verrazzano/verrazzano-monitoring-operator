@@ -7,8 +7,7 @@ import (
 	"bytes"
 	"context"
 	"html/template"
-
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"strings"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
