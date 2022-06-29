@@ -5,6 +5,8 @@ package vmo
 
 import (
 	"context"
+	"strings"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
@@ -13,7 +15,6 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
 )
 
 //resizePVC resizes a PVC to a new size
@@ -152,7 +153,6 @@ func updateVMOStorageForPVC(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ol
 	}
 
 	// Look for the PVC reference and update it
-	updateStorage(&vmo.Spec.Prometheus.Storage)
 	updateStorage(&vmo.Spec.Grafana.Storage)
 	updateStorage(vmo.Spec.Elasticsearch.DataNode.Storage)
 }

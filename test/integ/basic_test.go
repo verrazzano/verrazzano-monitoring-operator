@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package integ
@@ -25,7 +25,6 @@ import (
 
 	"strconv"
 
-	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/test/integ/framework"
 	testutil "github.com/verrazzano/verrazzano-monitoring-operator/test/integ/util"
@@ -50,24 +49,10 @@ var changePassword = generateRandomString()
 // - creation of a VMO instance with block volumes + validations below
 // VMO API Server validations
 // - Verify service endpoint connectivity
-// - Update/PUT Prometheus configuration via HTTP API /prometheus/config
-// - GET Prometheus configuration via HTTP API /prometheus/config
-// - Update/PUT Alertmanager configuration via HTTP API /alertmanager/config
-// - GET Alertmanager configuration via HTTP API /alertmanager/config
-// - Update/PUT Alert configuration via HTTP API /alertmanager/config
-// - GET Alert configuration via HTTP API /alertmanager/config
-// Prometheus Server validations
-// - Verify service endpoint connectivity
-// - Verify Elasticsearch configuration via Prometheus HTTP API
-// - Use VMO API to addd http://localhost:9090/metrics as a local scrape target
-// - Verify special 'up' metric which is updated when it performs a scrape
 // Grafana Server validations
 // - Verify service endpoint connectivity
 // - Upload dashboard via Grafana HTTP API
 // - GET/DELETE dashboard via Grafana HTTP API
-// Alertmanager Server validations
-// - Verify service endpoint connectivity
-// - Verify Prometheus has an Alertmanager defined
 // Elasticsearch Server validations
 // - Verify service endpoint connectivity
 // - Upload new document via Elasticsearch HTTP API
@@ -139,9 +124,7 @@ func TestBasic2VMOWithDataVolumes(t *testing.T) {
 	// Create VMO
 	vmo := testutil.NewVMO(f.RunID+"-vmo-data", secretName)
 	vmo.Spec.Elasticsearch.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
-	vmo.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.Grafana.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
-	vmo.Spec.AlertManager.Replicas = 3
 	vmo.Spec.API.Replicas = 2
 	if f.Ingress {
 		vmo.Spec.URI = testDomain
@@ -207,8 +190,8 @@ func TestBasic4VMOMultiUserAuthn(t *testing.T) {
 	var err error
 	testDomain := "multiuser-authn.example.com"
 
-	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain +
-		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
+	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain +
+		",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
 
 	err = testutil.GenerateKeys(hosts, testDomain, "", 365*24*time.Hour, true, 2048, "P256")
 	if err != nil {
@@ -258,8 +241,8 @@ func TestBasic4VMOWithIngress(t *testing.T) {
 	f := framework.Global
 
 	testDomain := "ingress-test.example.com"
-	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain +
-		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
+	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain +
+		",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
 
 	err := testutil.GenerateKeys(hosts, testDomain, "", 365*24*time.Hour, true, 2048, "P256")
 	if err != nil {
@@ -327,95 +310,6 @@ func TestBasic4VMOOperatorMetricsServer(t *testing.T) {
 	}
 }
 
-func TestBasic2PrometheusMultipleReplicas(t *testing.T) {
-	f := framework.Global
-	var vmoName string
-
-	// Create secrets - domain only used with ingress
-	secretName := f.RunID + "-vmo-secrets"
-	testDomain := "ingress-test.example.com"
-	secret, err := createTestSecrets(secretName, testDomain)
-	if err != nil {
-		t.Errorf("failed to create test secrets: %+v", err)
-	}
-
-	// Create vmo
-	if f.Ingress {
-		vmoName = f.RunID + "-ingress"
-	} else {
-		vmoName = f.RunID + "-prom-2x"
-	}
-	vmo := testutil.NewVMO(vmoName, secretName)
-	vmo.Spec.Prometheus.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
-	vmo.Spec.Prometheus.Replicas = 3
-	if f.Ingress {
-		vmo.Spec.URI = testDomain
-	}
-
-	if testutil.RunBeforePhase(f) {
-		// Create VMO instance
-		vmo, err = testutil.CreateVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret)
-		if err != nil {
-			t.Fatalf("Failed to create VMO: %v", err)
-		}
-	} else {
-		vmo, err = testutil.GetVMO(f.CRClient, f.Namespace, vmo)
-		if err != nil {
-			t.Fatalf("%v", err)
-		}
-	}
-	// Delete VMO instance if we are tearing down
-	if !testutil.SkipTeardown(f) {
-		defer func() {
-			if err := testutil.DeleteVMO(f.CRClient, f.KubeClient2, f.Namespace, vmo, secret); err != nil {
-				t.Fatalf("Failed to clean up VMO: %v", err)
-			}
-		}()
-	}
-	// Check additional prometheus deployments
-	var deploymentNamesToReplicas = map[string]int32{
-		constants.VMOServiceNamePrefix + vmo.Name + "-prometheus-1": 1,
-		constants.VMOServiceNamePrefix + vmo.Name + "-prometheus-2": 1,
-	}
-	for deploymentName := range deploymentNamesToReplicas {
-		err := testutil.WaitForDeploymentAvailable(f.Namespace, deploymentName,
-			deploymentNamesToReplicas[deploymentName], testutil.DefaultRetry, f.KubeClient)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Log("  ==> Additional Prometheus deployments are available")
-
-	verifyVMODeployment(t, vmo)
-
-	// Verify PVC Locations of prometheus deployments to ensure they are on different ADs of a region
-	deploymentList, _ := f.KubeClient.AppsV1().Deployments(f.Namespace).List(context.Background(), metav1.ListOptions{})
-	// Keep track of unique prometheus PVC AD information. Test expectes this should be 3, each PVC on unique AD
-	var prometheusADs []string
-	for _, deployment := range deploymentList.Items {
-		if !(deployment.Spec.Template.Labels["app"] == fmt.Sprintf("%s-%s", vmo.Name, "prometheus")) {
-			continue
-		}
-		skip := false
-		pvcName := deployment.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName
-		pvc, err := f.KubeClient.CoreV1().PersistentVolumeClaims(f.Namespace).Get(context.Background(), pvcName, metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		AD := pvc.Spec.Selector.MatchLabels["oci-availability-domain"]
-		for _, prometheusAD := range prometheusADs {
-			if prometheusAD == AD {
-				skip = true
-				t.Fatalf(" ==> FAIL!!! PVC %s is got assigned to %s again..", pvcName, AD)
-			}
-		}
-		if !skip {
-			prometheusADs = append(prometheusADs, AD)
-		}
-	}
-	assert.Equal(t, 3, len(prometheusADs), "Length of prometheus ADs")
-}
-
 // Create appropriate secrets file for the test
 func createTestSecrets(secretName, testDomain string) (*corev1.Secret, error) {
 	f := framework.Global
@@ -426,8 +320,8 @@ func createTestSecrets(secretName, testDomain string) (*corev1.Secret, error) {
 	}
 
 	// Create TLS Secret
-	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain + ",prometheus." + testDomain +
-		testDomain + ",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
+	hosts := "*." + testDomain + ",api." + testDomain + ",grafana." + testDomain +
+		",kibana." + testDomain + ",elasticsearch." + testDomain + "," + f.ExternalIP
 
 	err := testutil.GenerateKeys(hosts, testDomain, "", 365*24*time.Hour, true, 2048, "P256")
 	if err != nil {
@@ -447,8 +341,8 @@ func createTestSecrets(secretName, testDomain string) (*corev1.Secret, error) {
 
 func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
-	var httpProtocol, myURL, host, body string
-	var promPort, apiPort, esPort int32
+	var httpProtocol, myURL, host string
+	var apiPort, esPort int32
 	var resp *http.Response
 	var err error
 	var headers = map[string]string{}
@@ -465,38 +359,19 @@ func verifyMultiUserAuthnOperations(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 	// What port should we use?
 	if f.Ingress {
 		httpProtocol = "https://"
-		promPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
-		apiPort = promPort
+		apiPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
 	} else {
 		httpProtocol = "http://"
-		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name+"-0")
 		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
 		esPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name)
 	}
 
 	// Verify service endpoint connectivity
-	// Verify Prometheus availability
-	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
-
 	// Verify API availability
 	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
 	fmt.Println("  ==> Service endpoint is available")
 
-	//Test 1: Validate get Unauthorized for reporter user
-	myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/config")
-	host = "api." + vmo.Spec.URI
-	resp, body, err = sendRequestWithUserPassword("GET", myURL, host, false, headers, "", reporterUsername, reporterPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)",
-			http.StatusUnauthorized, "/prometheus/config", resp.StatusCode, body)
-	}
-	fmt.Println("Test 1: Validate get Unauthorized for reporter userd - PASSED")
-
-	// Test 2: Validate reporter use is able to push to elasticsearch
+	// Test 1: Validate reporter use is able to push to elasticsearch
 	index := strings.ToLower("verifyElasticsearch") + f.RunID
 	docPath := "/" + index + "/_doc/1"
 
@@ -540,19 +415,15 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	var deploymentNamesToReplicas = map[string]int32{
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.API.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name:        vmo.Spec.AlertManager.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name:              vmo.Spec.Kibana.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Elasticsearch.IngestNode.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchMaster.Name: vmo.Spec.Elasticsearch.MasterNode.Replicas,
-	}
-	for i := 0; i < int(vmo.Spec.Prometheus.Replicas); i++ {
-		deploymentNamesToReplicas[constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name+"-"+strconv.Itoa(i)] = 1
 	}
 	for i := 0; i < int(vmo.Spec.Elasticsearch.DataNode.Replicas); i++ {
 		deploymentNamesToReplicas[constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchData.Name+"-"+strconv.Itoa(i)] = 1
 	}
 
-	statefulSetComponents := []string{constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name}
+	statefulSetComponents := []string{}
 
 	statefulSetComponents = append(statefulSetComponents, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchMaster.Name)
 	for deploymentName := range deploymentNamesToReplicas {
@@ -575,15 +446,11 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	fmt.Println("Step 2: Verify API service")
 
 	verifyAPI(t, vmo)
-	fmt.Println("Step 3: Verify Prometheus")
-	verifyPrometheus(t, vmo)
-	fmt.Println("Step 4: Verify Grafana")
+	fmt.Println("Step 3: Verify Grafana")
 	verifyGrafana(t, vmo)
-	fmt.Println("Step 5: Verify Alertmanager")
-	verifyAlertmanager(t, vmo)
-	fmt.Println("Step 6: Verify Elasticsearch")
+	fmt.Println("Step 4: Verify Elasticsearch")
 	verifyElasticsearch(t, vmo, true, false)
-	fmt.Println("Step 7: Verify Kibana")
+	fmt.Println("Step 5: Verify Kibana")
 	verifyKibana(t, vmo)
 
 	fmt.Println("======================================================")
@@ -591,46 +458,16 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 
 func verifyAPI(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	f := framework.Global
-	var apiPort, promPort int32
+	var apiPort int32
 
 	// What ports should we use?
 	if f.Ingress {
 		apiPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
-		promPort = apiPort
 	} else {
 		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
-		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
 	}
 
 	// Wait for API availability
-	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
-
-	// Wait for Prometheus availability
-	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
-	fmt.Println("  ==> Service endpoint is available")
-}
-
-func verifyPrometheus(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
-	f := framework.Global
-	var promPort, apiPort int32
-
-	if !vmo.Spec.Prometheus.Enabled {
-		return
-	}
-
-	// What port should we use?
-	if f.Ingress {
-		promPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
-		apiPort = promPort
-	} else {
-		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
-	}
-
-	// Verify Prometheus availability
-	waitForEndpoint(t, vmo, "Prometheus", promPort, "/-/healthy")
-
-	// Verify API availability
 	waitForEndpoint(t, vmo, "API", apiPort, "/healthcheck")
 	fmt.Println("  ==> Service endpoint is available")
 }
@@ -1001,176 +838,6 @@ func verifyGrafana(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstanc
 	}
 }
 
-func verifyAlertmanager(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
-	f := framework.Global
-
-	if !vmo.Spec.AlertManager.Enabled {
-		return
-	}
-
-	var alrtMgrConfig = `
-route:
-  receiver: ` + f.RunID + `
-  group_by: ['alertname']
-  group_wait: 1s
-  group_interval: 1m
-  repeat_interval: 1h
-receivers:
-- name: ` + f.RunID + `
-  pagerduty_configs:
-  - service_key: some-service-key
-`
-
-	var alrtDef = `
-groups:
-- name: ` + f.RunID + `
-  rules:
-  - alert: TargetUP
-    expr: sum(up) > 0
-    labels:
-      severity: page
-    annotations:
-      summary: integ test run ` + f.RunID + ` target up
-`
-
-	var alertPort, apiPort, promPort int32
-	var httpProtocol, myURL, host, payload, body string
-	var resp *http.Response
-	var err error
-	var headers = map[string]string{}
-
-	// What ports should we use?
-	if f.Ingress {
-		alertPort = getPortFromService(t, f.OperatorNamespace, f.IngressControllerSvcName)
-		apiPort = alertPort
-		promPort = alertPort
-		httpProtocol = "https://"
-	} else {
-		alertPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.AlertManager.Name)
-		apiPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.API.Name)
-		promPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Prometheus.Name)
-		httpProtocol = "http://"
-	}
-
-	//Verify service endpoint connectivity
-	waitForEndpoint(t, vmo, "AlertManager", alertPort, "/#/status")
-	fmt.Println("  ==> Service endpoint is available")
-
-	// Get alertmanagers
-	myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, promPort, "/api/v1/alertmanagers")
-	host = "prometheus." + vmo.Spec.URI
-	_, body, err = sendRequest("GET", myURL, host, false, headers, "")
-	if err != nil {
-		t.Fatalf("Failed to GET /api/v1/alertmanagers %v", err)
-	}
-
-	// Verify cluster state
-	fmt.Printf("  ==> Verifying AlertManager cluster size reaches %d\n", vmo.Spec.AlertManager.Replicas)
-	err = waitForStringInResponse("alertmanager."+vmo.Spec.URI, f.ExternalIP, alertPort, "/metrics", fmt.Sprintf("alertmanager_cluster_members %d", vmo.Spec.AlertManager.Replicas))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Get Alertmanager service - needed for target port
-	alertMgrSvc, err := testutil.WaitForService(f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-alertmanager", testutil.DefaultRetry, f.KubeClient)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !strings.Contains(body, alertMgrSvc.Spec.Ports[0].TargetPort.StrVal) {
-		t.Fatalf("response body %s does not contain expected alertmanager", body)
-	}
-	fmt.Println("  ==> Alertmanager defined")
-
-	if testutil.RunBeforePhase(f) {
-
-		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/alertmanager/config")
-		host = "api." + vmo.Spec.URI
-		resp, _, err = sendRequest("PUT", myURL, host, false, headers, alrtMgrConfig)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-			t.Fatalf("Expected response code %d or %d from PUT on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, "/alertmanager/config", resp.StatusCode, resp)
-		}
-		fmt.Println("  ==> Alertmanager config set via API")
-
-		//api server is causing trouble for immediate PUT requests, wait for api server url is ready before attempting to send another PUT request
-		waitForEndpoint(t, vmo, "API", apiPort, "/prometheus/rules")
-
-		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/rules/"+f.RunID+".rules")
-		host = "api." + vmo.Spec.URI
-		resp, _, err = sendRequest("PUT", myURL, host, false, headers, alrtDef)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-			t.Fatalf("Expected response code %d or %d from PUT on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, "/prometheus/rules/"+f.RunID+".rules", resp.StatusCode, resp)
-		}
-		fmt.Println("  ==> Alert definition set via API")
-	}
-	if testutil.RunAfterPhase(f) {
-		// Verify alert manager config
-		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/alertmanager/config")
-		host = "api." + vmo.Spec.URI
-		resp, body, _ = sendRequest("GET", myURL, host, false, headers, "")
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)", http.StatusOK, "/alertmanager/config", resp.StatusCode, resp)
-		}
-		if !strings.Contains(body, alrtMgrConfig) {
-			t.Fatalf("Expected response body %s but got %s", alrtMgrConfig, body)
-		}
-
-		// Verify alert definition
-		myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/rules/"+f.RunID+".rules")
-		host = "api." + vmo.Spec.URI
-		resp, body, _ = sendRequest("GET", myURL, host, false, headers, "")
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected response code %d from GET on %s but got %d: (%v)", http.StatusOK, "/prometheus/rules/"+f.RunID+".rules", resp.StatusCode, resp)
-		}
-		if !strings.Contains(body, alrtDef) {
-			t.Fatalf("Expected response body %s but got %s", alrtDef, body)
-		}
-
-		// Wait for alert to trigger
-		err = waitForKeyWithValueResponse("alertmanager."+vmo.Spec.URI, f.ExternalIP, alertPort, "/api/v1/alerts", "receivers", "["+f.RunID+"]")
-		if err != nil {
-			t.Fatal(err)
-		}
-		fmt.Println("  ==> Test alert firing")
-
-		// Clear Alertmanager config via API if we are tearing down
-		if !testutil.SkipTeardown(f) {
-			// Delete alertrule
-			myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/prometheus/rules/"+f.RunID+".rules")
-			host = "api." + vmo.Spec.URI
-			resp, _, err = sendRequest("DELETE", myURL, host, false, headers, alrtDef)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-				t.Fatalf("Expected response code %d or %d from DELETE on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, "/prometheus/rules/"+f.RunID+".rules", resp.StatusCode, resp)
-			}
-			fmt.Println("  ==> Alert definition unset via API")
-
-			myURL = fmt.Sprintf("%s%s:%d%s", httpProtocol, f.ExternalIP, apiPort, "/alertmanager/config")
-			host = "api." + vmo.Spec.URI
-			payload = `route:
-   receiver: Test
-receivers:
-   - name: Test
-`
-			resp, _, err = sendRequest("PUT", myURL, host, false, headers, payload)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-				t.Fatalf("Expected response code %d or %d from PUT on %s but got %d: (%v)", http.StatusOK, http.StatusAccepted, "/alertmanager/config", resp.StatusCode, resp)
-			}
-		}
-	}
-}
-
 func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, verifyIngestPipeline bool, verifyVMOIndex bool) {
 	f := framework.Global
 
@@ -1474,25 +1141,16 @@ func verifyVMODeploymentWithIngress(t *testing.T, vmo *vmcontrollerv1.Verrazzano
 	ingressMappings := []ingress{
 		{"api", "api", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name, "/prometheus/config", 1},
 		{"grafana", "grafana", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name, "", 1},
-		{"prometheus", "prometheus", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Prometheus.Name + "-0", "/graph", 1},
-		{"alertmanager", "alertmanager", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.AlertManager.Name, "", 1},
 		{"elasticsearch-ingest", "elasticsearch", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name, "", 1},
 		{"kibana", "kibana", constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name, "/app/kibana", 1},
 	}
-	statefulSetComponents := []string{"alertmanager"}
 
 	// Verify VMO instance deployments
 
 	fmt.Println("when junk credentials provided Mapping of VMO Endpoints")
 	for p := range ingressMappings {
-		var err error
-		if resources.SliceContains(statefulSetComponents, ingressMappings[p].componentName) {
-			err = testutil.WaitForStatefulSetAvailable(f.Namespace, ingressMappings[p].deploymentName,
-				ingressMappings[p].replicas, testutil.DefaultRetry, f.KubeClient)
-		} else {
-			err = testutil.WaitForDeploymentAvailable(f.Namespace, ingressMappings[p].deploymentName,
-				ingressMappings[p].replicas, testutil.DefaultRetry, f.KubeClient)
-		}
+		err := testutil.WaitForDeploymentAvailable(f.Namespace, ingressMappings[p].deploymentName,
+			ingressMappings[p].replicas, testutil.DefaultRetry, f.KubeClient)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1622,31 +1280,6 @@ func waitForKeyWithValueResponse(host, externalIP string, port int32, urlPath, k
 			return found, nil
 		}
 		return false, err
-	})
-	return err
-}
-
-// waitForStringInResponse waits until the given URL contains a given expected string
-func waitForStringInResponse(host string, externalIP string, port int32, urlPath, expectedString string) error {
-	f := framework.Global
-	var httpProtocol, body string
-	var err error
-	var headers = map[string]string{}
-
-	// Always use https with Ingress Controller
-	if f.Ingress {
-		httpProtocol = "https://"
-	} else {
-		httpProtocol = "http://"
-	}
-	endpointURL := fmt.Sprintf("%s%s:%d%s", httpProtocol, externalIP, port, urlPath)
-
-	err = testutil.Retry(testutil.DefaultRetry, func() (bool, error) {
-		_, body, err = sendRequest("GET", endpointURL, host, false, headers, "")
-		if err == nil {
-			return strings.Contains(body, expectedString), nil
-		}
-		return false, nil
 	})
 	return err
 }

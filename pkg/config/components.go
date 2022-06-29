@@ -32,10 +32,10 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Prometheus, &PrometheusInit, &AlertManager, &AlertManagerCluster, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
-var StorageEnableComponents = []*ComponentDetails{&Grafana, &Prometheus}
+var StorageEnableComponents = []*ComponentDetails{&Grafana}
 
 // Grafana is the default Grafana configuration
 var Grafana = ComponentDetails{
@@ -66,14 +66,6 @@ var Prometheus = ComponentDetails{
 	OidcProxy:         &OidcProxy,
 }
 
-// PrometheusInit is the default Prometheus InitContainer configuration
-var PrometheusInit = ComponentDetails{
-	Name:            "prometheus-init",
-	EnvName:         "PROMETHEUS_INIT_IMAGE",
-	ImagePullPolicy: constants.DefaultImagePullPolicy,
-	DataDir:         "/prometheus",
-}
-
 // AlertManager is the default AlertManager configuration
 // Note: Update amtool version to match any version changes here
 //   - vmo/images/cirith-server-for-operator/docker-images
@@ -85,12 +77,6 @@ var AlertManager = ComponentDetails{
 	LivenessHTTPPath:  "/-/healthy",
 	ReadinessHTTPPath: "/-/ready",
 	Privileged:        false,
-}
-
-// AlertManagerCluster is AlertManager cluster settings - used in standalone AlertManager cluster service
-var AlertManagerCluster = ComponentDetails{
-	Name: "alertmanager-cluster",
-	Port: 9094,
 }
 
 // ESWait is the InitContainer config; will wait for ES to reach stable healthy state
