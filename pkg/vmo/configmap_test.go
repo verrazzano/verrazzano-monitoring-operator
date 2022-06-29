@@ -7,6 +7,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"gopkg.in/yaml.v2"
 
@@ -295,4 +298,40 @@ func TestReconcileConfigmapsNewScrapeConfigsIntactAfterReconcile(t *testing.T) {
 		}
 	}
 	assert.True(t, found)
+}
+
+// TestCreateUpdateDatasourcesConfigMap tests the createUpdateDatasourcesConfigMap function
+func TestCreateUpdateDatasourcesConfigMap(t *testing.T) {
+	const configMapName = "myDatasourcesConfigMap"
+
+	// GIVEN a Grafana datasources configmap exists and the Prometheus URL is the legacy URL
+	//  WHEN we call the createUpdateDatasourcesConfigMap
+	//  THEN the configmap is updated and the Prometheus URL points to the new Prometheus instance
+	vmo := &vmctl.VerrazzanoMonitoringInstance{}
+	vmo.Name = constants.VMODefaultName
+	vmo.Namespace = constants.VerrazzanoSystemNamespace
+
+	// set the Prometheus URL to the legacy URL
+	replaceMap := map[string]string{constants.GrafanaTmplPrometheusURI: resources.GetMetaName(vmo.Name, config.Prometheus.Name),
+		constants.GrafanaTmplAlertManagerURI: ""}
+	dataSourceTemplate, err := asDashboardTemplate(constants.DataSourcesTmpl, replaceMap)
+	assert.NoError(t, err)
+
+	cm := configmaps.NewConfig(vmo, configMapName, map[string]string{datasourceYAMLKey: dataSourceTemplate})
+
+	client := fake.NewSimpleClientset(cm)
+	controller := &Controller{
+		kubeclientset:   client,
+		configMapLister: &simpleConfigMapLister{kubeClient: client},
+		secretLister:    &simpleSecretLister{kubeClient: client},
+		log:             vzlog.DefaultLogger(),
+	}
+
+	err = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
+	assert.NoError(t, err)
+
+	// fetch the configmap, the Prometheus URL should now be the new Prometheus URL
+	cm, err = client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), configMapName, metav1.GetOptions{})
+	assert.NoError(t, err)
+	assert.Contains(t, cm.Data[datasourceYAMLKey], "url: http://"+prometheusOperatorPrometheusHost+":9090")
 }

@@ -6,13 +6,13 @@ package vmo
 import (
 	"bytes"
 	"context"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"html/template"
 	"reflect"
 	"strings"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -22,6 +22,11 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+)
+
+const (
+	prometheusOperatorPrometheusHost = "prometheus-operator-kube-p-prometheus.verrazzano-monitoring"
+	datasourceYAMLKey                = "datasource.yaml"
 )
 
 // CreateConfigmaps to create all required configmaps for VMI
@@ -41,14 +46,14 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	configMaps = append(configMaps, vmo.Spec.Grafana.DashboardsConfigMap)
 
 	//configmap for grafana datasources
-	replaceMap := map[string]string{constants.GrafanaTmplPrometheusURI: resources.GetMetaName(vmo.Name, config.Prometheus.Name),
+	replaceMap := map[string]string{constants.GrafanaTmplPrometheusURI: prometheusOperatorPrometheusHost,
 		constants.GrafanaTmplAlertManagerURI: resources.GetMetaName(vmo.Name, config.AlertManager.Name)}
 	dataSourceTemplate, err := asDashboardTemplate(constants.DataSourcesTmpl, replaceMap)
 	if err != nil {
 		controller.log.Errorf("Failed to create dashboard datasource template for VMI %s: %v", vmo.Name, err)
 		return err
 	}
-	err = createConfigMapIfDoesntExist(controller, vmo, vmo.Spec.Grafana.DatasourcesConfigMap, map[string]string{"datasource.yaml": dataSourceTemplate})
+	err = createUpdateDatasourcesConfigMap(controller, vmo, vmo.Spec.Grafana.DatasourcesConfigMap, map[string]string{datasourceYAMLKey: dataSourceTemplate})
 	if err != nil {
 		controller.log.Errorf("Failed to create datasource configmap %s: %v", vmo.Spec.Grafana.DatasourcesConfigMap, err)
 		return err
@@ -164,6 +169,41 @@ func createUpdateAlertRulesConfigMap(controller *Controller, vmo *vmcontrollerv1
 		if err != nil {
 			controller.log.Errorf("Failed to create configmap %s%s: %v", vmo.Namespace, configmap, err)
 			return err
+		}
+	}
+	return nil
+}
+
+// createUpdateDatasourcesConfigMap creates or updates the Grafana datasource configmap. If the configmap exists and the Prometheus URL still points
+// to the legacy VMO-managed Prometheus, then replace the Prometheus URL with the new Prometheus Operator-managed Prometheus URL.
+func createUpdateDatasourcesConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmapName string, data map[string]string) error {
+	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmapName)
+	if err != nil {
+		controller.log.Errorf("Failed to get configmap %s%s: %v", vmo.Namespace, configmapName, err)
+		return err
+	}
+	if existingConfig == nil {
+		configMap := configmaps.NewConfig(vmo, configmapName, data)
+		_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+		if err != nil {
+			controller.log.Errorf("Failed to create configmap %s%s: %v", vmo.Namespace, configmapName, err)
+			return err
+		}
+		return nil
+	}
+
+	// if the datasource still points to the legacy Prometheus instance, update it to point to the new Prometheus Operator-managed Prometheus
+	if ds, found := existingConfig.Data[datasourceYAMLKey]; found {
+		updatedDatasourceStr := strings.Replace(ds, resources.GetMetaName(vmo.Name, config.Prometheus.Name), prometheusOperatorPrometheusHost, 1)
+		if updatedDatasourceStr != ds {
+			controller.log.Infof("Replacing Prometheus URL in existing datasource configmap %s/%s", vmo.Namespace, configmapName)
+
+			existingConfig.Data[datasourceYAMLKey] = updatedDatasourceStr
+			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), existingConfig, metav1.UpdateOptions{})
+			if err != nil {
+				controller.log.Errorf("Failed to update configmap %s%s: %v", vmo.Namespace, configmapName, err)
+				return err
+			}
 		}
 	}
 	return nil
