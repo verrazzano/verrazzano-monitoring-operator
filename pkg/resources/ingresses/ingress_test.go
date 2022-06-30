@@ -73,8 +73,18 @@ func TestVMOWithIngresses(t *testing.T) {
 	assert.Equal(t, "api.example.com", ingresses[0].Annotations["cert-manager.io/common-name"], "TLS cert CN")
 	assert.Equal(t, "grafana.example.com", ingresses[1].Annotations["cert-manager.io/common-name"], "TLS cert CN")
 	assert.Equal(t, "elasticsearch.example.com", ingresses[2].Annotations["cert-manager.io/common-name"], "TLS cert CN")
-	assert.Equal(t, verrazzanoIngressClassName, ingresses[0].Annotations["kubernetes.io/ingress.class"])
-	assert.Equal(t, verrazzanoIngressClassName, *ingresses[0].Spec.IngressClassName)
+	assert.Equal(t, getIngressClassName(vmo), ingresses[0].Annotations["kubernetes.io/ingress.class"])
+	assert.Equal(t, getIngressClassName(vmo), *ingresses[0].Spec.IngressClassName)
+}
+
+func TestGetIngressClassName(t *testing.T) {
+	ingressClassName := "foobar"
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			IngressClassName: &ingressClassName,
+		},
+	}
+	assert.Equal(t, ingressClassName, getIngressClassName(vmo))
 }
 
 func TestVMOWithCascadingDelete(t *testing.T) {

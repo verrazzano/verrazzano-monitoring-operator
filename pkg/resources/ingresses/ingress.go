@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var verrazzanoIngressClassName = "nginx"
+var defaultIngressClassName = "nginx"
 
 func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) netv1.IngressRule {
 	serviceName := resources.GetMetaName(vmo.Name, componentDetails.Name)
@@ -52,6 +52,7 @@ func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 
 func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule netv1.IngressRule) (*netv1.Ingress, error) {
 	var hosts = []string{hostName}
+	ingressClassName := getIngressClassName(vmo)
 	ingress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
@@ -69,7 +70,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 				},
 			},
 			Rules:            []netv1.IngressRule{ingressRule},
-			IngressClassName: &verrazzanoIngressClassName,
+			IngressClassName: &ingressClassName,
 		},
 	}
 
@@ -88,8 +89,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	}
 
 	ingress.Annotations["cert-manager.io/common-name"] = hostName
-	ingress.Annotations["kubernetes.io/ingress.class"] = verrazzanoIngressClassName
-
+	ingress.Annotations["kubernetes.io/ingress.class"] = ingressClassName
 	return ingress, nil
 }
 
@@ -214,6 +214,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	serviceName := resources.AuthProxyMetaName()
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
 	pathType := netv1.PathTypeImplementationSpecific
+	ingressClassName := getIngressClassName(vmo)
 	ingressRule := netv1.IngressRule{
 		Host: ingressHost,
 		IngressRuleValue: netv1.IngressRuleValue{
@@ -250,7 +251,8 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
 			},
-			Rules: []netv1.IngressRule{ingressRule},
+			Rules:            []netv1.IngressRule{ingressRule},
+			IngressClassName: &ingressClassName,
 		},
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
@@ -266,5 +268,13 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
 	setNginxRoutingAnnotations(ingress)
 	ingress.Annotations["cert-manager.io/common-name"] = ingressHost
+	ingress.Annotations["kubernetes.io/ingress.class"] = ingressClassName
 	return ingress
+}
+
+func getIngressClassName(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	if vmi.Spec.IngressClassName != nil && *vmi.Spec.IngressClassName != "" {
+		return *vmi.Spec.IngressClassName
+	}
+	return defaultIngressClassName
 }
