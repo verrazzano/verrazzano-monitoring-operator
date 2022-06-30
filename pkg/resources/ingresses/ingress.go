@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var defaultIngressClassName = "nginx"
+var defaultIngressClassName = "verrazzano-nginx"
 
 func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) netv1.IngressRule {
 	serviceName := resources.GetMetaName(vmo.Name, componentDetails.Name)
