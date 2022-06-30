@@ -89,7 +89,6 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	}
 
 	ingress.Annotations["cert-manager.io/common-name"] = hostName
-	ingress.Annotations["kubernetes.io/ingress.class"] = ingressClassName
 	return ingress, nil
 }
 
@@ -268,7 +267,6 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
 	setNginxRoutingAnnotations(ingress)
 	ingress.Annotations["cert-manager.io/common-name"] = ingressHost
-	ingress.Annotations["kubernetes.io/ingress.class"] = ingressClassName
 	return ingress
 }
 
