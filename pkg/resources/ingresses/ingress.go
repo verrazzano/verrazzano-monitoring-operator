@@ -16,6 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var verrazzanoIngressClassName = "nginx"
+
 func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) netv1.IngressRule {
 	serviceName := resources.GetMetaName(vmo.Name, componentDetails.Name)
 	endpointName := componentDetails.EndpointName
@@ -59,13 +61,15 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Spec: netv1.IngressSpec{
+
 			TLS: []netv1.IngressTLS{
 				{
 					Hosts:      hosts,
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, componentDetails.Name),
 				},
 			},
-			Rules: []netv1.IngressRule{ingressRule},
+			Rules:            []netv1.IngressRule{ingressRule},
+			IngressClassName: &verrazzanoIngressClassName,
 		},
 	}
 
@@ -84,6 +88,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	}
 
 	ingress.Annotations["cert-manager.io/common-name"] = hostName
+	ingress.Annotations["kubernetes.io/ingress.class"] = verrazzanoIngressClassName
 
 	return ingress, nil
 }
