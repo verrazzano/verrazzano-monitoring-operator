@@ -136,7 +136,7 @@ func main() {
 	}
 
 	// Initialize K8s object
-	k8s := kutil.New(dynamicKubeClientInterface, kubeClient, kubeClientInterface, config, log)
+	k8s := kutil.New(dynamicKubeClientInterface, kubeClient, kubeClientInterface, config, Profile, log)
 
 	// Get S3 access details from Velero Backup Storage location associated with Backup given as input
 	// Ensure the Backup Storage Location is NOT default

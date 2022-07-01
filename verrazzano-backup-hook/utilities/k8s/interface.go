@@ -31,15 +31,17 @@ type K8sImpl struct {
 	K8sClient           client.Client
 	K8sInterface        kubernetes.Interface
 	K8sConfig           *rest.Config
+	CredentialProfile   string //default value `default`
 	Log                 *zap.SugaredLogger
 }
 
-func New(dclient dynamic.Interface, kclient client.Client, kclientInterface kubernetes.Interface, cfg *rest.Config, log *zap.SugaredLogger) *K8sImpl {
+func New(dclient dynamic.Interface, kclient client.Client, kclientInterface kubernetes.Interface, cfg *rest.Config, credentialProfile string, log *zap.SugaredLogger) *K8sImpl {
 	return &K8sImpl{
 		DynamicK8sInterface: dclient,
 		K8sClient:           kclient,
 		K8sInterface:        kclientInterface,
 		K8sConfig:           cfg,
+		CredentialProfile:   credentialProfile,
 		Log:                 log,
 	}
 }

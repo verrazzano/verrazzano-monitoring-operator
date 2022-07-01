@@ -80,7 +80,7 @@ func (k *K8sImpl) GetObjectStoreCreds(secretName, namespace, secretKey string) (
 	}
 	defer os.Remove(file)
 
-	accessKey, secretAccessKey, err := futil.ReadTempCredsFile(file)
+	accessKey, secretAccessKey, err := futil.ReadTempCredsFile(file, k.CredentialProfile)
 	if err != nil {
 		k.Log.Error("Error while reading creds from file ", zap.Error(err))
 		return nil, err
