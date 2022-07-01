@@ -224,7 +224,7 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		metricsexporter.DeploymentUpdateCountIncrement()
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 		if err != nil {
-			metricsexporter.DeploymentRollingUpdateErrorIncrement()
+			metricsexporter.DeploymentUpdateErrorIncrement()
 			return false, err
 		}
 	}

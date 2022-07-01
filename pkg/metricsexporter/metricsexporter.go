@@ -26,18 +26,16 @@ var (
 	reconcileDuration     = prometheus.NewSummary(prometheus.SummaryOpts{Name: "reconcileLastTime", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"})
 
 	//VMO deployments metrics
-	deploymentIndex                     uint64 = 0
-	deploymentTimer                     *prometheus.Timer
-	deploymentCounter                   = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentCounter", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"})
-	deploymentLastTime                  = prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "deploymentLastTime", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"})
-	deploymentErrorCounter              = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentErrorCounter", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"})
-	deploymentDuration                  = prometheus.NewSummary(prometheus.SummaryOpts{Name: "deploymentLastTime", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"})
-	deploymentUpdateCounter             = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentCounter", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"})
-	deploymentUpdateErrorCounter        = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentErrorCounter", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"})
-	deploymentRollingUpdateCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentCounter", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"})
-	deploymentRollingUpdateErrorCounter = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentErrorCounter", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"})
-	deploymentDeleteCounter             = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentCounter", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"})
-	deploymentDeleteErrorCounter        = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentErrorCounter", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"})
+	deploymentIndex              uint64 = 0
+	deploymentTimer              *prometheus.Timer
+	deploymentCounter            = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentCounter", Help: "Tracks how many times the deployment function is called"})
+	deploymentLastTime           = prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "deploymentLastTime", Help: "The timestamp of the last time the deployment function completed"}, []string{"reconcile_index"})
+	deploymentErrorCounter       = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentErrorCounter", Help: "Tracks how many times the deployment failed"}, []string{"reconcile_index"})
+	deploymentDuration           = prometheus.NewSummary(prometheus.SummaryOpts{Name: "deploymentDuration", Help: "The duration of the last call to the deployment function"})
+	deploymentUpdateCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentUpdateCounter", Help: "Tracks how many times a deployment update is attempted"})
+	deploymentUpdateErrorCounter = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentUpdateErrorCounter", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"})
+	deploymentDeleteCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentDeleteCounter", Help: "Tracks how many times the delete functionality is invoked"})
+	deploymentDeleteErrorCounter = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentDeleteErrorCounter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"})
 
 	allMetrics    = []prometheus.Collector{reconcileCounter, reconcileLastTime, reconcileErrorCounter, reconcileDuration}
 	failedMetrics = map[prometheus.Collector]int{}
@@ -172,11 +170,6 @@ func DeploymentUpdateErrorIncrement() {
 	metricCounterVecErrorIncrement(deploymentUpdateErrorCounter, indexString)
 }
 
-func DeploymentRollingUpdateErrorIncrement() {
-	indexString := numToString(deploymentIndex)
-	metricCounterVecErrorIncrement(deploymentRollingUpdateErrorCounter, indexString)
-}
-
 func DeploymentDeleteErrorIncrement() {
 	indexString := numToString(deploymentIndex)
 	metricCounterVecErrorIncrement(deploymentDeleteErrorCounter, indexString)
@@ -191,10 +184,6 @@ func DeploymentCountIncrement() {
 //in update, rolling update, update all, ...
 func DeploymentUpdateCountIncrement() {
 	deploymentUpdateCounter.Inc()
-}
-
-func DeploymentRollingUpdateCountIncrement() {
-	deploymentRollingUpdateCounter.Inc()
 }
 
 func DeploymentDeleteCountIncrement() {
