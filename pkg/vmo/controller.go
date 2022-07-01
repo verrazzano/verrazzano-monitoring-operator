@@ -520,6 +520,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if !errorObserved {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
+			metricsexporter.DeploymentErrorIncrement()
 			errorObserved = true
 		}
 	}
