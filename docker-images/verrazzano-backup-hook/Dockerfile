@@ -9,7 +9,7 @@ FROM ghcr.io/oracle/oraclelinux:8-slim as opensearch-hook-builder
 RUN microdnf update -y \
     && microdnf install -y oraclelinux-developer-release-el8 \
     && microdnf module enable go-toolset:ol8addon \
-    && microdnf install go-toolset \
+    && microdnf install go-toolset git \
     && go version
 
 # Need to use specific WORKDIR to match verrazzano-monitoring-operator's source packages
