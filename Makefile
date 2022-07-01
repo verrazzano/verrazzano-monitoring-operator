@@ -154,7 +154,7 @@ push-tag:
 #
 .PHONY: unit-test
 unit-test: go-install
-	GO111MODULE=on $(GO) test -v ./pkg/... ./cmd/...
+	GO111MODULE=on $(GO) test -v ./pkg/... ./cmd/... ./verrazzano-backup-hook/
 
 #
 # Run all checks, convenient as a sanity-check before committing/pushing

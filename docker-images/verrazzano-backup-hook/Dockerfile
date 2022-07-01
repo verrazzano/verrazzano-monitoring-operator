@@ -10,7 +10,7 @@ RUN microdnf update -y \
     && microdnf install -y oraclelinux-developer-release-el8 \
     && microdnf module enable go-toolset:ol8addon \
     && microdnf install go-toolset \
-    && go version \
+    && go version
 
 # Need to use specific WORKDIR to match verrazzano-monitoring-operator's source packages
 WORKDIR /root/go/src/github.com/verrazzano/verrazzano-monitoring-operator
