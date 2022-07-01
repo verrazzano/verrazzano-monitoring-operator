@@ -132,6 +132,14 @@ build: k8s-dist
 		-f ${DOCKERFILE_OPERATOR} \
 		.
 
+.PHONY: buildbackup
+buildbackup:
+	go build \
+           -ldflags '-extldflags "-static"' \
+           -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
+           -o /usr/bin/verrazzano-backup-hook ./verrazzano-backup-hook
+
+
 .PHONY: push
 push: build
 	docker tag ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
