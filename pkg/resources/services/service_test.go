@@ -19,13 +19,6 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled:  true,
-				Replicas: 1,
-			},
-			AlertManager: vmcontrollerv1.AlertManager{
-				Enabled: true,
-			},
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},

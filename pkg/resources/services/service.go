@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package services
@@ -21,20 +21,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, useNodeRoleSelectors 
 	if vmo.Spec.Grafana.Enabled {
 		service := createServiceElement(vmo, config.Grafana)
 		services = append(services, service)
-	}
-	if vmo.Spec.Prometheus.Enabled {
-		service := createServiceElement(vmo, config.Prometheus)
-		services = append(services, service)
-	}
-	if vmo.Spec.AlertManager.Enabled {
-		alertManagerService := createServiceElement(vmo, config.AlertManager)
-		services = append(services, alertManagerService)
-
-		alertManagerClusterService := createServiceElement(vmo, config.AlertManagerCluster)
-		alertManagerClusterService.Spec.Selector = resources.GetSpecID(vmo.Name, config.AlertManager.Name)
-		alertManagerClusterService.Spec.Type = corev1.ServiceTypeClusterIP
-		alertManagerClusterService.Spec.ClusterIP = corev1.ClusterIPNone
-		services = append(services, alertManagerClusterService)
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
 		services = append(services, createOpenSearchServiceElements(vmo, useNodeRoleSelectors)...)

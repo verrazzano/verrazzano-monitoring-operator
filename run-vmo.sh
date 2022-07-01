@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2020, 2021, Oracle and/or its affiliates.
+# Copyright (c) 2020, 2022, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 #
 # This script will run the verrazzano-monitoring-operator outside of the cluster, for local debugging/testing
@@ -42,9 +42,6 @@ echo ""
 # Extract the images required by verrazzano-operator from values.yaml into environment variables.
 export ISTIO_PROXY_IMAGE=$(grep istioProxyImage ${VERRAZZANO_INSTALLER_REPO}//values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export GRAFANA_IMAGE=$(grep grafanaImage ${VERRAZZANO_INSTALLER_REPO}//values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export PROMETHEUS_IMAGE=$(grep prometheusImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export PROMETHEUS_INIT_IMAGE=$(grep prometheusInitImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
-export ALERT_MANAGER_IMAGE=$(grep alertManagerImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export ELASTICSEARCH_WAIT_TARGET_VERSION=7.6.1
 export ELASTICSEARCH_WAIT_IMAGE=$(grep esWaitImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
 export KIBANA_IMAGE=$(grep kibanaImage ${VERRAZZANO_INSTALLER_REPO}/values.yaml | cut -d':' -f2,3 | sed -e 's/^[[:space:]]*//')
@@ -68,9 +65,6 @@ Variables:
 
 ISTIO_PROXY_IMAGE=${ISTIO_PROXY_IMAGE}
 GRAFANA_IMAGE=${GRAFANA_IMAGE}
-PROMETHEUS_IMAGE=${PROMETHEUS_IMAGE}
-PROMETHEUS_INIT_IMAGE=${PROMETHEUS_INIT_IMAGE}
-ALERT_MANAGER_IMAGE=${ALERT_MANAGER_IMAGE}
 ELASTICSEARCH_WAIT_TARGET_VERSION=${ELASTICSEARCH_WAIT_TARGET_VERSION}
 ELASTICSEARCH_WAIT_IMAGE=${ELASTICSEARCH_WAIT_IMAGE}
 KIBANA_IMAGE=${KIBANA_IMAGE}
