@@ -18,6 +18,7 @@ import (
 	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
@@ -428,6 +429,9 @@ func (c *Controller) syncHandler(key string) error {
 // converge the two.  We then update the Status block of the VMO resource
 // with the current status.
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	metricsexporter.LogSyncHandlerStart()
+	defer metricsexporter.LogSyncHandlerEnd()
+
 	originalVMO := vmo.DeepCopy()
 
 	// populate clusterInfo
@@ -570,6 +574,10 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	if vmo.Status.Hash != hash {
 		vmo.Status.Hash = hash
+	}
+
+	if errorObserved {
+		metricsexporter.ReconcileErrorIncrement()
 	}
 
 	c.log.Oncef("Successfully synced VMI'%s/%s'", vmo.Namespace, vmo.Name)
