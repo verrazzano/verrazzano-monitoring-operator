@@ -85,12 +85,16 @@ func registerMetricsHandlersHelper() error {
 }
 
 func metricCounterVecErrorIncrement(metricVec *prometheus.CounterVec, label string) {
-	errorMetric, err := reconcileErrorCounter.GetMetricWithLabelValues(label)
+	errorMetric, err := metricVec.GetMetricWithLabelValues(label)
 	if err != nil {
 		zap.S().Errorf("Failed to get metric label %s: %v", label, err)
 	} else {
 		errorMetric.Inc()
 	}
+}
+
+func metricCounterVecErrorDelete(metricVec *prometheus.CounterVec, label string) {
+	metricVec.DeleteLabelValues(label)
 }
 
 func metricGaugeVecSetLastTime(metricVec *prometheus.GaugeVec, label string) {
@@ -100,6 +104,10 @@ func metricGaugeVecSetLastTime(metricVec *prometheus.GaugeVec, label string) {
 	} else {
 		lastTimeMetric.SetToCurrentTime()
 	}
+}
+
+func metricGaugeVecDelete(metricVec *prometheus.GaugeVec, label string) {
+	metricVec.DeleteLabelValues(label)
 }
 
 func numToString(num uint64) string {
@@ -163,16 +171,22 @@ func LogDeploymentEnd() {
 func DeploymentErrorIncrement() {
 	indexString := numToString(deploymentIndex)
 	metricCounterVecErrorIncrement(deploymentErrorCounter, indexString)
+	indexString = numToString(deploymentIndex - 1)
+	metricCounterVecErrorDelete(deploymentErrorCounter, indexString)
 }
 
 func DeploymentUpdateErrorIncrement() {
 	indexString := numToString(deploymentIndex)
 	metricCounterVecErrorIncrement(deploymentUpdateErrorCounter, indexString)
+	indexString = numToString(deploymentIndex - 1)
+	metricCounterVecErrorDelete(deploymentUpdateErrorCounter, indexString)
 }
 
 func DeploymentDeleteErrorIncrement() {
 	indexString := numToString(deploymentIndex)
 	metricCounterVecErrorIncrement(deploymentDeleteErrorCounter, indexString)
+	indexString = numToString(deploymentIndex - 1)
+	metricCounterVecErrorDelete(deploymentDeleteErrorCounter, indexString)
 }
 
 func DeploymentCountIncrement() {
@@ -193,6 +207,8 @@ func DeploymentDeleteCountIncrement() {
 func DeploymentLastTimeSet() {
 	indexString := numToString(deploymentIndex)
 	metricGaugeVecSetLastTime(deploymentLastTime, indexString)
+	indexString = numToString(deploymentIndex - 1)
+	metricGaugeVecDelete(deploymentLastTime, indexString)
 }
 
 func DeploymentTimerStart() {
