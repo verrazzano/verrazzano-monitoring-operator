@@ -70,7 +70,7 @@ func TestPopulateConnData(t *testing.T) {
 	fc := fake.NewSimpleClientset()
 	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
 
-	k8s := kutil.New(dclient, clientk, fc, nil, log)
+	k8s := kutil.New(dclient, clientk, fc, nil, "default", log)
 	conData, err := k8s.PopulateConnData(constants.VeleroNameSpace, "Foo")
 	assert.Nil(t, conData)
 	assert.NotNil(t, err)
@@ -88,7 +88,7 @@ func TestGetBackupStorageLocation(t *testing.T) {
 	var clientk client.Client
 	fc := fake.NewSimpleClientset()
 	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-	k8s := kutil.New(dclient, clientk, fc, nil, log)
+	k8s := kutil.New(dclient, clientk, fc, nil, "default", log)
 	_, err := k8s.GetBackupStorageLocation("system", "fsl")
 	assert.NotNil(t, err)
 }
@@ -105,7 +105,7 @@ func TestGetBackup(t *testing.T) {
 	var clientk client.Client
 	fc := fake.NewSimpleClientset()
 	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-	k8s := kutil.New(dclient, clientk, fc, nil, log)
+	k8s := kutil.New(dclient, clientk, fc, nil, "default", log)
 
 	_, err := k8s.GetBackup("system", "foo")
 	assert.NotNil(t, err)
@@ -122,7 +122,7 @@ func TestCheckPodStatus(t *testing.T) {
 	var clientk client.Client
 	fc := fake.NewSimpleClientset()
 	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-	k8s := kutil.New(dclient, clientk, fc, nil, log)
+	k8s := kutil.New(dclient, clientk, fc, nil, "default", log)
 
 	var wg sync.WaitGroup
 
@@ -133,7 +133,7 @@ func TestCheckPodStatus(t *testing.T) {
 	wg.Wait()
 
 	fc = fake.NewSimpleClientset(&TestPod)
-	k8stest := kutil.New(dclient, clientk, fc, nil, log)
+	k8stest := kutil.New(dclient, clientk, fc, nil, "default", log)
 	wg.Add(1)
 	err = k8stest.CheckPodStatus("foo", "foo", "up", "10m", &wg)
 	log.Infof("%v", err)
@@ -207,7 +207,7 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 	var clientk client.Client
 	fc := fake.NewSimpleClientset()
 	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-	k8s := kutil.New(dclient, clientk, fc, nil, log)
+	k8s := kutil.New(dclient, clientk, fc, nil, "default", log)
 
 	os.Setenv(constants.OpenSearchHealthCheckTimeoutKey, "1s")
 
@@ -216,7 +216,7 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 	assert.Nil(t, err)
 
 	fc = fake.NewSimpleClientset(&IngestPod, &KibanaPod)
-	k8snew := kutil.New(dclient, clientk, fc, nil, log)
+	k8snew := kutil.New(dclient, clientk, fc, nil, "default", log)
 	err = k8snew.CheckAllPodsAfterRestore()
 	log.Infof("%v", err)
 	assert.Nil(t, err)
@@ -255,7 +255,7 @@ func TestCheckDeployment(t *testing.T) {
 	var clientk client.Client
 	fc := fake.NewSimpleClientset()
 	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-	k8s := kutil.New(dclient, clientk, fc, nil, log)
+	k8s := kutil.New(dclient, clientk, fc, nil, "default", log)
 	os.Setenv(constants.OpenSearchHealthCheckTimeoutKey, "1s")
 
 	fmt.Println("Deployment not found")
@@ -266,7 +266,7 @@ func TestCheckDeployment(t *testing.T) {
 
 	fmt.Println("Deployment found")
 	fc = fake.NewSimpleClientset(&PrimaryDeploy)
-	k8sPrimary := kutil.New(dclient, clientk, fc, nil, log)
+	k8sPrimary := kutil.New(dclient, clientk, fc, nil, "default", log)
 	ok, err = k8sPrimary.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoNameSpaceName)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
@@ -274,7 +274,7 @@ func TestCheckDeployment(t *testing.T) {
 
 	fmt.Println("Multiple Deployments found")
 	fc = fake.NewSimpleClientset(&PrimaryDeploy, &SecondaryDeploy)
-	k8sPrimarySec := kutil.New(dclient, clientk, fc, nil, log)
+	k8sPrimarySec := kutil.New(dclient, clientk, fc, nil, "default", log)
 	ok, err = k8sPrimarySec.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoNameSpaceName)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
@@ -350,7 +350,7 @@ func TestIsPodReady(t *testing.T) {
 	var clientk client.Client
 	fc := fake.NewSimpleClientset()
 	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-	k8s := kutil.New(dclient, clientk, fc, nil, log)
+	k8s := kutil.New(dclient, clientk, fc, nil, "default", log)
 	ok, err := k8s.IsPodReady(&ReadyPod)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
