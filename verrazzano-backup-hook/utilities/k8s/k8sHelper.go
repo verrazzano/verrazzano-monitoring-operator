@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-//PopulateConnData creates the connection object thats used to communicate to object store
+// PopulateConnData creates the connection object that's used to communicate to object store.
 func (k *K8sImpl) PopulateConnData(veleroNamespace, backupName string) (*model.ConnectionData, error) {
 	k.Log.Infof("Populating connection data from backup '%v' in namespace '%s'", backupName, veleroNamespace)
 
@@ -65,8 +65,8 @@ func (k *K8sImpl) PopulateConnData(veleroNamespace, backupName string) (*model.C
 
 }
 
-//GetObjectStoreCreds - Fetches credentials from Velero Backup object store location.
-//This object will be pre-created before the execution of this hook
+// GetObjectStoreCreds fetches credentials from Velero Backup object store location.
+// This object will be pre-created before the execution of this hook
 func (k *K8sImpl) GetObjectStoreCreds(secretName, namespace, secretKey string) (*model.ObjectStoreSecret, error) {
 	secret := v1.Secret{}
 	if err := k.K8sClient.Get(context.TODO(), crtclient.ObjectKey{Name: secretName, Namespace: namespace}, &secret); err != nil {
@@ -94,7 +94,7 @@ func (k *K8sImpl) GetObjectStoreCreds(secretName, namespace, secretKey string) (
 	return &secretData, nil
 }
 
-//GetBackupStorageLocation - Retrieves the backup storage location from the backup storage location
+// GetBackupStorageLocation retrieves data from the velero backup storage location
 func (k *K8sImpl) GetBackupStorageLocation(veleroNamespace, bslName string) (*model.VeleroBackupStorageLocation, error) {
 	k.Log.Infof("Fetching velero backup storage location '%s' in namespace '%s'", bslName, veleroNamespace)
 	gvr := schema.GroupVersionResource{
@@ -124,7 +124,7 @@ func (k *K8sImpl) GetBackupStorageLocation(veleroNamespace, bslName string) (*mo
 	return &bsl, nil
 }
 
-//GetBackup - Retrives velero backups in the cluster
+// GetBackup Retrieves velero backup object from the cluster
 func (k *K8sImpl) GetBackup(veleroNamespace, backupName string) (*model.VeleroBackup, error) {
 	k.Log.Infof("Fetching velero backup '%s' in namespace '%s'", backupName, veleroNamespace)
 	gvr := schema.GroupVersionResource{
@@ -154,8 +154,9 @@ func (k *K8sImpl) GetBackup(veleroNamespace, backupName string) (*model.VeleroBa
 	return &backup, nil
 }
 
-// ScaleDeployment is used to scale deployment to specific replica count
-// labelselectors,namespace, deploymentName are used to identify deployments and specific pods associated with them
+// ScaleDeployment is used to scale a deployment to specific replica count
+// labelSelectors,namespace, deploymentName are used to identify deployments
+// and specific pods associated with them
 func (k *K8sImpl) ScaleDeployment(labelSelector, namespace, deploymentName string, replicaCount int32) error {
 	k.Log.Infof("Scale deployment '%s' in namespace '%s", deploymentName, namespace)
 	var wg sync.WaitGroup
@@ -215,7 +216,7 @@ func (k *K8sImpl) ScaleDeployment(labelSelector, namespace, deploymentName strin
 
 }
 
-// CheckDeployment checks the existence of a deployment
+// CheckDeployment checks the existence of a deployment in anamespace
 func (k *K8sImpl) CheckDeployment(labelSelector, namespace string) (bool, error) {
 	k.Log.Infof("Checking deployment with labelselector '%v' exists in namespace '%s", labelSelector, namespace)
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
@@ -315,7 +316,7 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 	return nil
 }
 
-// CheckDeployment checks the existence of a deployment
+// CheckAllPodsAfterRestore checks presence of pods part of Opensearch cluster implementation after restore
 func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	timeout := futil.GetEnvWithDefault(constants.OpenSearchHealthCheckTimeoutKey, constants.OpenSearchHealthCheckTimeoutDefaultValue)
 
@@ -356,7 +357,7 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	return nil
 }
 
-//ExecPod runs a remote command a pod, returning the stdout and stderr of the command.
+// ExecPod runs a remote command a pod, returning the stdout and stderr of the command.
 func (k *K8sImpl) ExecPod(pod *v1.Pod, container string, command []string) (string, string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -391,7 +392,7 @@ func (k *K8sImpl) ExecPod(pod *v1.Pod, container string, command []string) (stri
 	return stdout.String(), stderr.String(), nil
 }
 
-//UpdateKeystore Update Opensearch keystore with object store creds
+// UpdateKeystore Update Opensearch keystore with object store creds
 func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData) (bool, error) {
 
 	var accessKeyCmd, secretKeyCmd []string

@@ -134,10 +134,11 @@ build: k8s-dist
 
 .PHONY: buildbackup
 buildbackup:
+	rm -rf verrazzano-backup-hook/out/
 	go build \
            -ldflags '-extldflags "-static"' \
            -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
-           -o /usr/bin/verrazzano-backup-hook ./verrazzano-backup-hook
+           -o verrazzano-backup-hook/out/ ./verrazzano-backup-hook
 
 
 .PHONY: push

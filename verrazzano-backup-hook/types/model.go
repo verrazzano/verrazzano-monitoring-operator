@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Connection data object used to communicate with Object Store
+// ConnectionData object used to communicate with Object Store
 type ConnectionData struct {
 	Secret     ObjectStoreSecret `json:"secret"`
 	Endpoint   string            `json:"endpoint"`
@@ -233,7 +233,7 @@ type OpenSearchClusterInfo struct {
 	Tagline string `json:"tagline"`
 }
 
-// ΩpenSearchSecureSettingsReloadStatus renders status of nodes on reload secure settings
+// OpenSearchSecureSettingsReloadStatus renders status of nodes on reload secure settings
 type OpenSearchSecureSettingsReloadStatus struct {
 	ClusterNodes struct {
 		Total      int `json:"total"`

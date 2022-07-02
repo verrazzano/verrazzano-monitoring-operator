@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-//HTTPHelper supports net/http calls of type GTE/POST/DELETE
+// HTTPHelper supports net/http calls of type GET/POST/DELETE
 func (o *OpensearchImpl) HTTPHelper(ctx context.Context, method, requestURL string, body io.Reader, data interface{}) error {
 	o.Log.Debugf("Invoking HTTP '%s' request with url '%s'", method, requestURL)
 	var response *http.Response
@@ -69,7 +69,7 @@ func (o *OpensearchImpl) HTTPHelper(ctx context.Context, method, requestURL stri
 	return nil
 }
 
-//EnsureOpenSearchIsReachable is used determine whether OpenSearch cluster is reachable
+// EnsureOpenSearchIsReachable is used determine whether OpenSearch cluster is reachable
 func (o *OpensearchImpl) EnsureOpenSearchIsReachable() error {
 	o.Log.Infof("Checking if cluster is reachable")
 	var osinfo types.OpenSearchClusterInfo
@@ -113,9 +113,6 @@ func (o *OpensearchImpl) EnsureOpenSearchIsReachable() error {
 }
 
 //EnsureOpenSearchIsHealthy ensures OpenSearch cluster is healthy
-// Verifies if cluster is reachable
-// Verifies if health url is reachable
-// Verifies health status is green
 func (o *OpensearchImpl) EnsureOpenSearchIsHealthy() error {
 	o.Log.Infof("Checking if cluster is healthy")
 	var clusterHealth types.OpenSearchHealthResponse
@@ -202,7 +199,7 @@ func (o *OpensearchImpl) EnsureOpenSearchIsHealthy() error {
 	return err
 }
 
-//ReloadOpenSearchSecureSettings used to reload secure settings once object store keys are updated
+// ReloadOpensearchSecureSettings used to reload secure settings once object store keys are updated
 func (o *OpensearchImpl) ReloadOpensearchSecureSettings() error {
 	var secureSettings types.OpenSearchSecureSettingsReloadStatus
 	url := fmt.Sprintf("%s/_nodes/reload_secure_settings", o.BaseURL)
@@ -223,9 +220,9 @@ func (o *OpensearchImpl) ReloadOpensearchSecureSettings() error {
 	return fmt.Errorf("Not all nodes were updated successfully. Total = '%v', Failed = '%v' , Successful = '%v'", secureSettings.ClusterNodes.Total, secureSettings.ClusterNodes.Failed, secureSettings.ClusterNodes.Successful)
 }
 
-//RegisterSnapshotRepository Register an opbject store with OpenSearch using the s3-plugin
+// RegisterSnapshotRepository registers an object store with OpenSearch using the s3-plugin
 func (o *OpensearchImpl) RegisterSnapshotRepository() error {
-	o.Log.Infof("Registering s3 backend repository '%s'", constants.OpeSearchSnapShotRepoName)
+	o.Log.Infof("Registering s3 backend repository '%s'", constants.OpenSearchSnapShotRepoName)
 	var snapshotPayload types.OpenSearchSnapshotRequestPayload
 	var registerResponse types.OpenSearchOperationResponse
 	snapshotPayload.Type = "s3"
@@ -240,7 +237,7 @@ func (o *OpensearchImpl) RegisterSnapshotRepository() error {
 		return err
 	}
 
-	url := fmt.Sprintf("%s/_snapshot/%s", o.BaseURL, constants.OpeSearchSnapShotRepoName)
+	url := fmt.Sprintf("%s/_snapshot/%s", o.BaseURL, constants.OpenSearchSnapShotRepoName)
 
 	err = o.HTTPHelper(context.Background(), "POST", url, bytes.NewBuffer(postBody), &registerResponse)
 	if err != nil {
@@ -254,11 +251,11 @@ func (o *OpensearchImpl) RegisterSnapshotRepository() error {
 	return fmt.Errorf("Snapshot registration unsuccessful. Response = %v", registerResponse)
 }
 
-//TriggerSnapshot this triggers a snapshot/backup of all the data streams/indices
+// TriggerSnapshot this triggers a snapshot/backup of all the data streams/indices
 func (o *OpensearchImpl) TriggerSnapshot() error {
 	o.Log.Infof("Triggering snapshot with name '%s'", o.SecretData.BackupName)
 	var snapshotResponse types.OpenSearchSnapshotResponse
-	snapShotURL := fmt.Sprintf("%s/_snapshot/%s/%s", o.BaseURL, constants.OpeSearchSnapShotRepoName, o.SecretData.BackupName)
+	snapShotURL := fmt.Sprintf("%s/_snapshot/%s/%s", o.BaseURL, constants.OpenSearchSnapShotRepoName, o.SecretData.BackupName)
 
 	err := o.HTTPHelper(context.Background(), "POST", snapShotURL, nil, &snapshotResponse)
 	if err != nil {
@@ -272,10 +269,10 @@ func (o *OpensearchImpl) TriggerSnapshot() error {
 	return nil
 }
 
-//CheckSnapshotProgress checks the data backup progress
+// CheckSnapshotProgress checks the data backup progress.
 func (o *OpensearchImpl) CheckSnapshotProgress() error {
 	o.Log.Infof("Checking snapshot progress with name '%s'", o.SecretData.BackupName)
-	snapShotURL := fmt.Sprintf("%s/_snapshot/%s/%s", o.BaseURL, constants.OpeSearchSnapShotRepoName, o.SecretData.BackupName)
+	snapShotURL := fmt.Sprintf("%s/_snapshot/%s/%s", o.BaseURL, constants.OpenSearchSnapShotRepoName, o.SecretData.BackupName)
 	var snapshotInfo types.OpenSearchSnapshotStatus
 
 	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TruthString {
@@ -309,7 +306,7 @@ func (o *OpensearchImpl) CheckSnapshotProgress() error {
 			} else {
 				return fmt.Errorf("Timeout '%s' exceeded. Snapshot '%s' state is still IN_PROGRESS", o.SecretData.Timeout, o.SecretData.BackupName)
 			}
-		case constants.OpenSearchSnapShotSucess:
+		case constants.OpenSearchSnapShotSuccess:
 			o.Log.Infof("Snapshot '%s' complete", o.SecretData.BackupName)
 			done = true
 		default:
@@ -325,8 +322,7 @@ func (o *OpensearchImpl) CheckSnapshotProgress() error {
 	return nil
 }
 
-//DeleteData used to delete data streams before restore.
-// This requires that ingest be turned off
+// DeleteData used to delete data streams before restore.
 func (o *OpensearchImpl) DeleteData() error {
 	o.Log.Infof("Deleting data streams followed by index ..")
 	dataStreamURL := fmt.Sprintf("%s/_data_stream/*", o.BaseURL)
@@ -355,10 +351,10 @@ func (o *OpensearchImpl) DeleteData() error {
 	return nil
 }
 
-//TriggerRestore Triggers a restore from a specified snapshot
+// TriggerRestore Triggers a restore from a specified snapshot
 func (o *OpensearchImpl) TriggerRestore() error {
 	o.Log.Infof("Triggering restore with name '%s'", o.SecretData.BackupName)
-	restoreURL := fmt.Sprintf("%s/_snapshot/%s/%s/_restore", o.BaseURL, constants.OpeSearchSnapShotRepoName, o.SecretData.BackupName)
+	restoreURL := fmt.Sprintf("%s/_snapshot/%s/%s/_restore", o.BaseURL, constants.OpenSearchSnapShotRepoName, o.SecretData.BackupName)
 	var restoreResponse types.OpenSearchSnapshotResponse
 
 	err := o.HTTPHelper(context.Background(), "POST", restoreURL, nil, &restoreResponse)
@@ -373,7 +369,7 @@ func (o *OpensearchImpl) TriggerRestore() error {
 	return nil
 }
 
-//CheckRestoreProgress checks progress of restore process, by monitoring all the data streams
+// CheckRestoreProgress checks progress of restore process, by monitoring all the data streams
 func (o *OpensearchImpl) CheckRestoreProgress() error {
 	o.Log.Infof("Checking restore progress with name '%s'", o.SecretData.BackupName)
 	dsURL := fmt.Sprintf("%s/_data_stream", o.BaseURL)
@@ -433,7 +429,7 @@ func (o *OpensearchImpl) CheckRestoreProgress() error {
 	return nil
 }
 
-//Backup - Toplevel method to invoke OpenSearch backup
+// Backup - Toplevel method to invoke OpenSearch backup
 func (o *OpensearchImpl) Backup() error {
 	o.Log.Info("Start backup steps ....")
 	err := o.RegisterSnapshotRepository()
@@ -454,7 +450,7 @@ func (o *OpensearchImpl) Backup() error {
 	return nil
 }
 
-//Restore - Top level method to invoke opensearch restore
+// Restore - Top level method to invoke opensearch restore
 func (o *OpensearchImpl) Restore() error {
 	o.Log.Info("Start restore steps ....")
 	err := o.RegisterSnapshotRepository()

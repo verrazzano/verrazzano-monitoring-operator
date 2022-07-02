@@ -33,7 +33,7 @@ var (
 
 func main() {
 	flag.StringVar(&VeleroBackupName, "velero-backup-name", "", "The Velero-backup-name associated with this operation.")
-	flag.StringVar(&Component, "", "", "The Verrazzano component to be backed up or restored (Default = opensearch).")
+	flag.StringVar(&Component, "component", "opensearch", "The Verrazzano component to be backed up or restored (Default = opensearch).")
 	flag.StringVar(&Operation, "operation", "", "The operation to be performed - backup/restore.")
 	flag.StringVar(&Profile, "profile", "default", "Object store credentials profile")
 
@@ -58,13 +58,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Auto detect component based on injection
-	componentFound, err := futil.GetComponent(constants.ComponentPath)
-	if err != nil {
-		fmt.Printf("Component detection failure %v", err)
-		os.Exit(1)
-	}
-	Component = componentFound
+	//// Auto detect component based on injection
+	//componentFound, err := futil.GetComponent(constants.ComponentPath)
+	//if err != nil {
+	//	fmt.Printf("Component detection failure %v", err)
+	//	os.Exit(1)
+	//}
+	//Component = componentFound
 
 	// Initialize the zap log
 	file, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("verrazzano-%s-hook-*.log", strings.ToLower(Operation)))

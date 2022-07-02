@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-//CreateTempFileWithData used to create temp cloud-creds utilized for object store access
+// CreateTempFileWithData used to create temp cloud-creds utilized for object store access
 func CreateTempFileWithData(data []byte) (string, error) {
 	file, err := os.CreateTemp(os.TempDir(), "cloud-creds-*.ini")
 	if err != nil {
@@ -30,7 +30,7 @@ func CreateTempFileWithData(data []byte) (string, error) {
 	return file.Name(), nil
 }
 
-//GenerateRandom generates a random number between min and max
+// WaitRandom generates a random number between min and max
 func WaitRandom(message, timeout string, log *zap.SugaredLogger) (int, error) {
 	randomBig, err := rand.Int(rand.Reader, big.NewInt(constants.Max))
 	if err != nil {
@@ -53,7 +53,7 @@ func WaitRandom(message, timeout string, log *zap.SugaredLogger) (int, error) {
 	return randomInt, nil
 }
 
-//ReadTempCredsFile reads object store credentials from a temporary file for registration purpose
+// ReadTempCredsFile reads object store credentials from a temporary file for registration purpose
 func ReadTempCredsFile(filePath, credentialProfile string) (string, string, error) {
 	var awsAccessKey, awsSecretAccessKey string
 	/*

@@ -65,14 +65,14 @@ func TestReadTempCredsFile(t *testing.T) {
 		os.Exit(1)
 	}
 	file.Close()
-	data1, data2, err := utils.ReadTempCredsFile(file.Name())
+	data1, data2, err := utils.ReadTempCredsFile(file.Name(), "default")
 	assert.Equal(t, "", data1)
 	assert.Equal(t, "", data2)
 	assert.Nil(t, err)
 	os.Remove(file.Name())
 
 	fileNotExist := "/tmp/foo.txt"
-	data1, data2, err = utils.ReadTempCredsFile(fileNotExist)
+	data1, data2, err = utils.ReadTempCredsFile(fileNotExist, "default")
 	assert.Equal(t, "", data1)
 	assert.Equal(t, "", data2)
 	assert.Nil(t, err)
