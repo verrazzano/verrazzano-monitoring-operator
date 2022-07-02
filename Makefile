@@ -132,8 +132,8 @@ build: k8s-dist
 		-f ${DOCKERFILE_OPERATOR} \
 		.
 
-.PHONY: buildbackup
-buildbackup:
+.PHONY: buildhook
+buildhook:
 	rm -rf /usr/bin/verrazzano-backup-hook
 	go build \
            -ldflags '-extldflags "-static"' \
