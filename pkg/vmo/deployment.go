@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -60,7 +61,6 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 	deployList := expected.Deployments
 
-	var prometheusDeployments []*appsv1.Deployment
 	var openSearchDeployments []*appsv1.Deployment
 	var deploymentNames []string
 	controller.log.Oncef("Creating/updating ExpectedDeployments for VMI %s", vmo.Name)
@@ -84,9 +84,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 				return false, err
 			}
 		} else if existingDeployment != nil {
-			if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.Prometheus.Name) {
-				prometheusDeployments = append(prometheusDeployments, curDeployment)
-			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
+			if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				openSearchDeployments = append(openSearchDeployments, curDeployment)
 			} else {
 				err = updateDeployment(controller, vmo, existingDeployment, curDeployment)
@@ -98,12 +96,6 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 	}
 
-	// Rolling update through Prometheus deployments.  For each, we'll update the *next* candidate
-	// deployment (only), then let subsequent runs of this function update the subsequent deployments.
-	prometheusDirty, err := rollingUpdate(controller, vmo, prometheusDeployments)
-	if err != nil {
-		return false, err
-	}
 	openSearchDirty, err := updateOpenSearchDeployments(controller, vmo, openSearchDeployments, existingCluster)
 	if err != nil {
 		return false, err
@@ -142,7 +134,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 	}
 
-	return prometheusDirty || openSearchDirty, nil
+	return openSearchDirty, nil
 }
 
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {

@@ -18,9 +18,6 @@ func TestVMONoStorageVolumes(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled: true,
-			},
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
@@ -47,14 +44,6 @@ func TestVMOWithStorageVolumes1(t *testing.T) {
 					PvcNames:           []string{"grafana-pvc"},
 				},
 			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled: true,
-				Storage: vmcontrollerv1.Storage{
-					Size:               "50Gi",
-					AvailabilityDomain: "AD1",
-					PvcNames:           []string{"prometheus-pvc"},
-				},
-			},
 			// An empty size element is interpreted as no storage
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
@@ -69,7 +58,7 @@ func TestVMOWithStorageVolumes1(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, 2, len(pvcs), "Length of generated PVCs")
+	assert.Equal(t, 1, len(pvcs), "Length of generated PVCs")
 }
 
 func TestVMOWithStorageVolumes2(t *testing.T) {
@@ -143,14 +132,6 @@ func TestVMODevModeWithStorageVolumes(t *testing.T) {
 					PvcNames:           []string{"grafana-pvc"},
 				},
 			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled: true,
-				Storage: vmcontrollerv1.Storage{
-					Size:               "50Gi",
-					AvailabilityDomain: "AD1",
-					PvcNames:           []string{"prometheus-pvc"},
-				},
-			},
 			Elasticsearch: vmcontrollerv1.Elasticsearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
@@ -166,7 +147,7 @@ func TestVMODevModeWithStorageVolumes(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, 2, len(pvcs), "Length of generated PVCs")
+	assert.Equal(t, 1, len(pvcs), "Length of generated PVCs")
 	for _, pvc := range pvcs {
 		pvcName := pvc.ObjectMeta.Name
 		t.Log("Checking pvc ", pvcName)
@@ -185,14 +166,6 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 					Size:               "50Gi",
 					AvailabilityDomain: "AD1",
 					PvcNames:           []string{"grafana-pvc"},
-				},
-			},
-			Prometheus: vmcontrollerv1.Prometheus{
-				Enabled: true,
-				Storage: vmcontrollerv1.Storage{
-					Size:               "50Gi",
-					AvailabilityDomain: "AD1",
-					PvcNames:           []string{"prometheus-pvc"},
 				},
 			},
 			// An empty size element is interpreted as no storage

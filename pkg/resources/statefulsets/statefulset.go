@@ -5,6 +5,7 @@ package statefulsets
 
 import (
 	"fmt"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -24,10 +25,6 @@ import (
 func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass, initialMasterNodes string) ([]*appsv1.StatefulSet, error) {
 	var statefulSets []*appsv1.StatefulSet
 
-	// Alert Manager
-	if vmo.Spec.AlertManager.Enabled {
-		statefulSets = append(statefulSets, createAlertManagerStatefulSet(vmo))
-	}
 	// OpenSearch MasterNodes
 	if vmo.Spec.Elasticsearch.Enabled {
 		statefulSets = append(statefulSets, createOpenSearchStatefulSets(log, vmo, storageClass, initialMasterNodes)...)
@@ -291,90 +288,6 @@ fi`,
 
 	// set Node Role labels for role based selectors
 	nodes.SetNodeRoleLabels(&node, statefulSet.Spec.Template.Labels)
-	return statefulSet
-}
-
-// Creates StatefulSet for AlertManager
-func createAlertManagerStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
-	alertManagerClusterService := resources.GetMetaName(vmo.Name, config.AlertManagerCluster.Name)
-	statefulSet := createStatefulSetElement(vmo, &vmo.Spec.AlertManager.Resources, config.AlertManager, alertManagerClusterService, "")
-	statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.AlertManager.Replicas)
-	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.AlertManager.Name)
-	statefulSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.AlertManager.ImagePullPolicy
-
-	// Construct command line args, with a cluster peer entry for each replica
-	statefulSet.Spec.Template.Spec.Containers[0].Command = []string{"/bin/alertmanager"}
-	statefulSet.Spec.Template.Spec.Containers[0].Args = []string{
-		fmt.Sprintf("--config.file=%s", constants.AlertManagerConfigContainerLocation),
-		fmt.Sprintf("--cluster.listen-address=0.0.0.0:%d", config.AlertManagerCluster.Port),
-		fmt.Sprintf("--cluster.advertise-address=$(POD_IP):%d", config.AlertManagerCluster.Port),
-		"--cluster.pushpull-interval=10s",
-	}
-
-	if vmo.Spec.URI != "" {
-		alertManagerExternalURL := "https://" + config.AlertManager.Name + "." + vmo.Spec.URI
-		statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--web.external-url=%s", alertManagerExternalURL))
-		statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, "--web.route-prefix=/")
-	}
-
-	// We'll be using the first replica of the statefulset as the discovery "hub" for all cluster members.  This will be the
-	// *only* entry in the cluster peer list used by each cluster member.  The main reason to limit this peer list to the
-	// first member is so that when scaling up from 1 to N, our first replica is not restarted, and therefore does
-	// not lose its state before replicating over to subsequent replicas.
-
-	// First replica is addressed in the form <statefulset_name>-0.<service_name>
-	firstReplicaName := fmt.Sprintf("%s-%d.%s", statefulSet.Name, 0, alertManagerClusterService)
-	arg := fmt.Sprintf("--cluster.peer=%s:%d", firstReplicaName, config.AlertManagerCluster.Port)
-	statefulSet.Spec.Template.Spec.Containers[0].Args = append(statefulSet.Spec.Template.Spec.Containers[0].Args, arg)
-	statefulSet.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-		{
-			Name: "POD_IP",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					APIVersion: "v1",
-					FieldPath:  "status.podIP",
-				},
-			},
-		},
-	}
-
-	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 5
-	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 1
-	statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 10
-
-	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
-	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 1
-	statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 10
-
-	// Alertmanager config volume
-	volumes := []corev1.Volume{
-		{
-			Name: "alert-config-volume",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.AlertManager.ConfigMap},
-				},
-			},
-		},
-	}
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      "alert-config-volume",
-			MountPath: constants.AlertManagerConfigMountPath,
-		},
-	}
-	statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
-	statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, volumes...)
-
-	// Config-reloader container
-	statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers, corev1.Container{
-		Name:            config.ConfigReloader.Name,
-		Image:           config.ConfigReloader.Image,
-		ImagePullPolicy: constants.DefaultImagePullPolicy,
-	})
-	statefulSet.Spec.Template.Spec.Containers[1].Args = []string{"-volume-dir=" + constants.AlertManagerConfigMountPath, "-webhook-url=" + constants.AlertManagerWebhookURL}
-	statefulSet.Spec.Template.Spec.Containers[1].VolumeMounts = volumeMounts
-
 	return statefulSet
 }
 

@@ -16,6 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var defaultIngressClassName = "verrazzano-nginx"
+
 func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) netv1.IngressRule {
 	serviceName := resources.GetMetaName(vmo.Name, componentDetails.Name)
 	endpointName := componentDetails.EndpointName
@@ -50,6 +52,7 @@ func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 
 func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, hostName string, componentDetails config.ComponentDetails, ingressRule netv1.IngressRule) (*netv1.Ingress, error) {
 	var hosts = []string{hostName}
+	ingressClassName := getIngressClassName(vmo)
 	ingress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
@@ -59,13 +62,15 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
 		Spec: netv1.IngressSpec{
+
 			TLS: []netv1.IngressTLS{
 				{
 					Hosts:      hosts,
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, componentDetails.Name),
 				},
 			},
-			Rules: []netv1.IngressRule{ingressRule},
+			Rules:            []netv1.IngressRule{ingressRule},
+			IngressClassName: &ingressClassName,
 		},
 	}
 
@@ -84,7 +89,6 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	}
 
 	ingress.Annotations["cert-manager.io/common-name"] = hostName
-
 	return ingress, nil
 }
 
@@ -142,32 +146,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 			}
 			ingresses = append(ingresses, ingress)
 		}
-	}
-	if vmo.Spec.Prometheus.Enabled {
-		if config.Prometheus.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Prometheus))
-		} else {
-			// Create Ingress Rule for Prometheus Endpoint
-			ingRule := createIngressRuleElement(vmo, config.Prometheus)
-			host := config.Prometheus.Name + "." + vmo.Spec.URI
-			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Prometheus)
-			ingress, err := createIngressElement(vmo, host, config.Prometheus, ingRule, healthLocations)
-			if err != nil {
-				return ingresses, err
-			}
-			ingresses = append(ingresses, ingress)
-		}
-	}
-	if vmo.Spec.AlertManager.Enabled {
-		// Create Ingress Rule for AlertManager Endpoint
-		ingRule := createIngressRuleElement(vmo, config.AlertManager)
-		host := config.AlertManager.Name + "." + vmo.Spec.URI
-		healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.AlertManager)
-		ingress, err := createIngressElement(vmo, host, config.AlertManager, ingRule, healthLocations)
-		if err != nil {
-			return ingresses, err
-		}
-		ingresses = append(ingresses, ingress)
 	}
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
@@ -235,6 +213,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	serviceName := resources.AuthProxyMetaName()
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
 	pathType := netv1.PathTypeImplementationSpecific
+	ingressClassName := getIngressClassName(vmo)
 	ingressRule := netv1.IngressRule{
 		Host: ingressHost,
 		IngressRuleValue: netv1.IngressRuleValue{
@@ -271,7 +250,8 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
 			},
-			Rules: []netv1.IngressRule{ingressRule},
+			Rules:            []netv1.IngressRule{ingressRule},
+			IngressClassName: &ingressClassName,
 		},
 	}
 	ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
@@ -288,4 +268,11 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	setNginxRoutingAnnotations(ingress)
 	ingress.Annotations["cert-manager.io/common-name"] = ingressHost
 	return ingress
+}
+
+func getIngressClassName(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) string {
+	if vmi.Spec.IngressClassName != nil && *vmi.Spec.IngressClassName != "" {
+		return *vmi.Spec.IngressClassName
+	}
+	return defaultIngressClassName
 }
