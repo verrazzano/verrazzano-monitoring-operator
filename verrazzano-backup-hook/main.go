@@ -145,19 +145,20 @@ func main() {
 
 	// Get S3 access details from Velero Backup Storage location associated with Backup given as input
 	// Ensure the Backup Storage Location is NOT default
-	conData, err := k8s.PopulateConnData(constants.VeleroNameSpace, VeleroBackupName)
+	openSearchConData, err := k8s.PopulateConnData(constants.VeleroNameSpace, VeleroBackupName)
 	if err != nil {
 		log.Errorf("Unable to fetch secret: %v", err)
 		os.Exit(1)
 	}
 
 	// Update OpenSearch keystore
-	_, err = k8s.UpdateKeystore(conData)
+	_, err = k8s.UpdateKeystore(openSearchConData)
 	if err != nil {
 		log.Errorf("Unable to update keystore")
 		os.Exit(1)
 	}
 
+	openSearch := opensearch.New(constants.OpenSearchURL, globalTimeout, http.DefaultClient, openSearchConData, log)
 	err = search.ReloadOpensearchSecureSettings()
 	if err != nil {
 		log.Errorf("Unable to reload security settings")
@@ -168,7 +169,7 @@ func main() {
 	// OpenSearch backup handling
 	case constants.BackupOperation:
 		log.Info("Commencing opensearch backup ..")
-		err = search.Backup()
+		err = openSearch.Backup()
 		if err != nil {
 			log.Errorf("Operation '%s' unsuccessfull due to %v", Operation, zap.Error(err))
 			os.Exit(1)
@@ -188,7 +189,7 @@ func main() {
 			log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
 			os.Exit(1)
 		}
-		err = search.Restore()
+		err = openSearch.Restore()
 		if err != nil {
 			log.Errorf("Operation '%s' unsuccessfull due to %v", Operation, zap.Error(err))
 			os.Exit(1)

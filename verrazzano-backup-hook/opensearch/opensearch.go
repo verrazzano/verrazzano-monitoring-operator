@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities"
@@ -242,6 +243,8 @@ func (o *OpensearchImpl) RegisterSnapshotRepository() error {
 	if err != nil {
 		return err
 	}
+
+	spew.Dump(snapshotPayload)
 
 	url := fmt.Sprintf("%s/_snapshot/%s", o.BaseURL, constants.OpenSearchSnapShotRepoName)
 

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	model "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	futil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities"
@@ -60,6 +61,8 @@ func (k *K8sImpl) PopulateConnData(veleroNamespace, backupName string) (*model.C
 	conData.BackupName = backupName
 	// For now, we will look at the first POST hook in the first Hook in Velero Backup
 	conData.VeleroTimeout = backup.Spec.Hooks.Resources[0].Post[0].Exec.Timeout
+
+	spew.Dump(conData)
 
 	return &conData, nil
 
