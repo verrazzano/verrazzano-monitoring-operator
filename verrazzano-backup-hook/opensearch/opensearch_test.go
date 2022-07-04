@@ -148,8 +148,8 @@ func TestMain(m *testing.M) {
 	defer os.Remove(f)
 
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
 	}
 
 	fmt.Println("Starting mock server")
@@ -201,8 +201,8 @@ func Test_EnsureOpenSearchIsReachable(t *testing.T) {
 	defer server1.Close()
 	timeParse, _ := time.ParseDuration("10m")
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
 	}
 	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.EnsureOpenSearchIsReachable()
@@ -243,8 +243,8 @@ func Test_EnsureOpenSearchIsHealthy(t *testing.T) {
 	defer server1.Close()
 	timeParse, _ := time.ParseDuration("10m")
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
 	}
 	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.EnsureOpenSearchIsHealthy()
@@ -291,11 +291,11 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 	objsecret.ObjectSecretKey = "betabetabeta"
 
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
-		RegionName: "region",
-		Endpoint:   constants.OpenSearchURL,
-		Secret:     objsecret,
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
+		RegionName:    "region",
+		Endpoint:      constants.OpenSearchURL,
+		Secret:        objsecret,
 	}
 
 	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
@@ -336,9 +336,9 @@ func Test_ReloadOpensearchSecureSettings(t *testing.T) {
 	defer server1.Close()
 	timeParse, _ := time.ParseDuration("10m")
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
-		RegionName: "region",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
+		RegionName:    "region",
 	}
 	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.ReloadOpensearchSecureSettings()
@@ -378,9 +378,9 @@ func Test_TriggerSnapshot(t *testing.T) {
 	timeParse, _ := time.ParseDuration("10m")
 
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
-		RegionName: "region",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
+		RegionName:    "region",
 	}
 	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.TriggerSnapshot()
@@ -421,9 +421,9 @@ func TestCheckSnapshotProgress(t *testing.T) {
 	timeParse, _ := time.ParseDuration("10m")
 
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
-		RegionName: "region",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
+		RegionName:    "region",
 	}
 	o := opensearch.New(server.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.CheckSnapshotProgress()
@@ -449,9 +449,9 @@ func Test_DeleteDataStreams(t *testing.T) {
 	defer server1.Close()
 	timeParse, _ := time.ParseDuration("10m")
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
-		RegionName: "region",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
+		RegionName:    "region",
 	}
 	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.DeleteData()
@@ -491,9 +491,9 @@ func Test_TriggerRestore(t *testing.T) {
 	defer server1.Close()
 	timeParse, _ := time.ParseDuration("10m")
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
-		RegionName: "region",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
+		RegionName:    "region",
 	}
 	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.TriggerRestore()
@@ -532,9 +532,9 @@ func Test_CheckRestoreProgress(t *testing.T) {
 	defer server.Close()
 	timeParse, _ := time.ParseDuration("10m")
 	conData := types.ConnectionData{
-		BackupName: "mango",
-		Timeout:    "1s",
-		RegionName: "region",
+		BackupName:    "mango",
+		VeleroTimeout: "1s",
+		RegionName:    "region",
 	}
 	o := opensearch.New(server.URL, timeParse, http.DefaultClient, &conData, log)
 	err := o.CheckRestoreProgress()
@@ -575,7 +575,7 @@ func Test_Restore(t *testing.T) {
 //
 //	conData := types.ConnectionData{
 //		BackupName: "mango",
-//		Timeout:    "1s",
+//		VeleroTimeout:    "1s",
 //		RegionName: "region",
 //		Endpoint:   constants.OpenSearchURL,
 //		Secret:     objsecret,

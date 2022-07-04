@@ -9,12 +9,12 @@ import (
 
 // ConnectionData object used to communicate with Object Store
 type ConnectionData struct {
-	Secret     ObjectStoreSecret `json:"secret"`
-	Endpoint   string            `json:"endpoint"`
-	RegionName string            `json:"region_name"`
-	BucketName string            `json:"bucket_name"`
-	BackupName string            `json:"backup_name"`
-	Timeout    string            `json:"timeout"`
+	Secret        ObjectStoreSecret `json:"secret"`
+	Endpoint      string            `json:"endpoint"`
+	RegionName    string            `json:"region_name"`
+	BucketName    string            `json:"bucket_name"`
+	BackupName    string            `json:"backup_name"`
+	VeleroTimeout string            `json:"velero_timeout"`
 }
 
 // ObjectStoreSecret to render secret details

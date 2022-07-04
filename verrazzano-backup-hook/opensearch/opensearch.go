@@ -15,6 +15,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -24,8 +25,13 @@ func (o *OpensearchImpl) HTTPHelper(ctx context.Context, method, requestURL stri
 	var response *http.Response
 	var request *http.Request
 	var err error
-	//client := &http.Client{}
-	ctx, cancel := context.WithTimeout(ctx, o.Timeout)
+
+	timeoutDuration, err := time.ParseDuration(o.Timeout)
+	if err != nil {
+		o.Log.Errorf("Unable to parse time duration ", zap.Error(err))
+		os.Exit(1)
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
 	switch method {
@@ -81,7 +87,7 @@ func (o *OpensearchImpl) EnsureOpenSearchIsReachable() error {
 		return nil
 	}
 
-	timeParse, err := time.ParseDuration(o.SecretData.Timeout)
+	timeParse, err := time.ParseDuration(o.SecretData.VeleroTimeout)
 	if err != nil {
 		o.Log.Errorf("Unable to parse time duration ", zap.Error(err))
 		return err
@@ -93,13 +99,13 @@ func (o *OpensearchImpl) EnsureOpenSearchIsReachable() error {
 		if err != nil {
 			if timeSeconds < totalSeconds {
 				message := "Cluster is not reachable"
-				duration, err := utilities.WaitRandom(message, o.SecretData.Timeout, o.Log)
+				duration, err := utilities.WaitRandom(message, o.SecretData.VeleroTimeout, o.Log)
 				if err != nil {
 					return err
 				}
 				timeSeconds = timeSeconds + float64(duration)
 			} else {
-				o.Log.Errorf("Timeout '%s' exceeded. Cluster not reachable", o.SecretData.Timeout)
+				o.Log.Errorf("VeleroTimeout '%s' exceeded. Cluster not reachable", o.SecretData.VeleroTimeout)
 				return err
 			}
 		} else {
@@ -125,7 +131,7 @@ func (o *OpensearchImpl) EnsureOpenSearchIsHealthy() error {
 	healthReachable := false
 	var timeSeconds float64
 
-	timeParse, err := time.ParseDuration(o.SecretData.Timeout)
+	timeParse, err := time.ParseDuration(o.SecretData.VeleroTimeout)
 	if err != nil {
 		o.Log.Errorf("Unable to parse time duration ", zap.Error(err))
 		return err
@@ -142,13 +148,13 @@ func (o *OpensearchImpl) EnsureOpenSearchIsHealthy() error {
 		if err != nil {
 			if timeSeconds < totalSeconds {
 				message := "Cluster health endpoint is not reachable"
-				duration, err := utilities.WaitRandom(message, o.SecretData.Timeout, o.Log)
+				duration, err := utilities.WaitRandom(message, o.SecretData.VeleroTimeout, o.Log)
 				if err != nil {
 					return err
 				}
 				timeSeconds = timeSeconds + float64(duration)
 			} else {
-				o.Log.Errorf("Timeout '%s' exceeded. Cluster health endpoint is not reachable", o.SecretData.Timeout)
+				o.Log.Errorf("VeleroTimeout '%s' exceeded. Cluster health endpoint is not reachable", o.SecretData.VeleroTimeout)
 				return err
 			}
 		} else {
@@ -164,27 +170,27 @@ func (o *OpensearchImpl) EnsureOpenSearchIsHealthy() error {
 		if err != nil {
 			if timeSeconds < totalSeconds {
 				message := "Json unmarshalling error"
-				duration, err := utilities.WaitRandom(message, o.SecretData.Timeout, o.Log)
+				duration, err := utilities.WaitRandom(message, o.SecretData.VeleroTimeout, o.Log)
 				if err != nil {
 					return err
 				}
 				timeSeconds = timeSeconds + float64(duration)
 				continue
 			} else {
-				return fmt.Errorf("Timeout '%s' exceeded. Json unmarshalling error while checking cluster health %v", o.SecretData.Timeout, zap.Error(err))
+				return fmt.Errorf("VeleroTimeout '%s' exceeded. Json unmarshalling error while checking cluster health %v", o.SecretData.VeleroTimeout, zap.Error(err))
 			}
 		}
 
 		if clusterHealth.Status != "green" {
 			if timeSeconds < totalSeconds {
 				message := fmt.Sprintf("Cluster health is '%s'", clusterHealth.Status)
-				duration, err := utilities.WaitRandom(message, o.SecretData.Timeout, o.Log)
+				duration, err := utilities.WaitRandom(message, o.SecretData.VeleroTimeout, o.Log)
 				if err != nil {
 					return err
 				}
 				timeSeconds = timeSeconds + float64(duration)
 			} else {
-				return fmt.Errorf("Timeout '%s' exceeded. Cluster health expected 'green' , current state '%s'", o.SecretData.Timeout, clusterHealth.Status)
+				return fmt.Errorf("VeleroTimeout '%s' exceeded. Cluster health expected 'green' , current state '%s'", o.SecretData.VeleroTimeout, clusterHealth.Status)
 			}
 		} else {
 			healthGreen = true
@@ -281,7 +287,7 @@ func (o *OpensearchImpl) CheckSnapshotProgress() error {
 	}
 
 	var timeSeconds float64
-	timeParse, err := time.ParseDuration(o.SecretData.Timeout)
+	timeParse, err := time.ParseDuration(o.SecretData.VeleroTimeout)
 	if err != nil {
 		o.Log.Errorf("Unable to parse time duration ", zap.Error(err))
 		return err
@@ -298,13 +304,13 @@ func (o *OpensearchImpl) CheckSnapshotProgress() error {
 		case constants.OpenSearchSnapShotInProgress:
 			if timeSeconds < totalSeconds {
 				message := fmt.Sprintf("Snapshot '%s' is in progress", o.SecretData.BackupName)
-				duration, err := utilities.WaitRandom(message, o.SecretData.Timeout, o.Log)
+				duration, err := utilities.WaitRandom(message, o.SecretData.VeleroTimeout, o.Log)
 				if err != nil {
 					return err
 				}
 				timeSeconds = timeSeconds + float64(duration)
 			} else {
-				return fmt.Errorf("Timeout '%s' exceeded. Snapshot '%s' state is still IN_PROGRESS", o.SecretData.Timeout, o.SecretData.BackupName)
+				return fmt.Errorf("VeleroTimeout '%s' exceeded. Snapshot '%s' state is still IN_PROGRESS", o.SecretData.VeleroTimeout, o.SecretData.BackupName)
 			}
 		case constants.OpenSearchSnapShotSuccess:
 			o.Log.Infof("Snapshot '%s' complete", o.SecretData.BackupName)
@@ -381,7 +387,7 @@ func (o *OpensearchImpl) CheckRestoreProgress() error {
 	}
 
 	var timeSeconds float64
-	timeParse, err := time.ParseDuration(o.SecretData.Timeout)
+	timeParse, err := time.ParseDuration(o.SecretData.VeleroTimeout)
 	if err != nil {
 		o.Log.Errorf("Unable to parse time duration ", zap.Error(err))
 		return err
@@ -408,14 +414,14 @@ func (o *OpensearchImpl) CheckRestoreProgress() error {
 		if notGreen {
 			if timeSeconds < totalSeconds {
 				message := "Restore is in progress"
-				duration, err := utilities.WaitRandom(message, o.SecretData.Timeout, o.Log)
+				duration, err := utilities.WaitRandom(message, o.SecretData.VeleroTimeout, o.Log)
 				if err != nil {
 					return err
 				}
 				timeSeconds = timeSeconds + float64(duration)
 				notGreen = false
 			} else {
-				return fmt.Errorf("Timeout '%s' exceeded. Restore '%s' state is still IN_PROGRESS", o.SecretData.Timeout, o.SecretData.BackupName)
+				return fmt.Errorf("VeleroTimeout '%s' exceeded. Restore '%s' state is still IN_PROGRESS", o.SecretData.VeleroTimeout, o.SecretData.BackupName)
 			}
 		} else {
 			// This section is hit when all data streams are green

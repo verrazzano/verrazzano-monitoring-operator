@@ -58,8 +58,8 @@ func (k *K8sImpl) PopulateConnData(veleroNamespace, backupName string) (*model.C
 	conData.Endpoint = bsl.Spec.Config.S3URL
 	conData.BucketName = bsl.Spec.ObjectStorage.Bucket
 	conData.BackupName = backupName
-	// For now, we will look at the first POST hook in the first Hook in Backup
-	conData.Timeout = backup.Spec.Hooks.Resources[0].Post[0].Exec.Timeout
+	// For now, we will look at the first POST hook in the first Hook in Velero Backup
+	conData.VeleroTimeout = backup.Spec.Hooks.Resources[0].Post[0].Exec.Timeout
 
 	return &conData, nil
 
@@ -306,7 +306,7 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 					timeSeconds = timeSeconds + float64(duration)
 
 				} else {
-					return fmt.Errorf("Timeout '%s' exceeded. Pod '%s' is still not in running state", timeout, pod.Name)
+					return fmt.Errorf("VeleroTimeout '%s' exceeded. Pod '%s' is still not in running state", timeout, pod.Name)
 				}
 				// change wait to false after each wait
 				wait = false

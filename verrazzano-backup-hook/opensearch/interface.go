@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
-	"time"
 )
 
 // Opensearch Interface implements methods needed for backup and restore of Opensearch
@@ -55,14 +54,14 @@ type Opensearch interface {
 // OpensearchImpl struct for Opensearch interface
 type OpensearchImpl struct {
 	Client     *http.Client
-	Timeout    time.Duration //Timeout for HTTP calls
+	Timeout    string //Timeout for HTTP calls
 	BaseURL    string
 	SecretData *types.ConnectionData
 	Log        *zap.SugaredLogger
 }
 
 // New Opensearch Impl constructor
-func New(baseURL string, timeout time.Duration, client *http.Client, secretData *types.ConnectionData, log *zap.SugaredLogger) *OpensearchImpl {
+func New(baseURL string, timeout string, client *http.Client, secretData *types.ConnectionData, log *zap.SugaredLogger) *OpensearchImpl {
 	return &OpensearchImpl{
 		Client:     client,
 		Timeout:    timeout,

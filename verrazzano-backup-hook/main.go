@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"strings"
-	"time"
 )
 
 var (
@@ -91,15 +90,10 @@ func main() {
 	var dynamicKubeClientInterface dynamic.Interface
 
 	globalTimeout := futil.GetEnvWithDefault(constants.OpenSearchHealthCheckTimeoutKey, constants.OpenSearchHealthCheckTimeoutDefaultValue)
-	globalTimeoutDuration, err := time.ParseDuration(globalTimeout)
-	if err != nil {
-		log.Errorf("Unable to parse time duration ", zap.Error(err))
-		os.Exit(1)
-	}
-
 	var checkConData model.ConnectionData
+	checkConData.VeleroTimeout = globalTimeout
 	// Initialize Opensearch object
-	search := opensearch.New(constants.OpenSearchURL, globalTimeoutDuration, http.DefaultClient, &checkConData, log)
+	search := opensearch.New(constants.OpenSearchURL, globalTimeout, http.DefaultClient, &checkConData, log)
 	// Check OpenSearch health before proceeding with backup or restore
 	err = search.EnsureOpenSearchIsHealthy()
 	if err != nil {
@@ -156,17 +150,6 @@ func main() {
 		log.Errorf("Unable to fetch secret: %v", err)
 		os.Exit(1)
 	}
-
-	/*
-		// Initialize Opensearch object
-		search := opensearch.New(constants.OpenSearchURL, globalTimeoutDuration, http.DefaultClient, conData, log)
-		// Check OpenSearch health before proceeding with backup or restore
-		err = search.EnsureOpenSearchIsHealthy()
-		if err != nil {
-			log.Errorf("Operation cannot be performed as OpenSearch is not healthy")
-			os.Exit(1)
-		}
-	*/
 
 	// Update OpenSearch keystore
 	_, err = k8s.UpdateKeystore(conData)
