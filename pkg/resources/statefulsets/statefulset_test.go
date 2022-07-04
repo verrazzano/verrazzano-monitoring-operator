@@ -250,13 +250,10 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Equal(esMasterVolName, sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name, "Incorrect VolumeMount name")
 	assert.Equal(esMasterData, sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath, "Incorrect VolumeMount mount path")
 
-	assert.Len(sts.Spec.Template.Spec.InitContainers, 2, "Incorrect number of InitContainers")
+	assert.Len(sts.Spec.Template.Spec.InitContainers, 1, "Incorrect number of InitContainers")
 	assert.Len(sts.Spec.Template.Spec.InitContainers[0].VolumeMounts, 1, "Incorrect number of VolumeMounts")
 	assert.Equal(esMasterVolName, sts.Spec.Template.Spec.InitContainers[0].VolumeMounts[0].Name, "Incorrect VolumeMount name")
 	assert.Equal(esMasterData, sts.Spec.Template.Spec.InitContainers[0].VolumeMounts[0].MountPath, "Incorrect VolumeMount mount path")
-	assert.Len(sts.Spec.Template.Spec.InitContainers[1].VolumeMounts, 1, "Incorrect number of VolumeMounts")
-	assert.Equal(esMasterVolName, sts.Spec.Template.Spec.InitContainers[1].VolumeMounts[0].Name, "Incorrect VolumeMount name")
-	assert.Equal(esMasterData, sts.Spec.Template.Spec.InitContainers[1].VolumeMounts[0].MountPath, "Incorrect VolumeMount mount path")
 
 	assert.Len(sts.Spec.VolumeClaimTemplates, 1, "Incorrect number of VolumeClaimTemplates")
 	assert.Equal(sts.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, esMasterVolName, "Incorrect VolumeClaimTemplate name")
@@ -343,14 +340,10 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(esMasterVolName, sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name, "Incorrect VolumeMount name")
 	assert.Equal(esMasterData, sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath, "Incorrect VolumeMount mount path")
 
-	assert.Len(sts.Spec.Template.Spec.InitContainers, 2, "Incorrect number of InitContainers")
+	assert.Len(sts.Spec.Template.Spec.InitContainers, 1, "Incorrect number of InitContainers")
 	assert.Len(sts.Spec.Template.Spec.InitContainers[0].VolumeMounts, 1, "Incorrect number of VolumeMounts")
 	assert.Equal(esMasterVolName, sts.Spec.Template.Spec.InitContainers[0].VolumeMounts[0].Name, "Incorrect VolumeMount name")
 	assert.Equal(esMasterData, sts.Spec.Template.Spec.InitContainers[0].VolumeMounts[0].MountPath, "Incorrect VolumeMount mount path")
-	assert.Len(sts.Spec.Template.Spec.InitContainers[1].VolumeMounts, 1, "Incorrect number of VolumeMounts")
-	assert.Equal(esMasterVolName, sts.Spec.Template.Spec.InitContainers[1].VolumeMounts[0].Name, "Incorrect VolumeMount name")
-	assert.Equal(esMasterData, sts.Spec.Template.Spec.InitContainers[1].VolumeMounts[0].MountPath, "Incorrect VolumeMount mount path")
-
 	assert.Len(sts.Spec.VolumeClaimTemplates, 0, "Incorrect number of VolumeClaimTemplates")
 
 	volumes := sts.Spec.Template.Spec.Volumes
