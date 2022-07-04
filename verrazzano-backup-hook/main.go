@@ -9,6 +9,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/log"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/opensearch"
+	model "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	futil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities"
 	kutil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s"
 	"go.uber.org/zap"
@@ -96,6 +97,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	var checkConData model.ConnectionData
+	// Initialize Opensearch object
+	search := opensearch.New(constants.OpenSearchURL, globalTimeoutDuration, http.DefaultClient, &checkConData, log)
+	// Check OpenSearch health before proceeding with backup or restore
+	err = search.EnsureOpenSearchIsHealthy()
+	if err != nil {
+		log.Errorf("Operation cannot be performed as OpenSearch is not healthy")
+		os.Exit(1)
+	}
+
 	// Feedback loop to gather k8s context
 	for !done {
 		config, err = ctrl.GetConfig()
@@ -146,14 +157,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize Opensearch object
-	search := opensearch.New(constants.OpenSearchURL, globalTimeoutDuration, http.DefaultClient, conData, log)
-	// Check OpenSearch health before proceeding with backup or restore
-	err = search.EnsureOpenSearchIsHealthy()
-	if err != nil {
-		log.Errorf("Operation cannot be performed as OpenSearch is not healthy")
-		os.Exit(1)
-	}
+	/*
+		// Initialize Opensearch object
+		search := opensearch.New(constants.OpenSearchURL, globalTimeoutDuration, http.DefaultClient, conData, log)
+		// Check OpenSearch health before proceeding with backup or restore
+		err = search.EnsureOpenSearchIsHealthy()
+		if err != nil {
+			log.Errorf("Operation cannot be performed as OpenSearch is not healthy")
+			os.Exit(1)
+		}
+	*/
 
 	// Update OpenSearch keystore
 	_, err = k8s.UpdateKeystore(conData)
