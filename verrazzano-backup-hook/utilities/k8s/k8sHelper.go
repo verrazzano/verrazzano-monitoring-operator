@@ -306,7 +306,7 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 					timeSeconds = timeSeconds + float64(duration)
 
 				} else {
-					return fmt.Errorf("VeleroTimeout '%s' exceeded. Pod '%s' is still not in running state", timeout, pod.Name)
+					return fmt.Errorf("Timeout '%s' exceeded. Pod '%s' is still not in running state", timeout, pod.Name)
 				}
 				// change wait to false after each wait
 				wait = false
