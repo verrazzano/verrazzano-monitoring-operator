@@ -327,13 +327,6 @@ func GetElasticsearchMasterInitContainer() *corev1.Container {
 	return &elasticsearchInitContainer
 }
 
-//GetElasticsearchBackupInitContainer return an Elasticsearch Init container for the master which is used for backup and restore operations
-func GetElasticsearchBackupInitContainer() *corev1.Container {
-	elasticsearchBackupInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchBackupInit)
-	elasticsearchBackupInitContainer.Ports = nil
-	return &elasticsearchBackupInitContainer
-}
-
 // GetElasticsearchInitContainer returns an Elasticsearch Init container object
 func GetElasticsearchInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)

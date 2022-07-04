@@ -235,17 +235,6 @@ fi`,
 			Name:      esMasterVolName,
 			MountPath: esMasterData,
 		}}
-
-	// Add second init container
-	statefulSet.Spec.Template.Spec.InitContainers = append(statefulSet.Spec.Template.Spec.InitContainers,
-		*resources.GetElasticsearchBackupInitContainer())
-
-	statefulSet.Spec.Template.Spec.InitContainers[1].VolumeMounts =
-		[]corev1.VolumeMount{{
-			Name:      esMasterVolName,
-			MountPath: esMasterData,
-		}}
-
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
 	if node.Storage != nil && len(node.Storage.Size) > 0 {
