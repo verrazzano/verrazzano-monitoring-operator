@@ -26,8 +26,8 @@ const (
 	// DevKey used in setting env values for dev
 	DevKey = "dev"
 
-	// TruthString is expected value for true
-	TruthString = "true"
+	// TrueString is expected value for true
+	TrueString = "true"
 
 	// FalseString is expected value for false
 	FalseString = "false"

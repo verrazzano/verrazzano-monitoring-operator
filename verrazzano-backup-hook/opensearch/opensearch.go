@@ -82,7 +82,7 @@ func (o *OpensearchImpl) EnsureOpenSearchIsReachable() error {
 	done := false
 	var timeSeconds float64
 
-	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TruthString {
+	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TrueString {
 		// if UT flag is set, skip to avoid retry logic
 		return nil
 	}
@@ -138,7 +138,7 @@ func (o *OpensearchImpl) EnsureOpenSearchIsHealthy() error {
 	}
 	totalSeconds := timeParse.Seconds()
 
-	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TruthString {
+	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TrueString {
 		// if UT flag is set, skip to avoid retry logic
 		return nil
 	}
@@ -281,7 +281,7 @@ func (o *OpensearchImpl) CheckSnapshotProgress() error {
 	snapShotURL := fmt.Sprintf("%s/_snapshot/%s/%s", o.BaseURL, constants.OpenSearchSnapShotRepoName, o.SecretData.BackupName)
 	var snapshotInfo types.OpenSearchSnapshotStatus
 
-	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TruthString {
+	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TrueString {
 		// if UT flag is set, skip to avoid retry logic
 		return nil
 	}
@@ -381,7 +381,7 @@ func (o *OpensearchImpl) CheckRestoreProgress() error {
 	dsURL := fmt.Sprintf("%s/_data_stream", o.BaseURL)
 	var snapshotInfo types.OpenSearchDataStreams
 
-	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TruthString {
+	if utilities.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TrueString {
 		// if UT flag is set, skip to avoid retry logic
 		return nil
 	}
