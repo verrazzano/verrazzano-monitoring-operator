@@ -58,14 +58,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	//// Auto detect component based on injection
-	//componentFound, err := futil.GetComponent(constants.ComponentPath)
-	//if err != nil {
-	//	fmt.Printf("Component detection failure %v", err)
-	//	os.Exit(1)
-	//}
-	//Component = componentFound
-
 	// Initialize the zap log
 	file, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("verrazzano-%s-hook-*.log", strings.ToLower(Operation)))
 	if err != nil {
@@ -179,12 +171,12 @@ func main() {
 	case constants.RestoreOperation:
 		// OpenSearch restore handling
 		log.Infof("Commencing OpenSearch restore ..")
-		err = k8s.ScaleDeployment(constants.VMOLabelSelector, constants.VerrazzanoNameSpaceName, constants.VMODeploymentName, int32(0))
+		err = k8s.ScaleDeployment(constants.VMOLabelSelector, constants.VerrazzanoSystemNamespace, constants.VMODeploymentName, int32(0))
 		if err != nil {
 			log.Errorf("Unable to scale deployment '%s' due to %v", constants.VMODeploymentName, zap.Error(err))
 			os.Exit(1)
 		}
-		err = k8s.ScaleDeployment(constants.IngestLabelSelector, constants.VerrazzanoNameSpaceName, constants.IngestDeploymentName, int32(0))
+		err = k8s.ScaleDeployment(constants.IngestLabelSelector, constants.VerrazzanoSystemNamespace, constants.IngestDeploymentName, int32(0))
 		if err != nil {
 			log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
 			os.Exit(1)
@@ -195,19 +187,19 @@ func main() {
 			os.Exit(1)
 		}
 
-		ok, err := k8s.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoNameSpaceName)
+		ok, err := k8s.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoSystemNamespace)
 		if err != nil {
 			log.Errorf("Unable to detect Kibana deployment '%s' due to %v", constants.KibanaDeploymentLabelSelector, zap.Error(err))
 			os.Exit(1)
 		}
 		// If kibana is deployed then scale it down
 		if ok {
-			err = k8s.ScaleDeployment(constants.KibanaLabelSelector, constants.VerrazzanoNameSpaceName, constants.KibanaDeploymentName, int32(0))
+			err = k8s.ScaleDeployment(constants.KibanaLabelSelector, constants.VerrazzanoSystemNamespace, constants.KibanaDeploymentName, int32(0))
 			if err != nil {
 				log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
 			}
 		}
-		err = k8s.ScaleDeployment(constants.VMOLabelSelector, constants.VerrazzanoNameSpaceName, constants.VMODeploymentName, int32(1))
+		err = k8s.ScaleDeployment(constants.VMOLabelSelector, constants.VerrazzanoSystemNamespace, constants.VMODeploymentName, int32(1))
 		if err != nil {
 			log.Errorf("Unable to scale deployment '%s' due to %v", constants.VMODeploymentName, zap.Error(err))
 		}
