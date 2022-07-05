@@ -235,7 +235,7 @@ fi`,
 			Name:      esMasterVolName,
 			MountPath: esMasterData,
 		}}
-	
+
 	// Add the pvc templates, this will result in a PV + PVC being created automatically for each
 	// pod in the stateful set.
 	if node.Storage != nil && len(node.Storage.Size) > 0 {

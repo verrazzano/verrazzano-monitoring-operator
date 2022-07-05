@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	healthUrl         = "/_cluster/health"
-	secureSettingsUrl = "/_nodes/reload_secure_settings"
-	dataStreamsUrl    = "/_data_stream"
+	healthURL         = "/_cluster/health"
+	secureSettingsURL = "/_nodes/reload_secure_settings"
+	dataStreamsURL    = "/_data_stream"
+	snapshotURL       = "/_snapshot"
 	timeOutGlobal     = "10m"
 )
 
@@ -163,15 +164,15 @@ func TestMain(m *testing.M) {
 		switch strings.TrimSpace(r.URL.Path) {
 		case "/":
 			mockEnsureOpenSearchIsReachable(false, w, r)
-		case healthUrl:
+		case healthURL:
 			mockEnsureOpenSearchIsHealthy(false, w, r)
-		case fmt.Sprintf("/_snapshot/%s", constants.OpenSearchSnapShotRepoName), fmt.Sprintf("%s/*", dataStreamsUrl), "/*":
+		case fmt.Sprintf("%s/%s", snapshotURL, constants.OpenSearchSnapShotRepoName), fmt.Sprintf("%s/*", dataStreamsURL), "/*":
 			mockOpenSearchOperationResponse(false, w, r)
-		case secureSettingsUrl:
+		case secureSettingsURL:
 			mockReloadOpensearchSecureSettings(false, w, r)
 		case fmt.Sprintf("/_snapshot/%s/%s", constants.OpenSearchSnapShotRepoName, "mango"), fmt.Sprintf("/_snapshot/%s/%s/_restore", constants.OpenSearchSnapShotRepoName, "mango"):
 			mockTriggerSnapshotRepository(false, w, r)
-		case dataStreamsUrl:
+		case dataStreamsURL:
 			mockRestoreProgress(w, r)
 
 		default:
@@ -239,7 +240,7 @@ func Test_EnsureOpenSearchIsHealthy(t *testing.T) {
 
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case "/_cluster/health":
+		case healthURL:
 			mockEnsureOpenSearchIsHealthy(false, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -257,7 +258,7 @@ func Test_EnsureOpenSearchIsHealthy(t *testing.T) {
 
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case "/_cluster/health":
+		case healthURL:
 			mockEnsureOpenSearchIsHealthy(true, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -280,7 +281,7 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case fmt.Sprintf("/_snapshot/%s", constants.OpenSearchSnapShotRepoName):
+		case fmt.Sprintf("%s/%s", snapshotURL, constants.OpenSearchSnapShotRepoName):
 			mockOpenSearchOperationResponse(false, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -308,7 +309,7 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case fmt.Sprintf("/_snapshot/%s", constants.OpenSearchSnapShotRepoName):
+		case fmt.Sprintf("%s/%s", snapshotURL, constants.OpenSearchSnapShotRepoName):
 			mockOpenSearchOperationResponse(true, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -331,7 +332,7 @@ func Test_ReloadOpensearchSecureSettings(t *testing.T) {
 	defer os.Remove(f)
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case "/_nodes/reload_secure_settings":
+		case secureSettingsURL:
 			mockReloadOpensearchSecureSettings(false, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -350,7 +351,7 @@ func Test_ReloadOpensearchSecureSettings(t *testing.T) {
 
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case "/_nodes/reload_secure_settings":
+		case secureSettingsURL:
 			mockReloadOpensearchSecureSettings(true, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -372,7 +373,7 @@ func Test_TriggerSnapshot(t *testing.T) {
 
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case fmt.Sprintf("/_snapshot/%s/%s", constants.OpenSearchSnapShotRepoName, "mango"):
+		case fmt.Sprintf("%s/%s/%s", snapshotURL, constants.OpenSearchSnapShotRepoName, "mango"):
 			mockTriggerSnapshotRepository(false, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -391,7 +392,7 @@ func Test_TriggerSnapshot(t *testing.T) {
 
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case fmt.Sprintf("/_snapshot/%s/%s", constants.OpenSearchSnapShotRepoName, "mango"):
+		case fmt.Sprintf("%s/%s/%s", snapshotURL, constants.OpenSearchSnapShotRepoName, "mango"):
 			mockTriggerSnapshotRepository(true, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -414,7 +415,7 @@ func TestCheckSnapshotProgress(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case fmt.Sprintf("/_snapshot/%s/%s", constants.OpenSearchSnapShotRepoName, "mango"):
+		case fmt.Sprintf("%s/%s/%s", snapshotURL, constants.OpenSearchSnapShotRepoName, "mango"):
 			mockTriggerSnapshotRepository(false, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -442,7 +443,7 @@ func Test_DeleteDataStreams(t *testing.T) {
 
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case "/_data_stream/*", "/*":
+		case fmt.Sprintf("%s/*", dataStreamsURL), "/*":
 			mockOpenSearchOperationResponse(false, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -461,7 +462,7 @@ func Test_DeleteDataStreams(t *testing.T) {
 
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case "/_data_stream/*", "/*":
+		case fmt.Sprintf("%s/*", dataStreamsURL), "/*":
 			mockOpenSearchOperationResponse(true, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -484,7 +485,7 @@ func Test_TriggerRestore(t *testing.T) {
 
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case fmt.Sprintf("/_snapshot/%s/%s/_restore", constants.OpenSearchSnapShotRepoName, "mango"):
+		case fmt.Sprintf("%s/%s/%s/_restore", snapshotURL, constants.OpenSearchSnapShotRepoName, "mango"):
 			mockTriggerSnapshotRepository(false, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -503,7 +504,7 @@ func Test_TriggerRestore(t *testing.T) {
 
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case fmt.Sprintf("/_snapshot/%s/%s/_restore", constants.OpenSearchSnapShotRepoName, "mango"):
+		case fmt.Sprintf("%s/%s/%s/_restore", snapshotURL, constants.OpenSearchSnapShotRepoName, "mango"):
 			mockTriggerSnapshotRepository(true, w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
@@ -525,7 +526,7 @@ func Test_CheckRestoreProgress(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(r.URL.Path) {
-		case "/_data_stream":
+		case dataStreamsURL:
 			mockRestoreProgress(w, r)
 		default:
 			http.NotFoundHandler().ServeHTTP(w, r)
