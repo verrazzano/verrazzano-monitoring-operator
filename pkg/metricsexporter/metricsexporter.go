@@ -18,7 +18,7 @@ import (
 
 var (
 	//syncHandler/Reconcile metric
-	reconcileIndex        uint64 = 0
+	reconcileIndex        uint64
 	reconcileTimer        *prometheus.Timer
 	reconcileCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "reconcileCounter", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"})
 	reconcileLastTime     = prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "reconcileLastTime", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"})
@@ -26,7 +26,7 @@ var (
 	reconcileDuration     = prometheus.NewSummary(prometheus.SummaryOpts{Name: "reconcileLastTime", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"})
 
 	//VMO deployments metrics
-	deploymentIndex              uint64 = 0
+	deploymentIndex              uint64
 	deploymentTimer              *prometheus.Timer
 	deploymentCounter            = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentCounter", Help: "Tracks how many times the deployment function is called"})
 	deploymentLastTime           = prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "deploymentLastTime", Help: "The timestamp of the last time the deployment function completed"}, []string{"reconcile_index"})
@@ -71,7 +71,7 @@ func registerMetricsHandlers() {
 }
 
 func registerMetricsHandlersHelper() error {
-	var errorObserved error = nil
+	var errorObserved error
 	for metric, i := range failedMetrics {
 		err := registry.Register(metric)
 		if err != nil {
