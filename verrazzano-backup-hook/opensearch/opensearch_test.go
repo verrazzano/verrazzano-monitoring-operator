@@ -17,7 +17,13 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
+)
+
+const (
+	healthUrl         = "/_cluster/health"
+	secureSettingsUrl = "/_nodes/reload_secure_settings"
+	dataStreamsUrl    = "/_data_stream"
+	timeOutGlobal     = "10m"
 )
 
 func logHelper() (*zap.SugaredLogger, string) {
@@ -157,15 +163,15 @@ func TestMain(m *testing.M) {
 		switch strings.TrimSpace(r.URL.Path) {
 		case "/":
 			mockEnsureOpenSearchIsReachable(false, w, r)
-		case "/_cluster/health":
+		case healthUrl:
 			mockEnsureOpenSearchIsHealthy(false, w, r)
-		case fmt.Sprintf("/_snapshot/%s", constants.OpenSearchSnapShotRepoName), "/_data_stream/*", "/*":
+		case fmt.Sprintf("/_snapshot/%s", constants.OpenSearchSnapShotRepoName), fmt.Sprintf("%s/*", dataStreamsUrl), "/*":
 			mockOpenSearchOperationResponse(false, w, r)
-		case "/_nodes/reload_secure_settings":
+		case secureSettingsUrl:
 			mockReloadOpensearchSecureSettings(false, w, r)
 		case fmt.Sprintf("/_snapshot/%s/%s", constants.OpenSearchSnapShotRepoName, "mango"), fmt.Sprintf("/_snapshot/%s/%s/_restore", constants.OpenSearchSnapShotRepoName, "mango"):
 			mockTriggerSnapshotRepository(false, w, r)
-		case "/_data_stream":
+		case dataStreamsUrl:
 			mockRestoreProgress(w, r)
 
 		default:
@@ -175,8 +181,7 @@ func TestMain(m *testing.M) {
 	defer httpServer.Close()
 
 	fmt.Println("mock opensearch handler")
-	timeParse, _ := time.ParseDuration("10m")
-	openSearch = opensearch.New(httpServer.URL, timeParse, http.DefaultClient, &conData, log)
+	openSearch = opensearch.New(httpServer.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 
 	fmt.Println("Start tests")
 	m.Run()
@@ -199,12 +204,12 @@ func Test_EnsureOpenSearchIsReachable(t *testing.T) {
 		}
 	}))
 	defer server1.Close()
-	timeParse, _ := time.ParseDuration("10m")
+
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 	}
-	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.EnsureOpenSearchIsReachable()
 	assert.Nil(t, err)
 
@@ -218,7 +223,7 @@ func Test_EnsureOpenSearchIsReachable(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeParse, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err = o.EnsureOpenSearchIsReachable()
 	assert.Nil(t, err)
 
@@ -241,12 +246,12 @@ func Test_EnsureOpenSearchIsHealthy(t *testing.T) {
 		}
 	}))
 	defer server1.Close()
-	timeParse, _ := time.ParseDuration("10m")
+
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 	}
-	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.EnsureOpenSearchIsHealthy()
 	assert.Nil(t, err)
 
@@ -260,7 +265,7 @@ func Test_EnsureOpenSearchIsHealthy(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeParse, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err = o.EnsureOpenSearchIsHealthy()
 	assert.NotNil(t, err)
 }
@@ -282,7 +287,6 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 		}
 	}))
 	defer server1.Close()
-	timeParse, _ := time.ParseDuration("10m")
 
 	var objsecret types.ObjectStoreSecret
 	objsecret.SecretName = "alpha"
@@ -298,7 +302,7 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 		Secret:        objsecret,
 	}
 
-	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.RegisterSnapshotRepository()
 	assert.Nil(t, err)
 
@@ -312,7 +316,7 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeParse, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err = o.RegisterSnapshotRepository()
 	assert.NotNil(t, err)
 
@@ -334,13 +338,13 @@ func Test_ReloadOpensearchSecureSettings(t *testing.T) {
 		}
 	}))
 	defer server1.Close()
-	timeParse, _ := time.ParseDuration("10m")
+
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.ReloadOpensearchSecureSettings()
 	assert.Nil(t, err)
 
@@ -353,7 +357,7 @@ func Test_ReloadOpensearchSecureSettings(t *testing.T) {
 		}
 	}))
 	defer server2.Close()
-	o = opensearch.New(server2.URL, timeParse, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err = o.ReloadOpensearchSecureSettings()
 	assert.NotNil(t, err)
 }
@@ -375,14 +379,13 @@ func Test_TriggerSnapshot(t *testing.T) {
 		}
 	}))
 	defer server1.Close()
-	timeParse, _ := time.ParseDuration("10m")
 
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.TriggerSnapshot()
 	assert.Nil(t, err)
 
@@ -395,7 +398,7 @@ func Test_TriggerSnapshot(t *testing.T) {
 		}
 	}))
 	defer server2.Close()
-	o = opensearch.New(server2.URL, timeParse, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err = o.TriggerSnapshot()
 	assert.NotNil(t, err)
 
@@ -418,14 +421,13 @@ func TestCheckSnapshotProgress(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	timeParse, _ := time.ParseDuration("10m")
 
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.CheckSnapshotProgress()
 	assert.Nil(t, err)
 }
@@ -447,13 +449,13 @@ func Test_DeleteDataStreams(t *testing.T) {
 		}
 	}))
 	defer server1.Close()
-	timeParse, _ := time.ParseDuration("10m")
+
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.DeleteData()
 	assert.Nil(t, err)
 
@@ -467,7 +469,7 @@ func Test_DeleteDataStreams(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeParse, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err = o.DeleteData()
 	assert.NotNil(t, err)
 }
@@ -489,13 +491,13 @@ func Test_TriggerRestore(t *testing.T) {
 		}
 	}))
 	defer server1.Close()
-	timeParse, _ := time.ParseDuration("10m")
+
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.TriggerRestore()
 	assert.Nil(t, err)
 
@@ -508,7 +510,7 @@ func Test_TriggerRestore(t *testing.T) {
 		}
 	}))
 	defer server2.Close()
-	o = opensearch.New(server2.URL, timeParse, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err = o.TriggerRestore()
 	assert.NotNil(t, err)
 }
@@ -530,13 +532,13 @@ func Test_CheckRestoreProgress(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	timeParse, _ := time.ParseDuration("10m")
+
 	conData := types.ConnectionData{
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server.URL, timeParse, http.DefaultClient, &conData, log)
+	o := opensearch.New(server.URL, timeOutGlobal, http.DefaultClient, &conData, log)
 	err := o.CheckRestoreProgress()
 	assert.Nil(t, err)
 }
