@@ -160,7 +160,7 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 	IngestPod := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",
-			Namespace:   constants.VerrazzanoNameSpaceName,
+			Namespace:   constants.VerrazzanoSystemNamespace,
 			Annotations: map[string]string{},
 			Labels:      IngestLabel,
 		},
@@ -182,7 +182,7 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 	KibanaPod := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "bar",
-			Namespace:   constants.VerrazzanoNameSpaceName,
+			Namespace:   constants.VerrazzanoSystemNamespace,
 			Annotations: map[string]string{},
 			Labels:      KibanaLabel,
 		},
@@ -234,7 +234,7 @@ func TestCheckDeployment(t *testing.T) {
 	PrimaryDeploy := apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",
-			Namespace:   constants.VerrazzanoNameSpaceName,
+			Namespace:   constants.VerrazzanoSystemNamespace,
 			Annotations: map[string]string{},
 			Labels:      KibanaLabel,
 		},
@@ -243,7 +243,7 @@ func TestCheckDeployment(t *testing.T) {
 	SecondaryDeploy := apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "bar",
-			Namespace:   constants.VerrazzanoNameSpaceName,
+			Namespace:   constants.VerrazzanoSystemNamespace,
 			Annotations: map[string]string{},
 			Labels:      KibanaLabel,
 		},
@@ -259,7 +259,7 @@ func TestCheckDeployment(t *testing.T) {
 	os.Setenv(constants.OpenSearchHealthCheckTimeoutKey, "1s")
 
 	fmt.Println("Deployment not found")
-	ok, err := k8s.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoNameSpaceName)
+	ok, err := k8s.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoSystemNamespace)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
 	assert.Equal(t, ok, false)
@@ -267,7 +267,7 @@ func TestCheckDeployment(t *testing.T) {
 	fmt.Println("Deployment found")
 	fc = fake.NewSimpleClientset(&PrimaryDeploy)
 	k8sPrimary := kutil.New(dclient, clientk, fc, nil, "default", log)
-	ok, err = k8sPrimary.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoNameSpaceName)
+	ok, err = k8sPrimary.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoSystemNamespace)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
 	assert.Equal(t, ok, true)
@@ -275,7 +275,7 @@ func TestCheckDeployment(t *testing.T) {
 	fmt.Println("Multiple Deployments found")
 	fc = fake.NewSimpleClientset(&PrimaryDeploy, &SecondaryDeploy)
 	k8sPrimarySec := kutil.New(dclient, clientk, fc, nil, "default", log)
-	ok, err = k8sPrimarySec.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoNameSpaceName)
+	ok, err = k8sPrimarySec.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoSystemNamespace)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
 	assert.Equal(t, ok, false)
@@ -291,7 +291,7 @@ func TestIsPodReady(t *testing.T) {
 	ReadyPod := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",
-			Namespace:   constants.VerrazzanoNameSpaceName,
+			Namespace:   constants.VerrazzanoSystemNamespace,
 			Annotations: map[string]string{},
 		},
 		Status: v1.PodStatus{
@@ -320,7 +320,7 @@ func TestIsPodReady(t *testing.T) {
 	NotReadyPod := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",
-			Namespace:   constants.VerrazzanoNameSpaceName,
+			Namespace:   constants.VerrazzanoSystemNamespace,
 			Annotations: map[string]string{},
 		},
 		Status: v1.PodStatus{
