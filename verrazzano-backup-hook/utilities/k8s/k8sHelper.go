@@ -327,9 +327,9 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	}
 
 	var wg sync.WaitGroup
-	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", constants.IngestLabelSelector, constants.VerrazzanoNameSpaceName)
+	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", constants.IngestLabelSelector, constants.VerrazzanoSystemNamespace)
 	listOptions := metav1.ListOptions{LabelSelector: constants.IngestLabelSelector}
-	ingestPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoNameSpaceName).List(context.TODO(), listOptions)
+	ingestPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return err
 	}
@@ -337,12 +337,12 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	wg.Add(len(ingestPods.Items))
 	for _, pod := range ingestPods.Items {
 		k.Log.Debugf("Firing go routine to check on pod '%s'", pod.Name)
-		go k.CheckPodStatus(pod.Name, constants.VerrazzanoNameSpaceName, "up", timeout, &wg)
+		go k.CheckPodStatus(pod.Name, constants.VerrazzanoSystemNamespace, "up", timeout, &wg)
 	}
 
-	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", constants.KibanaLabelSelector, constants.VerrazzanoNameSpaceName)
+	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", constants.KibanaLabelSelector, constants.VerrazzanoSystemNamespace)
 	listOptions = metav1.ListOptions{LabelSelector: constants.KibanaLabelSelector}
-	kibanaPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoNameSpaceName).List(context.TODO(), listOptions)
+	kibanaPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return err
 	}
@@ -350,7 +350,7 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	wg.Add(len(kibanaPods.Items))
 	for _, pod := range kibanaPods.Items {
 		k.Log.Debugf("Firing go routine to check on pod '%s'", pod.Name)
-		go k.CheckPodStatus(pod.Name, constants.VerrazzanoNameSpaceName, "up", timeout, &wg)
+		go k.CheckPodStatus(pod.Name, constants.VerrazzanoSystemNamespace, "up", timeout, &wg)
 	}
 
 	wg.Wait()
@@ -401,7 +401,7 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData) (bool, error) {
 
 	// Updating keystore in other masters
 	listOptions := metav1.ListOptions{LabelSelector: constants.OpenSearchMasterLabel}
-	esMasterPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoNameSpaceName).List(context.TODO(), listOptions)
+	esMasterPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return false, err
 	}
@@ -421,7 +421,7 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData) (bool, error) {
 
 	// Updating keystore in data nodes
 	listOptions = metav1.ListOptions{LabelSelector: constants.OpenSearchDataLabel}
-	esDataPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoNameSpaceName).List(context.TODO(), listOptions)
+	esDataPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return false, err
 	}

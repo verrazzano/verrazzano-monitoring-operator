@@ -6,7 +6,7 @@ package constants
 // General constants
 const (
 	// VerrazzanoNameSpaceName Namespace where Opensearch components are installed
-	VerrazzanoNameSpaceName = "verrazzano-system"
+	VerrazzanoSystemNamespace = "verrazzano-system"
 
 	// VerrazzanoNameSpaceName Namespace where Velero components are installed
 	VeleroNameSpace = "velero"

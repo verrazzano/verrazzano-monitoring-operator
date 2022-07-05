@@ -56,25 +56,6 @@ func WaitRandom(message, timeout string, log *zap.SugaredLogger) (int, error) {
 // ReadTempCredsFile reads object store credentials from a temporary file for registration purpose
 func ReadTempCredsFile(filePath, credentialProfile string) (string, string, error) {
 	var awsAccessKey, awsSecretAccessKey string
-	/*
-		f, err := os.Open(filePath)
-		if err != nil {
-			return "", "", nil
-		}
-		defer f.Close()
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if strings.Contains(line, constants.AwsAccessKeyString) {
-				words := strings.Split(line, fmt.Sprintf("%s=", constants.AwsAccessKeyString))
-				awsAccessKey = words[len(words)-1]
-			}
-			if strings.Contains(line, constants.AwsSecretAccessKeyString) {
-				words := strings.Split(line, fmt.Sprintf("%s=", constants.AwsSecretAccessKeyString))
-				awsSecretAccessKey = words[len(words)-1]
-			}
-		}
-	*/
 	pathElements := strings.Split(filePath, "/")
 	viper.SetConfigName(pathElements[len(pathElements)-1])
 	viper.SetConfigType("ini")
