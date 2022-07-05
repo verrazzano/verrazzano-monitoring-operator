@@ -561,32 +561,3 @@ func Test_Restore(t *testing.T) {
 	err := openSearch.Restore()
 	assert.Nil(t, err)
 }
-
-//// TestCheckDeployment tests the CheckDeployment method for the following use case.
-//// GIVEN k8s client
-//// WHEN restore is complete
-//// THEN checks kibana deployment is present on system
-//func Test_UpdateKeystore(t *testing.T) {
-//	log, f := logHelper()
-//	defer os.Remove(f)
-//
-//	var objsecret types.ObjectStoreSecret
-//	objsecret.SecretName = "alpha"
-//	objsecret.SecretKey = "cloud"
-//	objsecret.ObjectAccessKey = "alphalapha"
-//	objsecret.ObjectSecretKey = "betabetabeta"
-//
-//	conData := types.ConnectionData{
-//		BackupName: "mango",
-//		VeleroTimeout:    "1s",
-//		RegionName: "region",
-//		Endpoint:   constants.OpenSearchURL,
-//		Secret:     objsecret,
-//	}
-//	o := opensearch.New(server.URL, timeParse, http.DefaultClient, &conData, log)
-//	cfg, vzkfake := vzk8sfake.NewClientsetConfig()
-//	ok, err := openSearch.(vzkfake, cfg, &sdat, log)
-//	assert.Nil(t, err)
-//	assert.Equal(t, ok, true)
-//
-//}
