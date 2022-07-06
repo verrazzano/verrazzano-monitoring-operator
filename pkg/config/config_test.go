@@ -1,4 +1,4 @@
-// Copyright (C) 2020, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package config
@@ -34,7 +34,6 @@ func TestConfigDefaults(t *testing.T) {
 
 	assert.Equal(t, *operatorConfig.MetricsPort, 8090)
 	assert.Equal(t, *operatorConfig.DefaultSimpleComponentReplicas, defaultSimpleComponentReplicas)
-	assert.Equal(t, *operatorConfig.DefaultPrometheusReplicas, defaultPrometheusReplicas)
 	assert.Equal(t, operatorConfig.DefaultIngressTargetDNSName, "")
 }
 

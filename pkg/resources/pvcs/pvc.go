@@ -18,13 +18,6 @@ import (
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	var pvcList []*corev1.PersistentVolumeClaim
 
-	if vmo.Spec.Prometheus.Enabled && vmo.Spec.Prometheus.Storage.Size != "" {
-		pvcs, err := createPvcElements(vmo, &vmo.Spec.Prometheus.Storage, config.Prometheus, storageClassName)
-		if err != nil {
-			return pvcList, err
-		}
-		pvcList = append(pvcList, pvcs...)
-	}
 	if vmo.Spec.Elasticsearch.Enabled {
 		for _, dataNode := range nodes.DataNodes(vmo) {
 			if dataNode.Storage != nil && dataNode.Storage.Size != "" {

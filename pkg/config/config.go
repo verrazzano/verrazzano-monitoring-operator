@@ -42,9 +42,6 @@ func setConfigDefaults(config *OperatorConfig) {
 	if config.DefaultSimpleComponentReplicas == nil {
 		config.DefaultSimpleComponentReplicas = newIntVal(defaultSimpleComponentReplicas)
 	}
-	if config.DefaultPrometheusReplicas == nil {
-		config.DefaultPrometheusReplicas = newIntVal(defaultPrometheusReplicas)
-	}
 	if config.MetricsPort == nil {
 		config.MetricsPort = newIntVal(defaultMetricsPort)
 	}

@@ -29,7 +29,6 @@ type Elasticsearch interface {
 type ExpectedDeployments struct {
 	Deployments                 []*appsv1.Deployment
 	GrafanaDeployments          int
-	PrometheusDeployments       int
 	OpenSearchDataDeployments   int
 	OpenSearchIngestDeployments int
 }
@@ -193,16 +192,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 			FSGroup: &grafanaGid,
 		}
 		deployments = append(deployments, deployment)
-	}
-
-	// Prometheus
-	if vmo.Spec.Prometheus.Enabled {
-		promDeployments, err := createPrometheusDeploymentElements(vmo, kubeclientset, pvcToAdMap)
-		if err != nil {
-			return nil, err
-		}
-		deployments = append(deployments, promDeployments...)
-		expected.PrometheusDeployments += len(promDeployments)
 	}
 
 	// API
