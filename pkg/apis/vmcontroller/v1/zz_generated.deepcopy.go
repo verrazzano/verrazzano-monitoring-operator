@@ -483,6 +483,11 @@ func (in *VerrazzanoMonitoringInstanceList) DeepCopyObject() runtime.Object {
 func (in *VerrazzanoMonitoringInstanceSpec) DeepCopyInto(out *VerrazzanoMonitoringInstanceSpec) {
 	*out = *in
 	out.Versioning = in.Versioning
+	if in.IngressClassName != nil {
+		in, out := &in.IngressClassName, &out.IngressClassName
+		*out = new(string)
+		**out = **in
+	}
 	in.Grafana.DeepCopyInto(&out.Grafana)
 	in.Prometheus.DeepCopyInto(&out.Prometheus)
 	out.AlertManager = in.AlertManager
