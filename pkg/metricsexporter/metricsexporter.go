@@ -84,6 +84,25 @@ func registerMetricsHandlersHelper() error {
 	return errorObserved
 }
 
+func setLastTimeTemplate(indexOfVector uint64, vectorToSet *prometheus.GaugeVec) {
+	indexString := numToString(indexOfVector)
+	metricGaugeVecSetLastTime(vectorToSet, indexString)
+	indexString = numToString(indexOfVector - 1)
+	metricGaugeVecDelete(vectorToSet, indexString)
+}
+
+func incrementVectorTemplate(indexOfVector uint64, vectorToIncrement *prometheus.CounterVec) {
+	indexString := numToString(indexOfVector)
+	metricCounterVecErrorIncrement(vectorToIncrement, indexString)
+	indexString = numToString(indexOfVector - 1)
+	metricCounterVecErrorDelete(vectorToIncrement, indexString)
+}
+
+func eventCountIncrementTemplate(indexToIncrement uint64, counterToIncrement prometheus.Counter) {
+	indexToIncrement++
+	counterToIncrement.Inc()
+}
+
 func metricCounterVecErrorIncrement(metricVec *prometheus.CounterVec, label string) {
 	errorMetric, err := metricVec.GetMetricWithLabelValues(label)
 	if err != nil {
@@ -130,18 +149,15 @@ func LogSyncHandlerEnd() {
 }
 
 func ReconcileErrorIncrement() {
-	indexString := numToString(reconcileIndex)
-	metricCounterVecErrorIncrement(reconcileErrorCounter, indexString)
+	incrementVectorTemplate(reconcileIndex, reconcileErrorCounter)
 }
 
 func ReconcileCountIncrement() {
-	reconcileIndex++
-	reconcileCounter.Inc()
+	eventCountIncrementTemplate(reconcileIndex, reconcileCounter)
 }
 
 func ReconcileLastTimeSet() {
-	indexString := numToString(reconcileIndex)
-	metricGaugeVecSetLastTime(reconcileLastTime, indexString)
+	setLastTimeTemplate(reconcileIndex, reconcileLastTime)
 }
 
 func ReconcileTimerStart() {
@@ -169,29 +185,19 @@ func LogDeploymentEnd() {
 }
 
 func DeploymentErrorIncrement() {
-	indexString := numToString(deploymentIndex)
-	metricCounterVecErrorIncrement(deploymentErrorCounter, indexString)
-	indexString = numToString(deploymentIndex - 1)
-	metricCounterVecErrorDelete(deploymentErrorCounter, indexString)
+	incrementVectorTemplate(deploymentIndex, deploymentErrorCounter)
 }
 
 func DeploymentUpdateErrorIncrement() {
-	indexString := numToString(deploymentIndex)
-	metricCounterVecErrorIncrement(deploymentUpdateErrorCounter, indexString)
-	indexString = numToString(deploymentIndex - 1)
-	metricCounterVecErrorDelete(deploymentUpdateErrorCounter, indexString)
+	incrementVectorTemplate(deploymentIndex, deploymentUpdateErrorCounter)
 }
 
 func DeploymentDeleteErrorIncrement() {
-	indexString := numToString(deploymentIndex)
-	metricCounterVecErrorIncrement(deploymentDeleteErrorCounter, indexString)
-	indexString = numToString(deploymentIndex - 1)
-	metricCounterVecErrorDelete(deploymentDeleteErrorCounter, indexString)
+	incrementVectorTemplate(deploymentIndex, deploymentDeleteErrorCounter)
 }
 
 func DeploymentCountIncrement() {
-	deploymentIndex++
-	deploymentCounter.Inc()
+	eventCountIncrementTemplate(deploymentIndex, deploymentCounter)
 }
 
 //counts number of updates attempted, not just function calls
@@ -205,10 +211,7 @@ func DeploymentDeleteCountIncrement() {
 }
 
 func DeploymentLastTimeSet() {
-	indexString := numToString(deploymentIndex)
-	metricGaugeVecSetLastTime(deploymentLastTime, indexString)
-	indexString = numToString(deploymentIndex - 1)
-	metricGaugeVecDelete(deploymentLastTime, indexString)
+	setLastTimeTemplate(deploymentIndex, deploymentLastTime)
 }
 
 func DeploymentTimerStart() {
