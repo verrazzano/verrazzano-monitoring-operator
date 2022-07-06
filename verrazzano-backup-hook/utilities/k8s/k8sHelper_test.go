@@ -58,9 +58,9 @@ func logHelper() (*zap.SugaredLogger, string) {
 }
 
 // TestPopulateConnData tests the PopulateConnData method for the following use case.
-// GIVEN a velero backup name
-// WHEN velero backup is in progress
-// THEN fetches the secret associate with velero backup
+// GIVEN a Velero backup name
+// WHEN Velero backup is in progress
+// THEN fetches the secret associate with Velero backup
 func TestPopulateConnData(t *testing.T) {
 	t.Parallel()
 	log, f := logHelper()
@@ -77,7 +77,7 @@ func TestPopulateConnData(t *testing.T) {
 }
 
 // TestGetBackupStorageLocation tests the GetBackupStorageLocation method for the following use case.
-// GIVEN a velero backup storage location name
+// GIVEN a Velero backup storage location name
 // WHEN invoked
 // THEN fetches backup storage location object
 func TestGetBackupStorageLocation(t *testing.T) {
@@ -94,7 +94,7 @@ func TestGetBackupStorageLocation(t *testing.T) {
 }
 
 // TestGetBackup tests the GetBackup method for the following use case.
-// GIVEN a velero backup name
+// GIVEN a Velero backup name
 // WHEN invoked
 // THEN fetches backup object
 func TestGetBackup(t *testing.T) {

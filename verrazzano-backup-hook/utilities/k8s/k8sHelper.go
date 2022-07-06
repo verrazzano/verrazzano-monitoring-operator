@@ -41,7 +41,7 @@ func (k *K8sImpl) PopulateConnData(veleroNamespace, backupName string) (*model.C
 		return nil, err
 	}
 
-	k.Log.Infof("Detected velero backup storage location '%s' in namespace '%s' used by backup '%s'", backup.Spec.StorageLocation, veleroNamespace, backupName)
+	k.Log.Infof("Detected Velero backup storage location '%s' in namespace '%s' used by backup '%s'", backup.Spec.StorageLocation, veleroNamespace, backupName)
 	bsl, err := k.GetBackupStorageLocation(veleroNamespace, backup.Spec.StorageLocation)
 	if err != nil {
 		return nil, err
@@ -94,9 +94,9 @@ func (k *K8sImpl) GetObjectStoreCreds(secretName, namespace, secretKey string) (
 	return &secretData, nil
 }
 
-// GetBackupStorageLocation retrieves data from the velero backup storage location
+// GetBackupStorageLocation retrieves data from the Velero backup storage location
 func (k *K8sImpl) GetBackupStorageLocation(veleroNamespace, bslName string) (*model.VeleroBackupStorageLocation, error) {
-	k.Log.Infof("Fetching velero backup storage location '%s' in namespace '%s'", bslName, veleroNamespace)
+	k.Log.Infof("Fetching Velero backup storage location '%s' in namespace '%s'", bslName, veleroNamespace)
 	gvr := schema.GroupVersionResource{
 		Group:    "velero.io",
 		Version:  "v1",
@@ -108,7 +108,7 @@ func (k *K8sImpl) GetBackupStorageLocation(veleroNamespace, bslName string) (*mo
 	}
 
 	if bslRecievd == nil {
-		k.Log.Infof("No velero backup storage location in namespace '%s' was detected", veleroNamespace)
+		k.Log.Infof("No Velero backup storage location in namespace '%s' was detected", veleroNamespace)
 		return nil, err
 	}
 
@@ -124,9 +124,9 @@ func (k *K8sImpl) GetBackupStorageLocation(veleroNamespace, bslName string) (*mo
 	return &bsl, nil
 }
 
-// GetBackup Retrieves velero backup object from the cluster
+// GetBackup Retrieves Velero backup object from the cluster
 func (k *K8sImpl) GetBackup(veleroNamespace, backupName string) (*model.VeleroBackup, error) {
-	k.Log.Infof("Fetching velero backup '%s' in namespace '%s'", backupName, veleroNamespace)
+	k.Log.Infof("Fetching Velero backup '%s' in namespace '%s'", backupName, veleroNamespace)
 	gvr := schema.GroupVersionResource{
 		Group:    "velero.io",
 		Version:  "v1",
@@ -138,7 +138,7 @@ func (k *K8sImpl) GetBackup(veleroNamespace, backupName string) (*model.VeleroBa
 	}
 
 	if backupFetched == nil {
-		k.Log.Infof("No velero backup in namespace '%s' was detected", veleroNamespace)
+		k.Log.Infof("No Velero backup in namespace '%s' was detected", veleroNamespace)
 		return nil, err
 	}
 
@@ -155,8 +155,8 @@ func (k *K8sImpl) GetBackup(veleroNamespace, backupName string) (*model.VeleroBa
 }
 
 // ScaleDeployment is used to scale a deployment to specific replica count
-// labelSelectors,namespace, deploymentName are used to identify deployments
-// and specific pods associated with them
+// labelSelectors, namespace, deploymentName are used to identify deployments
+// and specific pods associated with them.
 func (k *K8sImpl) ScaleDeployment(labelSelector, namespace, deploymentName string, replicaCount int32) error {
 	k.Log.Infof("Scale deployment '%s' in namespace '%s", deploymentName, namespace)
 	var wg sync.WaitGroup

@@ -62,7 +62,7 @@ func (o *OpensearchImpl) HTTPHelper(ctx context.Context, method, requestURL stri
 	}
 
 	if response.StatusCode != 200 {
-		o.Log.Errorf("Response code is not 200 OK!. Actual response code '%v' with response body '%v'", response.StatusCode, string(bdata))
+		o.Log.Errorf("Error completing request, response code '%v', response body '%v'", response.StatusCode, string(bdata))
 		return err
 	}
 
@@ -320,11 +320,9 @@ func (o *OpensearchImpl) CheckSnapshotProgress() error {
 		}
 	}
 
-	o.Log.Infof("Number of shards backed up = %v", snapshotInfo.Snapshots[0].Shards.Total)
-	o.Log.Infof("Number of successfull shards backed up = %v", snapshotInfo.Snapshots[0].Shards.Total)
-	o.Log.Infof("Indices backed up = %v", snapshotInfo.Snapshots[0].Indices)
-	o.Log.Infof("Data streams backed up = %v", snapshotInfo.Snapshots[0].DataStreams)
-
+	o.Log.Infof("Backup in progress. total shards = %v, successfull shards backed up = %v, indices = %v, data streams = %v, ",
+		snapshotInfo.Snapshots[0].Shards.Total, snapshotInfo.Snapshots[0].Shards.Successful,
+		snapshotInfo.Snapshots[0].Indices, snapshotInfo.Snapshots[0].DataStreams)
 	return nil
 }
 

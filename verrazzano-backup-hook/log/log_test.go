@@ -11,6 +11,10 @@ import (
 	"testing"
 )
 
+// TestLogger tests the Logger method to create a zap logger
+// GIVEN input file name
+// WHEN file has been pre-created
+// THEN creates zap logger object to be consumed by other methods
 func TestLogger(t *testing.T) {
 	file, _ := os.CreateTemp(os.TempDir(), fmt.Sprintf("verrazzano-%s-hook-*.log", strings.ToLower("BACKUP")))
 	defer file.Close()

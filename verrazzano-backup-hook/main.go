@@ -34,8 +34,8 @@ var (
 func main() {
 	flag.StringVar(&VeleroBackupName, "velero-backup-name", "", "The Velero-backup-name associated with this operation.")
 	flag.StringVar(&Component, "component", "opensearch", "The Verrazzano component to be backed up or restored (Default = opensearch).")
-	flag.StringVar(&Operation, "operation", "", "The operation to be performed - backup/restore.")
-	flag.StringVar(&Profile, "profile", "default", "Object store credentials profile")
+	flag.StringVar(&Operation, "operation", "", "Operation must be one of 'backup' or 'restore'.")
+	flag.StringVar(&Profile, "profile", "default", "Object store credentials profile.")
 
 	// Add the zap logger flag set to the CLI.
 	opts := kzap.Options{}
@@ -54,7 +54,7 @@ func main() {
 		os.Exit(1)
 	}
 	if VeleroBackupName == "" {
-		fmt.Printf("VeleroBackupName cannot be empty . It has to be set to an existing velero backup.\n")
+		fmt.Printf("VeleroBackupName must refer to an existing Velero backup.\n")
 		os.Exit(1)
 	}
 
