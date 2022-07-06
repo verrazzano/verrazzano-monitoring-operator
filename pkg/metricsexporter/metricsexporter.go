@@ -98,8 +98,8 @@ func incrementVectorTemplate(indexOfVector uint64, vectorToIncrement *prometheus
 	metricCounterVecErrorDelete(vectorToIncrement, indexString)
 }
 
-func eventCountIncrementTemplate(indexToIncrement *uint64, counterToIncrement prometheus.Counter) {
-	(*indexToIncrement) = (*indexToIncrement) + 1
+func eventCountIncrementTemplate(indexToIncrement uint64, counterToIncrement prometheus.Counter) {
+	indexToIncrement = indexToIncrement + 1
 	counterToIncrement.Inc()
 }
 
