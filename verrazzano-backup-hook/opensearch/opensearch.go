@@ -269,9 +269,9 @@ func (o *OpensearchImpl) TriggerSnapshot() error {
 	}
 
 	if !snapshotResponse.Accepted {
-		return fmt.Errorf("Snapshot registration failure. Response = %v ", snapshotResponse)
+		return fmt.Errorf("Snapshot trigger failure. Response = %v ", snapshotResponse)
 	}
-	o.Log.Infof("Snapshot registered successfully !")
+	o.Log.Infof("Snapshot triggered successfully !")
 	return nil
 }
 
