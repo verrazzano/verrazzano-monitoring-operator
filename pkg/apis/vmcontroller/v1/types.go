@@ -34,6 +34,9 @@ type (
 		// the external endpoint or uniform resource identifier
 		URI string `json:"uri,omitempty" yaml:"uri"`
 
+		// the ingress class for external endpoints
+		IngressClassName *string `json:"IngressClassName,omitempty"`
+
 		// a secret which contains secrets VerrazzanoMonitoringInstance needs to startup
 		// examples being username, password, tls.crt, tls.key
 		SecretsName string `json:"secretsName" yaml:"secretsName"`
