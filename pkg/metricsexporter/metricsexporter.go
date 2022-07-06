@@ -98,11 +98,6 @@ func incrementVectorTemplate(indexOfVector uint64, vectorToIncrement *prometheus
 	metricCounterVecErrorDelete(vectorToIncrement, indexString)
 }
 
-func eventCountIncrementTemplate(indexToIncrement uint64, counterToIncrement prometheus.Counter) {
-	indexToIncrement = indexToIncrement + 1
-	counterToIncrement.Inc()
-}
-
 func metricCounterVecErrorIncrement(metricVec *prometheus.CounterVec, label string) {
 	errorMetric, err := metricVec.GetMetricWithLabelValues(label)
 	if err != nil {
@@ -153,7 +148,8 @@ func ReconcileErrorIncrement() {
 }
 
 func ReconcileCountIncrement() {
-	eventCountIncrementTemplate(reconcileIndex, reconcileCounter)
+	reconcileIndex++
+	reconcileCounter.Inc()
 }
 
 func ReconcileLastTimeSet() {
@@ -197,7 +193,8 @@ func DeploymentDeleteErrorIncrement() {
 }
 
 func DeploymentCountIncrement() {
-	eventCountIncrementTemplate(deploymentIndex, deploymentCounter)
+	deploymentIndex++
+	deploymentCounter.Inc()
 }
 
 //counts number of updates attempted, not just function calls
