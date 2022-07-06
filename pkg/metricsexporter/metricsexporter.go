@@ -23,7 +23,7 @@ var (
 	reconcileCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "reconcileCounter", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"})
 	reconcileLastTime     = prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "reconcileLastTime", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"})
 	reconcileErrorCounter = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "reconcileErrorCounter", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"})
-	reconcileDuration     = prometheus.NewSummary(prometheus.SummaryOpts{Name: "reconcileLastTime", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"})
+	reconcileDuration     = prometheus.NewSummary(prometheus.SummaryOpts{Name: "reconcileDuration", Help: "Tracks the duration of the reconcile function in seconds"})
 
 	//VMO deployments metrics
 	deploymentIndex              uint64
@@ -37,7 +37,7 @@ var (
 	deploymentDeleteCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "deploymentDeleteCounter", Help: "Tracks how many times the delete functionality is invoked"})
 	deploymentDeleteErrorCounter = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "deploymentDeleteErrorCounter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"})
 
-	allMetrics    = []prometheus.Collector{reconcileCounter, reconcileLastTime, reconcileErrorCounter, reconcileDuration}
+	allMetrics    = []prometheus.Collector{reconcileCounter, reconcileLastTime, reconcileErrorCounter, reconcileDuration, deploymentCounter, deploymentDeleteCounter, deploymentDeleteErrorCounter, deploymentDuration, deploymentErrorCounter, deploymentLastTime, deploymentUpdateCounter, deploymentUpdateErrorCounter}
 	failedMetrics = map[prometheus.Collector]int{}
 	registry      = prometheus.DefaultRegisterer
 )
