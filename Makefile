@@ -132,6 +132,15 @@ build: k8s-dist
 		-f ${DOCKERFILE_OPERATOR} \
 		.
 
+.PHONY: buildhook
+buildhook:
+	rm -rf /usr/bin/verrazzano-backup-hook
+	go build \
+           -ldflags '-extldflags "-static"' \
+           -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
+           -o /usr/bin/verrazzano-backup-hook ./verrazzano-backup-hook
+
+
 .PHONY: push
 push: build
 	docker tag ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
@@ -154,7 +163,7 @@ push-tag:
 #
 .PHONY: unit-test
 unit-test: go-install
-	GO111MODULE=on $(GO) test -v ./pkg/... ./cmd/...
+	GO111MODULE=on $(GO) test -v ./pkg/... ./cmd/... ./verrazzano-backup-hook/
 
 #
 # Run all checks, convenient as a sanity-check before committing/pushing
