@@ -12,8 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	vmctl "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned"
-	v1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/typed/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -21,12 +19,9 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	fake "k8s.io/client-go/kubernetes/fake"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // simple ClusterRoleLister implementation
@@ -138,7 +133,6 @@ func TestReconcileMetrics(t *testing.T) {
 	defaultReplicasNum := 0
 	vmo.Labels = make(map[string]string)
 	//versioned.Interface{}
-	vmoclientset := versioned.Interface{}
 	//controller, err := NewController("verrazzano-install", "", "v1", "default", "default", "", "")
 	controller := &Controller{
 		kubeclientset:   client,
@@ -165,7 +159,6 @@ func TestReconcileMetrics(t *testing.T) {
 		pvcLister:           kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Core().V1().PersistentVolumeClaims().Lister(),
 		statefulSetLister:   kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Apps().V1().StatefulSets().Lister(),
 		ingressLister:       kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Networking().V1().Ingresses().Lister(),
-		vmoclientset:        vmoclientset,
 	}
 	err = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
 	assert.NoError(t, err)
@@ -189,13 +182,6 @@ func TestReconcileMetrics(t *testing.T) {
 // 	_ = corev1.AddToScheme(scheme)
 // 	return scheme
 // }
-
-func newRequest() ctrl.Request {
-	return ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: "verrazzano-install",
-			Name:      "default"}}
-}
 
 func clearMetrics() {
 	allMetrics = []prometheus.Collector{}
