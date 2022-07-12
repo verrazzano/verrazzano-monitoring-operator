@@ -138,12 +138,7 @@ func TestReconcileMetrics(t *testing.T) {
 	defaultReplicasNum := 0
 	vmo.Labels = make(map[string]string)
 	//versioned.Interface{}
-	//vmoclientset := fake.NewSimpleClientset()
-	vmoclientset := versioned.Clientset{
-		DiscoveryClient: &discovery.DiscoveryClient{},
-		verrazzanoV1: fake.,
-	}
-
+	vmoclientset := versioned.Interface{}
 	//controller, err := NewController("verrazzano-install", "", "v1", "default", "default", "", "")
 	controller := &Controller{
 		kubeclientset:   client,
