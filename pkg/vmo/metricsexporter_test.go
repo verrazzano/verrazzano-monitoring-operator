@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	vmctl "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/fake"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -159,6 +160,7 @@ func TestReconcileMetrics(t *testing.T) {
 		pvcLister:           kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Core().V1().PersistentVolumeClaims().Lister(),
 		statefulSetLister:   kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Apps().V1().StatefulSets().Lister(),
 		ingressLister:       kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Networking().V1().Ingresses().Lister(),
+		vmoclientset:        vmofake.NewSimpleClientset(),
 	}
 	err = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
 	assert.NoError(t, err)
