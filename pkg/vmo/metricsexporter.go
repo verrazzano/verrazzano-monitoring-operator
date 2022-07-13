@@ -16,6 +16,60 @@ import (
 
 //is retry functionality good to have? Should I look to support progmatically creating metrics? How about flags, is that a possible feature in the future? Im thinking about using some sort of struct or member functions to make all the metrics generic, how does that sound?
 
+type FunctionMetrics struct {
+	durationSeconds   DurationMetric
+	callsTotal        SimpleCounterMetric
+	lastCallTimestamp TimestampMetric
+	errorTotal        ErrorMetric
+	index             uint64
+	labelFunction     func() string
+}
+
+func (this *FunctionMetrics) LogSyncHandlerStart() {
+	this.callsTotal.metric.Inc()
+	this.index = this.index + 1
+	this.durationSeconds.TimerStart()
+}
+
+func (this *FunctionMetrics) LogSyncHandlerEnd() {
+	this.durationSeconds.TimerStop()
+	this.lastCallTimestamp.setLastTime(this.labelFunction())
+}
+
+type SimpleCounterMetric struct {
+	metric prometheus.Counter
+}
+
+type DurationMetric struct {
+	metricSummary prometheus.Summary
+	timer         *prometheus.Timer
+}
+
+func (this *DurationMetric) TimerStart() {
+	this.timer = prometheus.NewTimer(this.metricSummary)
+}
+
+func (this *DurationMetric) TimerStop() {
+	this.timer.ObserveDuration()
+}
+
+type TimestampMetric struct {
+	metricVec prometheus.GaugeVec
+}
+
+func (this *TimestampMetric) setLastTime(indexString string) {
+	lastTimeMetric, err := this.metricVec.GetMetricWithLabelValues(indexString)
+	if err != nil {
+		zap.S().Errorf("Failed to log the last reconcile time metric label %s: %v", indexString, err)
+	} else {
+		lastTimeMetric.SetToCurrentTime()
+	}
+}
+
+type ErrorMetric struct {
+	metric prometheus.Counter
+}
+
 var (
 	//syncHandler/Reconcile metric
 	reconcileIndex        uint64
@@ -37,7 +91,20 @@ var (
 	deploymentDeleteCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_delete_counter", Help: "Tracks how many times the delete functionality is invoked"})
 	deploymentDeleteErrorCounter = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"})
 
-	allMetrics    = []prometheus.Collector{reconcileCounter, reconcileLastTime, reconcileErrorCounter, reconcileDuration, deploymentCounter, deploymentDeleteCounter, deploymentDeleteErrorCounter, deploymentDuration, deploymentErrorCounter, deploymentLastTime, deploymentUpdateCounter, deploymentUpdateErrorCounter}
+	functionMetricsMap map[string]FunctionMetrics
+
+	simpleCounterMetricMap map[string]SimpleCounterMetric
+
+	durationMetricMap map[string]DurationMetric
+
+	timestampMetricMap map[string]TimestampMetric
+
+	errorMetricMap map[string]ErrorMetric
+
+	generalMetricMap map[string]prometheus.Collector
+
+	utcFunction   = time.Now().Unix
+	allMetrics    []prometheus.Collector
 	failedMetrics = map[prometheus.Collector]int{}
 	registry      = prometheus.DefaultRegisterer
 )
@@ -85,12 +152,6 @@ func registerMetricsHandlersHelper() error {
 }
 
 //testutil.tfloat64
-func setLastTimeTemplate(indexOfVector uint64, vectorToSet *prometheus.GaugeVec) {
-	indexString := numToString(indexOfVector)
-	metricGaugeVecSetLastTime(vectorToSet, indexString)
-	indexString = numToString(indexOfVector - 1)
-	metricGaugeVecDelete(vectorToSet, indexString)
-}
 
 func incrementVectorTemplate(indexOfVector uint64, vectorToIncrement *prometheus.CounterVec) {
 	indexString := numToString(indexOfVector)
@@ -112,15 +173,6 @@ func metricCounterVecErrorDelete(metricVec *prometheus.CounterVec, label string)
 	metricVec.DeleteLabelValues(label)
 }
 
-func metricGaugeVecSetLastTime(metricVec *prometheus.GaugeVec, label string) {
-	lastTimeMetric, err := metricVec.GetMetricWithLabelValues(label)
-	if err != nil {
-		zap.S().Errorf("Failed to log the last reconcile time metric label %s: %v", label, err)
-	} else {
-		lastTimeMetric.SetToCurrentTime()
-	}
-}
-
 func metricGaugeVecDelete(metricVec *prometheus.GaugeVec, label string) {
 	metricVec.DeleteLabelValues(label)
 }
@@ -134,15 +186,6 @@ func numToString(num uint64) string {
 Begin SyncHandler/Reconcile Metrics
 
 */
-func LogSyncHandlerStart() {
-	ReconcileCountIncrement()
-	ReconcileTimerStart()
-}
-
-func LogSyncHandlerEnd() {
-	ReconcileTimerEnd()
-	ReconcileLastTimeSet()
-}
 
 func ReconcileErrorIncrement() {
 	incrementVectorTemplate(reconcileIndex, reconcileErrorCounter)
@@ -170,16 +213,6 @@ func ReconcileTimerEnd() {
 Begin Deployment Metrics
 
 */
-
-func LogDeploymentStart() {
-	DeploymentCountIncrement()
-	DeploymentTimerStart()
-}
-
-func LogDeploymentEnd() {
-	DeploymentTimerEnd()
-	DeploymentLastTimeSet()
-}
 
 func DeploymentErrorIncrement() {
 	incrementVectorTemplate(deploymentIndex, deploymentErrorCounter)
@@ -210,12 +243,4 @@ func DeploymentDeleteCountIncrement() {
 
 func DeploymentLastTimeSet() {
 	setLastTimeTemplate(deploymentIndex, deploymentLastTime)
-}
-
-func DeploymentTimerStart() {
-	deploymentTimer = prometheus.NewTimer(deploymentDuration)
-}
-
-func DeploymentTimerEnd() {
-	deploymentTimer.ObserveDuration()
 }
