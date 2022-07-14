@@ -96,6 +96,8 @@ type (
 		DatasourcesConfigMap string    `json:"datasourcesConfigMap,omitempty"`
 		DashboardsConfigMap  string    `json:"dashboardsConfigMap,omitempty"`
 		Resources            Resources `json:"resources,omitempty"`
+		Replicas             int32     `json:"replicas,omitempty"`
+		Database             *Database `json:"database,omitempty"`
 	}
 
 	// Prometheus details
@@ -212,6 +214,13 @@ type (
 		MaxSizeDisk string `json:"maxSizeDisk,omitempty" yaml:"maxSizeDisk,omitempty"`
 		// +kubebuilder:validation:Pattern:=^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
 		MinSizeDisk string `json:"minSizeDisk,omitempty" yaml:"minSizeDisk,omitempty"`
+	}
+
+	// Database details
+	Database struct {
+		PasswordSecret string `json:"passwordSecret,omitempty"`
+		Host           string `json:"host,omitempty"`
+		Name           string `json:"name,omitempty"`
 	}
 
 	// ContainerSpec represents a container image that needs to be run periodically

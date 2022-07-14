@@ -131,6 +131,35 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				{Name: "GF_AUTH_PROXY_AUTO_SIGN_UP", Value: "true"},
 			}...)
 		}
+		if vmo.Spec.Grafana.Database != nil {
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{
+					Name: "GF_DATABASE_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: constants.GrafanaDbSecret,
+							},
+							Key: constants.VMOSecretPasswordField,
+						},
+					},
+				},
+				{
+					Name: "GF_DATABASE_USER",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: constants.GrafanaDbSecret,
+							},
+							Key: constants.VMOSecretUsernameField,
+						},
+					},
+				},
+				{Name: "GF_DATABASE_HOST", Value: vmo.Spec.Grafana.Database.Host},
+				{Name: "GF_DATABASE_HOST", Value: "mysql"},
+				{Name: "GF_DATABASE_NAME", Value: vmo.Spec.Grafana.Database.Name},
+			}...)
+		}
 		if vmo.Spec.URI != "" {
 			externalDomainName := config.Grafana.Name + "." + vmo.Spec.URI
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_DOMAIN", Value: externalDomainName})
