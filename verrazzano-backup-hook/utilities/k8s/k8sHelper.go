@@ -266,7 +266,7 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 
 		if pod == nil && checkFlag == "down" {
 			// break loop when scaling down condition is met
-			k.Log.Infof("Pod '%s' has scaled down successfully", pod.Name)
+			k.Log.Infof("Pod '%s' has scaled down successfully", podName)
 			done = true
 		}
 
