@@ -428,8 +428,9 @@ func (c *Controller) syncHandler(key string) error {
 // converge the two.  We then update the Status block of the VMO resource
 // with the current status.
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	LogSyncHandlerStart()
-	defer LogSyncHandlerEnd()
+	var errorObserved bool
+	FunctionMetricsMap["reconcile"].LogStart()
+	defer func() { FunctionMetricsMap["reconcile"].LogEnd(errorObserved) }()
 
 	originalVMO := vmo.DeepCopy()
 
@@ -452,7 +453,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	InitializeVMOSpec(c, vmo)
 
-	errorObserved := false
+	errorObserved = false
 
 	/*********************
 	 * Configure ISM
@@ -519,7 +520,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if !errorObserved {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
-			DeploymentErrorIncrement()
+			FunctionMetricsMap["deployment"].errorTotal.metricVecErrorIncrement(FunctionMetricsMap["deployment"].GetLabel())
 			errorObserved = true
 		}
 	}
@@ -574,10 +575,6 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	if vmo.Status.Hash != hash {
 		vmo.Status.Hash = hash
-	}
-
-	if errorObserved {
-		ReconcileErrorIncrement()
 	}
 
 	c.log.Oncef("Successfully synced VMI'%s/%s'", vmo.Namespace, vmo.Name)

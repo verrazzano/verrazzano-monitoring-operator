@@ -34,6 +34,13 @@ type simpleClusterRoleLister struct {
 // GIVEN an output directory for certificates
 //  WHEN I call CreateCertificates
 //  THEN all the needed certificate artifacts are created
+func TestInitializeAllMetricsArray(t *testing.T) {
+	clearMetrics()
+	assert := assert.New(t)
+	initializeAllMetricsArray()
+	assert.Equal(14, len(allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
+	//This number should correspond to the number of total metrics, including metrics inside of metric maps
+}
 func TestNoMetrics(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
@@ -133,8 +140,6 @@ func TestReconcileMetrics(t *testing.T) {
 	client := fake.NewSimpleClientset(cm)
 	defaultReplicasNum := 0
 	vmo.Labels = make(map[string]string)
-	//versioned.Interface{}
-	//controller, err := NewController("verrazzano-install", "", "v1", "default", "default", "", "")
 	controller := &Controller{
 		kubeclientset:   client,
 		configMapLister: &simpleConfigMapLister{kubeClient: client},
@@ -169,9 +174,9 @@ func TestReconcileMetrics(t *testing.T) {
 	cm, err = client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), configMapName, metav1.GetOptions{})
 	assert.NoError(t, err)
 
-	previousReconcileCount := testutil.ToFloat64(reconcileCounter)
+	previousReconcileCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)
 	controller.syncHandlerStandardMode(vmo)
-	assert.Equal(t, previousReconcileCount, testutil.ToFloat64(reconcileCounter)-1)
+	assert.Equal(t, previousReconcileCount, testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)-1)
 }
 
 // func newVMOReconciler(c client.Client)  {

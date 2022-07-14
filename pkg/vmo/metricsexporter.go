@@ -22,18 +22,26 @@ type FunctionMetrics struct {
 	lastCallTimestamp TimestampMetric
 	errorTotal        ErrorMetric
 	index             int64
-	labelFunction     *func() string
+	labelFunction     *func(int64) string
 }
 
-func (this *FunctionMetrics) LogSyncHandlerStart() {
+func (this *FunctionMetrics) LogStart() {
 	this.callsTotal.metric.Inc()
 	this.index = this.index + 1
 	this.durationSeconds.TimerStart()
 }
 
-func (this *FunctionMetrics) LogSyncHandlerEnd() {
+func (this *FunctionMetrics) LogEnd(errorObserved bool) {
+	label := (*this.labelFunction)(this.index)
 	this.durationSeconds.TimerStop()
-	this.lastCallTimestamp.setLastTime((*this.labelFunction)())
+	this.lastCallTimestamp.setLastTime(label)
+	if errorObserved {
+		this.errorTotal.metricVecErrorIncrement(label)
+	}
+}
+
+func (this *FunctionMetrics) GetLabel() string {
+	return (*this.labelFunction)(this.index)
 }
 
 type SimpleCounterMetric struct {
@@ -41,12 +49,12 @@ type SimpleCounterMetric struct {
 }
 
 type DurationMetric struct {
-	metricSummary prometheus.Summary
-	timer         *prometheus.Timer
+	metric prometheus.Summary
+	timer  *prometheus.Timer
 }
 
 func (this *DurationMetric) TimerStart() {
-	this.timer = prometheus.NewTimer(this.metricSummary)
+	this.timer = prometheus.NewTimer(this.metric)
 }
 
 func (this *DurationMetric) TimerStop() {
@@ -54,11 +62,11 @@ func (this *DurationMetric) TimerStop() {
 }
 
 type TimestampMetric struct {
-	metricVec *prometheus.GaugeVec
+	metric *prometheus.GaugeVec
 }
 
 func (this *TimestampMetric) setLastTime(indexString string) {
-	lastTimeMetric, err := this.metricVec.GetMetricWithLabelValues(indexString)
+	lastTimeMetric, err := this.metric.GetMetricWithLabelValues(indexString)
 	if err != nil {
 		zap.S().Errorf("Failed to log the last reconcile time metric label %s: %v", indexString, err)
 	} else {
@@ -67,11 +75,11 @@ func (this *TimestampMetric) setLastTime(indexString string) {
 }
 
 type ErrorMetric struct {
-	metricVec *prometheus.CounterVec
+	metric *prometheus.CounterVec
 }
 
 func (this *ErrorMetric) metricVecErrorIncrement(label string) {
-	errorMetric, err := this.metricVec.GetMetricWithLabelValues(label)
+	errorMetric, err := this.metric.GetMetricWithLabelValues(label)
 	if err != nil {
 		zap.S().Errorf("Failed to get metric label %s: %v", label, err)
 	} else {
@@ -80,76 +88,75 @@ func (this *ErrorMetric) metricVecErrorIncrement(label string) {
 }
 
 var (
-	functionMetricsMap = map[string]FunctionMetrics{
+	FunctionMetricsMap = map[string]*FunctionMetrics{
 		//syncHandler/Reconcile metric
-		"reconcile": FunctionMetrics{
+		"reconcile": {
 			durationSeconds: DurationMetric{
-				metricSummary: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
+				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
 			},
 			callsTotal: SimpleCounterMetric{
 				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_reconcile_total", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"}),
 			},
 			lastCallTimestamp: TimestampMetric{
-				metricVec: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_reconcile_last_timestamp_seconds", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"}),
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_reconcile_last_timestamp_seconds", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"}),
 			},
 			errorTotal: ErrorMetric{
-				metricVec: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_reconcile_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"}),
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_reconcile_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"}),
 			},
 			index:         int64(0),
-			labelFunction: &utcFunction,
+			labelFunction: &DefaultLabelFunction,
 		},
 
-		"deployment": FunctionMetrics{
+		"deployment": {
 			durationSeconds: DurationMetric{
-				metricSummary: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_deployment_duration_seconds", Help: "The duration of the last call to the deployment function"}),
+				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_deployment_duration_seconds", Help: "The duration of the last call to the deployment function"}),
 			},
 			callsTotal: SimpleCounterMetric{
 				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_total", Help: "Tracks how many times the deployment function is called"}),
 			},
 			lastCallTimestamp: TimestampMetric{
-				metricVec: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"reconcile_index"}),
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"reconcile_index"}),
 			},
 			errorTotal: ErrorMetric{
-				metricVec: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_error_total", Help: "Tracks how many times the deployment failed"}, []string{"reconcile_index"}),
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_error_total", Help: "Tracks how many times the deployment failed"}, []string{"reconcile_index"}),
 			},
 			index:         int64(0),
-			labelFunction: &utcFunction,
+			labelFunction: &DefaultLabelFunction,
 		},
 	}
 	//VMO deployments metrics
 
-	simpleCounterMetricMap = map[string]SimpleCounterMetric{
-		"deploymentUpdateCounter": SimpleCounterMetric{
+	SimpleCounterMetricMap = map[string]*SimpleCounterMetric{
+		"deploymentUpdateCounter": {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
 		},
-		"deploymentDeleteCounter": SimpleCounterMetric{
+		"deploymentDeleteCounter": {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_delete_counter", Help: "Tracks how many times the delete functionality is invoked"}),
 		},
 	}
 
-	durationMetricMap = map[string]DurationMetric{}
+	DurationMetricMap = map[string]*DurationMetric{}
 
-	timestampMetricMap = map[string]TimestampMetric{}
+	TimestampMetricMap = map[string]*TimestampMetric{}
 
-	errorMetricMap = map[string]ErrorMetric{
-		"deploymentUpdateErrorCounter": ErrorMetric{
-			metricVec: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"}),
+	ErrorMetricMap = map[string]*ErrorMetric{
+		"deploymentUpdateErrorCounter": {
+			metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"}),
 		},
-		"deploymentDeleteErrorCounter": ErrorMetric{
-			metricVec: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"}),
+		"deploymentDeleteErrorCounter": {
+			metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"}),
 		},
 	}
 
-	generalMetricMap = map[string]prometheus.Collector{}
-
-	utcFunction   = func() string { return numToString(time.Now().Unix()) }
-	allMetrics    []prometheus.Collector
-	failedMetrics = map[prometheus.Collector]int{}
-	registry      = prometheus.DefaultRegisterer
+	DefaultLabelFunction = func(index int64) string { return numToString(index) }
+	allMetrics           []prometheus.Collector
+	failedMetrics        = map[prometheus.Collector]int{}
+	registry             = prometheus.DefaultRegisterer
 )
 
 func StartMetricsServer() {
 
+	initializeAllMetricsArray()
 	go registerMetricsHandlers()
 
 	go wait.Until(func() {
@@ -165,6 +172,24 @@ func StartMetricsServer() {
 func initializeFailedMetricsArray() {
 	for i, metric := range allMetrics {
 		failedMetrics[metric] = i
+	}
+}
+
+func initializeAllMetricsArray() {
+	for _, value := range FunctionMetricsMap {
+		allMetrics = append(allMetrics, value.callsTotal.metric, value.durationSeconds.metric, value.errorTotal.metric, value.lastCallTimestamp.metric, value.durationSeconds.metric)
+	}
+	for _, value := range SimpleCounterMetricMap {
+		allMetrics = append(allMetrics, value.metric)
+	}
+	for _, value := range DurationMetricMap {
+		allMetrics = append(allMetrics, value.metric)
+	}
+	for _, value := range TimestampMetricMap {
+		allMetrics = append(allMetrics, value.metric)
+	}
+	for _, value := range ErrorMetricMap {
+		allMetrics = append(allMetrics, value.metric)
 	}
 }
 
@@ -194,68 +219,4 @@ func registerMetricsHandlersHelper() error {
 
 func numToString(num int64) string {
 	return fmt.Sprintf("%d", num)
-}
-
-/*
-
-Begin SyncHandler/Reconcile Metrics
-
-*/
-
-func ReconcileErrorIncrement() {
-	incrementVectorTemplate(reconcileIndex, reconcileErrorCounter)
-}
-
-func ReconcileCountIncrement() {
-	reconcileIndex++
-	reconcileCounter.Inc()
-}
-
-func ReconcileLastTimeSet() {
-	setLastTimeTemplate(reconcileIndex, reconcileLastTime)
-}
-
-func ReconcileTimerStart() {
-	reconcileTimer = prometheus.NewTimer(reconcileDuration)
-}
-
-func ReconcileTimerEnd() {
-	reconcileTimer.ObserveDuration()
-}
-
-/*
-
-Begin Deployment Metrics
-
-*/
-
-func DeploymentErrorIncrement() {
-	incrementVectorTemplate(deploymentIndex, deploymentErrorCounter)
-}
-
-func DeploymentUpdateErrorIncrement() {
-	incrementVectorTemplate(deploymentIndex, deploymentUpdateErrorCounter)
-}
-
-func DeploymentDeleteErrorIncrement() {
-	incrementVectorTemplate(deploymentIndex, deploymentDeleteErrorCounter)
-}
-
-func DeploymentCountIncrement() {
-	deploymentIndex++
-	deploymentCounter.Inc()
-}
-
-//counts number of updates attempted, not just function calls
-//in update, rolling update, update all, ...
-func DeploymentUpdateCountIncrement() {
-	deploymentUpdateCounter.Inc()
-}
-
-func DeploymentDeleteCountIncrement() {
-	deploymentDeleteCounter.Inc()
-}
-
-func DeploymentLastTimeSet() {
-	setLastTimeTemplate(deploymentIndex, deploymentLastTime)
 }
