@@ -26,25 +26,25 @@ type FunctionMetrics struct {
 }
 
 //Method to call at the start of the tracked function. Starts the duration timer and increments the total count
-func (this *FunctionMetrics) LogStart() {
-	this.callsTotal.metric.Inc()
-	this.index = this.index + 1
-	this.durationSeconds.TimerStart()
+func (thisMetric *FunctionMetrics) LogStart() {
+	thisMetric.callsTotal.metric.Inc()
+	thisMetric.index = thisMetric.index + 1
+	thisMetric.durationSeconds.TimerStart()
 }
 
 //Method to defer to the end of the tracked function. Stops the duration timer, sets the lastCallTimestamp. Pass in an argument of true to set an error for the current function call.
-func (this *FunctionMetrics) LogEnd(errorObserved bool) {
-	label := (*this.labelFunction)(this.index)
-	this.durationSeconds.TimerStop()
-	this.lastCallTimestamp.setLastTime(label)
+func (thisMetric *FunctionMetrics) LogEnd(errorObserved bool) {
+	label := (*thisMetric.labelFunction)(thisMetric.index)
+	thisMetric.durationSeconds.TimerStop()
+	thisMetric.lastCallTimestamp.setLastTime(label)
 	if errorObserved {
-		this.errorTotal.metricVecErrorIncrement(label)
+		thisMetric.errorTotal.metricVecErrorIncrement(label)
 	}
 }
 
 //Invokes the supplied labelFunction to return the string which would be used as a label. The label can be dynamic and may change depending on the labelFunctions behavior (i.e. a timestamp string)
-func (this *FunctionMetrics) GetLabel() string {
-	return (*this.labelFunction)(this.index)
+func (thisMetric *FunctionMetrics) GetLabel() string {
+	return (*thisMetric.labelFunction)(thisMetric.index)
 }
 
 //Type to count events such as the number fo function calls.
@@ -59,13 +59,13 @@ type DurationMetric struct {
 }
 
 //Creates a new timer, and starts the timer
-func (this *DurationMetric) TimerStart() {
-	this.timer = prometheus.NewTimer(this.metric)
+func (thisMetric *DurationMetric) TimerStart() {
+	thisMetric.timer = prometheus.NewTimer(thisMetric.metric)
 }
 
 //stops the timer and record the duration since the last call to TimerStart
-func (this *DurationMetric) TimerStop() {
-	this.timer.ObserveDuration()
+func (thisMetric *DurationMetric) TimerStop() {
+	thisMetric.timer.ObserveDuration()
 }
 
 //Type to track the last timestamp of a function call. Includes a method to set the last timestamp
@@ -74,8 +74,8 @@ type TimestampMetric struct {
 }
 
 //Adds a timestamp as the current time. The label must be supplied as an argument
-func (this *TimestampMetric) setLastTime(indexString string) {
-	lastTimeMetric, err := this.metric.GetMetricWithLabelValues(indexString)
+func (thisMetric *TimestampMetric) setLastTime(indexString string) {
+	lastTimeMetric, err := thisMetric.metric.GetMetricWithLabelValues(indexString)
 	if err != nil {
 		zap.S().Errorf("Failed to log the last reconcile time metric label %s: %v", indexString, err)
 	} else {
@@ -89,8 +89,8 @@ type ErrorMetric struct {
 }
 
 //Adds an error count. The label must be supplied as an argument
-func (this *ErrorMetric) metricVecErrorIncrement(label string) {
-	errorMetric, err := this.metric.GetMetricWithLabelValues(label)
+func (thisMetric *ErrorMetric) metricVecErrorIncrement(label string) {
+	errorMetric, err := thisMetric.metric.GetMetricWithLabelValues(label)
 	if err != nil {
 		zap.S().Errorf("Failed to get metric label %s: %v", label, err)
 	} else {
@@ -106,7 +106,7 @@ var (
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
 			},
 			callsTotal: SimpleCounterMetric{
-				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_reconcile_total", Help: "Tracks how many times the syncHandlerStandardMode function is called. This corresponds to the number of reconciles performed by the VMO"}),
+				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_reconcile_total", Help: "Tracks how many times the syncHandlerStandardMode function is called. thisMetric corresponds to the number of reconciles performed by the VMO"}),
 			},
 			lastCallTimestamp: TimestampMetric{
 				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_reconcile_last_timestamp_seconds", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"}),
@@ -159,9 +159,9 @@ var (
 	}
 
 	DefaultLabelFunction = func(index int64) string { return numToString(index) }
-	//This array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to this array for registration.
+	//thisMetric array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to thisMetric array for registration.
 	allMetrics []prometheus.Collector
-	//This map will be automatically populated with all metrics which were not registered correctly. Metrics in this map will be retried periodically.
+	//thisMetric map will be automatically populated with all metrics which were not registered correctly. Metrics in thisMetric map will be retried periodically.
 	failedMetrics = map[prometheus.Collector]int{}
 	registry      = prometheus.DefaultRegisterer
 )
