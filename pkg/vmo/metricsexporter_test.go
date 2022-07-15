@@ -86,7 +86,7 @@ func TestTwoInvalidMetrics(t *testing.T) {
 	allMetrics = append(allMetrics, firstInvalidMetric, secondInvalidMetric)
 	go registerMetricsHandlers()
 	time.Sleep(time.Second)
-	assert.Equal(3, len(failedMetrics), "Both Invalid")
+	assert.Equal(2, len(failedMetrics), "Both Invalid")
 }
 
 func TestThreeValidMetrics(t *testing.T) {
