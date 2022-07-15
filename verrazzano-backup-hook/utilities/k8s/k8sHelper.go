@@ -276,6 +276,7 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 			case "up":
 				// Check status and apply retry logic
 				if pod.Status.Phase != "Running" {
+					// Pod is not Running state so we need to wait.
 					wait = true
 				} else {
 					// break loop when scaling up condition is met
@@ -285,10 +286,10 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 						return err
 					}
 					if ok {
-						// break loop pod is Running and pod is in Ready !!
+						// break loop pod is Running and pod is in Ready.
 						done = true
 					} else {
-						// Pod is in Running state but still not ready
+						// Pod is in Running state but still not ready. Hence, we will wait.
 						wait = true
 					}
 				}
