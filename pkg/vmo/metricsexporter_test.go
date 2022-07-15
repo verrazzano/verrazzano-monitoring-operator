@@ -4,7 +4,6 @@
 package vmo
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	fake "k8s.io/client-go/kubernetes/fake"
 )
@@ -164,8 +162,6 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 	}
 	_ = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
 
-	// fetch the configmap, the Prometheus URL should now be the new Prometheus URL
-	cm, _ = client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), configMapName, metav1.GetOptions{})
 	return controller, vmo
 }
 
