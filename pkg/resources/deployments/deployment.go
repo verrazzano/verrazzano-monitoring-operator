@@ -158,7 +158,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 					},
 				},
 				{Name: "GF_DATABASE_HOST", Value: vmo.Spec.Grafana.Database.Host},
-				{Name: "GF_DATABASE_HOST", Value: "mysql"},
+				{Name: "GF_DATABASE_TYPE", Value: "mysql"},
 				{Name: "GF_DATABASE_NAME", Value: vmo.Spec.Grafana.Database.Name},
 			}...)
 		}
