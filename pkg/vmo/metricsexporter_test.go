@@ -21,14 +21,8 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	fake "k8s.io/client-go/kubernetes/fake"
 )
-
-// simple ClusterRoleLister implementation
-type simpleClusterRoleLister struct {
-	kubeClient kubernetes.Interface
-}
 
 // TestInitializeAllMetricsArray tests that the metrics maps are added to the allmetrics array
 // GIVEN populated metrics maps
