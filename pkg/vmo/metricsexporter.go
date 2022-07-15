@@ -8,29 +8,31 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-//is retry functionality good to have? Should I look to support progmatically creating metrics? How about flags, is that a possible feature in the future? Im thinking about using some sort of struct or member functions to make all the metrics generic, how does that sound?
-
+//Class of metrics to automatically capture 4 types of metrics for a given function
 type FunctionMetrics struct {
 	durationSeconds   DurationMetric
 	callsTotal        SimpleCounterMetric
 	lastCallTimestamp TimestampMetric
 	errorTotal        ErrorMetric
 	index             int64
-	labelFunction     *func(int64) string
+	labelFunction     *func(int64) string //The function to create the label values for the error and timestamp metrics. By default, this returns the functionMetric index as a string
 }
 
+//Method to call at the start of the tracked function. Starts the duration timer and increments the total count
 func (this *FunctionMetrics) LogStart() {
 	this.callsTotal.metric.Inc()
 	this.index = this.index + 1
 	this.durationSeconds.TimerStart()
 }
 
+//Method to defer to the end of the tracked function. Stops the duration timer, sets the lastCallTimestamp. Pass in an argument of true to set an error for the current function call.
 func (this *FunctionMetrics) LogEnd(errorObserved bool) {
 	label := (*this.labelFunction)(this.index)
 	this.durationSeconds.TimerStop()
@@ -40,31 +42,38 @@ func (this *FunctionMetrics) LogEnd(errorObserved bool) {
 	}
 }
 
+//Invokes the supplied labelFunction to return the string which would be used as a label. The label can be dynamic and may change depending on the labelFunctions behavior (i.e. a timestamp string)
 func (this *FunctionMetrics) GetLabel() string {
 	return (*this.labelFunction)(this.index)
 }
 
+//Type to count events such as the number fo function calls.
 type SimpleCounterMetric struct {
 	metric prometheus.Counter
 }
 
+//Type to track length of a function call. Method to start and stop the duration timer are available.
 type DurationMetric struct {
 	metric prometheus.Summary
 	timer  *prometheus.Timer
 }
 
+//Creates a new timer, and starts the timer
 func (this *DurationMetric) TimerStart() {
 	this.timer = prometheus.NewTimer(this.metric)
 }
 
+//stops the timer and record the duration since the last call to TimerStart
 func (this *DurationMetric) TimerStop() {
 	this.timer.ObserveDuration()
 }
 
+//Type to track the last timestamp of a function call. Includes a method to set the last timestamp
 type TimestampMetric struct {
 	metric *prometheus.GaugeVec
 }
 
+//Adds a timestamp as the current time. The label must be supplied as an argument
 func (this *TimestampMetric) setLastTime(indexString string) {
 	lastTimeMetric, err := this.metric.GetMetricWithLabelValues(indexString)
 	if err != nil {
@@ -74,10 +83,12 @@ func (this *TimestampMetric) setLastTime(indexString string) {
 	}
 }
 
+//Type to track the occurrence of an error. Includes a metod to add an error count
 type ErrorMetric struct {
 	metric *prometheus.CounterVec
 }
 
+//Adds an error count. The label must be supplied as an argument
 func (this *ErrorMetric) metricVecErrorIncrement(label string) {
 	errorMetric, err := this.metric.GetMetricWithLabelValues(label)
 	if err != nil {
@@ -88,8 +99,8 @@ func (this *ErrorMetric) metricVecErrorIncrement(label string) {
 }
 
 var (
+	//Metrics can be accessed through the metrics maps. All metrics declared in the metrics maps or allmetrics array are registered automatically.
 	FunctionMetricsMap = map[string]*FunctionMetrics{
-		//syncHandler/Reconcile metric
 		"reconcile": {
 			durationSeconds: DurationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
@@ -124,7 +135,6 @@ var (
 			labelFunction: &DefaultLabelFunction,
 		},
 	}
-	//VMO deployments metrics
 
 	SimpleCounterMetricMap = map[string]*SimpleCounterMetric{
 		"deploymentUpdateCounter": {
@@ -149,15 +159,17 @@ var (
 	}
 
 	DefaultLabelFunction = func(index int64) string { return numToString(index) }
-	allMetrics           []prometheus.Collector
-	failedMetrics        = map[prometheus.Collector]int{}
-	registry             = prometheus.DefaultRegisterer
+	//This array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to this array for registration.
+	allMetrics []prometheus.Collector
+	//This map will be automatically populated with all metrics which were not registered correctly. Metrics in this map will be retried periodically.
+	failedMetrics = map[prometheus.Collector]int{}
+	registry      = prometheus.DefaultRegisterer
 )
 
 func StartMetricsServer() {
 
-	initializeAllMetricsArray()
-	go registerMetricsHandlers()
+	initializeAllMetricsArray()  //populate allMetrics array with all map values
+	go registerMetricsHandlers() //begin the retry process
 
 	go wait.Until(func() {
 		http.Handle("/metrics", promhttp.Handler())
@@ -170,12 +182,14 @@ func StartMetricsServer() {
 }
 
 func initializeFailedMetricsArray() {
+	//the failed metrics array will initially contain all metrics so they may be registered
 	for i, metric := range allMetrics {
 		failedMetrics[metric] = i
 	}
 }
 
 func initializeAllMetricsArray() {
+	//loop through all metrics declarations in metric maps
 	for _, value := range FunctionMetricsMap {
 		allMetrics = append(allMetrics, value.callsTotal.metric, value.durationSeconds.metric, value.errorTotal.metric, value.lastCallTimestamp.metric, value.durationSeconds.metric)
 	}
@@ -194,21 +208,26 @@ func initializeAllMetricsArray() {
 }
 
 func registerMetricsHandlers() {
-	initializeFailedMetricsArray()
+	initializeFailedMetricsArray() //Get list of metrics to register initially
+	//loop until there is no error in registering
 	for err := registerMetricsHandlersHelper(); err != nil; err = registerMetricsHandlersHelper() {
-		zap.S().Errorf("Failed to register some metrics for VMI: %v", err)
+		zap.S().Errorf("Failed to register metrics for VMI %v \n", err)
 		time.Sleep(time.Second)
 	}
 }
 
 func registerMetricsHandlersHelper() error {
 	var errorObserved error
-	for metric, i := range failedMetrics {
+	for metric := range failedMetrics {
 		err := registry.Register(metric)
 		if err != nil {
-			zap.S().Errorf("Failed to register metric index %v for VMI", i)
-			errorObserved = err
+			if errorObserved != nil {
+				errorObserved = errors.Wrap(errorObserved, err.Error())
+			} else {
+				errorObserved = err
+			}
 		} else {
+			//if a metric is registered, delete it from the failed metrics map so that it is not retried
 			delete(failedMetrics, metric)
 		}
 	}

@@ -52,7 +52,8 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 // CreateDeployments create/update VMO deployment k8s resources
 func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (dirty bool, err error) {
 	FunctionMetricsMap["deployment"].LogStart()
-	defer FunctionMetricsMap["deployment"].LogEnd(false)
+	defer FunctionMetricsMap["deployment"].LogEnd(false) //The error count is incremented by the function which calls createDeployment
+
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs

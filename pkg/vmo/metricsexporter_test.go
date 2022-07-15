@@ -30,10 +30,10 @@ type simpleClusterRoleLister struct {
 	kubeClient kubernetes.Interface
 }
 
-// TestCreateCertificates tests that the certificates needed for webhooks are created
-// GIVEN an output directory for certificates
-//  WHEN I call CreateCertificates
-//  THEN all the needed certificate artifacts are created
+// TestInitializeAllMetricsArray tests that the metrics maps are added to the allmetrics array
+// GIVEN populated metrics maps
+//  WHEN I call initializeAllMetricsArray
+//  THEN all the needed metrics are placed in the allmetrics array
 func TestInitializeAllMetricsArray(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
@@ -41,6 +41,11 @@ func TestInitializeAllMetricsArray(t *testing.T) {
 	assert.Equal(14, len(allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
 	//This number should correspond to the number of total metrics, including metrics inside of metric maps
 }
+
+// TestNoMetrics, TestValid & TestInvalid tests that metrics in the allmetrics array are registered and failedMetrics are retried
+// GIVEN a populated allMetrics array
+//  WHEN I call registerMetricsHandlers
+//  THEN all the valid metrics are registered and failedMetrics are retried
 func TestNoMetrics(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
@@ -89,7 +94,7 @@ func TestTwoInvalidMetrics(t *testing.T) {
 	allMetrics = append(allMetrics, firstInvalidMetric, secondInvalidMetric)
 	go registerMetricsHandlers()
 	time.Sleep(time.Second)
-	assert.Equal(2, len(failedMetrics), "Both Invalid")
+	assert.Equal(3, len(failedMetrics), "Both Invalid")
 }
 
 func TestThreeValidMetrics(t *testing.T) {
@@ -116,10 +121,7 @@ func TestThreeInvalidMetrics(t *testing.T) {
 	assert.Equal(3, len(failedMetrics), "All 3 invalid")
 }
 
-func TestReconcileMetrics(t *testing.T) {
-	// vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
-	// operatorConfig := &config.OperatorConfig{}
-	// expected, err := vmo
+func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInstance) {
 	const configMapName = "myDatasourcesConfigMap"
 
 	// GIVEN a Grafana datasources configmap exists and the Prometheus URL is the legacy URL
@@ -132,8 +134,7 @@ func TestReconcileMetrics(t *testing.T) {
 	// set the Prometheus URL to the legacy URL
 	replaceMap := map[string]string{constants.GrafanaTmplPrometheusURI: resources.GetMetaName(vmo.Name, config.Prometheus.Name),
 		constants.GrafanaTmplAlertManagerURI: ""}
-	dataSourceTemplate, err := asDashboardTemplate(constants.DataSourcesTmpl, replaceMap)
-	assert.NoError(t, err)
+	dataSourceTemplate, _ := asDashboardTemplate(constants.DataSourcesTmpl, replaceMap)
 
 	cm := configmaps.NewConfig(vmo, configMapName, map[string]string{datasourceYAMLKey: dataSourceTemplate})
 
@@ -167,29 +168,55 @@ func TestReconcileMetrics(t *testing.T) {
 		ingressLister:       kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Networking().V1().Ingresses().Lister(),
 		vmoclientset:        vmofake.NewSimpleClientset(),
 	}
-	err = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
-	assert.NoError(t, err)
+	_ = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
 
 	// fetch the configmap, the Prometheus URL should now be the new Prometheus URL
-	cm, err = client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), configMapName, metav1.GetOptions{})
-	assert.NoError(t, err)
-
-	previousReconcileCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)
-	controller.syncHandlerStandardMode(vmo)
-	assert.Equal(t, previousReconcileCount, testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)-1)
+	cm, _ = client.CoreV1().ConfigMaps(vmo.Namespace).Get(context.TODO(), configMapName, metav1.GetOptions{})
+	return controller, vmo
 }
 
-// func newVMOReconciler(c client.Client)  {
-// 	return vmo.NewController("verrazzano-install",)
-// }
+// TestReconcileMetrics tests that the FunctionMetrics methods record metrics properly when the reconcile function is called
+// GIVEN a FunctionMetric corresponding to the reconcile function
+//  WHEN I call reconcile
+//  THEN the metrics for the reconcile function are to be captured
+func TestReconcileMetrics(t *testing.T) {
+	controller, vmo := createControllerForTesting()
 
-// func newScheme() *runtime.Scheme {
-// 	scheme := runtime.NewScheme()
-// 	_ = vmcontrollerv1.AddToScheme(scheme)
-// 	_ = corev1.AddToScheme(scheme)
-// 	return scheme
-// }
+	DefaultLabelFunction = func(idx int64) string { return "1" }
+	previousCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)
 
+	controller.syncHandlerStandardMode(vmo)
+
+	newTimeStamp := testutil.ToFloat64(FunctionMetricsMap["reconcile"].lastCallTimestamp.metric.WithLabelValues("1"))
+	newErrorCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].errorTotal.metric.WithLabelValues("1"))
+	newCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)
+
+	assert.Equal(t, previousCount, float64(newCount-1))
+	assert.Equal(t, newErrorCount, float64(1))
+	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
+}
+
+// TestDeploymentMetrics tests that the FunctionMetrics methods record metrics properly when the createDeployment function is called
+// GIVEN a FunctionMetric corresponding to the deployment function
+//  WHEN I call createDeployments
+//  THEN the metrics for the CreateDeployments function are to be captured, with the exception of (trivial) error metrics
+func TestDeploymentMetrics(t *testing.T) {
+	controller, vmo := createControllerForTesting()
+
+	DefaultLabelFunction = func(idx int64) string { return "1" }
+	previousCount := testutil.ToFloat64(FunctionMetricsMap["deployment"].callsTotal.metric)
+
+	CreateDeployments(controller, vmo, map[string]string{}, true)
+
+	newTimeStamp := testutil.ToFloat64(FunctionMetricsMap["deployment"].lastCallTimestamp.metric.WithLabelValues("1"))
+	newCount := testutil.ToFloat64(FunctionMetricsMap["deployment"].callsTotal.metric)
+	//The error is incremented outside of the deployment function, it is quite trivial
+
+	assert.Equal(t, previousCount, float64(newCount-1))
+	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
+}
+
+//helper function to ensure consistency between tests
 func clearMetrics() {
 	allMetrics = []prometheus.Collector{}
 	for c := range failedMetrics {
@@ -197,14 +224,3 @@ func clearMetrics() {
 	}
 	time.Sleep(time.Second * 1)
 }
-
-// func TestMain(t *testing.T) {
-// 	clearMetrics()
-// 	TestNoMetrics(t)
-// 	TestOneValidMetric(t)
-// 	TestOneInvalidMetric(t)
-// 	TestTwoValidMetrics(t)
-// 	TestTwoInvalidMetrics(t)
-// 	TestThreeValidMetrics(t)
-// 	TestThreeInvalidMetrics(t)
-// }
