@@ -55,6 +55,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		expected.GrafanaDeployments++
 		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
+		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Grafana.Name)
 
 		deployment.Spec.Strategy.Type = "Recreate"
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
