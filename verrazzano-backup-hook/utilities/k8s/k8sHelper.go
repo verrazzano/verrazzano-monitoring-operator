@@ -236,7 +236,7 @@ func (k *K8sImpl) CheckDeployment(labelSelector, namespace string) (bool, error)
 func (k *K8sImpl) IsPodReady(pod *v1.Pod) (bool, error) {
 	for _, condition := range pod.Status.Conditions {
 		if condition.Type == "Ready" && condition.Status == "True" {
-			k.Log.Infof("Pod '%s' in namespace '%s' is now in '%s' state", pod.Name, pod.Namespace, condition.Type)
+			k.Log.Infof("Pod '%s' in namespace '%s' is in '%s' state", pod.Name, pod.Namespace, condition.Type)
 			return true, nil
 		}
 	}
@@ -266,7 +266,7 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 
 		if pod == nil && checkFlag == "down" {
 			// break loop when scaling down condition is met
-			k.Log.Infof("Pod '%s' has scaled down successfully", pod.Name)
+			k.Log.Infof("Pod '%s' has scaled down successfully", podName)
 			done = true
 		}
 
@@ -274,9 +274,9 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 		if pod != nil {
 			switch checkFlag {
 			case "up":
-				pod.Status.Conditions[0].Type = "Ready"
 				// Check status and apply retry logic
 				if pod.Status.Phase != "Running" {
+					// Pod is not Running state so we need to wait.
 					wait = true
 				} else {
 					// break loop when scaling up condition is met
@@ -286,11 +286,14 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 						return err
 					}
 					if ok {
-						// break loop pod is Running and pod is in Ready !!
+						// break loop pod is Running and pod is in Ready.
 						done = true
+					} else {
+						// Pod is in Running state but still not ready. Hence, we will wait.
+						wait = true
 					}
-
 				}
+
 			case "down":
 				wait = true
 			}
