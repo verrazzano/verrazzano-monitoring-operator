@@ -22,7 +22,7 @@ type FunctionMetrics struct {
 	lastCallTimestamp TimestampMetric
 	errorTotal        ErrorMetric
 	index             int64
-	labelFunction     *func(int64) string //The function to create the label values for the error and timestamp metrics. By default, this returns the functionMetric index as a string
+	labelFunction     *func(int64) string //The function to create the label values for the error and timestamp metrics. A default is provided as &DefaultLabelFunction
 }
 
 //Method to call at the start of the tracked function. Starts the duration timer and increments the total count
@@ -233,8 +233,6 @@ func registerMetricsHandlersHelper() error {
 	}
 	return errorObserved
 }
-
-//testutil.tfloat64
 
 func numToString(num int64) string {
 	return fmt.Sprintf("%d", num)
