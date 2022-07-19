@@ -24,7 +24,7 @@ type singletonInstance struct {
 type configuration struct {
 	allMetrics    []prometheus.Collector       //thisMetric array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to thisMetric array for registration.
 	failedMetrics map[prometheus.Collector]int //thisMetric map will be automatically populated with all metrics which were not registered correctly. Metrics in thisMetric map will be retried periodically.
-	registry      prometheus.Registry
+	registry      prometheus.Registerer
 }
 
 type data struct {
@@ -157,15 +157,15 @@ func (e *errorMetric) IncWithLabel(label string) {
 	}
 }
 
-func newConfiguration() configuration {
+func initConfiguration() configuration {
 	return configuration{
 		allMetrics:    []prometheus.Collector{},
 		failedMetrics: map[prometheus.Collector]int{},
-		registry:      prometheus.Registry{},
+		registry:      prometheus.DefaultRegisterer,
 	}
 }
 
-func getFunctionMetricsMap() map[string]*functionMetrics {
+func initFunctionMetricsMap() map[string]*functionMetrics {
 	return map[string]*functionMetrics{
 		"reconcile": {
 			durationSeconds: durationMetric{
@@ -203,7 +203,7 @@ func getFunctionMetricsMap() map[string]*functionMetrics {
 	}
 }
 
-func getSimpleCounterMetricMap() map[string]*simpleCounterMetric {
+func initSimpleCounterMetricMap() map[string]*simpleCounterMetric {
 	return map[string]*simpleCounterMetric{
 		"deploymentUpdateCounter": {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
@@ -214,53 +214,69 @@ func getSimpleCounterMetricMap() map[string]*simpleCounterMetric {
 	}
 }
 
-func getSimpleGaugeMetricMap() map[string]*simpleGaugeMetric {
+func initSimpleGaugeMetricMap() map[string]*simpleGaugeMetric {
 	return map[string]*simpleGaugeMetric{}
 }
 
-func getDurationMetricMap() map[string]*durationMetric {
+func initDurationMetricMap() map[string]*durationMetric {
 	return map[string]*durationMetric{}
 }
 
-func getTimestampMetricMap() map[string]*timestampMetric {
+func initTimestampMetricMap() map[string]*timestampMetric {
 	return map[string]*timestampMetric{}
 }
 
-func getErrorMetricMap() map[string]*errorMetric {
+func initErrorMetricMap() map[string]*errorMetric {
 	return map[string]*errorMetric{
 		"deploymentUpdateErrorCounter": {
-			metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"}),
+			labelFunction: &deploymentLabelFunction,
 		},
 		"deploymentDeleteErrorCounter": {
-			metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"}),
+			labelFunction: &deploymentLabelFunction,
 		},
 	}
 }
 
 var (
+	Instance                = singletonInstance{}
+	DefaultLabelFunction    func(index int64) string
+	deploymentLabelFunction func() string
+	TestDelegate            = metricsDelegate{}
+)
+
+func InitRegisterStart() {
+	RequiredInitialization()
+	RegisterMetrics()
+	StartMetricsServer()
+}
+
+//This is intialized because adding the statement in the var block would create a cycle
+func RequiredInitialization() {
 	Instance = singletonInstance{
 		internalMetricsDelegate: metricsDelegate{},
-		internalConfig:          newConfiguration(),
+		internalConfig:          initConfiguration(),
 		internalData: data{
-			functionMetricsMap:     getFunctionMetricsMap(),
-			simpleCounterMetricMap: getSimpleCounterMetricMap(),
-			simpleGaugeMetricMap:   getSimpleGaugeMetricMap(),
-			durationMetricMap:      getDurationMetricMap(),
-			timestampMetricMap:     getTimestampMetricMap(),
-			errorMetricMap:         getErrorMetricMap(),
+			functionMetricsMap:     initFunctionMetricsMap(),
+			simpleCounterMetricMap: initSimpleCounterMetricMap(),
+			simpleGaugeMetricMap:   initSimpleGaugeMetricMap(),
+			durationMetricMap:      initDurationMetricMap(),
+			timestampMetricMap:     initTimestampMetricMap(),
+			errorMetricMap:         initErrorMetricMap(),
 		},
 	}
 
 	DefaultLabelFunction = func(index int64) string { return numToString(index) }
+	deploymentLabelFunction = Instance.internalData.functionMetricsMap["deployment"].GetLabel
+}
 
-	TestDelegate = metricsDelegate{}
-)
-
-func StartMetricsServer() {
-
+func RegisterMetrics() {
 	Instance.internalMetricsDelegate.InitializeAllMetricsArray()  //populate allMetrics array with all map values
 	go Instance.internalMetricsDelegate.RegisterMetricsHandlers() //begin the retry process
+}
 
+func StartMetricsServer() {
 	go wait.Until(func() {
 		http.Handle("/metrics", promhttp.Handler())
 		err := http.ListenAndServe(":9100", nil)
@@ -268,8 +284,15 @@ func StartMetricsServer() {
 			zap.S().Errorf("Failed to start metrics server for VMI: %v", err)
 		}
 	}, time.Second*3, wait.NeverStop)
-
 }
+
+func GetFunctionMetrics()      {}
+func GetSimpleCounterMetrics() {}
+func GetSimpleGaugeMetrics()   {}
+func GetErrorMetrics()         {}
+func GetDurationMetrics()      {}
+func GetTimestampMetrics()     {}
+func GetMetrics()              {}
 
 func (md *metricsDelegate) initializeFailedMetricsArray() {
 	//the failed metrics array will initially contain all metrics so they may be registered
@@ -324,12 +347,8 @@ func (md *metricsDelegate) registerMetricsHandlersHelper() error {
 	return errorObserved
 }
 
-func (md *metricsDelegate) GetAllMetricsArray() []prometheus.Collector {
-	return Instance.internalConfig.allMetrics
-}
-
-func (md *metricsDelegate) SetAllMetricsArray(arr []prometheus.Collector) {
-	Instance.internalConfig.allMetrics = arr
+func (md *metricsDelegate) GetAllMetricsArray() *[]prometheus.Collector {
+	return &Instance.internalConfig.allMetrics
 }
 
 func (md *metricsDelegate) GetFailedMetricsMap() map[prometheus.Collector]int {
