@@ -14,6 +14,7 @@ import (
 	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/fake"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	metricsExporter "github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
@@ -22,6 +23,8 @@ import (
 	fake "k8s.io/client-go/kubernetes/fake"
 )
 
+var delegate = metricsExporter.TestDelegate
+
 // TestInitializeAllMetricsArray tests that the metrics maps are added to the allmetrics array
 // GIVEN populated metrics maps
 //  WHEN I call initializeAllMetricsArray
@@ -29,8 +32,8 @@ import (
 func TestInitializeAllMetricsArray(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
-	initializeAllMetricsArray()
-	assert.Equal(14, len(allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
+	metricsExporter.TestDelegate.InitializeAllMetricsArray()
+	assert.Equal(14, len(metricsExporter.TestDelegate.GetAllMetricsArray()), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
 	//This number should correspond to the number of total metrics, including metrics inside of metric maps
 }
 
@@ -41,8 +44,8 @@ func TestInitializeAllMetricsArray(t *testing.T) {
 func TestNoMetrics(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
-	registerMetricsHandlers()
-	assert.Equal(0, len(allMetrics), "allMetrics array is not empty")
+	metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	assert.Equal(0, len(metricsExporter.TestDelegate.GetAllMetricsArray()), "allMetrics array is not empty")
 	assert.Equal(0, len(failedMetrics), "failedMetrics array is not empty")
 }
 
@@ -50,9 +53,9 @@ func TestOneValidMetric(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
 	firstValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "testOneValidMetric_A", Help: "This is the first valid metric"})
-	allMetrics = append(allMetrics, firstValidMetric)
-	registerMetricsHandlers()
-	assert.Equal(1, len(allMetrics), "allMetrics array does not contain the one valid metric")
+	metricsExporter.TestDelegate.SetAllMetricsArray(append(metricsExporter.TestDelegate.GetAllMetricsArray(), firstValidMetric))
+	metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	assert.Equal(1, len(metricsExporter.TestDelegate.GetAllMetricsArray()), "allMetrics array does not contain the one valid metric")
 	assert.Equal(0, len(failedMetrics), "The valid metric failed")
 }
 
@@ -60,10 +63,10 @@ func TestOneInvalidMetric(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
 	firstInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"})
-	allMetrics = append(allMetrics, firstInvalidMetric)
-	go registerMetricsHandlers()
+	metricsExporter.TestDelegate.SetAllMetricsArray(append(metricsExporter.TestDelegate.GetAllMetricsArray(), firstInvalidMetric))
+	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second * 1)
-	assert.Equal(1, len(allMetrics), "allMetrics array does not contain the one invalid metric")
+	assert.Equal(1, len(metricsExporter.TestDelegate.GetAllMetricsArray()), "allMetrics array does not contain the one invalid metric")
 	assert.Equal(1, len(failedMetrics), "The invalid metric did not fail properly and was not retried")
 }
 
@@ -72,8 +75,8 @@ func TestTwoValidMetrics(t *testing.T) {
 	assert := assert.New(t)
 	firstValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_A", Help: "This is the first valid metric"})
 	secondValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_B", Help: "This is the second valid metric"})
-	allMetrics = append(allMetrics, firstValidMetric, secondValidMetric)
-	registerMetricsHandlers()
+	metricsExporter.TestDelegate.SetAllMetricsArray(append(metricsExporter.TestDelegate.GetAllMetricsArray(), firstValidMetric, secondValidMetric))
+	metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(2, len(allMetrics), "allMetrics array does not contain both valid metrics")
 	assert.Equal(0, len(failedMetrics), "Some metrics failed")
 }
@@ -84,7 +87,7 @@ func TestTwoInvalidMetrics(t *testing.T) {
 	firstInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"})
 	secondInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"})
 	allMetrics = append(allMetrics, firstInvalidMetric, secondInvalidMetric)
-	go registerMetricsHandlers()
+	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second)
 	assert.Equal(2, len(failedMetrics), "Both Invalid")
 }
@@ -96,7 +99,7 @@ func TestThreeValidMetrics(t *testing.T) {
 	secondValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_B", Help: "This is the second valid metric"})
 	thirdValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_C", Help: "This is the third valid metric"})
 	allMetrics = append(allMetrics, firstValidMetric, secondValidMetric, thirdValidMetric)
-	registerMetricsHandlers()
+	metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(3, len(allMetrics), "allMetrics array does not contain all metrics")
 	assert.Equal(0, len(failedMetrics), "Some metrics failed")
 }
@@ -108,7 +111,7 @@ func TestThreeInvalidMetrics(t *testing.T) {
 	secondInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"})
 	thirdInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the third invalid metric"})
 	allMetrics = append(allMetrics, firstInvalidMetric, secondInvalidMetric, thirdInvalidMetric)
-	go registerMetricsHandlers()
+	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second)
 	assert.Equal(3, len(failedMetrics), "All 3 invalid")
 }
@@ -208,9 +211,9 @@ func TestDeploymentMetrics(t *testing.T) {
 
 //helper function to ensure consistency between tests
 func clearMetrics() {
-	allMetrics = []prometheus.Collector{}
-	for c := range failedMetrics {
-		delete(failedMetrics, c)
+	metricsExporter.TestDelegate.SetAllMetricsArray([]prometheus.Collector{})
+	for c := range metricsExporter.TestDelegate.GetFailedMetricsMap() {
+		delete(metricsExporter.TestDelegate.GetFailedMetricsMap(), c) //maps are references, hence we can delete like normal here
 	}
 	time.Sleep(time.Second * 1)
 }
