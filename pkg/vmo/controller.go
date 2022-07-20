@@ -18,6 +18,7 @@ import (
 	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	metricsExporter "github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
@@ -429,8 +430,8 @@ func (c *Controller) syncHandler(key string) error {
 // with the current status.
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	var errorObserved bool
-	FunctionMetricsMap["reconcile"].LogStart()
-	defer func() { FunctionMetricsMap["reconcile"].LogEnd(errorObserved) }()
+	metricsExporter.GetFunctionMetrics(metricsExporter.Names_reconcile).LogStart()
+	defer func() { metricsExporter.GetFunctionMetrics(metricsExporter.Names_reconcile).LogEnd(errorObserved) }()
 
 	originalVMO := vmo.DeepCopy()
 
@@ -520,7 +521,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if !errorObserved {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
-			FunctionMetricsMap["deployment"].errorTotal.metricVecErrorIncrement(FunctionMetricsMap["deployment"].GetLabel())
+			metricsExporter.GetFunctionMetrics(metricsExporter.Names_reconcile).IncError()
 			errorObserved = true
 		}
 	}

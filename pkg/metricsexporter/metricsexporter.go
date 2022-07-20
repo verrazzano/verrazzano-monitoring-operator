@@ -15,7 +15,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-type singletonInstance struct {
+type metricName string
+
+const (
+	Names_reconcile              metricName = "reconcile"
+	Names_deployment             metricName = "deployment"
+	Name_deploymentUpdateError   metricName = "deploymentUpdateErrorCounter"
+	Name_deploymentDeleteCounter metricName = "deploymentDeleteCounter"
+	Name_deploymentDeleteError   metricName = "deploymentDeleteErrorCounter"
+	Name_deploymentUpdateCounter metricName = "deploymentUpdateCounter"
+)
+
+type metricsExporter struct {
 	internalMetricsDelegate metricsDelegate
 	internalConfig          configuration
 	internalData            data
@@ -28,12 +39,12 @@ type configuration struct {
 }
 
 type data struct {
-	functionMetricsMap     map[string]*functionMetrics
-	simpleCounterMetricMap map[string]*simpleCounterMetric
-	simpleGaugeMetricMap   map[string]*simpleGaugeMetric
-	durationMetricMap      map[string]*durationMetric
-	timestampMetricMap     map[string]*timestampMetric
-	errorMetricMap         map[string]*errorMetric
+	functionMetricsMap     map[metricName]*functionMetrics
+	simpleCounterMetricMap map[metricName]*simpleCounterMetric
+	simpleGaugeMetricMap   map[metricName]*simpleGaugeMetric
+	durationMetricMap      map[metricName]*durationMetric
+	timestampMetricMap     map[metricName]*timestampMetric
+	errorMetricMap         map[metricName]*errorMetric
 }
 
 type metricsDelegate struct {
@@ -64,6 +75,10 @@ func (f *functionMetrics) LogEnd(errorObserved bool) {
 	if errorObserved {
 		f.errorTotal.IncWithLabel(label)
 	}
+}
+
+func (f *functionMetrics) IncError() {
+	f.errorTotal.IncWithLabel(f.GetLabel())
 }
 
 //Invokes the supplied labelFunction to return the string which would be used as a label. The label can be dynamic and may change depending on the labelFunctions behavior (i.e. a timestamp string)
@@ -165,8 +180,8 @@ func initConfiguration() configuration {
 	}
 }
 
-func initFunctionMetricsMap() map[string]*functionMetrics {
-	return map[string]*functionMetrics{
+func initFunctionMetricsMap() map[metricName]*functionMetrics {
+	return map[metricName]*functionMetrics{
 		"reconcile": {
 			durationSeconds: durationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
@@ -203,8 +218,8 @@ func initFunctionMetricsMap() map[string]*functionMetrics {
 	}
 }
 
-func initSimpleCounterMetricMap() map[string]*simpleCounterMetric {
-	return map[string]*simpleCounterMetric{
+func initSimpleCounterMetricMap() map[metricName]*simpleCounterMetric {
+	return map[metricName]*simpleCounterMetric{
 		"deploymentUpdateCounter": {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
 		},
@@ -214,20 +229,20 @@ func initSimpleCounterMetricMap() map[string]*simpleCounterMetric {
 	}
 }
 
-func initSimpleGaugeMetricMap() map[string]*simpleGaugeMetric {
-	return map[string]*simpleGaugeMetric{}
+func initSimpleGaugeMetricMap() map[metricName]*simpleGaugeMetric {
+	return map[metricName]*simpleGaugeMetric{}
 }
 
-func initDurationMetricMap() map[string]*durationMetric {
-	return map[string]*durationMetric{}
+func initDurationMetricMap() map[metricName]*durationMetric {
+	return map[metricName]*durationMetric{}
 }
 
-func initTimestampMetricMap() map[string]*timestampMetric {
-	return map[string]*timestampMetric{}
+func initTimestampMetricMap() map[metricName]*timestampMetric {
+	return map[metricName]*timestampMetric{}
 }
 
-func initErrorMetricMap() map[string]*errorMetric {
-	return map[string]*errorMetric{
+func initErrorMetricMap() map[metricName]*errorMetric {
+	return map[metricName]*errorMetric{
 		"deploymentUpdateErrorCounter": {
 			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"}),
 			labelFunction: &deploymentLabelFunction,
@@ -240,7 +255,7 @@ func initErrorMetricMap() map[string]*errorMetric {
 }
 
 var (
-	Instance                = singletonInstance{}
+	MetricsExp              = metricsExporter{}
 	DefaultLabelFunction    func(index int64) string
 	deploymentLabelFunction func() string
 	TestDelegate            = metricsDelegate{}
@@ -252,9 +267,13 @@ func InitRegisterStart() {
 	StartMetricsServer()
 }
 
+func (md *metricsDelegate) TestInitialization() {
+	RequiredInitialization()
+}
+
 //This is intialized because adding the statement in the var block would create a cycle
 func RequiredInitialization() {
-	Instance = singletonInstance{
+	MetricsExp = metricsExporter{
 		internalMetricsDelegate: metricsDelegate{},
 		internalConfig:          initConfiguration(),
 		internalData: data{
@@ -268,12 +287,12 @@ func RequiredInitialization() {
 	}
 
 	DefaultLabelFunction = func(index int64) string { return numToString(index) }
-	deploymentLabelFunction = Instance.internalData.functionMetricsMap["deployment"].GetLabel
+	deploymentLabelFunction = MetricsExp.internalData.functionMetricsMap[Names_deployment].GetLabel
 }
 
 func RegisterMetrics() {
-	Instance.internalMetricsDelegate.InitializeAllMetricsArray()  //populate allMetrics array with all map values
-	go Instance.internalMetricsDelegate.RegisterMetricsHandlers() //begin the retry process
+	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  //populate allMetrics array with all map values
+	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers() //begin the retry process
 }
 
 func StartMetricsServer() {
@@ -286,37 +305,65 @@ func StartMetricsServer() {
 	}, time.Second*3, wait.NeverStop)
 }
 
-func GetFunctionMetrics()      {}
-func GetSimpleCounterMetrics() {}
-func GetSimpleGaugeMetrics()   {}
-func GetErrorMetrics()         {}
-func GetDurationMetrics()      {}
-func GetTimestampMetrics()     {}
-func GetMetrics()              {}
+func GetFunctionMetrics(name metricName) *functionMetrics {
+	return MetricsExp.internalData.functionMetricsMap[name]
+}
+
+func (md *metricsDelegate) GetFunctionTimestampMetric(name metricName) *prometheus.GaugeVec {
+	return MetricsExp.internalData.functionMetricsMap[name].lastCallTimestamp.metric
+}
+
+func (md *metricsDelegate) GetFunctionDurationMetric(name metricName) prometheus.Summary {
+	return MetricsExp.internalData.functionMetricsMap[name].durationSeconds.metric
+}
+
+func (md *metricsDelegate) GetFunctionErrorMetric(name metricName) *prometheus.CounterVec {
+	return MetricsExp.internalData.functionMetricsMap[name].errorTotal.metric
+}
+
+func (md *metricsDelegate) GetFunctionCounterMetric(name metricName) prometheus.Counter {
+	return MetricsExp.internalData.functionMetricsMap[name].callsTotal.metric
+}
+
+func GetSimpleCounterMetrics(name metricName) *simpleCounterMetric {
+	return MetricsExp.internalData.simpleCounterMetricMap[name]
+}
+func GetSimpleGaugeMetrics(name metricName) *simpleGaugeMetric {
+	return MetricsExp.internalData.simpleGaugeMetricMap[name]
+}
+func GetErrorMetrics(name metricName) *errorMetric {
+	return MetricsExp.internalData.errorMetricMap[name]
+}
+func GetDurationMetrics(name metricName) *durationMetric {
+	return MetricsExp.internalData.durationMetricMap[name]
+}
+func GetTimestampMetrics(name metricName) *timestampMetric {
+	return MetricsExp.internalData.timestampMetricMap[name]
+}
 
 func (md *metricsDelegate) initializeFailedMetricsArray() {
 	//the failed metrics array will initially contain all metrics so they may be registered
-	for i, metric := range Instance.internalConfig.allMetrics {
-		Instance.internalConfig.failedMetrics[metric] = i
+	for i, metric := range MetricsExp.internalConfig.allMetrics {
+		MetricsExp.internalConfig.failedMetrics[metric] = i
 	}
 }
 
 func (md *metricsDelegate) InitializeAllMetricsArray() {
 	//loop through all metrics declarations in metric maps
-	for _, value := range Instance.internalData.functionMetricsMap {
-		Instance.internalConfig.allMetrics = append(Instance.internalConfig.allMetrics, value.callsTotal.metric, value.durationSeconds.metric, value.errorTotal.metric, value.lastCallTimestamp.metric, value.durationSeconds.metric)
+	for _, value := range MetricsExp.internalData.functionMetricsMap {
+		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.callsTotal.metric, value.durationSeconds.metric, value.errorTotal.metric, value.lastCallTimestamp.metric, value.durationSeconds.metric)
 	}
-	for _, value := range Instance.internalData.simpleCounterMetricMap {
-		Instance.internalConfig.allMetrics = append(Instance.internalConfig.allMetrics, value.metric)
+	for _, value := range MetricsExp.internalData.simpleCounterMetricMap {
+		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
 	}
-	for _, value := range Instance.internalData.durationMetricMap {
-		Instance.internalConfig.allMetrics = append(Instance.internalConfig.allMetrics, value.metric)
+	for _, value := range MetricsExp.internalData.durationMetricMap {
+		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
 	}
-	for _, value := range Instance.internalData.timestampMetricMap {
-		Instance.internalConfig.allMetrics = append(Instance.internalConfig.allMetrics, value.metric)
+	for _, value := range MetricsExp.internalData.timestampMetricMap {
+		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
 	}
-	for _, value := range Instance.internalData.errorMetricMap {
-		Instance.internalConfig.allMetrics = append(Instance.internalConfig.allMetrics, value.metric)
+	for _, value := range MetricsExp.internalData.errorMetricMap {
+		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
 	}
 }
 
@@ -331,8 +378,8 @@ func (md *metricsDelegate) RegisterMetricsHandlers() {
 
 func (md *metricsDelegate) registerMetricsHandlersHelper() error {
 	var errorObserved error
-	for metric := range Instance.internalConfig.failedMetrics {
-		err := Instance.internalConfig.registry.Register(metric)
+	for metric := range MetricsExp.internalConfig.failedMetrics {
+		err := MetricsExp.internalConfig.registry.Register(metric)
 		if err != nil {
 			if errorObserved != nil {
 				errorObserved = errors.Wrap(errorObserved, err.Error())
@@ -341,18 +388,18 @@ func (md *metricsDelegate) registerMetricsHandlersHelper() error {
 			}
 		} else {
 			//if a metric is registered, delete it from the failed metrics map so that it is not retried
-			delete(Instance.internalConfig.failedMetrics, metric)
+			delete(MetricsExp.internalConfig.failedMetrics, metric)
 		}
 	}
 	return errorObserved
 }
 
 func (md *metricsDelegate) GetAllMetricsArray() *[]prometheus.Collector {
-	return &Instance.internalConfig.allMetrics
+	return &MetricsExp.internalConfig.allMetrics
 }
 
 func (md *metricsDelegate) GetFailedMetricsMap() map[prometheus.Collector]int {
-	return Instance.internalConfig.failedMetrics
+	return MetricsExp.internalConfig.failedMetrics
 }
 
 func numToString(num int64) string {

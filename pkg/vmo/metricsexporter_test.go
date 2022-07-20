@@ -25,6 +25,7 @@ import (
 
 var allMetrics = metricsExporter.TestDelegate.GetAllMetricsArray()
 var failedMetrics = metricsExporter.TestDelegate.GetFailedMetricsMap()
+var delegate = metricsExporter.TestDelegate
 
 // TestInitializeAllMetricsArray tests that the metrics maps are added to the allmetrics array
 // GIVEN populated metrics maps
@@ -177,13 +178,13 @@ func TestReconcileMetrics(t *testing.T) {
 	controller, vmo := createControllerForTesting()
 
 	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
-	previousCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)
+	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_reconcile))
 
 	controller.syncHandlerStandardMode(vmo)
 
-	newTimeStamp := testutil.ToFloat64(FunctionMetricsMap["reconcile"].lastCallTimestamp.metric.WithLabelValues("1"))
-	newErrorCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].errorTotal.metric.WithLabelValues("1"))
-	newCount := testutil.ToFloat64(FunctionMetricsMap["reconcile"].callsTotal.metric)
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.Names_reconcile).WithLabelValues("1"))
+	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsExporter.Names_deployment).WithLabelValues("1"))
+	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_reconcile))
 
 	assert.Equal(t, previousCount, float64(newCount-1))
 	assert.Equal(t, newErrorCount, float64(1))
@@ -198,12 +199,12 @@ func TestDeploymentMetrics(t *testing.T) {
 	controller, vmo := createControllerForTesting()
 
 	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
-	previousCount := testutil.ToFloat64(FunctionMetricsMap["deployment"].callsTotal.metric)
+	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_deployment))
 
 	CreateDeployments(controller, vmo, map[string]string{}, true)
 
-	newTimeStamp := testutil.ToFloat64(FunctionMetricsMap["deployment"].lastCallTimestamp.metric.WithLabelValues("1"))
-	newCount := testutil.ToFloat64(FunctionMetricsMap["deployment"].callsTotal.metric)
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.Names_deployment).WithLabelValues("1"))
+	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_deployment))
 	//The error is incremented outside of the deployment function, it is quite trivial
 
 	assert.Equal(t, previousCount, float64(newCount-1))
