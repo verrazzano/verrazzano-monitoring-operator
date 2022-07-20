@@ -27,19 +27,19 @@ const (
 	NamesConfigMap               metricName = "configMap"
 )
 
-type metricsExporter struct { //nolint
+type metricsExporter struct {
 	internalMetricsDelegate metricsDelegate
 	internalConfig          configuration
 	internalData            data
 }
 
-type configuration struct { //nolint
+type configuration struct {
 	allMetrics    []prometheus.Collector       //thisMetric array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to thisMetric array for registration.
 	failedMetrics map[prometheus.Collector]int //thisMetric map will be automatically populated with all metrics which were not registered correctly. Metrics in thisMetric map will be retried periodically.
 	registry      prometheus.Registerer
 }
 
-type data struct { //nolint
+type data struct {
 	functionMetricsMap     map[metricName]*functionMetrics
 	simpleCounterMetricMap map[metricName]*simpleCounterMetric
 	simpleGaugeMetricMap   map[metricName]*simpleGaugeMetric
@@ -48,11 +48,11 @@ type data struct { //nolint
 	errorMetricMap         map[metricName]*errorMetric
 }
 
-type metricsDelegate struct { //nolint
+type metricsDelegate struct {
 }
 
 //Class of metrics to automatically capture 4 types of metrics for a given function
-type functionMetrics struct { //nolint
+type functionMetrics struct {
 	durationSeconds   durationMetric
 	callsTotal        simpleCounterMetric
 	lastCallTimestamp timestampMetric
@@ -88,7 +88,7 @@ func (f *functionMetrics) GetLabel() string {
 }
 
 //Type to count events such as the number fo function calls.
-type simpleCounterMetric struct { //nolint
+type simpleCounterMetric struct {
 	metric prometheus.Counter
 	index  int64
 }
@@ -107,7 +107,7 @@ func (c *simpleCounterMetric) GetLabel() string {
 	return numToString(c.index)
 }
 
-type simpleGaugeMetric struct { //nolint
+type simpleGaugeMetric struct {
 	metric prometheus.Gauge
 }
 
@@ -124,7 +124,7 @@ func (g *simpleGaugeMetric) Add(num float64) {
 }
 
 //Type to track length of a function call. Method to start and stop the duration timer are available.
-type durationMetric struct { //nolint
+type durationMetric struct {
 	metric prometheus.Summary
 	timer  *prometheus.Timer
 }
@@ -140,7 +140,7 @@ func (d *durationMetric) TimerStop() {
 }
 
 //Type to track the last timestamp of a function call. Includes a method to set the last timestamp
-type timestampMetric struct { //nolint
+type timestampMetric struct {
 	metric        *prometheus.GaugeVec
 	labelFunction *func() string
 }
@@ -161,7 +161,7 @@ func (t *timestampMetric) SetLastTimeWithLabel(indexString string) {
 }
 
 //Type to track the occurrence of an error. Includes a metod to add an error count
-type errorMetric struct { //nolint
+type errorMetric struct {
 	metric        *prometheus.CounterVec
 	labelFunction *func() string
 }
@@ -226,6 +226,7 @@ func initFunctionMetricsMap() map[metricName]*functionMetrics {
 	}
 }
 
+//nolint
 func initSimpleCounterMetricMap() map[metricName]*simpleCounterMetric {
 	return map[metricName]*simpleCounterMetric{
 		"deploymentUpdateCounter": {
@@ -237,14 +238,17 @@ func initSimpleCounterMetricMap() map[metricName]*simpleCounterMetric {
 	}
 }
 
+//nolint
 func initSimpleGaugeMetricMap() map[metricName]*simpleGaugeMetric {
 	return map[metricName]*simpleGaugeMetric{}
 }
 
+//nolint
 func initDurationMetricMap() map[metricName]*durationMetric {
 	return map[metricName]*durationMetric{}
 }
 
+//nolint
 func initTimestampMetricMap() map[metricName]*timestampMetric {
 	return map[metricName]*timestampMetric{
 		"configMap": {
@@ -254,6 +258,7 @@ func initTimestampMetricMap() map[metricName]*timestampMetric {
 	}
 }
 
+//nolint
 func initErrorMetricMap() map[metricName]*errorMetric {
 	return map[metricName]*errorMetric{
 		"deploymentUpdateErrorCounter": {
@@ -322,6 +327,7 @@ func StartMetricsServer() {
 	}, time.Second*3, wait.NeverStop)
 }
 
+//nolint
 func GetFunctionMetrics(name metricName) *functionMetrics {
 	return MetricsExp.internalData.functionMetricsMap[name]
 }
@@ -342,18 +348,27 @@ func (md *metricsDelegate) GetFunctionCounterMetric(name metricName) prometheus.
 	return MetricsExp.internalData.functionMetricsMap[name].callsTotal.metric
 }
 
+//nolint
 func GetSimpleCounterMetrics(name metricName) *simpleCounterMetric {
 	return MetricsExp.internalData.simpleCounterMetricMap[name]
 }
+
+//nolint
 func GetSimpleGaugeMetrics(name metricName) *simpleGaugeMetric {
 	return MetricsExp.internalData.simpleGaugeMetricMap[name]
 }
+
+//nolint
 func GetErrorMetrics(name metricName) *errorMetric {
 	return MetricsExp.internalData.errorMetricMap[name]
 }
+
+//nolint
 func GetDurationMetrics(name metricName) *durationMetric {
 	return MetricsExp.internalData.durationMetricMap[name]
 }
+
+//nolint
 func GetTimestampMetrics(name metricName) *timestampMetric {
 	return MetricsExp.internalData.timestampMetricMap[name]
 }
