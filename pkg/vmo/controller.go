@@ -430,8 +430,8 @@ func (c *Controller) syncHandler(key string) error {
 // with the current status.
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	var errorObserved bool
-	metricsExporter.GetFunctionMetrics(metricsExporter.Names_reconcile).LogStart()
-	defer func() { metricsExporter.GetFunctionMetrics(metricsExporter.Names_reconcile).LogEnd(errorObserved) }()
+	metricsExporter.GetFunctionMetrics(metricsExporter.NamesReconcile).LogStart()
+	defer func() { metricsExporter.GetFunctionMetrics(metricsExporter.NamesReconcile).LogEnd(errorObserved) }()
 
 	originalVMO := vmo.DeepCopy()
 
@@ -521,7 +521,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if !errorObserved {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
-			metricsExporter.GetFunctionMetrics(metricsExporter.Names_reconcile).IncError()
+			metricsExporter.GetFunctionMetrics(metricsExporter.NamesReconcile).IncError()
 			errorObserved = true
 		}
 	}

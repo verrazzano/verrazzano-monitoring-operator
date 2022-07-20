@@ -179,13 +179,13 @@ func TestReconcileMetrics(t *testing.T) {
 	controller, vmo := createControllerForTesting()
 
 	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
-	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_reconcile))
+	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesReconcile))
 
 	controller.syncHandlerStandardMode(vmo)
 
-	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.Names_reconcile).WithLabelValues("1"))
-	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsExporter.Names_reconcile).WithLabelValues("1"))
-	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_reconcile))
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.NamesReconcile).WithLabelValues("1"))
+	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsExporter.NamesReconcile).WithLabelValues("1"))
+	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesReconcile))
 
 	assert.Equal(t, previousCount, float64(newCount-1))
 	assert.Equal(t, newErrorCount, float64(1))
@@ -202,12 +202,12 @@ func TestDeploymentMetrics(t *testing.T) {
 	controller, vmo := createControllerForTesting()
 
 	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
-	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_deployment))
+	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesDeployment))
 
 	CreateDeployments(controller, vmo, map[string]string{}, true)
 
-	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.Names_deployment).WithLabelValues("1"))
-	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_deployment))
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.NamesDeployment).WithLabelValues("1"))
+	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesDeployment))
 	//The error is incremented outside of the deployment function, it is quite trivial
 
 	assert.Equal(t, previousCount, float64(newCount-1))

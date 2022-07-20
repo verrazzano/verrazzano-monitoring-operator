@@ -18,26 +18,30 @@ import (
 type metricName string
 
 const (
-	Names_reconcile              metricName = "reconcile"
-	Names_deployment             metricName = "deployment"
-	Name_deploymentUpdateError   metricName = "deploymentUpdateErrorCounter"
-	Name_deploymentDeleteCounter metricName = "deploymentDeleteCounter"
-	Name_deploymentDeleteError   metricName = "deploymentDeleteErrorCounter"
-	Name_deploymentUpdateCounter metricName = "deploymentUpdateCounter"
+	NamesReconcile               metricName = "reconcile"
+	NamesDeployment              metricName = "deployment"
+	NamesDeploymentUpdateError   metricName = "deploymentUpdateErrorCounter"
+	NamesDeploymentDeleteCounter metricName = "deploymentDeleteCounter"
+	NamesDeploymentDeleteError   metricName = "deploymentDeleteErrorCounter"
+	NamesDeploymentUpdateCounter metricName = "deploymentUpdateCounter"
+	NamesConfigMap               metricName = "configMap"
 )
 
+//nolint
 type metricsExporter struct {
 	internalMetricsDelegate metricsDelegate
 	internalConfig          configuration
 	internalData            data
 }
 
+//nolint
 type configuration struct {
 	allMetrics    []prometheus.Collector       //thisMetric array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to thisMetric array for registration.
 	failedMetrics map[prometheus.Collector]int //thisMetric map will be automatically populated with all metrics which were not registered correctly. Metrics in thisMetric map will be retried periodically.
 	registry      prometheus.Registerer
 }
 
+//nolint
 type data struct {
 	functionMetricsMap     map[metricName]*functionMetrics
 	simpleCounterMetricMap map[metricName]*simpleCounterMetric
@@ -47,10 +51,12 @@ type data struct {
 	errorMetricMap         map[metricName]*errorMetric
 }
 
+//nolint
 type metricsDelegate struct {
 }
 
 //Class of metrics to automatically capture 4 types of metrics for a given function
+//nolint
 type functionMetrics struct {
 	durationSeconds   durationMetric
 	callsTotal        simpleCounterMetric
@@ -87,18 +93,27 @@ func (f *functionMetrics) GetLabel() string {
 }
 
 //Type to count events such as the number fo function calls.
+//nolint
 type simpleCounterMetric struct {
 	metric prometheus.Counter
+	index  int64
 }
 
 func (c *simpleCounterMetric) Inc() {
+	c.index = c.index + 1
 	c.metric.Inc()
 }
 
 func (c *simpleCounterMetric) Add(num float64) {
+	c.index = c.index + int64(num)
 	c.metric.Add(num)
 }
 
+func (c *simpleCounterMetric) GetLabel() string {
+	return numToString(c.index)
+}
+
+//nolint
 type simpleGaugeMetric struct {
 	metric prometheus.Gauge
 }
@@ -116,6 +131,7 @@ func (g *simpleGaugeMetric) Add(num float64) {
 }
 
 //Type to track length of a function call. Method to start and stop the duration timer are available.
+//nolint
 type durationMetric struct {
 	metric prometheus.Summary
 	timer  *prometheus.Timer
@@ -132,6 +148,7 @@ func (d *durationMetric) TimerStop() {
 }
 
 //Type to track the last timestamp of a function call. Includes a method to set the last timestamp
+//nolint
 type timestampMetric struct {
 	metric        *prometheus.GaugeVec
 	labelFunction *func() string
@@ -153,6 +170,7 @@ func (t *timestampMetric) SetLastTimeWithLabel(indexString string) {
 }
 
 //Type to track the occurrence of an error. Includes a metod to add an error count
+//nolint
 type errorMetric struct {
 	metric        *prometheus.CounterVec
 	labelFunction *func() string
@@ -238,7 +256,12 @@ func initDurationMetricMap() map[metricName]*durationMetric {
 }
 
 func initTimestampMetricMap() map[metricName]*timestampMetric {
-	return map[metricName]*timestampMetric{}
+	return map[metricName]*timestampMetric{
+		"configMap": {
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"reconcile_index"}),
+			labelFunction: &configMapLabelFunction,
+		},
+	}
 }
 
 func initErrorMetricMap() map[metricName]*errorMetric {
@@ -258,6 +281,7 @@ var (
 	MetricsExp              = metricsExporter{}
 	DefaultLabelFunction    func(index int64) string
 	deploymentLabelFunction func() string
+	configMapLabelFunction  func() string
 	TestDelegate            = metricsDelegate{}
 )
 
@@ -287,7 +311,10 @@ func RequiredInitialization() {
 	}
 
 	DefaultLabelFunction = func(index int64) string { return numToString(index) }
-	deploymentLabelFunction = MetricsExp.internalData.functionMetricsMap[Names_deployment].GetLabel
+	deploymentLabelFunction = MetricsExp.internalData.functionMetricsMap[NamesDeployment].GetLabel
+	configMapLabelFunction = func() string {
+		return numToString(MetricsExp.internalData.simpleCounterMetricMap[NamesConfigMap].index)
+	}
 }
 
 func RegisterMetrics() {
