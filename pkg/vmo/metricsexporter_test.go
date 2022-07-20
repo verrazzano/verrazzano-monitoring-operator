@@ -24,7 +24,6 @@ import (
 )
 
 var allMetrics = metricsExporter.TestDelegate.GetAllMetricsArray()
-var failedMetrics = metricsExporter.TestDelegate.GetFailedMetricsMap()
 var delegate = metricsExporter.TestDelegate
 
 // TestInitializeAllMetricsArray tests that the metrics maps are added to the allmetrics array
@@ -48,7 +47,7 @@ func TestNoMetrics(t *testing.T) {
 	assert := assert.New(t)
 	metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(0, len(*allMetrics), "allMetrics array is not empty")
-	assert.Equal(0, len(failedMetrics), "failedMetrics array is not empty")
+	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "failedMetrics array is not empty")
 }
 
 func TestOneValidMetric(t *testing.T) {
@@ -58,7 +57,7 @@ func TestOneValidMetric(t *testing.T) {
 	*allMetrics = append(*allMetrics, firstValidMetric)
 	metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(1, len(*allMetrics), "allMetrics array does not contain the one valid metric")
-	assert.Equal(0, len(failedMetrics), "The valid metric failed")
+	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "The valid metric failed")
 }
 
 func TestOneInvalidMetric(t *testing.T) {
@@ -69,7 +68,7 @@ func TestOneInvalidMetric(t *testing.T) {
 	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second * 1)
 	assert.Equal(1, len(*allMetrics), "*allMetrics array does not contain the one invalid metric")
-	assert.Equal(1, len(failedMetrics), "The invalid metric did not fail properly and was not retried")
+	assert.Equal(1, len(delegate.GetFailedMetricsMap()), "The invalid metric did not fail properly and was not retried")
 }
 
 func TestTwoValidMetrics(t *testing.T) {
@@ -80,7 +79,7 @@ func TestTwoValidMetrics(t *testing.T) {
 	*allMetrics = append(*allMetrics, firstValidMetric, secondValidMetric)
 	metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(2, len(*allMetrics), "allMetrics array does not contain both valid metrics")
-	assert.Equal(0, len(failedMetrics), "Some metrics failed")
+	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "Some metrics failed")
 }
 
 func TestTwoInvalidMetrics(t *testing.T) {
@@ -91,7 +90,7 @@ func TestTwoInvalidMetrics(t *testing.T) {
 	*allMetrics = append(*allMetrics, firstInvalidMetric, secondInvalidMetric)
 	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second)
-	assert.Equal(2, len(failedMetrics), "Both Invalid")
+	assert.Equal(2, len(delegate.GetFailedMetricsMap()), "Both Invalid")
 }
 
 func TestThreeValidMetrics(t *testing.T) {
@@ -103,7 +102,7 @@ func TestThreeValidMetrics(t *testing.T) {
 	*allMetrics = append(*allMetrics, firstValidMetric, secondValidMetric, thirdValidMetric)
 	metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(3, len(*allMetrics), "allMetrics array does not contain all metrics")
-	assert.Equal(0, len(failedMetrics), "Some metrics failed")
+	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "Some metrics failed")
 }
 
 func TestThreeInvalidMetrics(t *testing.T) {
@@ -115,7 +114,7 @@ func TestThreeInvalidMetrics(t *testing.T) {
 	*allMetrics = append(*allMetrics, firstInvalidMetric, secondInvalidMetric, thirdInvalidMetric)
 	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second)
-	assert.Equal(3, len(failedMetrics), "All 3 invalid")
+	assert.Equal(3, len(delegate.GetFailedMetricsMap()), "All 3 invalid")
 }
 
 func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInstance) {
@@ -175,6 +174,8 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 //  WHEN I call reconcile
 //  THEN the metrics for the reconcile function are to be captured
 func TestReconcileMetrics(t *testing.T) {
+	metricsExporter.RequiredInitialization()
+
 	controller, vmo := createControllerForTesting()
 
 	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
@@ -183,7 +184,7 @@ func TestReconcileMetrics(t *testing.T) {
 	controller.syncHandlerStandardMode(vmo)
 
 	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.Names_reconcile).WithLabelValues("1"))
-	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsExporter.Names_deployment).WithLabelValues("1"))
+	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsExporter.Names_reconcile).WithLabelValues("1"))
 	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.Names_reconcile))
 
 	assert.Equal(t, previousCount, float64(newCount-1))
@@ -196,6 +197,8 @@ func TestReconcileMetrics(t *testing.T) {
 //  WHEN I call createDeployments
 //  THEN the metrics for the CreateDeployments function are to be captured, with the exception of (trivial) error metrics
 func TestDeploymentMetrics(t *testing.T) {
+	metricsExporter.RequiredInitialization()
+
 	controller, vmo := createControllerForTesting()
 
 	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
@@ -218,4 +221,5 @@ func clearMetrics() {
 		delete(metricsExporter.TestDelegate.GetFailedMetricsMap(), c) //maps are references, hence we can delete like normal here
 	}
 	time.Sleep(time.Second * 1)
+	metricsExporter.RequiredInitialization()
 }
