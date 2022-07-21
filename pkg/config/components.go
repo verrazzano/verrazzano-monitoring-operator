@@ -32,7 +32,7 @@ type ComponentDetails struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &ConfigReloader, &OidcProxy}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Kibana, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana}
@@ -159,14 +159,6 @@ var API = ComponentDetails{
 	ReadinessHTTPPath: "/healthcheck",
 	Privileged:        false,
 	Optional:          true,
-}
-
-// ConfigReloader is the default config-reloader configuration
-var ConfigReloader = ComponentDetails{
-	Name:            "config-reloader",
-	EnvName:         "CONFIG_RELOADER_IMAGE",
-	ImagePullPolicy: constants.DefaultImagePullPolicy,
-	Privileged:      false,
 }
 
 const (
