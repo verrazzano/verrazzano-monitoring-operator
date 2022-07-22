@@ -25,6 +25,13 @@ const (
 	NamesDeploymentDeleteError   metricName = "deploymentDeleteErrorCounter"
 	NamesDeploymentUpdateCounter metricName = "deploymentUpdateCounter"
 	NamesConfigMap               metricName = "configMap"
+	NamesServicesCreated         metricName = "servicesCreated"
+	NamesServices                metricName = "services"
+	NamesRoleBindings            metricName = "roleBindings"
+	NamesIngress                 metricName = "ingress"
+	NamesIngressDeleted          metricName = "ingressDeleted"
+	NamesVMOUpdate               metricName = "vmoupdate"
+	NamesQueue                   metricName = "queue"
 )
 
 type metricsExporter struct {
@@ -223,6 +230,23 @@ func initFunctionMetricsMap() map[metricName]*functionMetrics {
 			index:         int64(0),
 			labelFunction: &DefaultLabelFunction,
 		},
+
+		"ingress": {
+			durationSeconds: durationMetric{
+				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_ingress_duration_seconds", Help: "Tracks the duration of the ingress function in seconds"}),
+			},
+			callsTotal: simpleCounterMetric{
+				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_ingress_total", Help: "Tracks how many times the ingress function is called. This metric corresponds to the number of ingress requests performed by the VMO"}),
+			},
+			lastCallTimestamp: timestampMetric{
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_ingress_last_timestamp_seconds", Help: "The timestamp of the last time the ingress function completed"}, []string{"reconcile_index"}),
+			},
+			errorTotal: errorMetric{
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_ingress_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"}),
+			},
+			index:         int64(0),
+			labelFunction: &DefaultLabelFunction,
+		},
 	}
 }
 
@@ -233,14 +257,36 @@ func initSimpleCounterMetricMap() map[metricName]*simpleCounterMetric {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
 		},
 		"deploymentDeleteCounter": {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_delete_counter", Help: "Tracks how many times the delete functionality is invoked"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_delete_total", Help: "Tracks how many times the delete functionality is invoked"}),
+		},
+		"ingressDeleteCounter": {
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_ingress_delete_total", Help: "Tracks how many ingresses are deleted"}),
+		},
+		"configMap": {
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_configmap_total", Help: "Tracks how many times the configMap functionality is invoked"}),
+		},
+		"services": {
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_services_total", Help: "Tracks how many times the services functionality is invoked"}),
+		},
+		"servicesCreated": {
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_services_created_total", Help: "Tracks how many services are created"}),
+		},
+		"roleBindings": {
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_rolebindings_total", Help: "Tracks how many times the rolebindings functionality is invoked"}),
+		},
+		"vmoupdate": {
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_updates_total", Help: "Tracks how many times the update functionality is invoked"}),
 		},
 	}
 }
 
 //nolint
 func initSimpleGaugeMetricMap() map[metricName]*simpleGaugeMetric {
-	return map[metricName]*simpleGaugeMetric{}
+	return map[metricName]*simpleGaugeMetric{
+		"queue": {
+			metric: prometheus.NewGauge(prometheus.GaugeOpts{Name: "vmo_work_queue_size", Help: "Tracks the size of the VMO work queue"}),
+		},
+	}
 }
 
 //nolint
@@ -252,8 +298,20 @@ func initDurationMetricMap() map[metricName]*durationMetric {
 func initTimestampMetricMap() map[metricName]*timestampMetric {
 	return map[metricName]*timestampMetric{
 		"configMap": {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_configmap_last_succesful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"reconcile_index"}),
 			labelFunction: &configMapLabelFunction,
+		},
+		"services": {
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_services_last_succesful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"reconcile_index"}),
+			labelFunction: &servicesLabelFunction,
+		},
+		"roleBindings": {
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_rolebindings_last_succesful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"reconcile_index"}),
+			labelFunction: &roleBindingLabelFunction,
+		},
+		"vmoupdate": {
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_update_last_succesful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"reconcile_index"}),
+			labelFunction: &VMOUpdateLabelFunction,
 		},
 	}
 }
@@ -273,11 +331,15 @@ func initErrorMetricMap() map[metricName]*errorMetric {
 }
 
 var (
-	MetricsExp              = metricsExporter{}
-	DefaultLabelFunction    func(index int64) string
-	deploymentLabelFunction func() string
-	configMapLabelFunction  func() string
-	TestDelegate            = metricsDelegate{}
+	MetricsExp               = metricsExporter{}
+	DefaultLabelFunction     func(index int64) string
+	deploymentLabelFunction  func() string
+	configMapLabelFunction   func() string
+	servicesLabelFunction    func() string
+	roleBindingLabelFunction func() string
+	VMOUpdateLabelFunction   func() string
+	emptyLabelFunction       = func() string { return "default" }
+	TestDelegate             = metricsDelegate{}
 )
 
 func InitRegisterStart() {
@@ -307,9 +369,10 @@ func RequiredInitialization() {
 
 	DefaultLabelFunction = func(index int64) string { return numToString(index) }
 	deploymentLabelFunction = MetricsExp.internalData.functionMetricsMap[NamesDeployment].GetLabel
-	configMapLabelFunction = func() string {
-		return numToString(MetricsExp.internalData.simpleCounterMetricMap[NamesConfigMap].index)
-	}
+	configMapLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesConfigMap].GetLabel
+	servicesLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesServices].GetLabel
+	roleBindingLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesRoleBindings].GetLabel
+	VMOUpdateLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesVMOUpdate].GetLabel
 }
 
 func RegisterMetrics() {
