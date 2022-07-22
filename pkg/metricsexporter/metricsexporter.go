@@ -334,8 +334,8 @@ var (
 	servicesLabelFunction    func() string
 	roleBindingLabelFunction func() string
 	VMOUpdateLabelFunction   func() string
-	emptyLabelFunction       = func() string { return "default" }
-	TestDelegate             = metricsDelegate{}
+	//emptyLabelFunction       = func() string { return "default" }
+	TestDelegate = metricsDelegate{}
 )
 
 func (md *metricsDelegate) initializeFailedMetricsArray() {

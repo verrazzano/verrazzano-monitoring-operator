@@ -96,7 +96,11 @@ func (md *metricsDelegate) GetFailedMetricsMap() map[prometheus.Collector]int {
 
 //nolint
 func GetFunctionMetrics(name metricName) *functionMetrics {
-	return MetricsExp.internalData.functionMetricsMap[name]
+	returnVal, found := MetricsExp.internalData.functionMetricsMap[name]
+	if !found {
+		zap.S().Errorf("%v is not a valid function metric, it is not in the functionMetrics map", name)
+	}
+	return returnVal
 }
 
 func (md *metricsDelegate) GetFunctionTimestampMetric(name metricName) *prometheus.GaugeVec {
