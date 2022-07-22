@@ -11,7 +11,7 @@ import (
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	metricsExporter "github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -29,7 +29,7 @@ const (
 
 // CreateConfigmaps to create all required configmaps for VMI
 func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	metricsExporter.GetSimpleCounterMetrics(metricsExporter.NamesConfigMap).Inc()
+	metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesConfigMap).Inc()
 
 	var configMaps []string
 
@@ -77,7 +77,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 			}
 		}
 	}
-	metricsExporter.GetTimestampMetrics(metricsExporter.NamesConfigMap).SetLastTime()
+	metricsexporter.GetTimestampMetrics(metricsexporter.NamesConfigMap).SetLastTime()
 	return nil
 }
 

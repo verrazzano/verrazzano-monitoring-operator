@@ -1,18 +1,14 @@
 // Copyright (C) 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package metricsExporter
+package metricsexporter
 
 import (
 	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 type metricName string
@@ -197,7 +193,7 @@ func initConfiguration() configuration {
 
 func initFunctionMetricsMap() map[metricName]*functionMetrics {
 	return map[metricName]*functionMetrics{
-		"reconcile": {
+		NamesReconcile: {
 			durationSeconds: durationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
 			},
@@ -214,7 +210,7 @@ func initFunctionMetricsMap() map[metricName]*functionMetrics {
 			labelFunction: &DefaultLabelFunction,
 		},
 
-		"deployment": {
+		NamesDeployment: {
 			durationSeconds: durationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_deployment_duration_seconds", Help: "The duration of the last call to the deployment function"}),
 			},
@@ -231,7 +227,7 @@ func initFunctionMetricsMap() map[metricName]*functionMetrics {
 			labelFunction: &DefaultLabelFunction,
 		},
 
-		"ingress": {
+		NamesIngress: {
 			durationSeconds: durationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_ingress_duration_seconds", Help: "Tracks the duration of the ingress function in seconds"}),
 			},
@@ -253,28 +249,28 @@ func initFunctionMetricsMap() map[metricName]*functionMetrics {
 //nolint
 func initSimpleCounterMetricMap() map[metricName]*simpleCounterMetric {
 	return map[metricName]*simpleCounterMetric{
-		"deploymentUpdateCounter": {
+		NamesDeploymentUpdateCounter: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
 		},
-		"deploymentDeleteCounter": {
+		NamesDeploymentDeleteCounter: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_delete_total", Help: "Tracks how many times the delete functionality is invoked"}),
 		},
-		"ingressDeleteCounter": {
+		NamesIngressDeleted: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_ingress_delete_total", Help: "Tracks how many ingresses are deleted"}),
 		},
-		"configMap": {
+		NamesConfigMap: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_configmap_total", Help: "Tracks how many times the configMap functionality is invoked"}),
 		},
-		"services": {
+		NamesServices: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_services_total", Help: "Tracks how many times the services functionality is invoked"}),
 		},
-		"servicesCreated": {
+		NamesServicesCreated: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_services_created_total", Help: "Tracks how many services are created"}),
 		},
-		"roleBindings": {
+		NamesRoleBindings: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_rolebindings_total", Help: "Tracks how many times the rolebindings functionality is invoked"}),
 		},
-		"vmoupdate": {
+		NamesVMOUpdate: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_updates_total", Help: "Tracks how many times the update functionality is invoked"}),
 		},
 	}
@@ -283,7 +279,7 @@ func initSimpleCounterMetricMap() map[metricName]*simpleCounterMetric {
 //nolint
 func initSimpleGaugeMetricMap() map[metricName]*simpleGaugeMetric {
 	return map[metricName]*simpleGaugeMetric{
-		"queue": {
+		NamesQueue: {
 			metric: prometheus.NewGauge(prometheus.GaugeOpts{Name: "vmo_work_queue_size", Help: "Tracks the size of the VMO work queue"}),
 		},
 	}
@@ -297,19 +293,19 @@ func initDurationMetricMap() map[metricName]*durationMetric {
 //nolint
 func initTimestampMetricMap() map[metricName]*timestampMetric {
 	return map[metricName]*timestampMetric{
-		"configMap": {
+		NamesConfigMap: {
 			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_configmap_last_succesful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"reconcile_index"}),
 			labelFunction: &configMapLabelFunction,
 		},
-		"services": {
+		NamesServices: {
 			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_services_last_succesful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"reconcile_index"}),
 			labelFunction: &servicesLabelFunction,
 		},
-		"roleBindings": {
+		NamesRoleBindings: {
 			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_rolebindings_last_succesful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"reconcile_index"}),
 			labelFunction: &roleBindingLabelFunction,
 		},
-		"vmoupdate": {
+		NamesVMOUpdate: {
 			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_update_last_succesful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"reconcile_index"}),
 			labelFunction: &VMOUpdateLabelFunction,
 		},
@@ -319,11 +315,11 @@ func initTimestampMetricMap() map[metricName]*timestampMetric {
 //nolint
 func initErrorMetricMap() map[metricName]*errorMetric {
 	return map[metricName]*errorMetric{
-		"deploymentUpdateErrorCounter": {
+		NamesDeploymentUpdateError: {
 			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"}),
 			labelFunction: &deploymentLabelFunction,
 		},
-		"deploymentDeleteErrorCounter": {
+		NamesDeploymentDeleteError: {
 			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"}),
 			labelFunction: &deploymentLabelFunction,
 		},
@@ -342,132 +338,10 @@ var (
 	TestDelegate             = metricsDelegate{}
 )
 
-func InitRegisterStart() {
-	RequiredInitialization()
-	RegisterMetrics()
-	StartMetricsServer()
-}
-
-func (md *metricsDelegate) TestInitialization() {
-	RequiredInitialization()
-}
-
-//This is intialized because adding the statement in the var block would create a cycle
-func RequiredInitialization() {
-	MetricsExp = metricsExporter{
-		internalMetricsDelegate: metricsDelegate{},
-		internalConfig:          initConfiguration(),
-		internalData: data{
-			functionMetricsMap:     initFunctionMetricsMap(),
-			simpleCounterMetricMap: initSimpleCounterMetricMap(),
-			simpleGaugeMetricMap:   initSimpleGaugeMetricMap(),
-			durationMetricMap:      initDurationMetricMap(),
-			timestampMetricMap:     initTimestampMetricMap(),
-			errorMetricMap:         initErrorMetricMap(),
-		},
-	}
-
-	DefaultLabelFunction = func(index int64) string { return numToString(index) }
-	deploymentLabelFunction = MetricsExp.internalData.functionMetricsMap[NamesDeployment].GetLabel
-	configMapLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesConfigMap].GetLabel
-	servicesLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesServices].GetLabel
-	roleBindingLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesRoleBindings].GetLabel
-	VMOUpdateLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesVMOUpdate].GetLabel
-}
-
-func RegisterMetrics() {
-	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  //populate allMetrics array with all map values
-	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers() //begin the retry process
-}
-
-func StartMetricsServer() {
-	go wait.Until(func() {
-		http.Handle("/metrics", promhttp.Handler())
-		err := http.ListenAndServe(":9100", nil)
-		if err != nil {
-			zap.S().Errorf("Failed to start metrics server for VMI: %v", err)
-		}
-	}, time.Second*3, wait.NeverStop)
-}
-
-//nolint
-func GetFunctionMetrics(name metricName) *functionMetrics {
-	return MetricsExp.internalData.functionMetricsMap[name]
-}
-
-func (md *metricsDelegate) GetFunctionTimestampMetric(name metricName) *prometheus.GaugeVec {
-	return MetricsExp.internalData.functionMetricsMap[name].lastCallTimestamp.metric
-}
-
-func (md *metricsDelegate) GetFunctionDurationMetric(name metricName) prometheus.Summary {
-	return MetricsExp.internalData.functionMetricsMap[name].durationSeconds.metric
-}
-
-func (md *metricsDelegate) GetFunctionErrorMetric(name metricName) *prometheus.CounterVec {
-	return MetricsExp.internalData.functionMetricsMap[name].errorTotal.metric
-}
-
-func (md *metricsDelegate) GetFunctionCounterMetric(name metricName) prometheus.Counter {
-	return MetricsExp.internalData.functionMetricsMap[name].callsTotal.metric
-}
-
-//nolint
-func GetSimpleCounterMetrics(name metricName) *simpleCounterMetric {
-	return MetricsExp.internalData.simpleCounterMetricMap[name]
-}
-
-//nolint
-func GetSimpleGaugeMetrics(name metricName) *simpleGaugeMetric {
-	return MetricsExp.internalData.simpleGaugeMetricMap[name]
-}
-
-//nolint
-func GetErrorMetrics(name metricName) *errorMetric {
-	return MetricsExp.internalData.errorMetricMap[name]
-}
-
-//nolint
-func GetDurationMetrics(name metricName) *durationMetric {
-	return MetricsExp.internalData.durationMetricMap[name]
-}
-
-//nolint
-func GetTimestampMetrics(name metricName) *timestampMetric {
-	return MetricsExp.internalData.timestampMetricMap[name]
-}
-
 func (md *metricsDelegate) initializeFailedMetricsArray() {
 	//the failed metrics array will initially contain all metrics so they may be registered
 	for i, metric := range MetricsExp.internalConfig.allMetrics {
 		MetricsExp.internalConfig.failedMetrics[metric] = i
-	}
-}
-
-func (md *metricsDelegate) InitializeAllMetricsArray() {
-	//loop through all metrics declarations in metric maps
-	for _, value := range MetricsExp.internalData.functionMetricsMap {
-		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.callsTotal.metric, value.durationSeconds.metric, value.errorTotal.metric, value.lastCallTimestamp.metric, value.durationSeconds.metric)
-	}
-	for _, value := range MetricsExp.internalData.simpleCounterMetricMap {
-		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
-	}
-	for _, value := range MetricsExp.internalData.durationMetricMap {
-		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
-	}
-	for _, value := range MetricsExp.internalData.timestampMetricMap {
-		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
-	}
-	for _, value := range MetricsExp.internalData.errorMetricMap {
-		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
-	}
-}
-
-func (md *metricsDelegate) RegisterMetricsHandlers() {
-	md.initializeFailedMetricsArray() //Get list of metrics to register initially
-	//loop until there is no error in registering
-	for err := md.registerMetricsHandlersHelper(); err != nil; err = md.registerMetricsHandlersHelper() {
-		zap.S().Errorf("Failed to register metrics for VMI %v \n", err)
-		time.Sleep(time.Second)
 	}
 }
 
@@ -487,14 +361,6 @@ func (md *metricsDelegate) registerMetricsHandlersHelper() error {
 		}
 	}
 	return errorObserved
-}
-
-func (md *metricsDelegate) GetAllMetricsArray() *[]prometheus.Collector {
-	return &MetricsExp.internalConfig.allMetrics
-}
-
-func (md *metricsDelegate) GetFailedMetricsMap() map[prometheus.Collector]int {
-	return MetricsExp.internalConfig.failedMetrics
 }
 
 func numToString(num int64) string {

@@ -14,7 +14,7 @@ import (
 	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/fake"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	metricsExporter "github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
@@ -23,8 +23,8 @@ import (
 	fake "k8s.io/client-go/kubernetes/fake"
 )
 
-var allMetrics = metricsExporter.TestDelegate.GetAllMetricsArray()
-var delegate = metricsExporter.TestDelegate
+var allMetrics = metricsexporter.TestDelegate.GetAllMetricsArray()
+var delegate = metricsexporter.TestDelegate
 
 // TestInitializeAllMetricsArray tests that the metrics maps are added to the allmetrics array
 // GIVEN populated metrics maps
@@ -33,7 +33,7 @@ var delegate = metricsExporter.TestDelegate
 func TestInitializeAllMetricsArray(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
-	metricsExporter.TestDelegate.InitializeAllMetricsArray()
+	metricsexporter.TestDelegate.InitializeAllMetricsArray()
 	assert.Equal(15, len(*allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
 	//This number should correspond to the number of total metrics, including metrics inside of metric maps
 }
@@ -45,7 +45,7 @@ func TestInitializeAllMetricsArray(t *testing.T) {
 func TestNoMetrics(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
-	metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	metricsexporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(0, len(*allMetrics), "allMetrics array is not empty")
 	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "failedMetrics array is not empty")
 }
@@ -55,7 +55,7 @@ func TestOneValidMetric(t *testing.T) {
 	assert := assert.New(t)
 	firstValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "testOneValidMetric_A", Help: "This is the first valid metric"})
 	*allMetrics = append(*allMetrics, firstValidMetric)
-	metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	metricsexporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(1, len(*allMetrics), "allMetrics array does not contain the one valid metric")
 	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "The valid metric failed")
 }
@@ -65,7 +65,7 @@ func TestOneInvalidMetric(t *testing.T) {
 	assert := assert.New(t)
 	firstInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"})
 	*allMetrics = append(*allMetrics, firstInvalidMetric)
-	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	go metricsexporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second * 1)
 	assert.Equal(1, len(*allMetrics), "*allMetrics array does not contain the one invalid metric")
 	assert.Equal(1, len(delegate.GetFailedMetricsMap()), "The invalid metric did not fail properly and was not retried")
@@ -77,7 +77,7 @@ func TestTwoValidMetrics(t *testing.T) {
 	firstValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_A", Help: "This is the first valid metric"})
 	secondValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_B", Help: "This is the second valid metric"})
 	*allMetrics = append(*allMetrics, firstValidMetric, secondValidMetric)
-	metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	metricsexporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(2, len(*allMetrics), "allMetrics array does not contain both valid metrics")
 	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "Some metrics failed")
 }
@@ -88,7 +88,7 @@ func TestTwoInvalidMetrics(t *testing.T) {
 	firstInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"})
 	secondInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"})
 	*allMetrics = append(*allMetrics, firstInvalidMetric, secondInvalidMetric)
-	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	go metricsexporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second)
 	assert.Equal(2, len(delegate.GetFailedMetricsMap()), "Both Invalid")
 }
@@ -100,7 +100,7 @@ func TestThreeValidMetrics(t *testing.T) {
 	secondValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_B", Help: "This is the second valid metric"})
 	thirdValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_C", Help: "This is the third valid metric"})
 	*allMetrics = append(*allMetrics, firstValidMetric, secondValidMetric, thirdValidMetric)
-	metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	metricsexporter.TestDelegate.RegisterMetricsHandlers()
 	assert.Equal(3, len(*allMetrics), "allMetrics array does not contain all metrics")
 	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "Some metrics failed")
 }
@@ -112,7 +112,7 @@ func TestThreeInvalidMetrics(t *testing.T) {
 	secondInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"})
 	thirdInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the third invalid metric"})
 	*allMetrics = append(*allMetrics, firstInvalidMetric, secondInvalidMetric, thirdInvalidMetric)
-	go metricsExporter.TestDelegate.RegisterMetricsHandlers()
+	go metricsexporter.TestDelegate.RegisterMetricsHandlers()
 	time.Sleep(time.Second)
 	assert.Equal(3, len(delegate.GetFailedMetricsMap()), "All 3 invalid")
 }
@@ -174,18 +174,18 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 //  WHEN I call reconcile
 //  THEN the metrics for the reconcile function are to be captured
 func TestReconcileMetrics(t *testing.T) {
-	metricsExporter.RequiredInitialization()
+	metricsexporter.RequiredInitialization()
 
 	controller, vmo := createControllerForTesting()
 
-	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
-	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesReconcile))
+	metricsexporter.DefaultLabelFunction = func(idx int64) string { return "1" }
+	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesReconcile))
 
 	controller.syncHandlerStandardMode(vmo)
 
-	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.NamesReconcile).WithLabelValues("1"))
-	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsExporter.NamesReconcile).WithLabelValues("1"))
-	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesReconcile))
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsexporter.NamesReconcile).WithLabelValues("1"))
+	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsexporter.NamesReconcile).WithLabelValues("1"))
+	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesReconcile))
 
 	assert.Equal(t, previousCount, float64(newCount-1))
 	assert.Equal(t, newErrorCount, float64(1))
@@ -197,17 +197,17 @@ func TestReconcileMetrics(t *testing.T) {
 //  WHEN I call createDeployments
 //  THEN the metrics for the CreateDeployments function are to be captured, with the exception of (trivial) error metrics
 func TestDeploymentMetrics(t *testing.T) {
-	metricsExporter.RequiredInitialization()
+	metricsexporter.RequiredInitialization()
 
 	controller, vmo := createControllerForTesting()
 
-	metricsExporter.DefaultLabelFunction = func(idx int64) string { return "1" }
-	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesDeployment))
+	metricsexporter.DefaultLabelFunction = func(idx int64) string { return "1" }
+	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesDeployment))
 
 	CreateDeployments(controller, vmo, map[string]string{}, true)
 
-	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsExporter.NamesDeployment).WithLabelValues("1"))
-	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsExporter.NamesDeployment))
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsexporter.NamesDeployment).WithLabelValues("1"))
+	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesDeployment))
 	//The error is incremented outside of the deployment function, it is quite trivial
 
 	assert.Equal(t, previousCount, float64(newCount-1))
@@ -217,9 +217,9 @@ func TestDeploymentMetrics(t *testing.T) {
 //helper function to ensure consistency between tests
 func clearMetrics() {
 	*allMetrics = []prometheus.Collector{}
-	for c := range metricsExporter.TestDelegate.GetFailedMetricsMap() {
-		delete(metricsExporter.TestDelegate.GetFailedMetricsMap(), c) //maps are references, hence we can delete like normal here
+	for c := range metricsexporter.TestDelegate.GetFailedMetricsMap() {
+		delete(metricsexporter.TestDelegate.GetFailedMetricsMap(), c) //maps are references, hence we can delete like normal here
 	}
 	time.Sleep(time.Second * 1)
-	metricsExporter.RequiredInitialization()
+	metricsexporter.RequiredInitialization()
 }

@@ -14,7 +14,7 @@ import (
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	metricsExporter "github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/vmo"
 	"go.uber.org/zap"
@@ -63,7 +63,7 @@ func main() {
 
 	vmo.StartHTTPServer(controller, certdir, port)
 
-	metricsExporter.InitRegisterStart()
+	metricsexporter.InitRegisterStart()
 
 	if err = controller.Run(1); err != nil {
 		zap.S().Fatalf("Error running controller: %s", err.Error())

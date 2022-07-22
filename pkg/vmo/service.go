@@ -10,7 +10,7 @@ import (
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	metricsExporter "github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/services"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -19,7 +19,7 @@ import (
 
 // CreateServices creates/updates/deletes VMO service k8s resources
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	metricsExporter.GetSimpleCounterMetrics(metricsExporter.NamesServices).Inc()
+	metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesServices).Inc()
 
 	useNodeRoleSelectors, err := clusterHasNodeRoleSelectors(controller, vmo)
 	if err != nil {
@@ -66,7 +66,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			return err
 		}
 		controller.log.Debugf("Successfully applied Service '%s'\n", serviceName)
-		metricsExporter.GetSimpleCounterMetrics(metricsExporter.NamesServicesCreated).Inc()
+		metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesServicesCreated).Inc()
 	}
 
 	// Delete services that shouldn't exist
@@ -85,7 +85,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			}
 		}
 	}
-	metricsExporter.GetTimestampMetrics(metricsExporter.NamesServices).SetLastTime()
+	metricsexporter.GetTimestampMetrics(metricsexporter.NamesServices).SetLastTime()
 	return nil
 }
 
