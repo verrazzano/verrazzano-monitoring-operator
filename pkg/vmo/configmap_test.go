@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
@@ -39,6 +40,7 @@ func TestCreateConfigmaps(t *testing.T) {
 	vmo.Spec.URI = "vmi.system.v8o-env.oracledx.com"
 	vmo.Spec.Grafana.DashboardsConfigMap = "myDashboardsConfigMap"
 	vmo.Spec.Grafana.DatasourcesConfigMap = "myDatasourcesConfigMap"
+	metricsexporter.RequiredInitialization()
 	err := CreateConfigmaps(controller, vmo)
 	t.Logf("Error is %v", err)
 	assert.Nil(t, err)
