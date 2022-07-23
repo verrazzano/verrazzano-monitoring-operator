@@ -29,7 +29,11 @@ const (
 
 // CreateConfigmaps to create all required configmaps for VMI
 func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesConfigMap).Inc()
+	metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesConfigMap)
+	if metricErr != nil {
+		return metricErr
+	}
+	metric.Inc()
 
 	var configMaps []string
 
@@ -77,7 +81,11 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 			}
 		}
 	}
-	metricsexporter.GetTimestampMetrics(metricsexporter.NamesConfigMap).SetLastTime()
+	timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesConfigMap)
+	if timeErr != nil {
+		return timeErr
+	}
+	timeMetric.SetLastTime()
 	return nil
 }
 

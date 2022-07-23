@@ -4,6 +4,7 @@
 package metricsexporter
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -97,6 +98,14 @@ func (md *metricsDelegate) GetFailedMetricsMap() map[prometheus.Collector]int {
 	return MetricsExp.internalConfig.failedMetrics
 }
 
+func (md *metricsDelegate) GetCounterMetric(name metricName) prometheus.Counter {
+	return MetricsExp.internalData.simpleCounterMetricMap[name].metric
+}
+
+func (md *metricsDelegate) GetTimestampMetric(name metricName) *prometheus.GaugeVec {
+	return MetricsExp.internalData.timestampMetricMap[name].metric
+}
+
 //nolint
 func GetFunctionMetrics(name metricName) *functionMetrics {
 	returnVal, found := MetricsExp.internalData.functionMetricsMap[name]
@@ -123,26 +132,46 @@ func (md *metricsDelegate) GetFunctionCounterMetric(name metricName) prometheus.
 }
 
 //nolint
-func GetSimpleCounterMetrics(name metricName) *simpleCounterMetric {
-	return MetricsExp.internalData.simpleCounterMetricMap[name]
+func GetSimpleCounterMetrics(name metricName) (*simpleCounterMetric, error) {
+	returnVal, found := MetricsExp.internalData.simpleCounterMetricMap[name]
+	if !found {
+		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleCounterMetric map", name)
+	}
+	return returnVal, nil
 }
 
 //nolint
-func GetSimpleGaugeMetrics(name metricName) *simpleGaugeMetric {
-	return MetricsExp.internalData.simpleGaugeMetricMap[name]
+func GetSimpleGaugeMetrics(name metricName) (*simpleGaugeMetric, error) {
+	returnVal, found := MetricsExp.internalData.simpleGaugeMetricMap[name]
+	if !found {
+		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleGaugeMetric map", name)
+	}
+	return returnVal, nil
 }
 
 //nolint
-func GetErrorMetrics(name metricName) *errorMetric {
-	return MetricsExp.internalData.errorMetricMap[name]
+func GetErrorMetrics(name metricName) (*errorMetric, error) {
+	returnVal, found := MetricsExp.internalData.errorMetricMap[name]
+	if !found {
+		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the errorMetric map", name)
+	}
+	return returnVal, nil
 }
 
 //nolint
-func GetDurationMetrics(name metricName) *durationMetric {
-	return MetricsExp.internalData.durationMetricMap[name]
+func GetDurationMetrics(name metricName) (*durationMetric, error) {
+	returnVal, found := MetricsExp.internalData.durationMetricMap[name]
+	if !found {
+		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the durationMetric map", name)
+	}
+	return returnVal, nil
 }
 
 //nolint
-func GetTimestampMetrics(name metricName) *timestampMetric {
-	return MetricsExp.internalData.timestampMetricMap[name]
+func GetTimestampMetrics(name metricName) (*timestampMetric, error) {
+	returnVal, found := MetricsExp.internalData.timestampMetricMap[name]
+	if !found {
+		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the timestampMetric map", name)
+	}
+	return returnVal, nil
 }

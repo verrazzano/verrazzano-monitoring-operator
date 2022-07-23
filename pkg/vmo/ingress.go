@@ -85,7 +85,11 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 				controller.log.Errorf("Failed to delete Ingress %s/%s: %v", vmo.Namespace, ingress.Name, err)
 				return err
 			}
-			metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesIngressDeleted).Inc()
+			metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesIngressDeleted)
+			if metricErr != nil {
+				return metricErr
+			}
+			metric.Inc()
 		}
 	}
 

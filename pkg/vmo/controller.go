@@ -542,7 +542,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
 		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
 		c.log.Oncef("Updating VMO")
-		metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesVMOUpdate).Inc()
+		metric, err := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesVMOUpdate)
+		if err != nil {
+			return err
+		}
+		metric.Inc()
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
 			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
@@ -567,7 +571,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 			c.log.Errorf("Failed to update currentVersion for VMI %s: %v", vmo.Name, err)
 		} else {
 			c.log.Oncef("Updated VMI currentVersion to %s", c.buildVersion)
-			metricsexporter.GetTimestampMetrics(metricsexporter.NamesVMOUpdate).SetLastTime()
+			timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesVMOUpdate)
+			if timeErr != nil {
+				return timeErr
+			}
+			timeMetric.SetLastTime()
 		}
 	}
 
@@ -602,7 +610,12 @@ func (c *Controller) enqueueVMO(obj interface{}) {
 // IsHealthy returns true if this controller is healthy, false otherwise. It's health is determined based on: (1) its
 // workqueue is 0 or decreasing in a timely manner, (2) it can communicate with API server, and (3) the CRD exists.
 func (c *Controller) IsHealthy() bool {
-	metricsexporter.GetSimpleGaugeMetrics(metricsexporter.NamesQueue).Set(float64(c.workqueue.Len()))
+	metric, err := metricsexporter.GetSimpleGaugeMetrics(metricsexporter.NamesQueue)
+	if err != nil {
+		zap.S().Error("Unable to retrieve simple gauge metric in isHealthy function")
+	} else {
+		metric.Set(float64(c.workqueue.Len()))
+	}
 	// Make sure if workqueue > 0, make sure it hasn't remained for longer than 60 seconds.
 	if startQueueLen := c.workqueue.Len(); startQueueLen > 0 {
 		if time.Since(c.lastEnqueue).Seconds() > float64(60) {
