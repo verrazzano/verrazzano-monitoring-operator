@@ -16,7 +16,7 @@ import (
 )
 
 // RequiredInitialization populates the metricsexporter, this function must be called before any other non-init exporter function is called
-func PopulateMetrics() {
+func RequiredInitialization() {
 	MetricsExp = metricsExporter{
 		internalMetricsDelegate: metricsDelegate{},
 		internalConfig:          initConfiguration(),
@@ -42,19 +42,18 @@ func PopulateMetrics() {
 
 // InitRegisterStart call this function in order to completely initialize and start the metrics exporter. Populates, registers, and starts the metrics server.
 func InitRegisterStart() {
-	PopulateMetrics()
+	RequiredInitialization()
 	RegisterMetrics()
 	StartMetricsServer()
 }
 
 // TestInitialization is a test utility function which registers the metrics in the allMetrics array without adding any metrics in the metric maps
 func (md *metricsDelegate) TestInitialization() {
-	PopulateMetrics()
+	RequiredInitialization()
 }
 
-// RegisterMetrics populates the exporter and begins the registration process, does not start the metrics server
+// RegisterMetrics begins the registration process, Required Initialization must be called first. This function does not start the metrics server
 func RegisterMetrics() {
-	PopulateMetrics()
 	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  // populate allMetrics array with all map values
 	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers() // begin the retry process
 }
