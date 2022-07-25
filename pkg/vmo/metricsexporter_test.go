@@ -23,14 +23,6 @@ import (
 	fake "k8s.io/client-go/kubernetes/fake"
 )
 
-type registerTest struct {
-	isConcurrent       bool
-	waitTime           int
-	allMetricsLenght   int
-	failedMetricLength int
-	allMetrics         []prometheus.Collector
-}
-
 var allMetrics = metricsexporter.TestDelegate.GetAllMetricsArray()
 var delegate = metricsexporter.TestDelegate
 
