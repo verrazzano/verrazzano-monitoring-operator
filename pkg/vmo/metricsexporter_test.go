@@ -23,6 +23,15 @@ import (
 	fake "k8s.io/client-go/kubernetes/fake"
 )
 
+type registerTest struct {
+	name               string
+	isConcurrent       bool
+	waitTime           time.Duration
+	allMetricsLength   int
+	failedMetricLength int
+	allMetrics         []prometheus.Collector
+}
+
 var allMetrics = metricsexporter.TestDelegate.GetAllMetricsArray()
 var delegate = metricsexporter.TestDelegate
 
@@ -33,88 +42,107 @@ var delegate = metricsexporter.TestDelegate
 func TestInitializeAllMetricsArray(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
-	metricsexporter.TestDelegate.InitializeAllMetricsArray()
-	assert.Equal(29, len(*allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
 	//This number should correspond to the number of total metrics, including metrics inside of metric maps
+	assert.Equal(29, len(*allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
 }
 
 // TestNoMetrics, TestValid & TestInvalid tests that metrics in the allmetrics array are registered and failedMetrics are retried
 // GIVEN a populated allMetrics array
 //  WHEN I call registerMetricsHandlers
 //  THEN all the valid metrics are registered and failedMetrics are retried
-func TestNoMetrics(t *testing.T) {
-	clearMetrics()
-	assert := assert.New(t)
-	metricsexporter.TestDelegate.RegisterMetricsHandlers()
-	assert.Equal(0, len(*allMetrics), "allMetrics array is not empty")
-	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "failedMetrics array is not empty")
-}
+func TestRegistrationSystem(t *testing.T) {
+	testCases := []registerTest{
+		{
+			name:               "TestNoMetrics",
+			isConcurrent:       false,
+			allMetrics:         []prometheus.Collector{},
+			allMetricsLength:   0,
+			failedMetricLength: 0,
+			waitTime:           0 * time.Second,
+		},
+		{
+			name:         "TestOneValidMetric",
+			isConcurrent: false,
+			allMetrics: []prometheus.Collector{
+				prometheus.NewCounter(prometheus.CounterOpts{Name: "testOneValidMetric_A", Help: "This is the first valid metric"}),
+			},
+			allMetricsLength:   1,
+			failedMetricLength: 0,
+			waitTime:           0 * time.Second,
+		},
+		{
+			name:         "TestOneInvalidMetric",
+			isConcurrent: true,
+			allMetrics: []prometheus.Collector{
+				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"}),
+			},
+			allMetricsLength:   1,
+			failedMetricLength: 1,
+			waitTime:           1 * time.Second,
+		},
+		{
+			name:         "TestTwoValidMetrics",
+			isConcurrent: false,
+			allMetrics: []prometheus.Collector{
+				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_A", Help: "This is the first valid metric"}),
+				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_B", Help: "This is the second valid metric"}),
+			},
+			allMetricsLength:   2,
+			failedMetricLength: 0,
+			waitTime:           0 * time.Second,
+		},
+		{
+			name:         "TestTwoInvalidMetrics",
+			isConcurrent: true,
+			allMetrics: []prometheus.Collector{
+				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"}),
+				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"}),
+			},
+			allMetricsLength:   2,
+			failedMetricLength: 2,
+			waitTime:           1 * time.Second,
+		},
+		{
+			name:         "TestThreeValidMetrics",
+			isConcurrent: false,
+			allMetrics: []prometheus.Collector{
+				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_A", Help: "This is the first valid metric"}),
+				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_B", Help: "This is the second valid metric"}),
+				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_C", Help: "This is the third valid metric"}),
+			},
+			allMetricsLength:   3,
+			failedMetricLength: 0,
+			waitTime:           0 * time.Second,
+		},
+		{
+			name:         "TestThreeInvalidMetrics",
+			isConcurrent: true,
+			allMetrics: []prometheus.Collector{
+				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"}),
+				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"}),
+				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the third invalid metric"}),
+			},
+			allMetricsLength:   3,
+			failedMetricLength: 3,
+			waitTime:           1 * time.Second,
+		},
+	}
 
-func TestOneValidMetric(t *testing.T) {
-	clearMetrics()
-	assert := assert.New(t)
-	firstValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "testOneValidMetric_A", Help: "This is the first valid metric"})
-	*allMetrics = append(*allMetrics, firstValidMetric)
-	metricsexporter.TestDelegate.RegisterMetricsHandlers()
-	assert.Equal(1, len(*allMetrics), "allMetrics array does not contain the one valid metric")
-	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "The valid metric failed")
-}
-
-func TestOneInvalidMetric(t *testing.T) {
-	clearMetrics()
-	assert := assert.New(t)
-	firstInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"})
-	*allMetrics = append(*allMetrics, firstInvalidMetric)
-	go metricsexporter.TestDelegate.RegisterMetricsHandlers()
-	time.Sleep(time.Second * 1)
-	assert.Equal(1, len(*allMetrics), "*allMetrics array does not contain the one invalid metric")
-	assert.Equal(1, len(delegate.GetFailedMetricsMap()), "The invalid metric did not fail properly and was not retried")
-}
-
-func TestTwoValidMetrics(t *testing.T) {
-	clearMetrics()
-	assert := assert.New(t)
-	firstValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_A", Help: "This is the first valid metric"})
-	secondValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_B", Help: "This is the second valid metric"})
-	*allMetrics = append(*allMetrics, firstValidMetric, secondValidMetric)
-	metricsexporter.TestDelegate.RegisterMetricsHandlers()
-	assert.Equal(2, len(*allMetrics), "allMetrics array does not contain both valid metrics")
-	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "Some metrics failed")
-}
-
-func TestTwoInvalidMetrics(t *testing.T) {
-	clearMetrics()
-	assert := assert.New(t)
-	firstInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"})
-	secondInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"})
-	*allMetrics = append(*allMetrics, firstInvalidMetric, secondInvalidMetric)
-	go metricsexporter.TestDelegate.RegisterMetricsHandlers()
-	time.Sleep(time.Second)
-	assert.Equal(2, len(delegate.GetFailedMetricsMap()), "Both Invalid")
-}
-
-func TestThreeValidMetrics(t *testing.T) {
-	clearMetrics()
-	assert := assert.New(t)
-	firstValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_A", Help: "This is the first valid metric"})
-	secondValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_B", Help: "This is the second valid metric"})
-	thirdValidMetric := prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_C", Help: "This is the third valid metric"})
-	*allMetrics = append(*allMetrics, firstValidMetric, secondValidMetric, thirdValidMetric)
-	metricsexporter.TestDelegate.RegisterMetricsHandlers()
-	assert.Equal(3, len(*allMetrics), "allMetrics array does not contain all metrics")
-	assert.Equal(0, len(delegate.GetFailedMetricsMap()), "Some metrics failed")
-}
-
-func TestThreeInvalidMetrics(t *testing.T) {
-	clearMetrics()
-	assert := assert.New(t)
-	firstInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"})
-	secondInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"})
-	thirdInvalidMetric := prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the third invalid metric"})
-	*allMetrics = append(*allMetrics, firstInvalidMetric, secondInvalidMetric, thirdInvalidMetric)
-	go metricsexporter.TestDelegate.RegisterMetricsHandlers()
-	time.Sleep(time.Second)
-	assert.Equal(3, len(delegate.GetFailedMetricsMap()), "All 3 invalid")
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			clearMetrics()
+			assert := assert.New(t)
+			*allMetrics = testCase.allMetrics
+			if !testCase.isConcurrent {
+				metricsexporter.TestDelegate.RegisterMetricsHandlers()
+			} else {
+				go metricsexporter.TestDelegate.RegisterMetricsHandlers()
+				time.Sleep(testCase.waitTime)
+			}
+			assert.Equal(testCase.allMetricsLength, len(*allMetrics), "allMetrics array length is not correct")
+			assert.Equal(testCase.failedMetricLength, len(delegate.GetFailedMetricsMap()), "failedMetrics map lenght is not correct")
+		})
+	}
 }
 
 func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInstance) {
