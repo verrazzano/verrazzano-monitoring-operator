@@ -16,14 +16,14 @@ import (
 )
 
 // RequiredInitialization populates the metricsexporter, this function must be called before any other non-init exporter function is called
-func RequiredInitialization() {
+func PopulateMetrics() {
 	MetricsExp = metricsExporter{
 		internalMetricsDelegate: metricsDelegate{},
 		internalConfig:          initConfiguration(),
 		internalData: data{
 			functionMetricsMap:     initFunctionMetricsMap(),
-			simpleCounterMetricMap: initSimpleCounterMetricMap(),
-			simpleGaugeMetricMap:   initSimpleGaugeMetricMap(),
+			simpleCounterMetricMap: initCounterMetricMap(),
+			simpleGaugeMetricMap:   initGaugeMetricMap(),
 			durationMetricMap:      initDurationMetricMap(),
 			timestampMetricMap:     initTimestampMetricMap(),
 			errorMetricMap:         initErrorMetricMap(),
@@ -42,19 +42,19 @@ func RequiredInitialization() {
 
 // InitRegisterStart call this function in order to completely initialize and start the metrics exporter. Populates, registers, and starts the metrics server.
 func InitRegisterStart() {
-	RequiredInitialization()
+	PopulateMetrics()
 	RegisterMetrics()
 	StartMetricsServer()
 }
 
 // TestInitialization is a test utility function which registers the metrics in the allMetrics array without adding any metrics in the metric maps
 func (md *metricsDelegate) TestInitialization() {
-	RequiredInitialization()
+	PopulateMetrics()
 }
 
 // RegisterMetrics populates the exporter and begins the registration process, does not start the metrics server
 func RegisterMetrics() {
-	RequiredInitialization()
+	PopulateMetrics()
 	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  // populate allMetrics array with all map values
 	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers() // begin the retry process
 }
@@ -64,7 +64,7 @@ func StartMetricsServer() {
 		http.Handle("/metrics", promhttp.Handler())
 		err := http.ListenAndServe(":9100", nil)
 		if err != nil {
-			zap.S().Errorf("Failed to start metrics server for VMI: %v", err)
+			zap.S().Errorf("Failed to start metrics server for VMO: %v", err)
 		}
 	}, time.Second*3, wait.NeverStop)
 }
@@ -94,7 +94,7 @@ func (md *metricsDelegate) RegisterMetricsHandlers() {
 	md.initializeFailedMetricsArray() // Get list of metrics to register initially
 	// loop until there is no error in registering
 	for err := md.registerMetricsHandlersHelper(); err != nil; err = md.registerMetricsHandlersHelper() {
-		zap.S().Errorf("Failed to register metrics for VMI %v \n", err)
+		zap.S().Errorf("Failed to register metrics for VMO %v \n", err)
 		time.Sleep(time.Second)
 	}
 }
@@ -140,8 +140,8 @@ func (md *metricsDelegate) GetFunctionCounterMetric(name metricName) prometheus.
 	return MetricsExp.internalData.functionMetricsMap[name].callsTotal.metric
 }
 
-// GetSimpleCounterMetrics returns a simpleCounterMetric for use if it exists, otherwise returns nil.
-func GetSimpleCounterMetrics(name metricName) (*SimpleCounterMetric, error) {
+// GetCounterMetrics returns a simpleCounterMetric for use if it exists, otherwise returns nil.
+func GetCounterMetrics(name metricName) (*CounterMetric, error) {
 	returnVal, found := MetricsExp.internalData.simpleCounterMetricMap[name]
 	if !found {
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleCounterMetric map", name)
@@ -149,8 +149,8 @@ func GetSimpleCounterMetrics(name metricName) (*SimpleCounterMetric, error) {
 	return returnVal, nil
 }
 
-// GetSimpleGaugeMetrics returns a simpleGaugeMetric for use if it exists, otherwise returns nil.
-func GetSimpleGaugeMetrics(name metricName) (*SimpleGaugeMetric, error) {
+// GetGaugeMetrics returns a simpleGaugeMetric for use if it exists, otherwise returns nil.
+func GetGaugeMetrics(name metricName) (*GaugeMetric, error) {
 	returnVal, found := MetricsExp.internalData.simpleGaugeMetricMap[name]
 	if !found {
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleGaugeMetric map", name)

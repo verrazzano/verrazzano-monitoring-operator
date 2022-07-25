@@ -542,7 +542,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
 		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
 		c.log.Oncef("Updating VMO")
-		metric, err := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesVMOUpdate)
+		metric, err := metricsexporter.GetCounterMetrics(metricsexporter.NamesVMOUpdate)
 		if err != nil {
 			return err
 		}
@@ -610,7 +610,7 @@ func (c *Controller) enqueueVMO(obj interface{}) {
 // IsHealthy returns true if this controller is healthy, false otherwise. It's health is determined based on: (1) its
 // workqueue is 0 or decreasing in a timely manner, (2) it can communicate with API server, and (3) the CRD exists.
 func (c *Controller) IsHealthy() bool {
-	metric, err := metricsexporter.GetSimpleGaugeMetrics(metricsexporter.NamesQueue)
+	metric, err := metricsexporter.GetGaugeMetrics(metricsexporter.NamesQueue)
 	if err != nil {
 		zap.S().Error("Unable to retrieve simple gauge metric in isHealthy function")
 	} else {

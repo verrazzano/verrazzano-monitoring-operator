@@ -174,7 +174,7 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 //  WHEN I call reconcile
 //  THEN the metrics for the reconcile function are to be captured
 func TestReconcileMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
+	metricsexporter.PopulateMetrics()
 
 	controller, vmo := createControllerForTesting()
 
@@ -197,7 +197,7 @@ func TestReconcileMetrics(t *testing.T) {
 //  WHEN I call createDeployments
 //  THEN the metrics for the CreateDeployments function are to be captured, with the exception of (trivial) error metrics
 func TestDeploymentMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
+	metricsexporter.PopulateMetrics()
 
 	controller, vmo := createControllerForTesting()
 
@@ -221,5 +221,5 @@ func clearMetrics() {
 		delete(metricsexporter.TestDelegate.GetFailedMetricsMap(), c) //maps are references, hence we can delete like normal here
 	}
 	time.Sleep(time.Second * 1)
-	metricsexporter.RequiredInitialization()
+	metricsexporter.PopulateMetrics()
 }

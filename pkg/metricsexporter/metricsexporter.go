@@ -37,17 +37,17 @@ type metricsExporter struct {
 }
 
 type configuration struct {
-	// thisMetric array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to thisMetric array for registration.
+	// this Metric array will be automatically populated with all the metrics from each map. Metrics not included in a map can be added to thisMetric array for registration.
 	allMetrics []prometheus.Collector
-	// thisMetric map will be automatically populated with all metrics which were not registered correctly. Metrics in thisMetric map will be retried periodically.
+	// this Metric map will be automatically populated with all metrics which were not registered correctly. Metrics in thisMetric map will be retried periodically.
 	failedMetrics map[prometheus.Collector]int
 	registry      prometheus.Registerer
 }
 
 type data struct {
 	functionMetricsMap     map[metricName]*FunctionMetrics
-	simpleCounterMetricMap map[metricName]*SimpleCounterMetric
-	simpleGaugeMetricMap   map[metricName]*SimpleGaugeMetric
+	simpleCounterMetricMap map[metricName]*CounterMetric
+	simpleGaugeMetricMap   map[metricName]*GaugeMetric
 	durationMetricMap      map[metricName]*DurationMetric
 	timestampMetricMap     map[metricName]*TimestampMetric
 	errorMetricMap         map[metricName]*ErrorMetric
@@ -59,11 +59,12 @@ type metricsDelegate struct {
 // Class of metrics to automatically capture 4 types of metrics for a given function
 type FunctionMetrics struct {
 	durationMetric    DurationMetric
-	callsTotal        SimpleCounterMetric
+	callsTotal        CounterMetric
 	lastCallTimestamp TimestampMetric
 	errorTotal        ErrorMetric
-	labelFunction     *func(int64) string // The function to create the label values for the error and timestamp metrics. A default is provided as &DefaultLabelFunction
-	index             int64
+	// The function to create the label values for the error and timestamp metrics. A default is provided as &DefaultLabelFunction
+	labelFunction *func(int64) string
+	index         int64
 }
 
 // Method to call at the start of the tracked function. Starts the duration timer and increments the total count
@@ -93,44 +94,44 @@ func (f *FunctionMetrics) GetLabel() string {
 }
 
 // Type to count events such as the number fo function calls.
-type SimpleCounterMetric struct {
+type CounterMetric struct {
 	metric prometheus.Counter
 	index  int64
 }
 
 // Inc increases the counterMetric by one
-func (c *SimpleCounterMetric) Inc() {
+func (c *CounterMetric) Inc() {
 	c.index = c.index + 1
 	c.metric.Inc()
 }
 
 // Add increases the counter metric by the argument value
-func (c *SimpleCounterMetric) Add(num float64) {
+func (c *CounterMetric) Add(num float64) {
 	c.index = c.index + int64(num)
 	c.metric.Add(num)
 }
 
 // GetLabel returns the current value of the counter as a string
-func (c *SimpleCounterMetric) GetLabel() string {
+func (c *CounterMetric) GetLabel() string {
 	return strconv.FormatInt(c.index, 10)
 }
 
-type SimpleGaugeMetric struct {
+type GaugeMetric struct {
 	metric prometheus.Gauge
 }
 
 // Set sets the value of the gauge metric to the given value
-func (g *SimpleGaugeMetric) Set(num float64) {
+func (g *GaugeMetric) Set(num float64) {
 	g.metric.Set(num)
 }
 
 // SetToCurrentTime sets the value of the gauge metric to the system timestamp
-func (g *SimpleGaugeMetric) SetToCurrentTime() {
+func (g *GaugeMetric) SetToCurrentTime() {
 	g.metric.SetToCurrentTime()
 }
 
 // Add sets the value of the gauge metric to the current value plus the given value
-func (g *SimpleGaugeMetric) Add(num float64) {
+func (g *GaugeMetric) Add(num float64) {
 	g.metric.Add(num)
 }
 
@@ -207,7 +208,7 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 			durationMetric: DurationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
 			},
-			callsTotal: SimpleCounterMetric{
+			callsTotal: CounterMetric{
 				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_reconcile_total", Help: "Tracks how many times the syncHandlerStandardMode function is called. thisMetric corresponds to the number of reconciles performed by the VMO"}),
 			},
 			lastCallTimestamp: TimestampMetric{
@@ -224,7 +225,7 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 			durationMetric: DurationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_deployment_duration_seconds", Help: "The duration of the last call to the deployment function"}),
 			},
-			callsTotal: SimpleCounterMetric{
+			callsTotal: CounterMetric{
 				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_total", Help: "Tracks how many times the deployment function is called"}),
 			},
 			lastCallTimestamp: TimestampMetric{
@@ -241,7 +242,7 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 			durationMetric: DurationMetric{
 				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_ingress_duration_seconds", Help: "Tracks the duration of the ingress function in seconds"}),
 			},
-			callsTotal: SimpleCounterMetric{
+			callsTotal: CounterMetric{
 				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_ingress_total", Help: "Tracks how many times the ingress function is called. This metric corresponds to the number of ingress requests performed by the VMO"}),
 			},
 			lastCallTimestamp: TimestampMetric{
@@ -256,9 +257,9 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 	}
 }
 
-// initSimpleCounterMetricMap returns a populated map of counter metrics to be used in the data struct, add additional metrics here
-func initSimpleCounterMetricMap() map[metricName]*SimpleCounterMetric {
-	return map[metricName]*SimpleCounterMetric{
+// initCounterMetricMap returns a populated map of counter metrics to be used in the data struct, add additional metrics here
+func initCounterMetricMap() map[metricName]*CounterMetric {
+	return map[metricName]*CounterMetric{
 		NamesDeploymentUpdateCounter: {
 			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
 		},
@@ -286,9 +287,9 @@ func initSimpleCounterMetricMap() map[metricName]*SimpleCounterMetric {
 	}
 }
 
-// initSimpleGaugeMetricMap returns a map of gauge metrics to be used in the data struct, add additional metrics here
-func initSimpleGaugeMetricMap() map[metricName]*SimpleGaugeMetric {
-	return map[metricName]*SimpleGaugeMetric{
+// initGaugeMetricMap returns a map of gauge metrics to be used in the data struct, add additional metrics here
+func initGaugeMetricMap() map[metricName]*GaugeMetric {
+	return map[metricName]*GaugeMetric{
 		NamesQueue: {
 			metric: prometheus.NewGauge(prometheus.GaugeOpts{Name: "vmo_work_queue_size", Help: "Tracks the size of the VMO work queue"}),
 		},
