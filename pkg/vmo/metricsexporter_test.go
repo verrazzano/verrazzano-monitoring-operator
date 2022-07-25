@@ -4,6 +4,7 @@
 package vmo
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -19,8 +20,11 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubeinformers "k8s.io/client-go/informers"
 	fake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
 )
 
 type registerTest struct {
@@ -42,6 +46,7 @@ var delegate = metricsexporter.TestDelegate
 func TestInitializeAllMetricsArray(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
+	metricsexporter.TestDelegate.InitializeAllMetricsArray()
 	//This number should correspond to the number of total metrics, including metrics inside of metric maps
 	assert.Equal(29, len(*allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
 }
@@ -162,14 +167,18 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 
 	cm := configmaps.NewConfig(vmo, configMapName, map[string]string{datasourceYAMLKey: dataSourceTemplate})
 
+	cfg := &rest.Config{}
+	kubeextclientset, _ := apiextensionsclient.NewForConfig(cfg)
+
 	client := fake.NewSimpleClientset(cm)
 	defaultReplicasNum := 0
 	vmo.Labels = make(map[string]string)
 	controller := &Controller{
-		kubeclientset:   client,
-		configMapLister: &simpleConfigMapLister{kubeClient: client},
-		secretLister:    &simpleSecretLister{kubeClient: client},
-		log:             vzlog.DefaultLogger(),
+		kubeclientset:    client,
+		kubeextclientset: kubeextclientset,
+		configMapLister:  &simpleConfigMapLister{kubeClient: client},
+		secretLister:     &simpleSecretLister{kubeClient: client},
+		log:              vzlog.DefaultLogger(),
 		operatorConfig: &config.OperatorConfig{
 			EnvName:                        "",
 			DefaultIngressTargetDNSName:    "",
@@ -191,6 +200,7 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 		statefulSetLister:   kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Apps().V1().StatefulSets().Lister(),
 		ingressLister:       kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Networking().V1().Ingresses().Lister(),
 		vmoclientset:        vmofake.NewSimpleClientset(),
+		workqueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "VMOs"),
 	}
 	_ = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
 
@@ -201,22 +211,25 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 // GIVEN a FunctionMetric corresponding to the reconcile function
 //  WHEN I call reconcile
 //  THEN the metrics for the reconcile function are to be captured
-func TestReconcileMetrics(t *testing.T) {
+func TestReconcileAndUpdateMetrics(t *testing.T) {
 	metricsexporter.RequiredInitialization()
 
 	controller, vmo := createControllerForTesting()
 
 	metricsexporter.DefaultLabelFunction = func(idx int64) string { return "1" }
 	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesReconcile))
+	previousUpdateCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesVMOUpdate))
 
 	controller.syncHandlerStandardMode(vmo)
 
 	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsexporter.NamesReconcile).WithLabelValues("1"))
 	newErrorCount := testutil.ToFloat64(delegate.GetFunctionErrorMetric(metricsexporter.NamesReconcile).WithLabelValues("1"))
 	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesReconcile))
+	newUpdateCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesVMOUpdate))
 
 	assert.Equal(t, previousCount, float64(newCount-1))
 	assert.Equal(t, newErrorCount, float64(1))
+	assert.Equal(t, previousUpdateCount, float64(newUpdateCount-1))
 	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
 }
 
@@ -239,6 +252,60 @@ func TestDeploymentMetrics(t *testing.T) {
 	//The error is incremented outside of the deployment function, it is quite trivial
 
 	assert.Equal(t, previousCount, float64(newCount-1))
+	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
+}
+
+func TestIngressMetrics(t *testing.T) {
+	metricsexporter.RequiredInitialization()
+	controller, vmo := createControllerForTesting()
+	metricsexporter.DefaultLabelFunction = func(idx int64) string { return "1" }
+	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesIngress))
+	CreateIngresses(controller, vmo)
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsexporter.NamesIngress).WithLabelValues("1"))
+	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesIngress))
+	assert.Equal(t, previousCount, float64(newCount-1))
+	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
+}
+
+func TestRoleBindingMetrics(t *testing.T) {
+	metricsexporter.RequiredInitialization()
+	controller, vmo := createControllerForTesting()
+	previousCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesRoleBindings))
+	CreateRoleBindings(controller, vmo)
+	newCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesRoleBindings))
+	assert.Equal(t, previousCount, float64(newCount-1))
+}
+
+func TestThreadingMetrics(t *testing.T) {
+	metricsexporter.RequiredInitialization()
+	controller, _ := createControllerForTesting()
+	gauge := delegate.GetGaugeMetrics(metricsexporter.NamesQueue)
+	gauge.Set(100)
+	controller.IsHealthy()
+	newCount := testutil.ToFloat64(gauge)
+	assert.Equal(t, 0, int(newCount))
+}
+
+func TestConfigMapMetrics(t *testing.T) {
+	metricsexporter.RequiredInitialization()
+	controller, vmo := createControllerForTesting()
+	previousCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesConfigMap))
+	CreateConfigmaps(controller, vmo)
+	newCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesConfigMap))
+	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsexporter.NamesIngress).WithLabelValues(strconv.FormatInt(int64(previousCount)+1, 10)))
+	assert.Equal(t, previousCount, float64(newCount-1))
+	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
+}
+func TestServiceMetrics(t *testing.T) {
+	metricsexporter.RequiredInitialization()
+	controller, vmo := createControllerForTesting()
+	previousCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesServices))
+	CreateServices(controller, vmo)
+	newCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesServices))
+	newServicesCreated := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesServicesCreated))
+	newTimeStamp := testutil.ToFloat64(delegate.GetTimestampMetric(metricsexporter.NamesServices).WithLabelValues(strconv.FormatInt(int64(previousCount)+1, 10)))
+	assert.Equal(t, previousCount, float64(newCount-1))
+	assert.GreaterOrEqual(t, 1, int(newServicesCreated))
 	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
 }
 

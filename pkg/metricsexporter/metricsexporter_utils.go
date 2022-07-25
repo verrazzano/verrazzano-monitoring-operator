@@ -47,11 +47,6 @@ func InitRegisterStart() {
 	StartMetricsServer()
 }
 
-// TestInitialization is a test utility function which registers the metrics in the allMetrics array without adding any metrics in the metric maps
-func (md *metricsDelegate) TestInitialization() {
-	RequiredInitialization()
-}
-
 // RegisterMetrics begins the registration process, Required Initialization must be called first. This function does not start the metrics server
 func RegisterMetrics() {
 	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  // populate allMetrics array with all map values
@@ -108,6 +103,10 @@ func (md *metricsDelegate) GetFailedMetricsMap() map[prometheus.Collector]int {
 
 func (md *metricsDelegate) GetCounterMetric(name metricName) prometheus.Counter {
 	return MetricsExp.internalData.simpleCounterMetricMap[name].metric
+}
+
+func (md *metricsDelegate) GetGaugeMetrics(name metricName) prometheus.Gauge {
+	return MetricsExp.internalData.simpleGaugeMetricMap[name].metric
 }
 
 func (md *metricsDelegate) GetTimestampMetric(name metricName) *prometheus.GaugeVec {
