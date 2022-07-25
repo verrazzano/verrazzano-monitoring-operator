@@ -6,6 +6,7 @@ package metricsexporter
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -14,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-//This is intialized because adding the statement in the var block would create a cycle
+// RequiredInitialization populates the metricsexporter, this function must be called before any other non-init exporter function is called
 func RequiredInitialization() {
 	MetricsExp = metricsExporter{
 		internalMetricsDelegate: metricsDelegate{},
@@ -29,7 +30,9 @@ func RequiredInitialization() {
 		},
 	}
 
-	DefaultLabelFunction = func(index int64) string { return numToString(index) }
+	DefaultLabelFunction = func(index int64) string {
+		return strconv.FormatInt(index, 10)
+	}
 	deploymentLabelFunction = MetricsExp.internalData.functionMetricsMap[NamesDeployment].GetLabel
 	configMapLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesConfigMap].GetLabel
 	servicesLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesServices].GetLabel
@@ -37,19 +40,23 @@ func RequiredInitialization() {
 	VMOUpdateLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesVMOUpdate].GetLabel
 }
 
+// InitRegisterStart call this function in order to completely initialize and start the metrics exporter. Populates, registers, and starts the metrics server.
 func InitRegisterStart() {
 	RequiredInitialization()
 	RegisterMetrics()
 	StartMetricsServer()
 }
 
+// TestInitialization is a test utility function which registers the metrics in the allMetrics array without adding any metrics in the metric maps
 func (md *metricsDelegate) TestInitialization() {
 	RequiredInitialization()
 }
 
+// RegisterMetrics populates the exporter and begins the registration process, does not start the metrics server
 func RegisterMetrics() {
-	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  //populate allMetrics array with all map values
-	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers() //begin the retry process
+	RequiredInitialization()
+	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  // populate allMetrics array with all map values
+	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers() // begin the retry process
 }
 
 func StartMetricsServer() {
@@ -62,10 +69,11 @@ func StartMetricsServer() {
 	}, time.Second*3, wait.NeverStop)
 }
 
+// InitializeAllMetricsArray internal function used to add all metrics from the metrics maps to the allMetrics array
 func (md *metricsDelegate) InitializeAllMetricsArray() {
-	//loop through all metrics declarations in metric maps
+	// loop through all metrics declarations in metric maps
 	for _, value := range MetricsExp.internalData.functionMetricsMap {
-		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.callsTotal.metric, value.durationSeconds.metric, value.errorTotal.metric, value.lastCallTimestamp.metric, value.durationSeconds.metric)
+		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.callsTotal.metric, value.durationMetric.metric, value.errorTotal.metric, value.lastCallTimestamp.metric, value.durationMetric.metric)
 	}
 	for _, value := range MetricsExp.internalData.simpleCounterMetricMap {
 		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
@@ -81,9 +89,10 @@ func (md *metricsDelegate) InitializeAllMetricsArray() {
 	}
 }
 
+// RegisterMetricsHandlers loops through the failedMetrics map until all metrics are registered successfully
 func (md *metricsDelegate) RegisterMetricsHandlers() {
-	md.initializeFailedMetricsArray() //Get list of metrics to register initially
-	//loop until there is no error in registering
+	md.initializeFailedMetricsArray() // Get list of metrics to register initially
+	// loop until there is no error in registering
 	for err := md.registerMetricsHandlersHelper(); err != nil; err = md.registerMetricsHandlersHelper() {
 		zap.S().Errorf("Failed to register metrics for VMI %v \n", err)
 		time.Sleep(time.Second)
@@ -106,8 +115,8 @@ func (md *metricsDelegate) GetTimestampMetric(name metricName) *prometheus.Gauge
 	return MetricsExp.internalData.timestampMetricMap[name].metric
 }
 
-//nolint
-func GetFunctionMetrics(name metricName) *functionMetrics {
+// GetFunctionMetrics returns a functionMetric for use if it exists, otherwise returns nil.
+func GetFunctionMetrics(name metricName) *FunctionMetrics {
 	returnVal, found := MetricsExp.internalData.functionMetricsMap[name]
 	if !found {
 		zap.S().Errorf("%v is not a valid function metric, it is not in the functionMetrics map", name)
@@ -120,7 +129,7 @@ func (md *metricsDelegate) GetFunctionTimestampMetric(name metricName) *promethe
 }
 
 func (md *metricsDelegate) GetFunctionDurationMetric(name metricName) prometheus.Summary {
-	return MetricsExp.internalData.functionMetricsMap[name].durationSeconds.metric
+	return MetricsExp.internalData.functionMetricsMap[name].durationMetric.metric
 }
 
 func (md *metricsDelegate) GetFunctionErrorMetric(name metricName) *prometheus.CounterVec {
@@ -131,8 +140,8 @@ func (md *metricsDelegate) GetFunctionCounterMetric(name metricName) prometheus.
 	return MetricsExp.internalData.functionMetricsMap[name].callsTotal.metric
 }
 
-//nolint
-func GetSimpleCounterMetrics(name metricName) (*simpleCounterMetric, error) {
+// GetSimpleCounterMetrics returns a simpleCounterMetric for use if it exists, otherwise returns nil.
+func GetSimpleCounterMetrics(name metricName) (*SimpleCounterMetric, error) {
 	returnVal, found := MetricsExp.internalData.simpleCounterMetricMap[name]
 	if !found {
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleCounterMetric map", name)
@@ -140,8 +149,8 @@ func GetSimpleCounterMetrics(name metricName) (*simpleCounterMetric, error) {
 	return returnVal, nil
 }
 
-//nolint
-func GetSimpleGaugeMetrics(name metricName) (*simpleGaugeMetric, error) {
+// GetSimpleGaugeMetrics returns a simpleGaugeMetric for use if it exists, otherwise returns nil.
+func GetSimpleGaugeMetrics(name metricName) (*SimpleGaugeMetric, error) {
 	returnVal, found := MetricsExp.internalData.simpleGaugeMetricMap[name]
 	if !found {
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleGaugeMetric map", name)
@@ -149,8 +158,8 @@ func GetSimpleGaugeMetrics(name metricName) (*simpleGaugeMetric, error) {
 	return returnVal, nil
 }
 
-//nolint
-func GetErrorMetrics(name metricName) (*errorMetric, error) {
+// GetErrorMetrics returns a ErrorMetric for use if it exists, otherwise returns nil.
+func GetErrorMetrics(name metricName) (*ErrorMetric, error) {
 	returnVal, found := MetricsExp.internalData.errorMetricMap[name]
 	if !found {
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the errorMetric map", name)
@@ -158,8 +167,8 @@ func GetErrorMetrics(name metricName) (*errorMetric, error) {
 	return returnVal, nil
 }
 
-//nolint
-func GetDurationMetrics(name metricName) (*durationMetric, error) {
+// GetDurationMetrics returns a durationMetric for use if it exists, otherwise returns nil.
+func GetDurationMetrics(name metricName) (*DurationMetric, error) {
 	returnVal, found := MetricsExp.internalData.durationMetricMap[name]
 	if !found {
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the durationMetric map", name)
@@ -167,8 +176,8 @@ func GetDurationMetrics(name metricName) (*durationMetric, error) {
 	return returnVal, nil
 }
 
-//nolint
-func GetTimestampMetrics(name metricName) (*timestampMetric, error) {
+// GetTimestampMetrics returns a timeStampMetric for use if it exists, otherwise returns nil.
+func GetTimestampMetrics(name metricName) (*TimestampMetric, error) {
 	returnVal, found := MetricsExp.internalData.timestampMetricMap[name]
 	if !found {
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the timestampMetric map", name)
