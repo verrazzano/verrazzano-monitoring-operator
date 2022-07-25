@@ -152,7 +152,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {
-	metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesDeploymentDeleteCounter)
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentDeleteCounter)
 	if metricErr != nil {
 		return metricErr
 	}
@@ -171,7 +171,7 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 }
 
 func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
-	metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
 	if metricErr != nil {
 		return metricErr
 	}
@@ -202,7 +202,7 @@ func rollingUpdate(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitor
 		if !isUpdateAllowed(controller, vmo, current) {
 			continue
 		}
-		metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
+		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
 		if metricErr != nil {
 			return false, metricErr
 		}
@@ -250,7 +250,7 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		if err != nil {
 			return false, err
 		}
-		metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
+		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
 		if metricErr != nil {
 			return false, metricErr
 		}

@@ -19,7 +19,7 @@ import (
 
 // CreateRoleBindings creates/updates VMO RoleBindings k8s resources
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesRoleBindings)
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesRoleBindings)
 	if metricErr != nil {
 		return metricErr
 	}

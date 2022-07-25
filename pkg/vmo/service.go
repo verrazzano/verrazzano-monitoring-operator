@@ -19,7 +19,7 @@ import (
 
 // CreateServices creates/updates/deletes VMO service k8s resources
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	counter, counterErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesServices)
+	counter, counterErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesServices)
 	if counterErr != nil {
 		return counterErr
 	}
@@ -70,7 +70,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			return err
 		}
 		controller.log.Debugf("Successfully applied Service '%s'\n", serviceName)
-		metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesServicesCreated)
+		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesServicesCreated)
 		if metricErr != nil {
 			return metricErr
 		}

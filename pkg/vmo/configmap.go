@@ -29,7 +29,7 @@ const (
 
 // CreateConfigmaps to create all required configmaps for VMI
 func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	metric, metricErr := metricsexporter.GetSimpleCounterMetrics(metricsexporter.NamesConfigMap)
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesConfigMap)
 	if metricErr != nil {
 		return metricErr
 	}
