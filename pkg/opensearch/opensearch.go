@@ -63,6 +63,10 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 		}
 
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
+		if err := o.updateDefaultIndexSettings(opensearchEndpoint); err != nil {
+			ch <- err
+			return
+		}
 		for _, policy := range vmi.Spec.Elasticsearch.Policies {
 			if err := o.createISMPolicy(opensearchEndpoint, policy); err != nil {
 				ch <- err
