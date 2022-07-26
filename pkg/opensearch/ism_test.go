@@ -19,6 +19,7 @@ import (
 
 const (
 	testPolicyNotFound = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
+	testSettingsCreated = `{"acknowledged":true}`
 	testSystemPolicy   = `
 {
     "_id" : "verrazzano-system",
@@ -141,6 +142,12 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 			}, nil
 
 		case "PUT":
+			if strings.HasSuffix(request.URL.Path, "/_settings") {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(testSettingsCreated)),
+				}, nil
+			}
 			return &http.Response{
 				StatusCode: http.StatusCreated,
 				Body:       io.NopCloser(strings.NewReader(testSystemPolicy)),
