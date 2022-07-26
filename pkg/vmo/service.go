@@ -6,9 +6,11 @@ package vmo
 import (
 	"context"
 	"errors"
+
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/services"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -17,6 +19,12 @@ import (
 
 // CreateServices creates/updates/deletes VMO service k8s resources
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	counter, counterErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesServices)
+	if counterErr != nil {
+		return counterErr
+	}
+	counter.Inc()
+
 	useNodeRoleSelectors, err := clusterHasNodeRoleSelectors(controller, vmo)
 	if err != nil {
 		controller.log.Errorf("Failed to check node role selectors when creating services for VMI %s: %s", vmo.Name, err)
@@ -62,6 +70,11 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			return err
 		}
 		controller.log.Debugf("Successfully applied Service '%s'\n", serviceName)
+		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesServicesCreated)
+		if metricErr != nil {
+			return metricErr
+		}
+		metric.Inc()
 	}
 
 	// Delete services that shouldn't exist
@@ -80,7 +93,11 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 			}
 		}
 	}
-
+	metric, metricErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesServices)
+	if metricErr != nil {
+		return metricErr
+	}
+	metric.SetLastTime()
 	return nil
 }
 

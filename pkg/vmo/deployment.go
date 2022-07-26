@@ -12,6 +12,7 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	appsv1 "k8s.io/api/apps/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,6 +42,11 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		err = updateDeployment(controller, vmo, existingDeployment, osd)
 	}
 	if err != nil {
+		metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
+		if metricErr != nil {
+			return metricErr
+		}
+		metric.Inc()
 		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
 		return err
 	}
@@ -50,6 +56,15 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 
 // CreateDeployments create/update VMO deployment k8s resources
 func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (dirty bool, err error) {
+	// The error count is incremented by the function which calls createDeployment
+	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesDeployment)
+	if functionError == nil {
+		functionMetric.LogStart()
+		defer functionMetric.LogEnd(false)
+	} else {
+		return false, functionError
+	}
+
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
@@ -91,6 +106,11 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			}
 		}
 		if err != nil {
+			metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
+			if metricErr != nil {
+				return false, metricErr
+			}
+			metric.Inc()
 			controller.log.Errorf("Failed to update deployment %s/%s: %v", curDeployment.Namespace, curDeployment.Name, err)
 			return false, err
 		}
@@ -138,15 +158,30 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 }
 
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentDeleteCounter)
+	if metricErr != nil {
+		return metricErr
+	}
+	metric.Inc()
 	controller.log.Debugf("Deleting deployment %s", deployment.Name)
 	err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 	if err != nil {
+		metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentDeleteError)
+		if metricErr != nil {
+			return metricErr
+		}
+		metric.Inc()
 		controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
 	}
 	return nil
 }
 
 func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
+	if metricErr != nil {
+		return metricErr
+	}
+	metric.Inc()
 	var err error
 	curDeployment.Spec.Selector = existingDeployment.Spec.Selector
 	specDiffs := diff.Diff(existingDeployment, curDeployment)
@@ -173,7 +208,11 @@ func rollingUpdate(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitor
 		if !isUpdateAllowed(controller, vmo, current) {
 			continue
 		}
-
+		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
+		if metricErr != nil {
+			return false, metricErr
+		}
+		metric.Inc()
 		// Selector may not change, so we copy over from existing
 		current.Spec.Selector = existing.Spec.Selector
 		// Deployment spec differences, so call Update() and return
@@ -183,6 +222,11 @@ func rollingUpdate(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitor
 			controller.log.Oncef("Updating deployment %s in namespace %s", current.Name, current.Namespace)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), current, metav1.UpdateOptions{})
 			if err != nil {
+				metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
+				if metricErr != nil {
+					return false, metricErr
+				}
+				metric.Inc()
 				return false, err
 			}
 			//okay to return dirty=false after updating the *last* deployment
@@ -212,9 +256,18 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		if err != nil {
 			return false, err
 		}
-
+		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
+		if metricErr != nil {
+			return false, metricErr
+		}
+		metric.Inc()
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 		if err != nil {
+			metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
+			if metricErr != nil {
+				return false, metricErr
+			}
+			metric.Inc()
 			return false, err
 		}
 	}

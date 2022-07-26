@@ -10,6 +10,7 @@ import (
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,10 +20,18 @@ import (
 
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesIngress)
+	if functionError == nil {
+		functionMetric.LogStart()
+		defer functionMetric.LogEnd(false)
+	} else {
+		return functionError
+	}
 
 	ingList, err := ingresses.New(vmo)
 	if err != nil {
 		controller.log.Errorf("Failed to create Ingress specs for VMI %s: %v", vmo.Name, err)
+		functionMetric.IncError()
 		return err
 	}
 	if vmo.Spec.IngressTargetDNSName == "" {
@@ -39,6 +48,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
 			runtime.HandleError(errors.New("ingress name must be specified"))
+			functionMetric.IncError()
 			return nil
 		}
 
@@ -54,11 +64,13 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
 			controller.log.Errorf("Failed getting existing Ingress %s/%s: %v", vmo.Namespace, ingName, err)
+			functionMetric.IncError()
 			return err
 		}
 
 		if err != nil {
 			controller.log.Errorf("Failed to create/update Ingress %s/%s: %v", vmo.Namespace, ingName, err)
+			functionMetric.IncError()
 			return err
 		}
 	}
@@ -68,6 +80,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 	if err != nil {
+		functionMetric.IncError()
 		return err
 	}
 	for _, ingress := range existingIngressList {
@@ -78,6 +91,11 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 				controller.log.Errorf("Failed to delete Ingress %s/%s: %v", vmo.Namespace, ingress.Name, err)
 				return err
 			}
+			metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesIngressDeleted)
+			if metricErr != nil {
+				return metricErr
+			}
+			metric.Inc()
 		}
 	}
 
