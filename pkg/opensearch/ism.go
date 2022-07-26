@@ -83,12 +83,12 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 
 // updateDefaultIndexSettings updates the default index settings to be used
 func (o *OSClient) updateDefaultIndexSettings(opensearchEndpoint string) error {
-	settingsUrl := fmt.Sprintf("%s/_settings", opensearchEndpoint)
+	settingsURL := fmt.Sprintf("%s/_settings", opensearchEndpoint)
 	payload, err := json.Marshal(getDefaultIndexSettings())
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("PUT", settingsUrl, bytes.NewReader(payload))
+	req, err := http.NewRequest("PUT", settingsURL, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (o *OSClient) updateDefaultIndexSettings(opensearchEndpoint string) error {
 		return fmt.Errorf("got status code %d when updating default settings of index, expected %d", resp.StatusCode, http.StatusOK)
 	}
 	var updatedIndexSettings map[string]bool
-	err = json.NewDecoder(resp.Body).Decode(updatedIndexSettings)
+	err = json.NewDecoder(resp.Body).Decode(&updatedIndexSettings)
 	if err != nil {
 		return err
 	}
