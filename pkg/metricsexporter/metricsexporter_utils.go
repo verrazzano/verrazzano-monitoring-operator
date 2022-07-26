@@ -114,12 +114,12 @@ func (md *metricsDelegate) GetTimestampMetric(name metricName) *prometheus.Gauge
 }
 
 // GetFunctionMetrics returns a functionMetric for use if it exists, otherwise returns nil.
-func GetFunctionMetrics(name metricName) *FunctionMetrics {
+func GetFunctionMetrics(name metricName) (*FunctionMetrics, error) {
 	returnVal, found := MetricsExp.internalData.functionMetricsMap[name]
 	if !found {
-		zap.S().Errorf("%v is not a valid function metric, it is not in the functionMetrics map", name)
+		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the functionMetrics map", name)
 	}
-	return returnVal
+	return returnVal, nil
 }
 
 func (md *metricsDelegate) GetFunctionTimestampMetric(name metricName) *prometheus.GaugeVec {
