@@ -431,7 +431,7 @@ func (c *Controller) syncHandler(key string) error {
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	var errorObserved bool
 	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesReconcile)
-	if functionError != nil {
+	if functionError == nil {
 		functionMetric.LogStart()
 		defer func() { functionMetric.LogEnd(errorObserved) }()
 	} else {

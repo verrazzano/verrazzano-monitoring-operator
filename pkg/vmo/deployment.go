@@ -58,9 +58,11 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (dirty bool, err error) {
 	// The error count is incremented by the function which calls createDeployment
 	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesDeployment)
-	if functionError != nil {
+	if functionError == nil {
 		functionMetric.LogStart()
 		defer functionMetric.LogEnd(false)
+	} else {
+		return false, functionError
 	}
 
 	// Assigning the following spec members seems like a hack; is any

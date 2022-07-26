@@ -21,9 +21,11 @@ import (
 // CreateIngresses create/update VMO ingress k8s resources
 func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesIngress)
-	if functionError != nil {
+	if functionError == nil {
 		functionMetric.LogStart()
 		defer functionMetric.LogEnd(false)
+	} else {
+		return functionError
 	}
 
 	ingList, err := ingresses.New(vmo)
