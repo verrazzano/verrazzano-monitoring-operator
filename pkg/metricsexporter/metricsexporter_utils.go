@@ -81,6 +81,9 @@ func (md *metricsDelegate) InitializeAllMetricsArray() {
 	for _, value := range MetricsExp.internalData.errorMetricMap {
 		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
 	}
+	for _, value := range MetricsExp.internalData.simpleGaugeMetricMap {
+		MetricsExp.internalConfig.allMetrics = append(MetricsExp.internalConfig.allMetrics, value.metric)
+	}
 }
 
 // RegisterMetricsHandlers loops through the failedMetrics map until all metrics are registered successfully
