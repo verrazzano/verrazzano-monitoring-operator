@@ -48,7 +48,7 @@ func TestInitializeAllMetricsArray(t *testing.T) {
 	assert := assert.New(t)
 	metricsexporter.TestDelegate.InitializeAllMetricsArray()
 	//This number should correspond to the number of total metrics, including metrics inside of metric maps
-	assert.Equal(29, len(*allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
+	assert.Equal(30, len(*allMetrics), "There may be new metrics in the map, or some metrics may not be added to the allmetrics array from the metrics maps")
 }
 
 // TestNoMetrics, TestValid & TestInvalid tests that metrics in the allmetrics array are registered and failedMetrics are retried
