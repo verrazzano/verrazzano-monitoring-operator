@@ -229,10 +229,10 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_total", Help: "Tracks how many times the deployment function is called"}),
 			},
 			lastCallTimestamp: TimestampMetric{
-				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"reconcile_index"}),
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"deployment_index"}),
 			},
 			errorTotal: ErrorMetric{
-				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_error_total", Help: "Tracks how many times the deployment failed"}, []string{"reconcile_index"}),
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_error_total", Help: "Tracks how many times the deployment failed"}, []string{"deployment_index"}),
 			},
 			index:         int64(0),
 			labelFunction: &DefaultLabelFunction,
@@ -246,10 +246,10 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_ingress_total", Help: "Tracks how many times the ingress function is called. This metric corresponds to the number of ingress requests performed by the VMO"}),
 			},
 			lastCallTimestamp: TimestampMetric{
-				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_ingress_last_timestamp_seconds", Help: "The timestamp of the last time the ingress function completed"}, []string{"reconcile_index"}),
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_ingress_last_timestamp_seconds", Help: "The timestamp of the last time the ingress function completed"}, []string{"ingress_index"}),
 			},
 			errorTotal: ErrorMetric{
-				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_ingress_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"}),
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_ingress_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"ingress_index"}),
 			},
 			index:         int64(0),
 			labelFunction: &DefaultLabelFunction,
@@ -305,19 +305,19 @@ func initDurationMetricMap() map[metricName]*DurationMetric {
 func initTimestampMetricMap() map[metricName]*TimestampMetric {
 	return map[metricName]*TimestampMetric{
 		NamesConfigMap: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_configmap_last_succesful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_configmap_last_succesful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"configMap_index"}),
 			labelFunction: &configMapLabelFunction,
 		},
 		NamesServices: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_services_last_succesful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_services_last_succesful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"service_index"}),
 			labelFunction: &servicesLabelFunction,
 		},
 		NamesRoleBindings: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_rolebindings_last_succesful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_rolebindings_last_succesful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"rolebindings_index"}),
 			labelFunction: &roleBindingLabelFunction,
 		},
 		NamesVMOUpdate: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_update_last_succesful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_update_last_succesful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"update_index"}),
 			labelFunction: &VMOUpdateLabelFunction,
 		},
 	}
@@ -327,11 +327,11 @@ func initTimestampMetricMap() map[metricName]*TimestampMetric {
 func initErrorMetricMap() map[metricName]*ErrorMetric {
 	return map[metricName]*ErrorMetric{
 		NamesDeploymentUpdateError: {
-			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"deployment_index"}),
 			labelFunction: &deploymentLabelFunction,
 		},
 		NamesDeploymentDeleteError: {
-			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"reconcile_index"}),
+			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"deployment_index"}),
 			labelFunction: &deploymentLabelFunction,
 		},
 	}
