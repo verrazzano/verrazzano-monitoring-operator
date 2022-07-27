@@ -4,6 +4,8 @@
 package opensearch
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -15,6 +17,12 @@ type (
 		httpClient *http.Client
 		DoHTTP     func(request *http.Request) (*http.Response, error)
 	}
+)
+
+const (
+	indexSettings     = `{"index":{"auto_expand_replicas": "0-1"}}`
+	applicationJson   = "application/json"
+	contentTypeHeader = "Content-Type"
 )
 
 func NewOSClient() *OSClient {
@@ -63,10 +71,6 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 		}
 
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		if err := o.updateDefaultIndexSettings(opensearchEndpoint); err != nil {
-			ch <- err
-			return
-		}
 		for _, policy := range vmi.Spec.Elasticsearch.Policies {
 			if err := o.createISMPolicy(opensearchEndpoint, policy); err != nil {
 				ch <- err
@@ -75,6 +79,47 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 		}
 
 		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Elasticsearch.Policies)
+	}()
+
+	return ch
+}
+
+// SetAutoExpandIndices updates the default index settings to auto expand replicas (max 1) when nodes are added to the cluster
+func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
+	ch := make(chan error)
+	// configuration is done asynchronously, as this does not need to be blocking
+	go func() {
+		if !vmi.Spec.Elasticsearch.Enabled {
+			ch <- nil
+			return
+		}
+		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
+		settingsURL := fmt.Sprintf("%s/_settings", opensearchEndpoint)
+		req, err := http.NewRequest("PUT", settingsURL, bytes.NewReader([]byte(indexSettings)))
+		if err != nil {
+			ch <- err
+			return
+		}
+		req.Header.Add(contentTypeHeader, applicationJson)
+		resp, err := o.DoHTTP(req)
+		if err != nil {
+			ch <- err
+			return
+		}
+		if resp.StatusCode != http.StatusOK {
+			ch <- fmt.Errorf("got status code %d when updating default settings of index, expected %d", resp.StatusCode, http.StatusOK)
+			return
+		}
+		var updatedIndexSettings map[string]bool
+		err = json.NewDecoder(resp.Body).Decode(&updatedIndexSettings)
+		if err != nil {
+			ch <- err
+			return
+		}
+		if !updatedIndexSettings["acknowledged"] {
+			ch <- fmt.Errorf("expected acknowldegement for index settings update but did not get. Actual response  %v", updatedIndexSettings)
+			return
+		}
 	}()
 
 	return ch

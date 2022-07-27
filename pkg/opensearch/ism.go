@@ -81,46 +81,6 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 	return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
 }
 
-// updateDefaultIndexSettings updates the default index settings to be used
-func (o *OSClient) updateDefaultIndexSettings(opensearchEndpoint string) error {
-	settingsURL := fmt.Sprintf("%s/_settings", opensearchEndpoint)
-	payload, err := json.Marshal(getDefaultIndexSettings())
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("PUT", settingsURL, bytes.NewReader(payload))
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	resp, err := o.DoHTTP(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("got status code %d when updating default settings of index, expected %d", resp.StatusCode, http.StatusOK)
-	}
-	var updatedIndexSettings map[string]bool
-	err = json.NewDecoder(resp.Body).Decode(&updatedIndexSettings)
-	if err != nil {
-		return err
-	}
-	if !updatedIndexSettings["acknowledged"] {
-		return fmt.Errorf("expected acknowldegement for index settings update but did not get. Actual response  %v", updatedIndexSettings)
-	}
-	return nil
-}
-
-//getDefaultIndexSettings returns the default index settings to be used for all indices
-func getDefaultIndexSettings() map[string]interface{} {
-	indexSettings := map[string]interface{}{
-		"index": map[string]string{
-			"auto_expand_replicas": "0-1",
-		},
-	}
-	return indexSettings
-}
-
 func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	req, err := http.NewRequest("GET", policyURL, nil)
 	if err != nil {
@@ -173,7 +133,7 @@ func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrol
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add(contentTypeHeader, applicationJson)
 	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
@@ -202,7 +162,7 @@ func (o *OSClient) addPolicyToExistingIndices(opensearchEndpoint string, policy 
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add(contentTypeHeader, applicationJson)
 	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return err

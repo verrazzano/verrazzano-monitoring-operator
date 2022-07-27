@@ -142,12 +142,6 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 			}, nil
 
 		case "PUT":
-			if strings.HasSuffix(request.URL.Path, "/_settings") {
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(strings.NewReader(testSettingsCreated)),
-				}, nil
-			}
 			return &http.Response{
 				StatusCode: http.StatusCreated,
 				Body:       io.NopCloser(strings.NewReader(testSystemPolicy)),
