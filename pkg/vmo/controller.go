@@ -454,7 +454,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/***************************************
 	 * Configure Index AutoExpand settings
 	 ****************************************/
-	autoExpandIndexChannel := c.osClient.SetAutoExpandIndices(vmo);
+	autoExpandIndexChannel := c.osClient.SetAutoExpandIndices(vmo)
 
 	/*********************
 	 * Configure ISM
@@ -547,7 +547,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 			errorObserved = true
 		}
 	}
-	
+
 	autExpandIndexErr := <-autoExpandIndexChannel
 	if autExpandIndexErr != nil {
 		c.log.Errorf("Failed to update auto expand settings for indices: %v", err)

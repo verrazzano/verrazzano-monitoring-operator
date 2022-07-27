@@ -18,9 +18,8 @@ import (
 )
 
 const (
-	testPolicyNotFound  = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
-	testSettingsCreated = `{"acknowledged":true}`
-	testSystemPolicy    = `
+	testPolicyNotFound = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
+	testSystemPolicy   = `
 {
     "_id" : "verrazzano-system",
     "_seq_no" : 0,

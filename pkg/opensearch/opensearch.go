@@ -21,7 +21,7 @@ type (
 
 const (
 	indexSettings     = `{"index":{"auto_expand_replicas": "0-1"}}`
-	applicationJson   = "application/json"
+	applicationJSON   = "application/json"
 	contentTypeHeader = "Content-Type"
 )
 
@@ -100,7 +100,7 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			ch <- err
 			return
 		}
-		req.Header.Add(contentTypeHeader, applicationJson)
+		req.Header.Add(contentTypeHeader, applicationJSON)
 		resp, err := o.DoHTTP(req)
 		if err != nil {
 			ch <- err
