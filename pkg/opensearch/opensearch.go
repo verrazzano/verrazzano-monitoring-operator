@@ -9,6 +9,7 @@ import (
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"net/http"
 )
 
@@ -90,6 +91,10 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
 		if !vmi.Spec.Elasticsearch.Enabled {
+			ch <- nil
+			return
+		}
+		if !nodes.IsSingleNodeCluster(vmi) {
 			ch <- nil
 			return
 		}
