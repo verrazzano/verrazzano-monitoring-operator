@@ -226,7 +226,7 @@ func (o *OSClient) reindexToDataStream(log vzlog.VerrazzanoLogger, openSearchEnd
 	if err != nil {
 		return err
 	}
-	req.Header.Add(contentTypeHeader, applicationJSON)
+	req.Header.Add("Content-Type", "application/json")
 	resp, err := o.DoHTTP(req)
 	if err != nil {
 		log.Errorf("Reindex from %s to %s failed", sourceName, destName)
