@@ -125,6 +125,7 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			ch <- fmt.Errorf("expected acknowldegement for index settings update but did not get. Actual response  %v", updatedIndexSettings)
 			return
 		}
+                ch <- nil
 	}()
 
 	return ch
