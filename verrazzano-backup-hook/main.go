@@ -29,6 +29,7 @@ var (
 	Component        string
 	Operation        string
 	Profile          string
+	VeleroNamespace  string
 )
 
 func main() {
@@ -36,6 +37,7 @@ func main() {
 	flag.StringVar(&Component, "component", "opensearch", "The Verrazzano component to be backed up or restored (Default = opensearch).")
 	flag.StringVar(&Operation, "operation", "", "Operation must be one of 'backup' or 'restore'.")
 	flag.StringVar(&Profile, "profile", "default", "Object store credentials profile.")
+	flag.StringVar(&VeleroNamespace, "namespace", "verrazzano-backup", "Namespace where Velero component is deployed.")
 
 	// Add the zap logger flag set to the CLI.
 	opts := kzap.Options{}
@@ -137,7 +139,7 @@ func main() {
 
 	// Get S3 access details from Velero Backup Storage location associated with Backup given as input
 	// Ensure the Backup Storage Location is NOT default
-	openSearchConData, err := k8s.PopulateConnData(constants.VeleroNameSpace, VeleroBackupName)
+	openSearchConData, err := k8s.PopulateConnData(VeleroNamespace, VeleroBackupName)
 	if err != nil {
 		log.Errorf("Unable to fetch secret: %v", err)
 		os.Exit(1)

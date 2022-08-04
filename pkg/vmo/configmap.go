@@ -11,6 +11,7 @@ import (
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
@@ -28,6 +29,12 @@ const (
 
 // CreateConfigmaps to create all required configmaps for VMI
 func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesConfigMap)
+	if metricErr != nil {
+		return metricErr
+	}
+	metric.Inc()
+
 	var configMaps []string
 
 	// Configmap for Grafana dashboard
@@ -74,12 +81,18 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 			}
 		}
 	}
+	timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesConfigMap)
+	if timeErr != nil {
+		return timeErr
+	}
+	timeMetric.SetLastTime()
 	return nil
 }
 
 // createUpdateDatasourcesConfigMap creates or updates the Grafana datasource configmap. If the configmap exists and the Prometheus URL still points
 // to the legacy VMO-managed Prometheus, then replace the Prometheus URL with the new Prometheus Operator-managed Prometheus URL.
 func createUpdateDatasourcesConfigMap(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmapName string, data map[string]string) error {
+
 	existingConfig, err := getConfigMap(controller, vmo.Namespace, configmapName)
 	if err != nil {
 		controller.log.Errorf("Failed to get configmap %s%s: %v", vmo.Namespace, configmapName, err)

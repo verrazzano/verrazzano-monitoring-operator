@@ -9,7 +9,7 @@ const (
 	VerrazzanoSystemNamespace = "verrazzano-system"
 
 	// VerrazzanoNameSpaceName Namespace where Velero components are installed
-	VeleroNameSpace = "velero"
+	VeleroNameSpace = "verrazzano-backup"
 
 	// BackupOperation backup operation expected value
 	BackupOperation = "backup"

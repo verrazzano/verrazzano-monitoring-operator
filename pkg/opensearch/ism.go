@@ -133,7 +133,7 @@ func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrol
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add(contentTypeHeader, applicationJSON)
 	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (o *OSClient) addPolicyToExistingIndices(opensearchEndpoint string, policy 
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add(contentTypeHeader, applicationJSON)
 	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return err

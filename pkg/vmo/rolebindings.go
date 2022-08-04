@@ -10,6 +10,7 @@ import (
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,11 @@ import (
 
 // CreateRoleBindings creates/updates VMO RoleBindings k8s resources
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesRoleBindings)
+	if metricErr != nil {
+		return metricErr
+	}
+	metric.Inc()
 	controller.log.Oncef("Creating/updating RoleBindings for VMI %s", vmo.Name)
 
 	newRoleBindings, err := NewRoleBindings(vmo, controller)
@@ -74,6 +80,11 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 			}
 		}
 	}
+	timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesRoleBindings)
+	if timeErr != nil {
+		return timeErr
+	}
+	timeMetric.SetLastTime()
 	return nil
 }
 

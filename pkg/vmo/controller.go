@@ -18,6 +18,7 @@ import (
 	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
@@ -428,6 +429,15 @@ func (c *Controller) syncHandler(key string) error {
 // converge the two.  We then update the Status block of the VMO resource
 // with the current status.
 func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	var errorObserved bool
+	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesReconcile)
+	if functionError == nil {
+		functionMetric.LogStart()
+		defer func() { functionMetric.LogEnd(errorObserved) }()
+	} else {
+		return functionError
+	}
+
 	originalVMO := vmo.DeepCopy()
 
 	// populate clusterInfo
@@ -449,7 +459,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	InitializeVMOSpec(c, vmo)
 
-	errorObserved := false
+	errorObserved = false
+
+	/***************************************
+	 * Configure Index AutoExpand settings
+	 ****************************************/
+	autoExpandIndexChannel := c.osClient.SetAutoExpandIndices(vmo)
 
 	/*********************
 	 * Configure ISM
@@ -516,6 +531,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if !errorObserved {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
+			functionMetric.IncError()
 			errorObserved = true
 		}
 	}
@@ -536,11 +552,22 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
 		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
 		c.log.Oncef("Updating VMO")
+		metric, err := metricsexporter.GetCounterMetrics(metricsexporter.NamesVMOUpdate)
+		if err != nil {
+			return err
+		}
+		metric.Inc()
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
 			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
 			errorObserved = true
 		}
+	}
+
+	autExpandIndexErr := <-autoExpandIndexChannel
+	if autExpandIndexErr != nil {
+		c.log.Errorf("Failed to update auto expand settings for indices: %v", err)
+		errorObserved = true
 	}
 
 	ismErr := <-ismChannel
@@ -560,6 +587,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 			c.log.Errorf("Failed to update currentVersion for VMI %s: %v", vmo.Name, err)
 		} else {
 			c.log.Oncef("Updated VMI currentVersion to %s", c.buildVersion)
+			timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesVMOUpdate)
+			if timeErr != nil {
+				return timeErr
+			}
+			timeMetric.SetLastTime()
 		}
 	}
 
@@ -594,7 +626,12 @@ func (c *Controller) enqueueVMO(obj interface{}) {
 // IsHealthy returns true if this controller is healthy, false otherwise. It's health is determined based on: (1) its
 // workqueue is 0 or decreasing in a timely manner, (2) it can communicate with API server, and (3) the CRD exists.
 func (c *Controller) IsHealthy() bool {
-
+	metric, err := metricsexporter.GetGaugeMetrics(metricsexporter.NamesQueue)
+	if err != nil {
+		zap.S().Error("Unable to retrieve simple gauge metric in isHealthy function")
+	} else {
+		metric.Set(float64(c.workqueue.Len()))
+	}
 	// Make sure if workqueue > 0, make sure it hasn't remained for longer than 60 seconds.
 	if startQueueLen := c.workqueue.Len(); startQueueLen > 0 {
 		if time.Since(c.lastEnqueue).Seconds() > float64(60) {

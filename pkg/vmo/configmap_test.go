@@ -5,9 +5,13 @@ package vmo
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
@@ -39,11 +43,20 @@ func TestCreateConfigmaps(t *testing.T) {
 	vmo.Spec.URI = "vmi.system.v8o-env.oracledx.com"
 	vmo.Spec.Grafana.DashboardsConfigMap = "myDashboardsConfigMap"
 	vmo.Spec.Grafana.DatasourcesConfigMap = "myDatasourcesConfigMap"
+
+	metricsexporter.RequiredInitialization()
+	previousCount := testutil.ToFloat64(metricsexporter.TestDelegate.GetCounterMetric(metricsexporter.NamesConfigMap))
+
 	err := CreateConfigmaps(controller, vmo)
 	t.Logf("Error is %v", err)
 	assert.Nil(t, err)
 	all, _ := client.CoreV1().ConfigMaps(vmo.Namespace).List(context.TODO(), metav1.ListOptions{})
 	assert.Equal(t, 2, len(all.Items))
+
+	newCount := testutil.ToFloat64(metricsexporter.TestDelegate.GetCounterMetric(metricsexporter.NamesConfigMap))
+	newTimeStamp := testutil.ToFloat64(metricsexporter.TestDelegate.GetTimestampMetric(metricsexporter.NamesConfigMap).WithLabelValues(fmt.Sprintf("%v", newCount)))
+	assert.Equal(t, previousCount+1, newCount)
+	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
 }
 
 // simple ConfigMapLister implementation
