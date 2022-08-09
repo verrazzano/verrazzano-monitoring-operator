@@ -140,7 +140,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: constants.GrafanaDbSecret,
+								Name: vmo.Spec.Grafana.Database.PasswordSecret,
 							},
 							Key: constants.VMOSecretPasswordField,
 						},
@@ -151,7 +151,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: constants.GrafanaDbSecret,
+								Name: vmo.Spec.Grafana.Database.PasswordSecret,
 							},
 							Key: constants.VMOSecretUsernameField,
 						},

@@ -188,9 +188,6 @@ const KeycloakCABundleData = "ca-bundle"
 // GrafanaAdminSecret is the name of the secret used to to start Grafana
 const GrafanaAdminSecret = "grafana-admin" //nolint:gosec //#gosec G101
 
-// GrafanaDbSecret is the name of the secret used to to access the db from Grafana
-const GrafanaDbSecret = "grafana-db" //nolint:gosec //#gosec G101
-
 const (
 	// Constants required for updating Opensearch keystore
 	VerrazzanoBackupScrtName      = "verrazzano-backup"
