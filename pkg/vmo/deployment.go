@@ -30,6 +30,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
+			controller.log.Oncef("Creating deployment %s/%s", osd.Namespace, osd.Name)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
 		} else {
 			return err
@@ -42,11 +43,11 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		err = updateDeployment(controller, vmo, existingDeployment, osd)
 	}
 	if err != nil {
-		metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
-		if metricErr != nil {
-			return metricErr
+		if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError); metricErr != nil {
+			controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateError, metricErr)
+		} else {
+			metric.Inc()
 		}
-		metric.Inc()
 		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
 		return err
 	}
@@ -106,11 +107,11 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			}
 		}
 		if err != nil {
-			metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
-			if metricErr != nil {
-				return false, metricErr
+			if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError); metricErr != nil {
+				controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateError, metricErr)
+			} else {
+				metric.Inc()
 			}
-			metric.Inc()
 			controller.log.Errorf("Failed to update deployment %s/%s: %v", curDeployment.Namespace, curDeployment.Name, err)
 			return false, err
 		}
@@ -163,25 +164,26 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 		return metricErr
 	}
 	metric.Inc()
-	controller.log.Debugf("Deleting deployment %s", deployment.Name)
+	controller.log.Oncef("Deleting deployment %s/%s", deployment.Namespace, deployment.Name)
 	err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 	if err != nil {
-		metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentDeleteError)
-		if metricErr != nil {
-			return metricErr
+		if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentDeleteError); metricErr != nil {
+			controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentDeleteError, metricErr)
+		} else {
+			metric.Inc()
 		}
-		metric.Inc()
 		controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
+		return err
 	}
 	return nil
 }
 
 func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
-	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
-	if metricErr != nil {
-		return metricErr
+	if metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter); metricErr != nil {
+		controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateCounter, metricErr)
+	} else {
+		metric.Inc()
 	}
-	metric.Inc()
 	var err error
 	curDeployment.Spec.Selector = existingDeployment.Spec.Selector
 	specDiffs := diff.Diff(existingDeployment, curDeployment)
@@ -222,11 +224,11 @@ func rollingUpdate(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitor
 			controller.log.Oncef("Updating deployment %s in namespace %s", current.Name, current.Namespace)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), current, metav1.UpdateOptions{})
 			if err != nil {
-				metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
-				if metricErr != nil {
-					return false, metricErr
+				if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError); err != nil {
+					controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateError, metricErr)
+				} else {
+					metric.Inc()
 				}
-				metric.Inc()
 				return false, err
 			}
 			//okay to return dirty=false after updating the *last* deployment
@@ -261,13 +263,14 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 			return false, metricErr
 		}
 		metric.Inc()
+		controller.log.Oncef("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 		if err != nil {
-			metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
-			if metricErr != nil {
-				return false, metricErr
+			if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError); metricErr != nil {
+				controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateError, metricErr)
+			} else {
+				metric.Inc()
 			}
-			metric.Inc()
 			return false, err
 		}
 	}
