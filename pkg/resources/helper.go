@@ -317,25 +317,6 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 	}
 }
 
-// CreateNodeAntiAffinityElement return an Affinity resource for a given VMO instance and component
-func CreateNodeAntiAffinityElement(vmoName string, component string) *corev1.Affinity {
-	return &corev1.Affinity{
-		PodAntiAffinity: &corev1.PodAntiAffinity{
-			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-				{
-					Weight: 100,
-					PodAffinityTerm: corev1.PodAffinityTerm{
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: GetSpecID(vmoName, component),
-						},
-						TopologyKey: "kubernetes.io/hostname",
-					},
-				},
-			},
-		},
-	}
-}
-
 // GetElasticsearchMasterInitContainer return an Elasticsearch Init container for the master.  This changes ownership of
 // the ES directory permissions needed to access PV volume data.  Also set the max map count.
 func GetElasticsearchMasterInitContainer() *corev1.Container {
