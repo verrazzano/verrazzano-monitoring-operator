@@ -26,6 +26,10 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		return nil
 	}
 
+	if err := controller.osClient.IsGreen(vmo); err != nil {
+		return err
+	}
+
 	var err error
 	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
 	if err != nil {
