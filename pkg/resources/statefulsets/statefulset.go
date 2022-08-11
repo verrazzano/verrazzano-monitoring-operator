@@ -56,7 +56,7 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 	statefulSet.Spec.Template.Labels[constants.NodeGroupLabel] = node.Name
 
 	statefulSet.Spec.Replicas = resources.NewVal(node.Replicas)
-	statefulSet.Spec.Template.Spec.Affinity = resources.CreateNodeAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
+	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
 	var elasticsearchUID int64 = 1000
 	esMasterContainer := &statefulSet.Spec.Template.Spec.Containers[0]

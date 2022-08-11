@@ -56,7 +56,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
-		deployment.Spec.Template.Spec.Affinity = resources.CreateNodeAntiAffinityElement(vmo.Name, config.Grafana.Name)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Grafana.Name)
 
 		deployment.Spec.Strategy.Type = "Recreate"
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
@@ -262,7 +262,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			Type: appsv1.RecreateDeploymentStrategyType,
 		}
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
-		deployment.Spec.Template.Spec.Affinity = resources.CreateNodeAntiAffinityElement(vmo.Name, config.Kibana.Name)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
 		}

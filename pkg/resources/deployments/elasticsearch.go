@@ -5,7 +5,6 @@ package deployments
 
 import (
 	"fmt"
-
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -15,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ElasticsearchBasic function type
@@ -107,7 +107,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		ingestDeployment.Spec.Replicas = resources.NewVal(node.Replicas)
 
 		// Anti-affinity on other client zones
-		ingestDeployment.Spec.Template.Spec.Affinity = resources.CreateNodeAntiAffinityElement(vmo.Name, config.ElasticsearchIngest.Name)
+		ingestDeployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchIngest.Name)
 		ingestDeployment.Spec.Template.Spec.Containers[0].Env = append(ingestDeployment.Spec.Template.Spec.Containers[0].Env,
 			corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)},
 			corev1.EnvVar{Name: "NETWORK_HOST", Value: "0.0.0.0"},
@@ -154,8 +154,21 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			}
 
 			// Anti-affinity on other data pod *nodes* (try out best to spread across many nodes)
-			dataDeployment.Spec.Template.Spec.Affinity = resources.CreateNodeAntiAffinityElement(vmo.Name, config.ElasticsearchData.Name)
-
+			dataDeployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
+				PodAntiAffinity: &corev1.PodAntiAffinity{
+					PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+						{
+							Weight: 100,
+							PodAffinityTerm: corev1.PodAffinityTerm{
+								LabelSelector: &metav1.LabelSelector{
+									MatchLabels: resources.GetSpecID(vmo.Name, config.ElasticsearchData.Name),
+								},
+								TopologyKey: "kubernetes.io/hostname",
+							},
+						},
+					},
+				},
+			}
 			// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
 			// initially owned by root/root.  Previous versions of the ES image were run as "root", and chown'd the mounted
 			// directory to "elasticsearch", but we don't want to run as "root".  The current ES image creates a group
