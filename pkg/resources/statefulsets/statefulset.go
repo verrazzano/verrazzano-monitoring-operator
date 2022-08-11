@@ -320,3 +320,44 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 		},
 	}
 }
+
+func NewOpenSearchDashboardsStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.StatefulSet {
+	var statefulSet *appsv1.StatefulSet
+
+	// Headless service for OpenSearch Dashboards
+	headlessService := resources.GetMetaName(vmo.Name, config.Kibana.Name)
+	statefulSetName := resources.GetMetaName(vmo.Name, config.Kibana.Name)
+
+	if vmo.Spec.Kibana.Enabled {
+		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
+		statefulSet = createStatefulSetElement(vmo, &vmo.Spec.Kibana.Resources, config.Kibana, headlessService, statefulSetName)
+
+		statefulSet.Spec.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{
+			Type: appsv1.RollingUpdateStatefulSetStrategyType,
+		}
+		statefulSet.Spec.PodManagementPolicy = appsv1.OrderedReadyPodManagement
+		statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
+		statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
+		statefulSet.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
+		}
+
+		statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 120
+		statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
+		statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 20
+		statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold = 10
+
+		statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 15
+		statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
+		statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
+		statefulSet.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
+
+		// add the required istio annotations to allow inter-es component communication
+		if statefulSet.Spec.Template.Annotations == nil {
+			statefulSet.Spec.Template.Annotations = make(map[string]string)
+		}
+		statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = fmt.Sprintf("%d", constants.OSHTTPPort)
+	}
+
+	return statefulSet
+}

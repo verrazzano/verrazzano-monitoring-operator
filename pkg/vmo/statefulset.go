@@ -5,15 +5,56 @@ package vmo
 
 import (
 	"context"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	appsv1 "k8s.io/api/apps/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+func updateOpenSearchDashboardsStatefulSet(osd *appsv1.StatefulSet, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, plan *statefulsets.StatefulSetPlan) error {
+	if osd == nil {
+		return nil
+	}
+
+	if err := controller.osClient.IsGreen(vmo); err != nil {
+		return err
+	}
+
+	var err error
+	existingStatefulSet, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(osd.Name)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			controller.log.Oncef("Creating StatefulSet %s/%s", osd.Namespace, osd.Name)
+			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
+		} else {
+			return err
+		}
+	} else {
+		err = controller.osClient.IsUpdated(vmo)
+		if err != nil {
+			return err
+		}
+		err = updateStatefulSet(controller, existingStatefulSet, vmo, plan)
+	}
+	if err != nil {
+		if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError); metricErr != nil {
+			controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateError, metricErr)
+		} else {
+			metric.Inc()
+		}
+		controller.log.Errorf("Failed to update StatefulSet %s/%s: %v", osd.Namespace, osd.Name, err)
+		return err
+	}
+
+	return nil
+}
 
 // CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
@@ -59,6 +100,17 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	for _, sts := range plan.Update {
 		if err := updateStatefulSet(controller, sts, vmo, plan); err != nil {
 			return plan.ExistingCluster, logReturnError(controller.log, sts, err)
+		}
+	}
+
+	// Create the OSD StatefulSet
+	if vmo.Spec.Kibana.Enabled {
+		osd := statefulsets.NewOpenSearchDashboardsStatefulSet(vmo)
+		if osd != nil {
+			err = updateOpenSearchDashboardsStatefulSet(osd, controller, vmo, plan)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 

@@ -21,44 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
-func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	if osd == nil {
-		return nil
-	}
-
-	if err := controller.osClient.IsGreen(vmo); err != nil {
-		return err
-	}
-
-	var err error
-	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
-	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			controller.log.Oncef("Creating deployment %s/%s", osd.Namespace, osd.Name)
-			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
-		} else {
-			return err
-		}
-	} else {
-		err = controller.osClient.IsUpdated(vmo)
-		if err != nil {
-			return err
-		}
-		err = updateDeployment(controller, vmo, existingDeployment, osd)
-	}
-	if err != nil {
-		if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError); metricErr != nil {
-			controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateError, metricErr)
-		} else {
-			metric.Inc()
-		}
-		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
-		return err
-	}
-
-	return nil
-}
-
 // CreateDeployments create/update VMO deployment k8s resources
 func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (dirty bool, err error) {
 	// The error count is incremented by the function which calls createDeployment
@@ -124,16 +86,6 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	openSearchDirty, err := updateOpenSearchDeployments(controller, vmo, openSearchDeployments, existingCluster)
 	if err != nil {
 		return false, err
-	}
-
-	// Create the OSD deployment
-	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
-	if osd != nil {
-		deploymentNames = append(deploymentNames, osd.Name)
-		err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
-		if err != nil {
-			return false, err
-		}
 	}
 
 	// Delete deployments that shouldn't exist

@@ -252,41 +252,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	return expected, err
 }
 
-func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.Deployment {
-	var deployment *appsv1.Deployment
-	if vmo.Spec.Kibana.Enabled {
-		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
-		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.Kibana, config.Kibana.Name)
-
-		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
-			Type: appsv1.RecreateDeploymentStrategyType,
-		}
-		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
-		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
-		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
-		}
-
-		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 120
-		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
-		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 20
-		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold = 10
-
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 15
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
-
-		// add the required istio annotations to allow inter-es component communication
-		if deployment.Spec.Template.Annotations == nil {
-			deployment.Spec.Template.Annotations = make(map[string]string)
-		}
-		deployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = fmt.Sprintf("%d", constants.OSHTTPPort)
-	}
-
-	return deployment
-}
-
 func createVolumeElement(pvcName string) corev1.Volume {
 	return corev1.Volume{
 		Name: constants.StorageVolumeName,
