@@ -346,6 +346,7 @@ var (
 	roleBindingLabelFunction func() string
 	VMOUpdateLabelFunction   func() string
 	TestDelegate             = metricsDelegate{}
+	HasBeenInitialized       = false
 )
 
 // initializeFailedMetricsArray simply adds metrics in the allMetrics array to the failed metrics map, call this before registering metrics
@@ -373,4 +374,10 @@ func (md *metricsDelegate) registerMetricsHandlersHelper() error {
 		}
 	}
 	return errorObserved
+}
+
+func ensureInitialized() {
+	if !HasBeenInitialized {
+		RequiredInitialization()
+	}
 }

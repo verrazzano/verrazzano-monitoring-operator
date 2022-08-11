@@ -25,7 +25,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		functionMetric.LogStart()
 		defer functionMetric.LogEnd(false)
 	} else {
-		return functionError
+		controller.log.Errorf("Failed to get ingress metric, defaulting to dummy metric: %v", functionError)
 	}
 
 	ingList, err := ingresses.New(vmo)
@@ -93,7 +93,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			}
 			metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesIngressDeleted)
 			if metricErr != nil {
-				return metricErr
+				controller.log.Errorf("Failed to get ingress deleted metric, defaulting to dummy metric: %v", metricErr)
 			}
 			metric.Inc()
 		}

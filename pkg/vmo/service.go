@@ -21,7 +21,7 @@ import (
 func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	counter, counterErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesServices)
 	if counterErr != nil {
-		return counterErr
+		controller.log.Errorf("Failed to get services metric, defaulting to dummy metric: %v", counterErr)
 	}
 	counter.Inc()
 
@@ -72,7 +72,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 		controller.log.Debugf("Successfully applied Service '%s'\n", serviceName)
 		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesServicesCreated)
 		if metricErr != nil {
-			return metricErr
+			controller.log.Errorf("Failed to get services created metric, defaulting to dummy metric: %v", metricErr)
 		}
 		metric.Inc()
 	}
@@ -95,7 +95,7 @@ func CreateServices(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonito
 	}
 	metric, metricErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesServices)
 	if metricErr != nil {
-		return metricErr
+		controller.log.Errorf("Failed to get services timestamp metric, defaulting to dummy metric: %v", metricErr)
 	}
 	metric.SetLastTime()
 	return nil

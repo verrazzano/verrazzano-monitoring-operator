@@ -435,7 +435,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		functionMetric.LogStart()
 		defer func() { functionMetric.LogEnd(errorObserved) }()
 	} else {
-		return functionError
+		c.log.Errorf("Failed to get reconcile metric, defaulting to dummy metric: %v", functionError)
 	}
 
 	originalVMO := vmo.DeepCopy()
@@ -549,7 +549,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		c.log.Oncef("Updating VMO")
 		metric, err := metricsexporter.GetCounterMetrics(metricsexporter.NamesVMOUpdate)
 		if err != nil {
-			return err
+			c.log.Errorf("Failed to get vmo update metric, defaulting to dummy metric: %v", err)
 		}
 		metric.Inc()
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
@@ -578,7 +578,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 			c.log.Oncef("Updated VMI currentVersion to %s", c.buildVersion)
 			timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesVMOUpdate)
 			if timeErr != nil {
-				return timeErr
+				c.log.Errorf("Failed to get vmo update timestamp metric, defaulting to dummy metric: %v", timeErr)
 			}
 			timeMetric.SetLastTime()
 		}

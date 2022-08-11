@@ -38,6 +38,7 @@ func RequiredInitialization() {
 	servicesLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesServices].GetLabel
 	roleBindingLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesRoleBindings].GetLabel
 	VMOUpdateLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesVMOUpdate].GetLabel
+	HasBeenInitialized = true
 }
 
 // InitRegisterStart call this function in order to completely initialize and start the metrics exporter. Populates, registers, and starts the metrics server.
@@ -118,8 +119,25 @@ func (md *metricsDelegate) GetTimestampMetric(name metricName) *prometheus.Gauge
 
 // GetFunctionMetrics returns a functionMetric for use if it exists, otherwise returns nil.
 func GetFunctionMetrics(name metricName) (*FunctionMetrics, error) {
+	ensureInitialized()
 	returnVal, found := MetricsExp.internalData.functionMetricsMap[name]
 	if !found {
+		returnVal = &FunctionMetrics{
+			durationMetric: DurationMetric{
+				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}),
+			},
+			callsTotal: CounterMetric{
+				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}),
+			},
+			lastCallTimestamp: TimestampMetric{
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}, []string{"index"}),
+			},
+			errorTotal: ErrorMetric{
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}, []string{"index"}),
+			},
+			index:         int64(0),
+			labelFunction: &DefaultLabelFunction,
+		}
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the functionMetrics map", name)
 	}
 	return returnVal, nil
@@ -143,8 +161,12 @@ func (md *metricsDelegate) GetFunctionCounterMetric(name metricName) prometheus.
 
 // GetCounterMetrics returns a simpleCounterMetric for use if it exists, otherwise returns nil.
 func GetCounterMetrics(name metricName) (*CounterMetric, error) {
+	ensureInitialized()
 	returnVal, found := MetricsExp.internalData.simpleCounterMetricMap[name]
 	if !found {
+		returnVal = &CounterMetric{
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}),
+		}
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleCounterMetric map", name)
 	}
 	return returnVal, nil
@@ -152,8 +174,12 @@ func GetCounterMetrics(name metricName) (*CounterMetric, error) {
 
 // GetGaugeMetrics returns a simpleGaugeMetric for use if it exists, otherwise returns nil.
 func GetGaugeMetrics(name metricName) (*GaugeMetric, error) {
+	ensureInitialized()
 	returnVal, found := MetricsExp.internalData.simpleGaugeMetricMap[name]
 	if !found {
+		returnVal = &GaugeMetric{
+			metric: prometheus.NewGauge(prometheus.GaugeOpts{Name: "dummyMetric", Help: "This metric is returned to avoid a null metric"}),
+		}
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the simpleGaugeMetric map", name)
 	}
 	return returnVal, nil
@@ -161,8 +187,13 @@ func GetGaugeMetrics(name metricName) (*GaugeMetric, error) {
 
 // GetErrorMetrics returns a ErrorMetric for use if it exists, otherwise returns nil.
 func GetErrorMetrics(name metricName) (*ErrorMetric, error) {
+	ensureInitialized()
 	returnVal, found := MetricsExp.internalData.errorMetricMap[name]
 	if !found {
+		returnVal = &ErrorMetric{
+			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}, []string{"index"}),
+			labelFunction: &deploymentLabelFunction,
+		}
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the errorMetric map", name)
 	}
 	return returnVal, nil
@@ -170,8 +201,12 @@ func GetErrorMetrics(name metricName) (*ErrorMetric, error) {
 
 // GetDurationMetrics returns a durationMetric for use if it exists, otherwise returns nil.
 func GetDurationMetrics(name metricName) (*DurationMetric, error) {
+	ensureInitialized()
 	returnVal, found := MetricsExp.internalData.durationMetricMap[name]
 	if !found {
+		returnVal = &DurationMetric{
+			metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}),
+		}
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the durationMetric map", name)
 	}
 	return returnVal, nil
@@ -179,8 +214,13 @@ func GetDurationMetrics(name metricName) (*DurationMetric, error) {
 
 // GetTimestampMetrics returns a timeStampMetric for use if it exists, otherwise returns nil.
 func GetTimestampMetrics(name metricName) (*TimestampMetric, error) {
+	ensureInitialized()
 	returnVal, found := MetricsExp.internalData.timestampMetricMap[name]
 	if !found {
+		returnVal = &TimestampMetric{
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "dummyMetric", Help: "This metric is created to avoid any nil values being returned"}, []string{"index"}),
+			labelFunction: &deploymentLabelFunction,
+		}
 		return returnVal, fmt.Errorf("%v is not a valid function metric, it is not in the timestampMetric map", name)
 	}
 	return returnVal, nil

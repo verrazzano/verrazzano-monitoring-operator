@@ -44,7 +44,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 	if err != nil {
 		metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
 		if metricErr != nil {
-			return metricErr
+			controller.log.Errorf("Failed to get deployment update error metric, defaulting to dummy metric: %v", metricErr)
 		}
 		metric.Inc()
 		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
@@ -62,7 +62,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		functionMetric.LogStart()
 		defer functionMetric.LogEnd(false)
 	} else {
-		return false, functionError
+		controller.log.Errorf("Failed to get deployment metric, defaulting to dummy metric: %v", functionError)
 	}
 
 	// Assigning the following spec members seems like a hack; is any
@@ -108,7 +108,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		if err != nil {
 			metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
 			if metricErr != nil {
-				return false, metricErr
+				controller.log.Errorf("Failed to get deployment update error metric, defaulting to dummy metric: %v", metricErr)
 			}
 			metric.Inc()
 			controller.log.Errorf("Failed to update deployment %s/%s: %v", curDeployment.Namespace, curDeployment.Name, err)
@@ -160,7 +160,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {
 	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentDeleteCounter)
 	if metricErr != nil {
-		return metricErr
+		controller.log.Errorf("Failed to get deployment delete metric, defaulting to dummy metric: %v", metricErr)
 	}
 	metric.Inc()
 	controller.log.Debugf("Deleting deployment %s", deployment.Name)
@@ -168,7 +168,7 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	if err != nil {
 		metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentDeleteError)
 		if metricErr != nil {
-			return metricErr
+			controller.log.Errorf("Failed to get deployment delete error metric, defaulting to dummy metric: %v", metricErr)
 		}
 		metric.Inc()
 		controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
@@ -179,7 +179,7 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
 	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
 	if metricErr != nil {
-		return metricErr
+		controller.log.Errorf("Failed to get deployment update metric, defaulting to dummy metric: %v", metricErr)
 	}
 	metric.Inc()
 	var err error
@@ -210,7 +210,7 @@ func rollingUpdate(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitor
 		}
 		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
 		if metricErr != nil {
-			return false, metricErr
+			controller.log.Errorf("Failed to get deployment update metric, defaulting to dummy metric: %v", metricErr)
 		}
 		metric.Inc()
 		// Selector may not change, so we copy over from existing
@@ -224,7 +224,7 @@ func rollingUpdate(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitor
 			if err != nil {
 				metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
 				if metricErr != nil {
-					return false, metricErr
+					controller.log.Errorf("Failed to get deployment update error metric, defaulting to dummy metric: %v", metricErr)
 				}
 				metric.Inc()
 				return false, err
@@ -258,14 +258,14 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 		}
 		metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter)
 		if metricErr != nil {
-			return false, metricErr
+			controller.log.Errorf("Failed to get deployment update metric, defaulting to dummy metric: %v", metricErr)
 		}
 		metric.Inc()
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 		if err != nil {
 			metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)
 			if metricErr != nil {
-				return false, metricErr
+				controller.log.Errorf("Failed to get deployment update error metric, defaulting to dummy metric: %v", metricErr)
 			}
 			metric.Inc()
 			return false, err

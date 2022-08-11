@@ -31,7 +31,7 @@ const (
 func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesConfigMap)
 	if metricErr != nil {
-		return metricErr
+		controller.log.Errorf("Failed to get configmap metric, defaulting to dummy metric: %v", metricErr)
 	}
 	metric.Inc()
 
@@ -83,7 +83,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	}
 	timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesConfigMap)
 	if timeErr != nil {
-		return timeErr
+		controller.log.Errorf("Failed to get configmap duration metric, defaulting to dummy metric: %v", timeErr)
 	}
 	timeMetric.SetLastTime()
 	return nil

@@ -21,7 +21,7 @@ import (
 func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesRoleBindings)
 	if metricErr != nil {
-		return metricErr
+		controller.log.Errorf("Failed to get rolebindings metric, defaulting to dummy metric: %v", metricErr)
 	}
 	metric.Inc()
 	controller.log.Oncef("Creating/updating RoleBindings for VMI %s", vmo.Name)
@@ -82,7 +82,7 @@ func CreateRoleBindings(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 	timeMetric, timeErr := metricsexporter.GetTimestampMetrics(metricsexporter.NamesRoleBindings)
 	if timeErr != nil {
-		return timeErr
+		controller.log.Errorf("Failed to get role bindings timestamp metrics, defaulting to dummy metric: %v", timeErr)
 	}
 	timeMetric.SetLastTime()
 	return nil
