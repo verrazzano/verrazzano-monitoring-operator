@@ -6,20 +6,18 @@ package statefulsets
 import (
 	"testing"
 
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
-	storagev1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const defaultStorageClass = "default"
@@ -187,7 +185,7 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	const esMasterData = "/usr/share/opensearch/data"
 
 	assert.Equal(*resources.NewVal(replicas), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
-	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
+	affin := resources.CreateNodeAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
 	var elasticsearchUID int64 = 1000
 	assert.Equal(elasticsearchUID, *sts.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser,
@@ -277,7 +275,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleIngest])
 
 	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
-	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
+	affin := resources.CreateNodeAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
 	var elasticsearchUID int64 = 1000
 	assert.Equal(elasticsearchUID, *sts.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser,

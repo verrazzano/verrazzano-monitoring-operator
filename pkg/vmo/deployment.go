@@ -30,6 +30,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
+			controller.log.Oncef("Creating deployment %s/%s", osd.Namespace, osd.Name)
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
 		} else {
 			return err
@@ -163,7 +164,7 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 		controller.log.Errorf("Failed to get deployment delete metric, defaulting to dummy metric: %v", metricErr)
 	}
 	metric.Inc()
-	controller.log.Debugf("Deleting deployment %s", deployment.Name)
+	controller.log.Oncef("Deleting deployment %s/%s", deployment.Namespace, deployment.Name)
 	err := controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
 	if err != nil {
 		metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentDeleteError)
@@ -172,6 +173,7 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 		}
 		metric.Inc()
 		controller.log.Errorf("Failed to delete deployment %s: %v", deployment.Name, err)
+		return err
 	}
 	return nil
 }
@@ -261,6 +263,7 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 			controller.log.Errorf("Failed to get deployment update metric, defaulting to dummy metric: %v", metricErr)
 		}
 		metric.Inc()
+		controller.log.Oncef("Updating deployment %s in namespace %s", curDeployment.Name, curDeployment.Namespace)
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 		if err != nil {
 			metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError)

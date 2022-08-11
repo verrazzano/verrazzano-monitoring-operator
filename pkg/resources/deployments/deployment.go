@@ -55,6 +55,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		expected.GrafanaDeployments++
 		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
+		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateNodeAntiAffinityElement(vmo.Name, config.Grafana.Name)
 
 		deployment.Spec.Strategy.Type = "Recreate"
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
@@ -129,6 +131,35 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				{Name: "GF_AUTH_PROXY_HEADER_NAME", Value: "X-WEBAUTH-USER"},
 				{Name: "GF_AUTH_PROXY_HEADER_PROPERTY", Value: "username"},
 				{Name: "GF_AUTH_PROXY_AUTO_SIGN_UP", Value: "true"},
+			}...)
+		}
+		if vmo.Spec.Grafana.Database != nil {
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{
+					Name: "GF_DATABASE_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vmo.Spec.Grafana.Database.PasswordSecret,
+							},
+							Key: constants.VMOSecretPasswordField,
+						},
+					},
+				},
+				{
+					Name: "GF_DATABASE_USER",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vmo.Spec.Grafana.Database.PasswordSecret,
+							},
+							Key: constants.VMOSecretUsernameField,
+						},
+					},
+				},
+				{Name: "GF_DATABASE_HOST", Value: vmo.Spec.Grafana.Database.Host},
+				{Name: "GF_DATABASE_TYPE", Value: "mysql"},
+				{Name: "GF_DATABASE_NAME", Value: vmo.Spec.Grafana.Database.Name},
 			}...)
 		}
 		if vmo.Spec.URI != "" {
@@ -231,7 +262,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			Type: appsv1.RecreateDeploymentStrategyType,
 		}
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
-		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateNodeAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
 		}

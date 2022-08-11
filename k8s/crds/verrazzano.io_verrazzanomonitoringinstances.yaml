@@ -374,10 +374,23 @@ spec:
                 properties:
                   dashboardsConfigMap:
                     type: string
+                  database:
+                    description: Database details
+                    properties:
+                      host:
+                        type: string
+                      name:
+                        type: string
+                      passwordSecret:
+                        type: string
+                    type: object
                   datasourcesConfigMap:
                     type: string
                   enabled:
                     type: boolean
+                  replicas:
+                    format: int32
+                    type: integer
                   resources:
                     description: Resources details
                     properties:
