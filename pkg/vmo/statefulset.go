@@ -76,6 +76,22 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		return false, err
 	}
 
+	// Determine if Kibana is expected to be deployed, and if so, only deploy
+	// once ES is green.
+	waitingForKibana := false
+	var waitingForKibanaErr error
+	if vmo.Spec.Kibana.Enabled {
+		if err := controller.osClient.IsGreen(vmo); err != nil {
+			waitingForKibana = true
+			waitingForKibanaErr = err
+		} else {
+			osd := statefulsets.NewOpenSearchDashboardsStatefulSet(vmo)
+			if osd != nil {
+				expectedList = append(expectedList, osd)
+			}
+		}
+	}
+
 	// Loop through the existing stateful sets and create/update as needed
 	controller.log.Oncef("Creating/updating Statefulsets for VMI %s", vmo.Name)
 	plan := statefulsets.CreatePlan(controller.log, existingList, expectedList)
@@ -103,17 +119,6 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		}
 	}
 
-	// Create the OSD StatefulSet
-	if vmo.Spec.Kibana.Enabled {
-		osd := statefulsets.NewOpenSearchDashboardsStatefulSet(vmo)
-		if osd != nil {
-			err = updateOpenSearchDashboardsStatefulSet(osd, controller, vmo, plan)
-			if err != nil {
-				return false, err
-			}
-		}
-	}
-
 	for _, sts := range plan.Delete {
 		if err := scaleDownStatefulSet(controller, expectedList, sts, vmo); err != nil {
 			return plan.ExistingCluster, err
@@ -121,6 +126,11 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		// We only scale down one statefulset at a time. This gives the statefulset data
 		// time to migrate and the cluster to heal itself.
 		break
+	}
+
+	// If Kibana is not expected yet, return false
+	if waitingForKibana {
+		return false, waitingForKibanaErr
 	}
 
 	if plan.Conflict == nil {
