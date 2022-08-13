@@ -6,20 +6,18 @@ package statefulsets
 import (
 	"testing"
 
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
-	storagev1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const defaultStorageClass = "default"
@@ -28,6 +26,39 @@ var storageClass = storagev1.StorageClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: defaultStorageClass,
 	},
+}
+
+// TestNewOpenSearchDashboardsStatefulSet tests the creation of OpenSearch-Dashboard StatefulSets
+// GIVEN a VMI spec with an Kibana spec having 'enabled' set to true
+//  WHEN I call NewOpenSearchDashboardsStatefulSet
+//  THEN there should be a StatefulSet created
+func TestNewOpenSearchDashboardsStatefulSet(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Kibana: vmcontrollerv1.Kibana{
+				Enabled: true,
+			},
+		},
+	}
+	statefulSet := NewOpenSearchDashboardsStatefulSet(vmo)
+	assert.Equal(t, appsv1.RollingUpdateStatefulSetStrategyType, statefulSet.Spec.UpdateStrategy.Type)
+	assert.NotNil(t, statefulSet)
+}
+
+// TestNewOpenSearchDashboardsStatefulSetDisabled tests the creation of OpenSearch-Dashboard StatefulSets
+// GIVEN a VMI spec with an Kibana spec having 'enabled' set to false
+//  WHEN I call NewOpenSearchDashboardsStatefulSet
+//  THEN there should be no StatefulSets created
+func TestNewOpenSearchDashboardsStatefulSetDisabled(t *testing.T) {
+	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Kibana: vmcontrollerv1.Kibana{
+				Enabled: false,
+			},
+		},
+	}
+	statefulSet := NewOpenSearchDashboardsStatefulSet(vmo)
+	assert.Nil(t, statefulSet)
 }
 
 // TestVMOEmptyStatefulSetSize tests the creation of a VMI without StatefulSets
