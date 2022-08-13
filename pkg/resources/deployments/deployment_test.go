@@ -54,7 +54,7 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 		t.Error(err)
 	}
 	deployments := expected.Deployments
-	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 4, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
@@ -90,7 +90,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 		t.Error(err)
 	}
 	deployments := expected.Deployments
-	assert.Equal(t, 3, len(deployments), "Length of generated deployments")
+	assert.Equal(t, 2, len(deployments), "Length of generated deployments")
 	assert.Equal(t, constants.VMOKind, deployments[0].ObjectMeta.OwnerReferences[0].Kind, "OwnerReferences is not set by default")
 }
 
