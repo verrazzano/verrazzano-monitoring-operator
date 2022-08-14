@@ -6,8 +6,12 @@ package vmo
 import (
 	"context"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
@@ -16,81 +20,20 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// CreateStatefulSets creates/updates/deletes VMO statefulset k8s resources
+// CreateStatefulSets creates/updates/deletes VMO StatefulSet k8s resources
 func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) (bool, error) {
-	storageClass, err := getStorageClassOverride(controller, vmo.Spec.StorageClass)
-	if err != nil {
-		controller.log.Errorf("Failed to determine storage class for VMI %s: %v", vmo.Name, err)
-		return false, err
-	}
-
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
-	existingList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
+	existingList, expectedList, err := getLists(controller, vmo, selector)
 	if err != nil {
 		return false, err
-	}
-	initialMasterNodes := getInitialMasterNodes(vmo, existingList)
-	expectedList, err := statefulsets.New(controller.log, vmo, storageClass, initialMasterNodes)
-	if err != nil {
-		controller.log.Errorf("Failed to create StatefulSet specs for VMI %s: %v", vmo.Name, err)
-		return false, err
-	}
-
-	// Determine if Kibana is expected to be deployed, and if so, only deploy
-	// once ES is green.
-	waitingForKibana := false
-	var waitingForKibanaErr error
-	if vmo.Spec.Kibana.Enabled {
-		if err := controller.osClient.IsGreen(vmo); err != nil {
-			waitingForKibana = true
-			waitingForKibanaErr = err
-		} else {
-			osd := statefulsets.NewOpenSearchDashboardsStatefulSet(vmo)
-			if osd != nil {
-				expectedList = append(expectedList, osd)
-			}
-		}
 	}
 
 	// Loop through the existing stateful sets and create/update as needed
-	controller.log.Oncef("Creating/updating Statefulsets for VMI %s", vmo.Name)
+	controller.log.Oncef("Creating/updating StatefulSets for VMI %s", vmo.Name)
 	plan := statefulsets.CreatePlan(controller.log, existingList, expectedList)
 
-	for _, sts := range plan.Create {
-		if _, err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), sts, metav1.CreateOptions{}); err != nil {
-			return plan.ExistingCluster, logReturnError(controller.log, sts, err)
-		}
-	}
-
-	// Loop through existing statefulsets again to update PVC owner references
-	latestList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
-	if err != nil {
+	if err = executePlan(controller, plan, vmo, expectedList, selector); err != nil {
 		return plan.ExistingCluster, err
-	}
-	for _, sts := range latestList {
-		if err := updateOwnerForPVCs(controller, sts, vmo.Name, vmo.Namespace); err != nil {
-			return plan.ExistingCluster, err
-		}
-	}
-
-	for _, sts := range plan.Update {
-		if err := updateStatefulSet(controller, sts, vmo, plan); err != nil {
-			return plan.ExistingCluster, logReturnError(controller.log, sts, err)
-		}
-	}
-
-	for _, sts := range plan.Delete {
-		if err := scaleDownStatefulSet(controller, expectedList, sts, vmo); err != nil {
-			return plan.ExistingCluster, err
-		}
-		// We only scale down one statefulset at a time. This gives the statefulset data
-		// time to migrate and the cluster to heal itself.
-		break
-	}
-
-	// If Kibana is not expected yet, return false
-	if waitingForKibana {
-		return false, waitingForKibanaErr
 	}
 
 	if plan.Conflict == nil {
@@ -98,7 +41,83 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	} else {
 		controller.log.Errorf("StatefulSet update plan conflict: %v", plan.Conflict)
 	}
+
+	// Determine if Kibana is expected to be deployed, and if so, only deploy
+	// once ES is green.
+	if vmo.Spec.Kibana.Enabled {
+		if err := controller.osClient.IsGreen(vmo); err != nil {
+			return false, err
+		} else {
+			if osd := statefulsets.NewOpenSearchDashboardsStatefulSet(vmo); osd != nil {
+				if err = updateOpenSearchDashboardsStatefulSet(osd, controller, vmo); err != nil {
+					return false, err
+				}
+			}
+		}
+	}
+
 	return plan.ExistingCluster, plan.Conflict
+}
+
+func getLists(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, selector labels.Selector) ([]*appsv1.StatefulSet, []*appsv1.StatefulSet, error) {
+	storageClass, err := getStorageClassOverride(controller, vmo.Spec.StorageClass)
+	if err != nil {
+		controller.log.Errorf("Failed to determine storage class for VMI %s: %v", vmo.Name, err)
+		return nil, nil, err
+	}
+
+	existingList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
+	if err != nil {
+		return nil, nil, err
+	}
+	initialMasterNodes := getInitialMasterNodes(vmo, existingList)
+	expectedList, err := statefulsets.New(controller.log, vmo, storageClass, initialMasterNodes)
+	if err != nil {
+		controller.log.Errorf("Failed to create StatefulSet specs for VMI %s: %v", vmo.Name, err)
+		return nil, nil, err
+	}
+	return existingList, expectedList, nil
+}
+
+func executePlan(controller *Controller, plan *statefulsets.StatefulSetPlan, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, expectedList []*appsv1.StatefulSet, selector labels.Selector) error {
+	for _, sts := range plan.Create {
+		if _, err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), sts, metav1.CreateOptions{}); err != nil {
+			return logReturnError(controller.log, sts, err)
+		}
+	}
+
+	// Loop through existing StatefulSets again to update PVC owner references
+	latestList, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).List(selector)
+	if err != nil {
+		return err
+	}
+	for _, sts := range latestList {
+		if err := updateOwnerForPVCs(controller, sts, vmo.Namespace); err != nil {
+			return err
+		}
+	}
+
+	for _, sts := range plan.Update {
+		if err := updateStatefulSet(controller, sts, vmo, plan); err != nil {
+			return logReturnError(controller.log, sts, err)
+		}
+	}
+
+	for _, sts := range plan.Delete {
+		// Ignore deletes of the Kibana StatefulSet, it was intentionally left out of the expected list
+		// to ensure it is processed after the ES components.  During an upgrade ES may start out green
+		// but is going to get upgraded, and we don't want Kibana to get updated until after ES.
+		if sts.Name == resources.GetMetaName(vmo.Name, config.Kibana.Name) {
+			continue
+		}
+		if err := scaleDownStatefulSet(controller, expectedList, sts, vmo); err != nil {
+			return err
+		}
+		// We only scale down one StatefulSet at a time. This gives the StatefulSet data
+		// time to migrate and the cluster to heal itself.
+		break
+	}
+	return nil
 }
 
 func logReturnError(log vzlog.VerrazzanoLogger, sts *appsv1.StatefulSet, err error) error {
@@ -174,7 +193,7 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 // to the STS resource, the PVC will automatically get deleted when the STS is deleted.
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
 // NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
-func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
+func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoNamespace string) error {
 	pvcNames := statefulsets.GetPVCNames(statefulSet)
 	for _, pvcName := range pvcNames {
 		pvc, err := controller.pvcLister.PersistentVolumeClaims(vmoNamespace).Get(pvcName)
@@ -194,6 +213,32 @@ func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet,
 		_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
 			controller.log.Errorf("Failed to update the owner reference in PVC %s: %v", pvc.Name, err)
+			return err
+		}
+	}
+	return nil
+}
+
+func updateOpenSearchDashboardsStatefulSet(osd *appsv1.StatefulSet, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
+	if osd == nil {
+		return nil
+	}
+
+	var err error
+	existingStatefulSet, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(osd.Name)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			controller.log.Oncef("Creating StatefulSet %s/%s", osd.Namespace, osd.Name)
+			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
+		} else {
+			return err
+		}
+	} else {
+		if err = controller.osClient.IsUpdated(vmo); err != nil {
+			return err
+		}
+		plan := statefulsets.CreatePlan(controller.log, []*appsv1.StatefulSet{existingStatefulSet}, []*appsv1.StatefulSet{existingStatefulSet})
+		if err = updateStatefulSet(controller, existingStatefulSet, vmo, plan); err != nil {
 			return err
 		}
 	}
