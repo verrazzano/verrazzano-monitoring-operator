@@ -47,11 +47,10 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	if vmo.Spec.Kibana.Enabled {
 		if err := controller.osClient.IsGreen(vmo); err != nil {
 			return false, err
-		} else {
-			if osd := statefulsets.NewOpenSearchDashboardsStatefulSet(vmo); osd != nil {
-				if err = updateOpenSearchDashboardsStatefulSet(osd, controller, vmo); err != nil {
-					return false, err
-				}
+		}
+		if osd := statefulsets.NewOpenSearchDashboardsStatefulSet(vmo); osd != nil {
+			if err = updateOpenSearchDashboardsStatefulSet(osd, controller, vmo); err != nil {
+				return false, err
 			}
 		}
 	}
@@ -229,7 +228,9 @@ func updateOpenSearchDashboardsStatefulSet(osd *appsv1.StatefulSet, controller *
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			controller.log.Oncef("Creating StatefulSet %s/%s", osd.Namespace, osd.Name)
-			_, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
+			if _, err = controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{}); err != nil {
+				return err
+			}
 		} else {
 			return err
 		}
