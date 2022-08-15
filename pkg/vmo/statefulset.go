@@ -5,7 +5,6 @@ package vmo
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -234,7 +233,7 @@ func updateOpenSearchDashboardsStatefulSet(osd *appsv1.StatefulSet, controller *
 			return err
 		}
 		// Return a temporary error to give some time for the "delete" to start processing
-		return errors.New(fmt.Sprintf("waiting for delete of deployment %s in namespace %s to start processing", osd.Name, vmo.Namespace))
+		return fmt.Errorf("waiting for delete of deployment %s in namespace %s to start processing", osd.Name, vmo.Namespace)
 	} else if !k8serrors.IsNotFound(err) {
 		return err
 	}
