@@ -5,8 +5,8 @@ package vmo
 
 import (
 	"context"
-
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"errors"
+	"fmt"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
@@ -16,6 +16,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/statefulsets"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	appsv1 "k8s.io/api/apps/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -42,8 +43,8 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		controller.log.Errorf("StatefulSet update plan conflict: %v", plan.Conflict)
 	}
 
-	// Determine if Kibana is expected to be deployed, and if so, only deploy
-	// once ES is green.
+	// Determine if OpenSearch-Dashboards is expected to be deployed, and if so, only deploy
+	// once OpenSearch is green.
 	if vmo.Spec.Kibana.Enabled {
 		if err := controller.osClient.IsGreen(vmo); err != nil {
 			return false, err
@@ -58,6 +59,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	return plan.ExistingCluster, plan.Conflict
 }
 
+// getLists - return the list of existing and expected StatefulSets
 func getLists(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, selector labels.Selector) ([]*appsv1.StatefulSet, []*appsv1.StatefulSet, error) {
 	storageClass, err := getStorageClassOverride(controller, vmo.Spec.StorageClass)
 	if err != nil {
@@ -78,6 +80,7 @@ func getLists(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringIn
 	return existingList, expectedList, nil
 }
 
+// executePlan - execute the plan for creating, updating and deleting OpenSearch components
 func executePlan(controller *Controller, plan *statefulsets.StatefulSetPlan, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, expectedList []*appsv1.StatefulSet, selector labels.Selector) error {
 	for _, sts := range plan.Create {
 		if _, err := controller.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Create(context.TODO(), sts, metav1.CreateOptions{}); err != nil {
@@ -103,9 +106,9 @@ func executePlan(controller *Controller, plan *statefulsets.StatefulSetPlan, vmo
 	}
 
 	for _, sts := range plan.Delete {
-		// Ignore deletes of the Kibana StatefulSet, it was intentionally left out of the expected list
-		// to ensure it is processed after the ES components.  During an upgrade ES may start out green
-		// but is going to get upgraded, and we don't want Kibana to get updated until after ES.
+		// Ignore deletes of the OpenSearch-Dashboards StatefulSet, it was intentionally left out of the expected list
+		// to ensure it is processed after the OpenSearch components.  During an upgrade OpenSearch may start out green
+		// but is going to get upgraded, and we don't want OpenSearch-Dashboards to get updated until after OpenSearch.
 		if sts.Name == resources.GetMetaName(vmo.Name, config.Kibana.Name) {
 			continue
 		}
@@ -224,6 +227,18 @@ func updateOpenSearchDashboardsStatefulSet(osd *appsv1.StatefulSet, controller *
 	}
 
 	var err error
+
+	// If there is still an OpenSearch Dashboard deployment, delete that first before using StatefulSets
+	if _, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Get(context.TODO(), osd.Name, metav1.GetOptions{}); err == nil {
+		if err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Delete(context.TODO(), osd.Name, metav1.DeleteOptions{}); err != nil {
+			return err
+		}
+		// Return a temporary error to give some time for the "delete" to start processing
+		return errors.New(fmt.Sprintf("waiting for delete of deployment %s in namespace %s to start processing", osd.Name, vmo.Namespace))
+	} else if !k8serrors.IsNotFound(err) {
+		return err
+	}
+
 	existingStatefulSet, err := controller.statefulSetLister.StatefulSets(vmo.Namespace).Get(osd.Name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {

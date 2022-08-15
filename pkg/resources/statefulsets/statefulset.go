@@ -281,7 +281,7 @@ fi`,
 	return statefulSet
 }
 
-// Creates a statefulset element for the given VMO and component
+// Creates a StatefulSet element for the given VMO and component
 func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources,
 	componentDetails config.ComponentDetails, serviceName, statefulSetName string) *appsv1.StatefulSet {
 	labels := resources.GetSpecID(vmo.Name, componentDetails.Name)
@@ -298,8 +298,8 @@ func createStatefulSetElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, 
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: resources.NewVal(1),
-			// The default PodManagementPolicy (OrderedReady) has known issues where a statefulset with
-			// a crashing pod is never updated on further statefulset changes, so use Parallel here
+			// The default PodManagementPolicy (OrderedReady) has known issues where a StatefulSet with
+			// a crashing pod is never updated on further StatefulSet changes, so use Parallel here
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			ServiceName:         serviceName,
 			Selector: &metav1.LabelSelector{
@@ -329,7 +329,7 @@ func NewOpenSearchDashboardsStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoring
 	statefulSetName := resources.GetMetaName(vmo.Name, config.Kibana.Name)
 
 	if vmo.Spec.Kibana.Enabled {
-		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
+		openSearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
 		statefulSet = createStatefulSetElement(vmo, &vmo.Spec.Kibana.Resources, config.Kibana, headlessService, statefulSetName)
 
 		statefulSet.Spec.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{
@@ -339,7 +339,7 @@ func NewOpenSearchDashboardsStatefulSet(vmo *vmcontrollerv1.VerrazzanoMonitoring
 		statefulSet.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
 		statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		statefulSet.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
+			{Name: "OPENSEARCH_HOSTS", Value: openSearchURL},
 		}
 
 		statefulSet.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 120
