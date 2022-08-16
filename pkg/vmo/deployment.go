@@ -54,7 +54,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		if existingDeployment.Status.ReadyReplicas == *existingDeployment.Spec.Replicas &&
 			*resources.NewVal(vmo.Spec.Kibana.Replicas) > *existingDeployment.Spec.Replicas {
 			// Ok to scale up
-			*existingDeployment.Spec.Replicas++
+			*osd.Spec.Replicas = *existingDeployment.Spec.Replicas + 1
 			controller.log.Oncef("Incrementing replica count of deployment %s/%s to %d", osd.Namespace, osd.Name, *existingDeployment.Spec.Replicas)
 		}
 		if err = updateDeployment(controller, vmo, existingDeployment, osd); err == nil {
