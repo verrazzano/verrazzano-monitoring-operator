@@ -21,7 +21,7 @@ type (
 )
 
 const (
-	indexSettings     = `{"index_patterns": [".opendistro*", "verrazzano-jaeger*"],"priority": 0,"template": {"settings": {"auto_expand_replicas": "0-1"}}}`
+	indexSettings     = `{"index_patterns": [".opendistro*"],"priority": 0,"template": {"settings": {"auto_expand_replicas": "0-1"}}}`
 	applicationJSON   = "application/json"
 	contentTypeHeader = "Content-Type"
 )
@@ -99,7 +99,7 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			return
 		}
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		settingsURL := fmt.Sprintf("%s/_index_template/system-index-template", opensearchEndpoint)
+		settingsURL := fmt.Sprintf("%s/_index_template/ism-plugin-template", opensearchEndpoint)
 		req, err := http.NewRequest("PUT", settingsURL, bytes.NewReader([]byte(indexSettings)))
 		if err != nil {
 			ch <- err
