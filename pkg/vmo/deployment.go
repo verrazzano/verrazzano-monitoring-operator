@@ -13,6 +13,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	appsv1 "k8s.io/api/apps/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -24,6 +25,11 @@ import (
 func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	if osd == nil {
 		return nil
+	}
+
+	// Wait for OS to be green before deploying OS Dashboards
+	if err := controller.osClient.IsGreen(vmo); err != nil {
+		return err
 	}
 
 	var err error
@@ -50,6 +56,18 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		}
 		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
 		return err
+	}
+
+	// Determine if the deployment needs to be scaled up. The OS Dashboard pods are being rolled out one at a time.
+	if *resources.NewVal(vmo.Spec.Kibana.Replicas) > *existingDeployment.Spec.Replicas {
+		if existingDeployment.Status.ReadyReplicas == *existingDeployment.Spec.Replicas {
+			// Ok to scale up
+			*existingDeployment.Spec.Replicas++
+			if _, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), osd, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
+			return fmt.Errorf("waiting to bring OS Dashboards replica up to full count")
+		}
 	}
 
 	return nil
