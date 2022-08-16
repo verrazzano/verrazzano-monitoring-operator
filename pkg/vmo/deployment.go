@@ -60,7 +60,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 
 	// Determine if the deployment needs to be scaled up. The OS Dashboard pods are being rolled out one at a time.
 	// First re-fetch the deployment
-	if existingDeployment, err = controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name); err != nil {
+	if existingDeployment, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Get(context.TODO(), osd.Name, metav1.GetOptions{}); err != nil {
 		return err
 	}
 	if *resources.NewVal(vmo.Spec.Kibana.Replicas) > *existingDeployment.Spec.Replicas {
