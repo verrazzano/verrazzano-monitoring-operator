@@ -67,6 +67,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		if existingDeployment.Status.ReadyReplicas == *existingDeployment.Spec.Replicas {
 			// Ok to scale up
 			*existingDeployment.Spec.Replicas++
+			controller.log.Oncef("Incrementing replica count of deployment %s/%s to %d", osd.Namespace, osd.Name, *existingDeployment.Spec.Replicas)
 			if _, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), existingDeployment, metav1.UpdateOptions{}); err != nil {
 				return err
 			}
