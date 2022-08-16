@@ -26,27 +26,43 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 	if osd == nil {
 		return nil
 	}
+	var err error
 
 	// Wait for OS to be green before deploying OS Dashboards
-	if err := controller.osClient.IsGreen(vmo); err != nil {
+	if err = controller.osClient.IsGreen(vmo); err != nil {
 		return err
 	}
 
-	var err error
 	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			controller.log.Oncef("Creating deployment %s/%s", osd.Namespace, osd.Name)
+			// Initialize the replica count to one, and scale up one at a time during update.
+			// The OS Dashboard pods are being rolled out one at a time to avoid getting failures
+			// due to indices needing to be migrated.  We considered using StatefulSets with a
+			// pod management policy of "ordered ready".  However, StatefulSets do not support a
+			// deployment strategy of "recreate", which is also needed to avoid the migrating indices error.
+			osd.Spec.Replicas = resources.NewVal(int32(1))
 			_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), osd, metav1.CreateOptions{})
 		} else {
 			return err
 		}
 	} else {
-		err = controller.osClient.IsUpdated(vmo)
-		if err != nil {
+		if err = controller.osClient.IsUpdated(vmo); err != nil {
 			return err
 		}
-		err = updateDeployment(controller, vmo, existingDeployment, osd)
+		if existingDeployment.Status.ReadyReplicas == *existingDeployment.Spec.Replicas &&
+			*resources.NewVal(vmo.Spec.Kibana.Replicas) > *existingDeployment.Spec.Replicas {
+			// Ok to scale up
+			*existingDeployment.Spec.Replicas++
+			controller.log.Oncef("Incrementing replica count of deployment %s/%s to %d", osd.Namespace, osd.Name, *existingDeployment.Spec.Replicas)
+		}
+		if err = updateDeployment(controller, vmo, existingDeployment, osd); err == nil {
+			// Return a temporary error if not finished scaling up to the desired replica count
+			if *resources.NewVal(vmo.Spec.Kibana.Replicas) != *existingDeployment.Spec.Replicas {
+				return fmt.Errorf("waiting to bring OS Dashboards replica up to full count")
+			}
+		}
 	}
 	if err != nil {
 		if metric, metricErr := metricsexporter.GetErrorMetrics(metricsexporter.NamesDeploymentUpdateError); metricErr != nil {
@@ -56,23 +72,6 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		}
 		controller.log.Errorf("Failed to update deployment %s/%s: %v", osd.Namespace, osd.Name, err)
 		return err
-	}
-
-	// Determine if the deployment needs to be scaled up. The OS Dashboard pods are being rolled out one at a time.
-	// First re-fetch the deployment
-	if existingDeployment, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Get(context.TODO(), osd.Name, metav1.GetOptions{}); err != nil {
-		return err
-	}
-	if *resources.NewVal(vmo.Spec.Kibana.Replicas) > *existingDeployment.Spec.Replicas {
-		if existingDeployment.Status.ReadyReplicas == *existingDeployment.Spec.Replicas {
-			// Ok to scale up
-			*existingDeployment.Spec.Replicas++
-			controller.log.Oncef("Incrementing replica count of deployment %s/%s to %d", osd.Namespace, osd.Name, *existingDeployment.Spec.Replicas)
-			if _, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), existingDeployment, metav1.UpdateOptions{}); err != nil {
-				return err
-			}
-			return fmt.Errorf("waiting to bring OS Dashboards replica up to full count")
-		}
 	}
 
 	return nil

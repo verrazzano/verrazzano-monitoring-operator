@@ -261,9 +261,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 			Type: appsv1.RecreateDeploymentStrategyType,
 		}
-		// Always start with one replica, then scale up one at a time
-		// deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
-		deployment.Spec.Replicas = resources.NewVal(int32(1))
+		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
 		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
