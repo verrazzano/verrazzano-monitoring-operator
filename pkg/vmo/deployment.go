@@ -51,7 +51,14 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 		if err = controller.osClient.IsUpdated(vmo); err != nil {
 			return err
 		}
-		if existingDeployment.Status.AvailableReplicas == *existingDeployment.Spec.Replicas &&
+		// On upgrade the deployment spec may already have more than one replica of
+		// OS Dashboards running.  If the spec has changed, assume this is an upgrade
+		// and reset the replica count to one.
+		specDiffs := diff.Diff(existingDeployment, osd)
+		if specDiffs != "" {
+			controller.log.Oncef("Change detected, resetting the replica count of deployment %s/%s to 1", osd.Namespace, osd.Name)
+			osd.Spec.Replicas = resources.NewVal(int32(1))
+		} else if existingDeployment.Status.AvailableReplicas == *existingDeployment.Spec.Replicas &&
 			*resources.NewVal(vmo.Spec.Kibana.Replicas) > *existingDeployment.Spec.Replicas {
 			// Ok to scale up
 			*osd.Spec.Replicas = *existingDeployment.Spec.Replicas + 1
