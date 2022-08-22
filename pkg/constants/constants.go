@@ -126,7 +126,7 @@ const K8sTaintNoScheduleEffect = "NoSchedule"
 const K8sReadyCondition = "Ready"
 
 // K8sZoneLabel constant used for affinity
-const K8sZoneLabel = "failure-domain.beta.kubernetes.io/zone"
+const K8sZoneLabel = corev1.LabelTopologyZone
 
 // DashboardConfig dashboards config
 const DashboardConfig = "dashboards"
