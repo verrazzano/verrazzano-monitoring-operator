@@ -15,6 +15,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+func init() {
+	RequiredInitialization()
+	RegisterMetrics()
+}
+
 // RequiredInitialization populates the metricsexporter, this function must be called before any other non-init exporter function is called
 func RequiredInitialization() {
 	MetricsExp = metricsExporter{
@@ -38,13 +43,6 @@ func RequiredInitialization() {
 	servicesLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesServices].GetLabel
 	roleBindingLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesRoleBindings].GetLabel
 	VMOUpdateLabelFunction = MetricsExp.internalData.simpleCounterMetricMap[NamesVMOUpdate].GetLabel
-}
-
-// InitRegisterStart call this function in order to completely initialize and start the metrics exporter. Populates, registers, and starts the metrics server.
-func InitRegisterStart() {
-	RequiredInitialization()
-	RegisterMetrics()
-	StartMetricsServer()
 }
 
 // RegisterMetrics begins the registration process, Required Initialization must be called first. This function does not start the metrics server

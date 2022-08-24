@@ -212,7 +212,6 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 //  WHEN I call reconcile
 //  THEN the metrics for the reconcile function are to be captured
 func TestReconcileAndUpdateMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
 
 	controller, vmo := createControllerForTesting()
 
@@ -238,7 +237,6 @@ func TestReconcileAndUpdateMetrics(t *testing.T) {
 //  WHEN I call createDeployments
 //  THEN the metrics for the CreateDeployments function are to be captured, with the exception of (trivial) error metrics
 func TestDeploymentMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
 
 	controller, vmo := createControllerForTesting()
 
@@ -256,7 +254,6 @@ func TestDeploymentMetrics(t *testing.T) {
 }
 
 func TestIngressMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
 	controller, vmo := createControllerForTesting()
 	metricsexporter.DefaultLabelFunction = func(idx int64) string { return "1" }
 	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesIngress))
@@ -268,7 +265,6 @@ func TestIngressMetrics(t *testing.T) {
 }
 
 func TestRoleBindingMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
 	controller, vmo := createControllerForTesting()
 	previousCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesRoleBindings))
 	CreateRoleBindings(controller, vmo)
@@ -277,7 +273,6 @@ func TestRoleBindingMetrics(t *testing.T) {
 }
 
 func TestThreadingMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
 	controller, _ := createControllerForTesting()
 	gauge := delegate.GetGaugeMetrics(metricsexporter.NamesQueue)
 	gauge.Set(100)
@@ -287,7 +282,6 @@ func TestThreadingMetrics(t *testing.T) {
 }
 
 func TestConfigMapMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
 	controller, vmo := createControllerForTesting()
 	previousCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesConfigMap))
 	CreateConfigmaps(controller, vmo)
@@ -297,7 +291,6 @@ func TestConfigMapMetrics(t *testing.T) {
 	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
 }
 func TestServiceMetrics(t *testing.T) {
-	metricsexporter.RequiredInitialization()
 	controller, vmo := createControllerForTesting()
 	previousCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesServices))
 	CreateServices(controller, vmo)
@@ -305,7 +298,7 @@ func TestServiceMetrics(t *testing.T) {
 	newServicesCreated := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesServicesCreated))
 	newTimeStamp := testutil.ToFloat64(delegate.GetTimestampMetric(metricsexporter.NamesServices).WithLabelValues(strconv.FormatInt(int64(previousCount)+1, 10)))
 	assert.Equal(t, previousCount, float64(newCount-1))
-	assert.GreaterOrEqual(t, 1, int(newServicesCreated))
+	assert.EqualValues(t, 1, newServicesCreated)
 	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
 }
 

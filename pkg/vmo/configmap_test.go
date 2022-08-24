@@ -44,7 +44,6 @@ func TestCreateConfigmaps(t *testing.T) {
 	vmo.Spec.Grafana.DashboardsConfigMap = "myDashboardsConfigMap"
 	vmo.Spec.Grafana.DatasourcesConfigMap = "myDatasourcesConfigMap"
 
-	metricsexporter.RequiredInitialization()
 	previousCount := testutil.ToFloat64(metricsexporter.TestDelegate.GetCounterMetric(metricsexporter.NamesConfigMap))
 
 	err := CreateConfigmaps(controller, vmo)
