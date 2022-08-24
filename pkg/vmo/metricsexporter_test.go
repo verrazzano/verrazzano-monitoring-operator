@@ -291,6 +291,7 @@ func TestConfigMapMetrics(t *testing.T) {
 	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
 }
 func TestServiceMetrics(t *testing.T) {
+	clearMetrics()
 	controller, vmo := createControllerForTesting()
 	previousCount := testutil.ToFloat64(delegate.GetCounterMetric(metricsexporter.NamesServices))
 	CreateServices(controller, vmo)
