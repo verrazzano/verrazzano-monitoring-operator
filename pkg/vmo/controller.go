@@ -566,7 +566,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	autExpandIndexErr := <-autoExpandIndexChannel
 	if autExpandIndexErr != nil {
-		c.log.Errorf("Failed to update auto expand settings for indices: %v", err)
+		c.log.Errorf("Failed to update auto expand settings for indices: %v", autExpandIndexErr)
 		errorObserved = true
 	}
 
