@@ -118,7 +118,7 @@ func createUpdateDatasourcesConfigMap(controller *Controller, vmo *vmcontrollerv
 			existingConfig.Data[datasourceYAMLKey] = updatedDatasourceStr
 			_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Update(context.TODO(), existingConfig, metav1.UpdateOptions{})
 			if err != nil {
-				controller.log.Errorf("Failed to update configmap %s%s: %v", vmo.Namespace, configmapName, err)
+				controller.log.Errorf("Failed to update configmap %s/%s: %v", vmo.Namespace, configmapName, err)
 				return err
 			}
 		}
@@ -130,7 +130,7 @@ func createUpdateDatasourcesConfigMap(controller *Controller, vmo *vmcontrollerv
 func createConfigMapIfDoesntExist(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, configmap string, data map[string]string) error {
 	configMap := configmaps.NewConfig(vmo, configmap, data)
 	_, err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsAlreadyExists(err) {
 		controller.log.Errorf("Failed to create configmap %s/%s: %v", vmo.Namespace, configmap, err)
 		return err
 	}
