@@ -103,11 +103,6 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			ch <- nil
 			return
 		}
-		// if the cluster is not at least Yellow status, do not attempt to query settings
-		if err := o.IsYellowOrGreen(vmi); err != nil {
-			ch <- nil
-			return
-		}
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 
 		settingsURL := fmt.Sprintf("%s/_index_template/ism-plugin-template", opensearchEndpoint)
