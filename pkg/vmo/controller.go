@@ -494,7 +494,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create config maps for VMI %s: %v", vmo.Name, err)
+		c.log.Errorf("Failed to create configmaps for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
