@@ -8,13 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"io"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -116,7 +117,7 @@ func createISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoring
 // WHEN I call Configure
 // THEN the ISM configuration does nothing because it is disabled
 func TestConfigureIndexManagementPluginISMDisabled(t *testing.T) {
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 	assert.NoError(t, <-o.ConfigureISM(&vmcontrollerv1.VerrazzanoMonitoringInstance{}))
 }
 
@@ -125,7 +126,7 @@ func TestConfigureIndexManagementPluginISMDisabled(t *testing.T) {
 // WHEN I call Configure
 // THEN the ISM configuration is created in OpenSearch
 func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		switch request.Method {
 		case "GET":
@@ -174,7 +175,7 @@ func TestGetPolicyByName(t *testing.T) {
 		},
 	}
 
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		if strings.Contains(request.URL.Path, "verrazzano-system") {
 			return &http.Response{
@@ -251,7 +252,7 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 		assert.NoError(t, err)
 		status := http.StatusOK
 		existingPolicy.Status = &status
-		o := NewOSClient()
+		o := NewOSClient(statefulSetLister)
 		o.DoHTTP = tt.httpFunc
 		t.Run(tt.name, func(t *testing.T) {
 			newPolicy := &vmcontrollerv1.IndexManagementPolicy{
@@ -349,7 +350,7 @@ func TestPolicyNeedsUpdate(t *testing.T) {
 // WHEN I call cleanupPolicies
 // THEN then the existing policies should be queried and any non-matching members removed
 func TestCleanupPolicies(t *testing.T) {
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 
 	id1 := "myapp"
 	id2 := "anotherapp"

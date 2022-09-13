@@ -5,15 +5,18 @@ package opensearch
 
 import (
 	"errors"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"io"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
-	"strings"
-	"testing"
+	kubeinformers "k8s.io/client-go/informers"
+	fake "k8s.io/client-go/kubernetes/fake"
 )
 
 const (
@@ -125,6 +128,8 @@ var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 	},
 }
 
+var statefulSetLister = kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Apps().V1().StatefulSets().Lister()
+
 func mockHTTPGenerator(body1, body2 string, code1, code2 int) func(request *http.Request) (*http.Response, error) {
 	return func(request *http.Request) (*http.Response, error) {
 		if strings.Contains(request.URL.Path, "_cluster/health") {
@@ -183,7 +188,7 @@ func TestIsOpenSearchHealthy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := NewOSClient()
+			o := NewOSClient(statefulSetLister)
 			o.DoHTTP = tt.httpFunc
 			err := o.IsUpdated(&testvmo)
 			if tt.isError {
@@ -215,6 +220,6 @@ func TestIsOpenSearchResizable(t *testing.T) {
 			},
 		},
 	}
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 	assert.Error(t, o.IsDataResizable(&notEnoughNodesVMO))
 }
