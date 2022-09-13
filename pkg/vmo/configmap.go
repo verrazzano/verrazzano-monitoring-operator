@@ -72,8 +72,7 @@ func CreateConfigmaps(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 			controller.log.Debugf("Deleting config map %s", configMap.Name)
 			err := controller.kubeclientset.CoreV1().ConfigMaps(vmo.Namespace).Delete(context.TODO(), configMap.Name, metav1.DeleteOptions{})
 			if err != nil {
-				controller.log.Debugf("Failed to delete configmap %s%s: %v", vmo.Namespace, configMap.Name, err)
-				return err
+				return controller.log.ErrorfNewErr("Failed to delete configmap %s%s: %v", vmo.Namespace, configMap.Name, err)
 			}
 		}
 	}
