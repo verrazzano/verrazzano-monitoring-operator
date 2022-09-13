@@ -44,24 +44,20 @@ func (o *OSClient) IsDataResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
 		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
 	}
-	return o.opensearchHealth(vmo, StatusGreen, true, true)
+	return o.opensearchHealth(vmo, true, true)
 }
 
 //IsUpdated returns an error unless these conditions of the OpenSearch cluster are met
 // - 'green' health
 // - all expected nodes are present in the cluster status
 func (o *OSClient) IsUpdated(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return o.opensearchHealth(vmo, StatusGreen, true, true)
+	return o.opensearchHealth(vmo, true, true)
 }
 
 //IsGreen returns an error unless these conditions of the OpenSearch cluster are met
 // - 'green' health
 func (o *OSClient) IsGreen(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return o.opensearchHealth(vmo, StatusGreen, false, false)
-}
-
-func (o *OSClient) IsYellowOrGreen(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	return o.opensearchHealth(vmo, StatusYellow, false, false)
+	return o.opensearchHealth(vmo, false, false)
 }
 
 //ConfigureISM sets up the ISM Policies
@@ -98,18 +94,11 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			ch <- nil
 			return
 		}
-		// only set auto expand indices on single node clusters
 		if !nodes.IsSingleNodeCluster(vmi) {
 			ch <- nil
 			return
 		}
-		// if the cluster is not at least Yellow status, do not attempt to query settings
-		if err := o.IsYellowOrGreen(vmi); err != nil {
-			ch <- nil
-			return
-		}
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-
 		settingsURL := fmt.Sprintf("%s/_index_template/ism-plugin-template", opensearchEndpoint)
 		req, err := http.NewRequest("PUT", settingsURL, bytes.NewReader([]byte(indexSettings)))
 		if err != nil {
