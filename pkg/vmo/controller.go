@@ -566,11 +566,8 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	autoExpandIndexErr := <-autoExpandIndexChannel
 	if autoExpandIndexErr != nil {
-		// only log an error if the OS cluster is ready and the auto expand index query failed
-		if clusterConnectErr := c.osClient.IsYellowOrGreen(vmo); clusterConnectErr == nil {
-			c.log.Errorf("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
-			errorObserved = true
-		}
+		c.log.Errorf("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
+		errorObserved = true
 	}
 
 	ismErr := <-ismChannel
