@@ -15,7 +15,7 @@ import (
 
 type (
 	ClusterHealth struct {
-		Status string `json:"status"`
+		Status OpenSearchStatus `json:"status"`
 	}
 
 	NodeSettings struct {
@@ -28,18 +28,33 @@ type (
 	}
 )
 
+type OpenSearchStatus string
+
 const (
-	HealthGreen           = "green"
-	MinDataNodesForResize = 2
+	StatusGreen           OpenSearchStatus = "green"
+	StatusYellow          OpenSearchStatus = "yellow"
+	StatusRed             OpenSearchStatus = "red"
+	MinDataNodesForResize                  = 2
 )
 
-func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool, waitForVersion bool) error {
+func (c ClusterHealth) IsMinStatus(health OpenSearchStatus) bool {
+	switch health {
+	case StatusGreen:
+		return c.Status == StatusGreen
+	case StatusYellow:
+		return c.Status == StatusYellow || c.Status == StatusGreen
+	default:
+		return c.Status == StatusYellow || c.Status == StatusGreen || c.Status == StatusRed
+	}
+}
+
+func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, minStatus OpenSearchStatus, checkNodeCount bool, waitForVersion bool) error {
 	// Verify that the cluster is Green
 	clusterHealth, err := o.getOpenSearchClusterHealth(vmo)
 	if err != nil {
 		return err
 	}
-	if !(clusterHealth.Status == HealthGreen) {
+	if !clusterHealth.IsMinStatus(minStatus) {
 		return fmt.Errorf("OpenSearch health is %s", clusterHealth.Status)
 	}
 

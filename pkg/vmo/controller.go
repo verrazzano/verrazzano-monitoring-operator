@@ -494,7 +494,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create config maps for VMI %s: %v", vmo.Name, err)
+		c.log.Errorf("Failed to create configmaps for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -564,10 +564,13 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		}
 	}
 
-	autExpandIndexErr := <-autoExpandIndexChannel
-	if autExpandIndexErr != nil {
-		c.log.Errorf("Failed to update auto expand settings for indices: %v", autExpandIndexErr)
-		errorObserved = true
+	autoExpandIndexErr := <-autoExpandIndexChannel
+	if autoExpandIndexErr != nil {
+		// only log an error if the OS cluster is ready and the auto expand index query failed
+		if clusterConnectErr := c.osClient.IsYellowOrGreen(vmo); clusterConnectErr == nil {
+			c.log.Errorf("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
+			errorObserved = true
+		}
 	}
 
 	ismErr := <-ismChannel
