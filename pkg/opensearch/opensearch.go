@@ -155,17 +155,17 @@ func (o *OSClient) IsOpenSearchReady(vmi *vmcontrollerv1.VerrazzanoMonitoringIns
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmi.Name, constants.ComponentLabel: constants.ComponentOpenSearchValue})
 	statefulSets, err := o.statefulSetLister.StatefulSets(vmi.Namespace).List(selector)
 	if err != nil {
-		zap.S().Error("Error fetching OpenSearch statefulset.")
+		zap.S().Errorf("error fetching OpenSearch statefulset, error: %s", err.Error())
 		return false
 	}
 
 	if len(statefulSets) == 0 {
-		zap.S().Error("OpenSearch statefulset not created.")
+		zap.S().Warn("waiting for OpenSearch statefulset to be created.")
 		return false
 	}
 
 	if len(statefulSets) > 1 {
-		zap.S().Errorf("Invalid number of OpenSearch statefulset created %v.", len(statefulSets))
+		zap.S().Errorf("invalid number of OpenSearch statefulset created %v.", len(statefulSets))
 		return false
 	}
 
