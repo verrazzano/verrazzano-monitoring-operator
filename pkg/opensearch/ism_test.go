@@ -446,3 +446,16 @@ func TestIsEligibleForDeletion(t *testing.T) {
 		})
 	}
 }
+
+// TestConfigureIndexManagementPluginOpenSearchNotReady Tests that ConfigureISM does not return error when OpenSearch is not ready
+// GIVEN a default VMI instance
+// WHEN I call ConfigureISM
+// THEN the ISM configuration does nothing because OpenSearch is not ready
+func TestConfigureIndexManagementPluginOpenSearchNotReady(t *testing.T) {
+	o := NewOSClient(statefulSetLister)
+	assert.NoError(t, <-o.ConfigureISM(&vmcontrollerv1.VerrazzanoMonitoringInstance{Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+		Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Enabled: true,
+		},
+	}}))
+}
