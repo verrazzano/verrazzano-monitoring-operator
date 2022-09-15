@@ -521,6 +521,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	existingCluster, err := CreateStatefulSets(c, vmo)
 	if err != nil {
+		c.log.Errorf("Failed to create/update statefulsets for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -531,6 +532,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if !errorObserved {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
+			c.log.Errorf("Failed to create/update deployments for VMI %s: %v", vmo.Name, err)
 			functionMetric.IncError()
 			errorObserved = true
 		}
