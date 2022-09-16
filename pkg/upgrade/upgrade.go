@@ -5,6 +5,7 @@ package upgrade
 
 import (
 	"fmt"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
@@ -20,6 +21,10 @@ type Monitor struct {
 
 func (m *Monitor) MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	o *opensearch.OSClient, od *dashboards.OSDashboardsClient) error {
+	if !o.IsOpenSearchReady(vmi) {
+		return nil
+	}
+
 	// if not already migrating, start migrating indices
 	if !m.running {
 		m.run(log, vmi, o, od)

@@ -7,16 +7,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
-	"net/http"
+	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/labels"
+	appslistersv1 "k8s.io/client-go/listers/apps/v1"
 )
 
 type (
 	OSClient struct {
-		httpClient *http.Client
-		DoHTTP     func(request *http.Request) (*http.Response, error)
+		httpClient        *http.Client
+		DoHTTP            func(request *http.Request) (*http.Response, error)
+		statefulSetLister appslistersv1.StatefulSetLister
 	}
 )
 
@@ -26,9 +32,10 @@ const (
 	contentTypeHeader = "Content-Type"
 )
 
-func NewOSClient() *OSClient {
+func NewOSClient(statefulSetLister appslistersv1.StatefulSetLister) *OSClient {
 	o := &OSClient{
-		httpClient: http.DefaultClient,
+		httpClient:        http.DefaultClient,
+		statefulSetLister: statefulSetLister,
 	}
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		return o.httpClient.Do(request)
@@ -71,6 +78,11 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 			return
 		}
 
+		if !o.IsOpenSearchReady(vmi) {
+			ch <- nil
+			return
+		}
+
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 		for _, policy := range vmi.Spec.Elasticsearch.Policies {
 			if err := o.createISMPolicy(opensearchEndpoint, policy); err != nil {
@@ -88,6 +100,7 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 // SetAutoExpandIndices updates the default index settings to auto expand replicas (max 1) when nodes are added to the cluster
 func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)
+
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
 		if !vmi.Spec.Elasticsearch.Enabled {
@@ -98,6 +111,12 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			ch <- nil
 			return
 		}
+
+		if !o.IsOpenSearchReady(vmi) {
+			ch <- nil
+			return
+		}
+
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 		settingsURL := fmt.Sprintf("%s/_index_template/ism-plugin-template", opensearchEndpoint)
 		req, err := http.NewRequest("PUT", settingsURL, bytes.NewReader([]byte(indexSettings)))
@@ -129,4 +148,26 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 	}()
 
 	return ch
+}
+
+//IsOpenSearchReady returns true when all OpenSearch pods are ready, false otherwise
+func (o *OSClient) IsOpenSearchReady(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
+	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmi.Name, constants.ComponentLabel: constants.ComponentOpenSearchValue})
+	statefulSets, err := o.statefulSetLister.StatefulSets(vmi.Namespace).List(selector)
+	if err != nil {
+		zap.S().Errorf("error fetching OpenSearch statefulset, error: %s", err.Error())
+		return false
+	}
+
+	if len(statefulSets) == 0 {
+		zap.S().Warn("waiting for OpenSearch statefulset to be created.")
+		return false
+	}
+
+	if len(statefulSets) > 1 {
+		zap.S().Errorf("invalid number of OpenSearch statefulset created %v.", len(statefulSets))
+		return false
+	}
+
+	return statefulSets[0].Status.ReadyReplicas == statefulSets[0].Status.Replicas
 }

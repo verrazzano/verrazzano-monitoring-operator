@@ -205,9 +205,10 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 	eventBroadcaster.StartLogging(zap.S().Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
+	statefulSetLister := statefulSetInformer.Lister()
 
 	zap.S().Infow("Creating OpenSearch client")
-	osClient := opensearch.NewOSClient()
+	osClient := opensearch.NewOSClient(statefulSetLister)
 
 	zap.S().Infow("Creating OpenSearchDashboards client")
 	osDashboardsClient := dashboards.NewOSDashboardsClient()
@@ -238,7 +239,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		secretsSynced:         secretsInformer.Informer().HasSynced,
 		serviceLister:         serviceInformer.Lister(),
 		servicesSynced:        serviceInformer.Informer().HasSynced,
-		statefulSetLister:     statefulSetInformer.Lister(),
+		statefulSetLister:     statefulSetLister,
 		statefulSetsSynced:    statefulSetInformer.Informer().HasSynced,
 		vmoLister:             vmoInformer.Lister(),
 		vmosSynced:            vmoInformer.Informer().HasSynced,

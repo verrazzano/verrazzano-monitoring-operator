@@ -16,6 +16,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
@@ -173,6 +174,7 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 	client := fake.NewSimpleClientset(cm)
 	defaultReplicasNum := 0
 	vmo.Labels = make(map[string]string)
+	statefulSetLister := kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Apps().V1().StatefulSets().Lister()
 	controller := &Controller{
 		kubeclientset:    client,
 		kubeextclientset: kubeextclientset,
@@ -197,10 +199,11 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 		nodeLister:          kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Core().V1().Nodes().Lister(),
 		deploymentLister:    kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Apps().V1().Deployments().Lister(),
 		pvcLister:           kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Core().V1().PersistentVolumeClaims().Lister(),
-		statefulSetLister:   kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Apps().V1().StatefulSets().Lister(),
+		statefulSetLister:   statefulSetLister,
 		ingressLister:       kubeinformers.NewSharedInformerFactory(fake.NewSimpleClientset(), constants.ResyncPeriod).Networking().V1().Ingresses().Lister(),
 		vmoclientset:        vmofake.NewSimpleClientset(),
 		workqueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "VMOs"),
+		osClient:            opensearch.NewOSClient(statefulSetLister),
 	}
 	_ = createUpdateDatasourcesConfigMap(controller, vmo, configMapName, map[string]string{})
 

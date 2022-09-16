@@ -5,14 +5,15 @@ package opensearch
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
 const fakeIndicesResponse = `{
@@ -66,7 +67,7 @@ const openSearchEP = "http://localhost:9200/"
 // WHEN I call getIndices, getSystemIndices, and getApplicationIndices
 // THEN I get back the expected indices, system indices, and application indices
 func TestGetIndices(t *testing.T) {
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
@@ -97,7 +98,7 @@ func TestGetIndices(t *testing.T) {
 // THEN true is returned if the data stream is present
 func TestDataStreamExists(t *testing.T) {
 	a := assert.New(t)
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		if strings.Contains(request.URL.Path, config.DataStreamName()) {
 			return &http.Response{
@@ -232,7 +233,7 @@ func TestReindexAndDeleteIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := NewOSClient()
+			o := NewOSClient(statefulSetLister)
 			o.DoHTTP = tt.httpFunc
 			err := o.reindexAndDeleteIndices(vzlog.DefaultLogger(), vmi, openSearchEP, tt.indices, tt.isSystemIndex)
 			if tt.isError {
@@ -249,7 +250,7 @@ func TestReindexAndDeleteIndices(t *testing.T) {
 // WHEN I call reindexToDataStream
 // THEN the index is reindex to a data stream
 func TestReindexToDataStream(t *testing.T) {
-	o := NewOSClient()
+	o := NewOSClient(statefulSetLister)
 	o.DoHTTP = func(request *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
