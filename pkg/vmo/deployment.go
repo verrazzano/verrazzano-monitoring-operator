@@ -78,14 +78,14 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 }
 
 // CreateDeployments create/update VMO deployment k8s resources
-func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (dirty bool, err error) {
+func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (bool, *deployments.ExpectedDeployments, error) {
 	// The error count is incremented by the function which calls createDeployment
 	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesDeployment)
 	if functionError == nil {
 		functionMetric.LogStart()
 		defer functionMetric.LogEnd(false)
 	} else {
-		return false, functionError
+		return false, nil, functionError
 	}
 
 	// Assigning the following spec members seems like a hack; is any
@@ -95,22 +95,20 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	expected, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap)
 	if err != nil {
 		controller.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
-		return false, err
+		return false, nil, err
 	}
 	deployList := expected.Deployments
 
 	var openSearchDeployments []*appsv1.Deployment
-	var deploymentNames []string
 	controller.log.Oncef("Creating/updating ExpectedDeployments for VMI %s", vmo.Name)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
-		deploymentNames = append(deploymentNames, deploymentName)
 		if deploymentName == "" && curDeployment.GenerateName == "" {
 			// We choose to absorb the error here as the worker would requeue the
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
 			runtime.HandleError(errors.New("deployment name must be specified"))
-			return true, nil
+			return true, expected, nil
 		}
 		controller.log.Debugf("Applying Deployment '%s' in namespace '%s' for VMI '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
@@ -119,7 +117,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			if k8serrors.IsNotFound(err) {
 				_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), curDeployment, metav1.CreateOptions{})
 			} else {
-				return false, err
+				return false, expected, err
 			}
 		} else if existingDeployment != nil {
 			if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
@@ -135,49 +133,63 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 				metric.Inc()
 			}
 			controller.log.Errorf("Failed to update deployment %s/%s: %v", curDeployment.Namespace, curDeployment.Name, err)
-			return false, err
+			return false, expected, err
 		}
 	}
 
 	openSearchDirty, err := updateOpenSearchDeployments(controller, vmo, openSearchDeployments, existingCluster)
 	if err != nil {
-		return false, err
+		return false, expected, err
 	}
 
 	// Create the OSD deployment
 	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
 	if osd != nil {
-		deploymentNames = append(deploymentNames, osd.Name)
 		err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
 		if err != nil {
-			return false, err
+			return false, expected, err
 		}
 	}
 
-	// Delete deployments that shouldn't exist
+	return openSearchDirty, expected, nil
+}
+
+// DeleteDeployments compares the existing VMI deployments with the expected list of deployments and deletes any deployments that should not exist
+func DeleteDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, expectedDeployments *deployments.ExpectedDeployments) error {
+	if expectedDeployments == nil {
+		controller.log.Oncef("No expected deployments found, skipping deleting deployments that should not exist for VMI %s", vmo.Name)
+		return nil
+	}
+
 	controller.log.Oncef("Deleting deployments that should not exist for VMI %s", vmo.Name)
+
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingDeploymentsList, err := controller.deploymentLister.Deployments(vmo.Namespace).List(selector)
 	if err != nil {
-		return false, err
+		return err
 	}
+
+	var expectedDeploymentNames []string
+	for _, deployment := range expectedDeployments.Deployments {
+		expectedDeploymentNames = append(expectedDeploymentNames, deployment.Name)
+	}
+
 	for _, deployment := range existingDeploymentsList {
-		if !contains(deploymentNames, deployment.Name) {
+		if !contains(expectedDeploymentNames, deployment.Name) {
 			// if processing an OpenSearch data node, and the data node is expected and running
 			// An OpenSearch health check should be made to prevent unexpected shard allocation
-			if deployments.IsOpenSearchDataDeployment(vmo.Name, deployment) && (expected.OpenSearchDataDeployments > 0 || deployment.Status.ReadyReplicas > 0) {
+			if deployments.IsOpenSearchDataDeployment(vmo.Name, deployment) && (expectedDeployments.OpenSearchDataDeployments > 0 || deployment.Status.ReadyReplicas > 0) {
 				if err := controller.osClient.IsGreen(vmo); err != nil {
 					controller.log.Oncef("Scale down of deployment %s not allowed: cluster health is not green", deployment.Name)
 					continue
 				}
 			}
 			if err := deleteDeployment(controller, vmo, deployment); err != nil {
-				return false, err
+				return err
 			}
 		}
 	}
-
-	return openSearchDirty, nil
+	return nil
 }
 
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {

@@ -21,6 +21,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
@@ -527,17 +528,24 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 
 	/*********************
-	 * Create Deployments
+	 * Create, update, and delete Deployments
 	 **********************/
 	var deploymentsDirty bool
+	var expectedDeployments *deployments.ExpectedDeployments
 	if !errorObserved {
-		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
+		deploymentsDirty, expectedDeployments, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
 			c.log.Errorf("Failed to create/update deployments for VMI %s: %v", vmo.Name, err)
 			functionMetric.IncError()
 			errorObserved = true
 		}
 	}
+	if err = DeleteDeployments(c, vmo, expectedDeployments); err != nil {
+		c.log.Errorf("Failed to delete deployments for VMI %s: %v", vmo.Name, err)
+		functionMetric.IncError()
+		errorObserved = true
+	}
+
 	/*********************
 	 * Create Ingresses
 	 **********************/
