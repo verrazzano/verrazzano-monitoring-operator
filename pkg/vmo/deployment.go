@@ -145,6 +145,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	// Create the OSD deployment
 	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
 	if osd != nil {
+		expected.Deployments = append(expected.Deployments, osd)
 		err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
 		if err != nil {
 			return false, expected, err
