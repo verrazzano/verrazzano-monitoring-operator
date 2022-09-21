@@ -531,14 +531,22 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 * Create, update, and delete Deployments
 	 **********************/
 	var deploymentsDirty bool
-	var expectedDeployments *deployments.ExpectedDeployments
-	if !errorObserved {
-		deploymentsDirty, expectedDeployments, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
-		if err != nil {
-			c.log.Errorf("Failed to create/update deployments for VMI %s: %v", vmo.Name, err)
-			functionMetric.IncError()
-			errorObserved = true
-		}
+	expectedDeployments, err := deployments.New(vmo, c.kubeclientset, c.operatorConfig, pvcToAdMap)
+	if err != nil {
+		c.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
+		functionMetric.IncError()
+		errorObserved = true
+	}
+	deploymentsDirty, err = CreateDeployments(c, vmo, expectedDeployments, existingCluster)
+	if err != nil {
+		c.log.Errorf("Failed to create/update deployments for VMI %s: %v", vmo.Name, err)
+		functionMetric.IncError()
+		errorObserved = true
+	}
+	// OSD is a special case, so add it to the expected deployments (if it should exist)
+	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
+	if osd != nil {
+		expectedDeployments.Deployments = append(expectedDeployments.Deployments, osd)
 	}
 	if err = DeleteDeployments(c, vmo, expectedDeployments); err != nil {
 		c.log.Errorf("Failed to delete deployments for VMI %s: %v", vmo.Name, err)

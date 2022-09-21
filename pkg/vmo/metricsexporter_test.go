@@ -1,4 +1,4 @@
-// Copyright (c) 2020, 2021, Oracle and/or its affiliates.
+// Copyright (c) 2020, 2022, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -19,6 +19,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -245,8 +246,10 @@ func TestDeploymentMetrics(t *testing.T) {
 
 	metricsexporter.DefaultLabelFunction = func(idx int64) string { return "1" }
 	previousCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesDeployment))
+	expectedDeployments, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, map[string]string{})
+	assert.NoError(t, err)
 
-	CreateDeployments(controller, vmo, map[string]string{}, true)
+	CreateDeployments(controller, vmo, expectedDeployments, true)
 
 	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsexporter.NamesDeployment).WithLabelValues("1"))
 	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesDeployment))

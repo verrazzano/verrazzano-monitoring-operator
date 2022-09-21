@@ -78,26 +78,21 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 }
 
 // CreateDeployments create/update VMO deployment k8s resources
-func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (bool, *deployments.ExpectedDeployments, error) {
+func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, expectedDeployments *deployments.ExpectedDeployments, existingCluster bool) (bool, error) {
 	// The error count is incremented by the function which calls createDeployment
 	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesDeployment)
 	if functionError == nil {
 		functionMetric.LogStart()
 		defer functionMetric.LogEnd(false)
 	} else {
-		return false, nil, functionError
+		return false, functionError
 	}
 
 	// Assigning the following spec members seems like a hack; is any
 	// better way to make these values available where the deployments are created?
 	vmo.Spec.NatGatewayIPs = controller.operatorConfig.NatGatewayIPs
 
-	expected, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, pvcToAdMap)
-	if err != nil {
-		controller.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
-		return false, nil, err
-	}
-	deployList := expected.Deployments
+	deployList := expectedDeployments.Deployments
 
 	var openSearchDeployments []*appsv1.Deployment
 	controller.log.Oncef("Creating/updating ExpectedDeployments for VMI %s", vmo.Name)
@@ -108,7 +103,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			// resource otherwise. Instead, the next time the resource is updated
 			// the resource will be queued again.
 			runtime.HandleError(errors.New("deployment name must be specified"))
-			return true, expected, nil
+			return true, nil
 		}
 		controller.log.Debugf("Applying Deployment '%s' in namespace '%s' for VMI '%s'\n", deploymentName, vmo.Namespace, vmo.Name)
 		existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
@@ -117,7 +112,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			if k8serrors.IsNotFound(err) {
 				_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Create(context.TODO(), curDeployment, metav1.CreateOptions{})
 			} else {
-				return false, expected, err
+				return false, err
 			}
 		} else if existingDeployment != nil {
 			if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
@@ -133,26 +128,25 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 				metric.Inc()
 			}
 			controller.log.Errorf("Failed to update deployment %s/%s: %v", curDeployment.Namespace, curDeployment.Name, err)
-			return false, expected, err
+			return false, err
 		}
 	}
 
 	openSearchDirty, err := updateOpenSearchDeployments(controller, vmo, openSearchDeployments, existingCluster)
 	if err != nil {
-		return false, expected, err
+		return false, err
 	}
 
 	// Create the OSD deployment
 	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
 	if osd != nil {
-		expected.Deployments = append(expected.Deployments, osd)
 		err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
 		if err != nil {
-			return false, expected, err
+			return false, err
 		}
 	}
 
-	return openSearchDirty, expected, nil
+	return openSearchDirty, nil
 }
 
 // DeleteDeployments compares the existing VMI deployments with the expected list of deployments and deletes any deployments that should not exist
