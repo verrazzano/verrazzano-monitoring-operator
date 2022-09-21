@@ -77,8 +77,8 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 	return nil
 }
 
-// CreateDeployments create/update VMO deployment k8s resources
-func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, expectedDeployments *deployments.ExpectedDeployments, existingCluster bool) (bool, error) {
+// CreateOrUpdateDeployments create/update VMO deployment k8s resources
+func CreateOrUpdateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, expectedDeployments *deployments.ExpectedDeployments, existingCluster bool) (bool, error) {
 	// The error count is incremented by the function which calls createDeployment
 	functionMetric, functionError := metricsexporter.GetFunctionMetrics(metricsexporter.NamesDeployment)
 	if functionError == nil {

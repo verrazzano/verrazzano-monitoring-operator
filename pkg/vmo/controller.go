@@ -531,13 +531,14 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 * Create, update, and delete Deployments
 	 **********************/
 	var deploymentsDirty bool
+	// create a struct containing the deployments that we expect to exist
 	expectedDeployments, err := deployments.New(vmo, c.kubeclientset, c.operatorConfig, pvcToAdMap)
 	if err != nil {
 		c.log.Errorf("Failed to create Deployment specs for VMI %s: %v", vmo.Name, err)
 		functionMetric.IncError()
 		errorObserved = true
 	} else {
-		deploymentsDirty, err = CreateDeployments(c, vmo, expectedDeployments, existingCluster)
+		deploymentsDirty, err = CreateOrUpdateDeployments(c, vmo, expectedDeployments, existingCluster)
 		if err != nil {
 			c.log.Errorf("Failed to create/update deployments for VMI %s: %v", vmo.Name, err)
 			functionMetric.IncError()
@@ -548,6 +549,8 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		if osd != nil {
 			expectedDeployments.Deployments = append(expectedDeployments.Deployments, osd)
 		}
+		// Delete any deployments that should not exist (deployments may need to be deleted after an upgrade, for example).
+		// We pass in the expected deployments, get the existing deployments, and delete any we find that are not expected.
 		if err = DeleteDeployments(c, vmo, expectedDeployments); err != nil {
 			c.log.Errorf("Failed to delete deployments for VMI %s: %v", vmo.Name, err)
 			functionMetric.IncError()

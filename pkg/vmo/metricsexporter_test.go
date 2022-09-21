@@ -249,7 +249,7 @@ func TestDeploymentMetrics(t *testing.T) {
 	expectedDeployments, err := deployments.New(vmo, controller.kubeclientset, controller.operatorConfig, map[string]string{})
 	assert.NoError(t, err)
 
-	CreateDeployments(controller, vmo, expectedDeployments, true)
+	CreateOrUpdateDeployments(controller, vmo, expectedDeployments, true)
 
 	newTimeStamp := testutil.ToFloat64(delegate.GetFunctionTimestampMetric(metricsexporter.NamesDeployment).WithLabelValues("1"))
 	newCount := testutil.ToFloat64(delegate.GetFunctionCounterMetric(metricsexporter.NamesDeployment))
