@@ -213,16 +213,16 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 	}
 	if grafanaResponse.StatusCode == 200 {
 		return Complete, nil
-	} else {
-		// We expect a message response for a
-		var messageResponse grafanaMessageResponse
-		err = json.NewDecoder(grafanaResponse.Body).Decode(&messageResponse)
-		if err != nil {
-			controller.log.Errorf("Failed to decode the response body of the incomplete request with status %d: %v", grafanaResponse.StatusCode, err)
-			return 0, err
-		}
-		controller.log.Progressf("Request to get Verrazzano user info from from the Grafana pod was unsuccessful status: %d message: %s", grafanaResponse.StatusCode, messageResponse.Message)
 	}
+
+	// Give a progress message for the unsuccessful request
+	var messageResponse grafanaMessageResponse
+	err = json.NewDecoder(grafanaResponse.Body).Decode(&messageResponse)
+	if err != nil {
+		controller.log.Errorf("Failed to decode the response body of the incomplete request with status %d: %v", grafanaResponse.StatusCode, err)
+		return 0, err
+	}
+	controller.log.Progressf("Request to get Verrazzano user info from from the Grafana pod was unsuccessful status: %d, message: %s", grafanaResponse.StatusCode, messageResponse.Message)
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
 	// If so, we should enter the request state
@@ -391,7 +391,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 	}
 
-	return openSearchDirty && grafanaDirty, nil
+	return openSearchDirty || grafanaDirty, nil
 }
 
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {
