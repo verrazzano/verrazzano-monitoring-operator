@@ -129,7 +129,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 }
 
 // updateGrafanaAdminUser updates the Grafana deployment to make the Verrazzano user a Grafana Admin
-func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, grafanaDeployment *appsv1.Deployment, curDeployment *appsv1.Deployment) error {
+func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, grafanaDeployment *appsv1.Deployment, curDeployment *appsv1.Deployment) (dirty bool, err error) {
 	grafanaURL := url.URL{
 		Scheme: "HTTP",
 		Host:   fmt.Sprintf("%s.%s.svc.cluster.local:3000", resources.GetMetaName(vmo.Name, config.Grafana.Name), vmo.Namespace),
@@ -138,7 +138,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 
 	grafanaState, err := determineGrafanaState(controller, grafanaDeployment, grafanaURL)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	switch grafanaState {
@@ -162,15 +162,15 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 		}
 
 		// Update the existing deployment to match the newly modified deployment
-		return updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+		return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	case Request:
 		controller.log.Oncef("Requesting the Grafana deployment for the Verrazzano user admin update")
-		return requestGrafanaAdmin(controller, grafanaURL)
+		return true, requestGrafanaAdmin(controller, grafanaURL)
 	case Complete:
 		controller.log.Oncef("The Verrazzano user admin update for Grafana has completed successfully")
-		return updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	}
-	return nil
+	return false, nil
 }
 
 // determineGrafanaState returns a Grafana Admin State based on the status of the Grafana deployment
@@ -308,6 +308,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	var openSearchDeployments []*appsv1.Deployment
 	var deploymentNames []string
+	var grafanaDirty bool
 	controller.log.Oncef("Creating/updating ExpectedDeployments for VMI %s", vmo.Name)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
@@ -331,7 +332,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		} else if existingDeployment != nil {
 			// if the Grafana Admin annotation is set to "true", do the Grafana Admin update process
 			if val, ok := vmo.Annotations[grafanaAdminAnnotation]; ok && val == "true" && strings.Contains(curDeployment.Name, config.Grafana.Name) {
-				err = updateGrafanaAdminUser(controller, vmo, existingDeployment, curDeployment)
+				grafanaDirty, err = updateGrafanaAdminUser(controller, vmo, existingDeployment, curDeployment)
 				if err != nil {
 					return false, err
 				}
@@ -390,7 +391,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 	}
 
-	return openSearchDirty, nil
+	return openSearchDirty && grafanaDirty, nil
 }
 
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {
