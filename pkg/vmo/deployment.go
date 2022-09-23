@@ -253,7 +253,7 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	}
 
 	// Request that the Verrazzano user be Grafana Admin
-	grafanaURL.Path = fmt.Sprintf("api/admin/users/%s/permissions", vzUserInfo.Id)
+	grafanaURL.Path = fmt.Sprintf("api/admin/users/%d/permissions", vzUserInfo.ID)
 	grafanaURL.RawQuery = ""
 	requestData, err := json.Marshal(&grafanaAdminRequest{IsGrafanaAdmin: true})
 	if err != nil {
