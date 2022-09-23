@@ -4,11 +4,15 @@
 package vmo
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -18,6 +22,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/deployments"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -28,6 +33,8 @@ const (
 	grafanaAdminAnnotation = "grafana-admin-update"
 	authProxyEnvName       = "GF_AUTH_PROXY_ENABLED"
 	basicAuthEnvName       = "GF_AUTH_BASIC_ENABLED"
+	vzUserEnvName          = "GF_SECURITY_ADMIN_USER"
+	vzPassEnvName          = "GF_SECURITY_ADMIN_PASSWORD"
 )
 
 // GrafanaAdminState Grafana Admin Update state enum
@@ -38,6 +45,33 @@ const (
 	Request
 	Complete
 )
+
+// grafanaUserInfo is the expected response body for a user info request from Grafana
+type grafanaUserInfo struct {
+	Id             int         `json:"id"`
+	Email          string      `json:"email"`
+	Name           string      `json:"name"`
+	Login          string      `json:"login"`
+	Theme          string      `json:"theme"`
+	OrgId          int         `json:"orgId"`
+	IsGrafanaAdmin bool        `json:"isGrafanaAdmin"`
+	IsDisabled     bool        `json:"isDisabled"`
+	IsExternal     bool        `json:"isExternal"`
+	AuthLabels     interface{} `json:"authLabels"`
+	UpdatedAt      time.Time   `json:"updatedAt"`
+	CreatedAt      time.Time   `json:"createdAt"`
+	AvatarUrl      string      `json:"avatarUrl"`
+}
+
+// grafanaAdminRequest is the request body used to grant a user Grafana admin permissions
+type grafanaAdminRequest struct {
+	IsGrafanaAdmin bool `json:"isGrafanaAdmin"`
+}
+
+// grafanaAdminResponse is the expected response body from a Grafana admin permissions request
+type grafanaAdminResponse struct {
+	Message string `json:"message"`
+}
 
 func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	if osd == nil {
@@ -96,8 +130,15 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 
 // updateGrafanaAdminUser updates the Grafana deployment to make the Verrazzano user a Grafana Admin
 func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, grafanaDeployment *appsv1.Deployment, curDeployment *appsv1.Deployment) error {
-	switch determineGrafanaState(grafanaDeployment) {
+	grafanaURL := url.URL{
+		Scheme: "HTTP",
+		Host:   fmt.Sprintf("%s.%s.svc.cluster.local:3000", resources.GetMetaName(vmo.Name, config.Grafana.Name), vmo.Namespace),
+	}
+	grafanaURL.User = url.UserPassword("admin", "admin")
+
+	switch determineGrafanaState(controller, grafanaDeployment, grafanaURL) {
 	case Setup:
+		controller.log.Oncef("Setting up the Grafana deployment for the Verrazzano user admin update")
 		// Update the existing authentication env vars to enable basic auth
 		authBasicEnabled := false
 		grafanaEnvPtr := &curDeployment.Spec.Template.Spec.Containers[0].Env
@@ -118,41 +159,102 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 		// Update the existing deployment to match the newly modified deployment
 		return updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	case Request:
-		// TODO: Send appropriate requests to the Grafana pod
-		return nil
+		controller.log.Oncef("Requesting the Grafana deployment for the Verrazzano user admin update")
+		return requestGrafanaAdmin(controller, grafanaURL)
 	case Complete:
+		controller.log.Oncef("The Verrazzano user admin update for Grafana has completed successfully")
 		return updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	}
 	return nil
 }
 
 // determineGrafanaState returns a Grafana Admin State based on the status of the Grafana deployment
-func determineGrafanaState(deployment *appsv1.Deployment) grafanaAdminState {
+func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment, grafanaURL url.URL) grafanaAdminState {
+	// Collect necessary information from the Grafana pod env vars
+	basicAuthEnabled := false
+	authProxyEnabled := false
+	var vzUser, vzPass string
+	for _, envVar := range deployment.Spec.Template.Spec.Containers[0].Env {
+		if envVar.Name == authProxyEnvName && envVar.Value == "true" {
+			authProxyEnabled = true
+		}
+		if envVar.Name == basicAuthEnvName && envVar.Value == "true" {
+			basicAuthEnabled = true
+		}
+		if envVar.Name == vzUserEnvName {
+			vzUser = envVar.Value
+		}
+		if envVar.Name == vzPassEnvName {
+			vzPass = envVar.Value
+		}
+	}
+
 	// Always check that the verrazzano is not the admin user first
 	// This prevents the pod from continually getting recycled and updated
-	// TODO: ensure Verrazzano admin in Grafana
-	isVerrazzanoAdmin := deployment.Name == "obviousFailCase"
-	if isVerrazzanoAdmin {
+	// Setup Get request as the verrazzano user, we will use the Grafana secret env var for authentication
+	grafanaURL.Path = "api/users/lookup"
+	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
+	grafanaURL.User = url.UserPassword(vzUser, vzPass)
+	grafanaResponse, err := http.Get(grafanaURL.String())
+	if err != nil {
+		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
+	}
+	if grafanaResponse.Status == "200" {
 		return Complete
 	}
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
 	// If so, we should enter the request state
 	// If not, we should enter the setup state
-	basicAuthEnabled := false
-	for _, envVar := range deployment.Spec.Template.Spec.Containers[0].Env {
-		if envVar.Name == authProxyEnvName && envVar.Value == "true" {
-			basicAuthEnabled = false
-			break
-		}
-		if envVar.Name == basicAuthEnvName && envVar.Value == "true" {
-			basicAuthEnabled = true
-		}
-	}
-	if basicAuthEnabled {
+	if basicAuthEnabled && !authProxyEnabled {
 		return Request
 	}
 	return Setup
+}
+
+// reuqestGrafanaAdmin handles the request to Grafana to grant the Verrazzano user admin permissions
+func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
+	// Get the Verrazzano user ID for the admin request
+	grafanaURL.Path = "api/users/lookup"
+	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
+	grafanaResponse, err := http.Get(grafanaURL.String())
+	if err != nil {
+		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
+		return err
+	}
+	var vzUserInfo grafanaUserInfo
+	err = json.NewDecoder(grafanaResponse.Body).Decode(&vzUserInfo)
+	if err != nil {
+		controller.log.Errorf("Failed to decode the response body of the Verrazzano user information: %v", err)
+		return err
+	}
+
+	// Request that the Verrazzano user be Grafana Admin
+	grafanaURL.Path = fmt.Sprintf("api/admin/users/%s/permissions", vzUserInfo.Id)
+	grafanaURL.RawQuery = ""
+	requestData := new(bytes.Buffer)
+	err = json.NewEncoder(requestData).Encode(&grafanaAdminRequest{IsGrafanaAdmin: true})
+	if err != nil {
+		controller.log.Errorf("Failed to encode the Grafana admin request body data: %v", err)
+		return err
+	}
+	grafanaResponse, err = http.Post(grafanaURL.String(), "application/json", requestData)
+	if err != nil {
+		controller.log.Errorf("Failed to request admin permissions for the Verrazzano user: %v", err)
+		return err
+	}
+
+	// Verify the response gives a valid response message
+	var adminUserResponse grafanaAdminResponse
+	err = json.NewDecoder(grafanaResponse.Body).Decode(&adminUserResponse)
+	if err != nil {
+		controller.log.Errorf("Failed to decode the response body of the Verrazzano admin request: %v", err)
+		return err
+	}
+	if adminUserResponse.Message != "User permissions updated" {
+		controller.log.Errorf("Failed to update user permissions, Grafana response: %v", adminUserResponse.Message)
+	}
+	return nil
 }
 
 // CreateDeployments create/update VMO deployment k8s resources
