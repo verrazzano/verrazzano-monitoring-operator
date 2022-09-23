@@ -69,7 +69,7 @@ type grafanaAdminRequest struct {
 }
 
 // grafanaAdminResponse is the expected response body from a Grafana admin permissions request
-type grafanaAdminResponse struct {
+type grafanaMessageResponse struct {
 	Message string `json:"message"`
 }
 
@@ -211,8 +211,17 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
 		return 0, err
 	}
-	if grafanaResponse.Status == "200" {
+	if grafanaResponse.StatusCode == 200 {
 		return Complete, nil
+	} else {
+		// We expect a message response for a
+		var messageResponse grafanaMessageResponse
+		err = json.NewDecoder(grafanaResponse.Body).Decode(&messageResponse)
+		if err != nil {
+			controller.log.Errorf("Failed to decode the response body of the incomplete request with status %d: %v", grafanaResponse.StatusCode, err)
+			return 0, err
+		}
+		controller.log.Progressf("Request to get Verrazzano user info from from the Grafana pod was unsuccessful status: %d message: %s", grafanaResponse.StatusCode, messageResponse.Message)
 	}
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
@@ -263,7 +272,7 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	}
 
 	// Verify the response gives a valid response message
-	var adminUserResponse grafanaAdminResponse
+	var adminUserResponse grafanaMessageResponse
 	err = json.NewDecoder(grafanaResponse.Body).Decode(&adminUserResponse)
 	if err != nil {
 		controller.log.Errorf("Failed to decode the response body of the Verrazzano admin request: %v", err)
