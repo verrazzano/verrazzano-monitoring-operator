@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	"strings"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -20,6 +22,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
+)
+
+const (
+	grafanaAdminAnnotation = "grafana-admin-update"
+	authProxyEnvName       = "GF_AUTH_PROXY_ENABLED"
+	basicAuthEnvName       = "GF_AUTH_BASIC_ENABLED"
+)
+
+// GrafanaAdminState Grafana Admin Update state enum
+type grafanaAdminState int
+
+const (
+	Setup grafanaAdminState = iota
+	Request
+	Complete
 )
 
 func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
@@ -77,6 +94,67 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 	return nil
 }
 
+// updateGrafanaAdminUser updates the Grafana deployment to make the Verrazzano user a Grafana Admin
+func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, grafanaDeployment *appsv1.Deployment, curDeployment *appsv1.Deployment) error {
+	switch determineGrafanaState(grafanaDeployment) {
+	case Setup:
+		// Update the existing authentication env vars to enable basic auth
+		authBasicEnabled := false
+		grafanaEnvPtr := &curDeployment.Spec.Template.Spec.Containers[0].Env
+		for i, envVar := range *grafanaEnvPtr {
+			if envVar.Name == authProxyEnvName {
+				(*grafanaEnvPtr)[i].Value = "false"
+			}
+			if envVar.Name == basicAuthEnvName {
+				(*grafanaEnvPtr)[i].Value = "true"
+				authBasicEnabled = true
+			}
+		}
+		// Ensure that basic auth is enabled, even if it was not present in the existing env vars
+		if !authBasicEnabled {
+			*grafanaEnvPtr = append(curDeployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: basicAuthEnvName, Value: "true"})
+		}
+
+		// Update the existing deployment to match the newly modified deployment
+		return updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+	case Request:
+		// TODO: Send appropriate requests to the Grafana pod
+		return nil
+	case Complete:
+		return updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+	}
+	return nil
+}
+
+// determineGrafanaState returns a Grafana Admin State based on the status of the Grafana deployment
+func determineGrafanaState(deployment *appsv1.Deployment) grafanaAdminState {
+	// Always check that the verrazzano is not the admin user first
+	// This prevents the pod from continually getting recycled and updated
+	// TODO: ensure Verrazzano admin in Grafana
+	isVerrazzanoAdmin := deployment.Name == "obviousFailCase"
+	if isVerrazzanoAdmin {
+		return Complete
+	}
+
+	// Check the deployment pod env vars to determine if basic auth is enabled
+	// If so, we should enter the request state
+	// If not, we should enter the setup state
+	basicAuthEnabled := false
+	for _, envVar := range deployment.Spec.Template.Spec.Containers[0].Env {
+		if envVar.Name == authProxyEnvName && envVar.Value == "true" {
+			basicAuthEnabled = false
+			break
+		}
+		if envVar.Name == basicAuthEnvName && envVar.Value == "true" {
+			basicAuthEnabled = true
+		}
+	}
+	if basicAuthEnabled {
+		return Request
+	}
+	return Setup
+}
+
 // CreateDeployments create/update VMO deployment k8s resources
 func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string, existingCluster bool) (dirty bool, err error) {
 	// The error count is incremented by the function which calls createDeployment
@@ -122,7 +200,13 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 				return false, err
 			}
 		} else if existingDeployment != nil {
-			if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
+			// if the Grafana Admin annotation is set to "true", do the Grafana Admin update process
+			if val, ok := vmo.Annotations[grafanaAdminAnnotation]; ok && val == "true" && strings.Contains(curDeployment.Name, config.Grafana.Name) {
+				err = updateGrafanaAdminUser(controller, vmo, existingDeployment, curDeployment)
+				if err != nil {
+					return false, err
+				}
+			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				openSearchDeployments = append(openSearchDeployments, curDeployment)
 			} else {
 				err = updateDeployment(controller, vmo, existingDeployment, curDeployment)
