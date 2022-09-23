@@ -6,6 +6,7 @@ package vmo
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,7 +35,7 @@ const (
 	authProxyEnvName       = "GF_AUTH_PROXY_ENABLED"
 	basicAuthEnvName       = "GF_AUTH_BASIC_ENABLED"
 	vzUserEnvName          = "GF_SECURITY_ADMIN_USER"
-	vzPassEnvName          = "GF_SECURITY_ADMIN_PASSWORD"
+	vzPassEnvName          = "GF_SECURITY_ADMIN_PASSWORD" //nolint:gosec
 )
 
 // GrafanaAdminState Grafana Admin Update state enum
@@ -48,19 +49,19 @@ const (
 
 // grafanaUserInfo is the expected response body for a user info request from Grafana
 type grafanaUserInfo struct {
-	Id             int         `json:"id"`
+	ID             int         `json:"id"`
 	Email          string      `json:"email"`
 	Name           string      `json:"name"`
 	Login          string      `json:"login"`
 	Theme          string      `json:"theme"`
-	OrgId          int         `json:"orgId"`
+	OrgID          int         `json:"orgId"`
 	IsGrafanaAdmin bool        `json:"isGrafanaAdmin"`
 	IsDisabled     bool        `json:"isDisabled"`
 	IsExternal     bool        `json:"isExternal"`
 	AuthLabels     interface{} `json:"authLabels"`
 	UpdatedAt      time.Time   `json:"updatedAt"`
 	CreatedAt      time.Time   `json:"createdAt"`
-	AvatarUrl      string      `json:"avatarUrl"`
+	AvatarURL      string      `json:"avatarUrl"`
 }
 
 // grafanaAdminRequest is the request body used to grant a user Grafana admin permissions
@@ -136,7 +137,12 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 	}
 	grafanaURL.User = url.UserPassword("admin", "admin")
 
-	switch determineGrafanaState(controller, grafanaDeployment, grafanaURL) {
+	grafanaState, err := determineGrafanaState(controller, grafanaDeployment, grafanaURL)
+	if err != nil {
+		return err
+	}
+
+	switch grafanaState {
 	case Setup:
 		controller.log.Oncef("Setting up the Grafana deployment for the Verrazzano user admin update")
 		// Update the existing authentication env vars to enable basic auth
@@ -169,11 +175,11 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 }
 
 // determineGrafanaState returns a Grafana Admin State based on the status of the Grafana deployment
-func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment, grafanaURL url.URL) grafanaAdminState {
+func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment, grafanaURL url.URL) (grafanaAdminState, error) {
 	// Collect necessary information from the Grafana pod env vars
 	basicAuthEnabled := false
 	authProxyEnabled := false
-	var vzUser, vzPass string
+	var vzUserSecretName string
 	for _, envVar := range deployment.Spec.Template.Spec.Containers[0].Env {
 		if envVar.Name == authProxyEnvName && envVar.Value == "true" {
 			authProxyEnabled = true
@@ -181,35 +187,52 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 		if envVar.Name == basicAuthEnvName && envVar.Value == "true" {
 			basicAuthEnabled = true
 		}
-		if envVar.Name == vzUserEnvName {
-			vzUser = envVar.Value
-		}
-		if envVar.Name == vzPassEnvName {
-			vzPass = envVar.Value
+		if (envVar.Name == vzUserEnvName || envVar.Name == vzPassEnvName) && envVar.ValueFrom.SecretKeyRef != nil {
+			vzUserSecretName = envVar.ValueFrom.SecretKeyRef.Name
 		}
 	}
 
-	// Always check that the verrazzano is not the admin user first
+	// Get the secret data from the Grafana admin credential secret
+	vzUserSecret, err := controller.secretLister.Secrets(deployment.Namespace).Get(vzUserSecretName)
+	if err != nil {
+		controller.log.Errorf("Failed to get the Grafana Verrazzano credential secret %s: %v", vzUserSecretName, err)
+		return 0, err
+	}
+	vzUserByte, err := base64.URLEncoding.DecodeString(string(vzUserSecret.Data["username"]))
+	if err != nil {
+		controller.log.Errorf("Failed to decode the Verrazzano username data: %v", err)
+		return 0, err
+	}
+	vzPassByte, err := base64.URLEncoding.DecodeString(string(vzUserSecret.Data["password"]))
+	if err != nil {
+		controller.log.Errorf("Failed to decode the Verrazzano password data: %v", err)
+		return 0, err
+	}
+	vzUser := string(vzUserByte)
+	vzPass := string(vzPassByte)
+
+	// Always check that the Verrazzano is not the admin user first
 	// This prevents the pod from continually getting recycled and updated
-	// Setup Get request as the verrazzano user, we will use the Grafana secret env var for authentication
+	// Setup Get request as the verrazzano user, we will use the Grafana credential secret for authentication
 	grafanaURL.Path = "api/users/lookup"
 	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
 	grafanaURL.User = url.UserPassword(vzUser, vzPass)
 	grafanaResponse, err := http.Get(grafanaURL.String())
 	if err != nil {
 		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
+		return 0, err
 	}
 	if grafanaResponse.Status == "200" {
-		return Complete
+		return Complete, nil
 	}
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
 	// If so, we should enter the request state
 	// If not, we should enter the setup state
 	if basicAuthEnabled && !authProxyEnabled {
-		return Request
+		return Request, nil
 	}
-	return Setup
+	return Setup, nil
 }
 
 // reuqestGrafanaAdmin handles the request to Grafana to grant the Verrazzano user admin permissions
@@ -232,13 +255,19 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	// Request that the Verrazzano user be Grafana Admin
 	grafanaURL.Path = fmt.Sprintf("api/admin/users/%s/permissions", vzUserInfo.Id)
 	grafanaURL.RawQuery = ""
-	requestData := new(bytes.Buffer)
-	err = json.NewEncoder(requestData).Encode(&grafanaAdminRequest{IsGrafanaAdmin: true})
+	requestData, err := json.Marshal(&grafanaAdminRequest{IsGrafanaAdmin: true})
 	if err != nil {
 		controller.log.Errorf("Failed to encode the Grafana admin request body data: %v", err)
 		return err
 	}
-	grafanaResponse, err = http.Post(grafanaURL.String(), "application/json", requestData)
+	grafanaRequest, err := http.NewRequest(http.MethodPut, grafanaURL.String(), bytes.NewBuffer(requestData))
+	if err != nil {
+		controller.log.Errorf("Failed to create request for admin permissions for the Verrazzano user: %v", err)
+		return err
+	}
+	grafanaRequest.Header.Set("Content-type", "application/json")
+	client := http.Client{}
+	grafanaResponse, err = client.Do(grafanaRequest)
 	if err != nil {
 		controller.log.Errorf("Failed to request admin permissions for the Verrazzano user: %v", err)
 		return err
