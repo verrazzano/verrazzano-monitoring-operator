@@ -20,7 +20,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/configmaps"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"github.com/verrazzano/verrazzano/pkg/log/vzlog"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubeinformers "k8s.io/client-go/informers"
 	fake "k8s.io/client-go/kubernetes/fake"

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"github.com/stretchr/testify/assert"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"github.com/verrazzano/verrazzano/pkg/log/vzlog"
 	"io"
 	"net/http"
 	"strings"

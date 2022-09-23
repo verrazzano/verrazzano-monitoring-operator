@@ -7,7 +7,7 @@ import (
 	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"github.com/verrazzano/verrazzano/pkg/log/vzlog"
 	"net/http"
 )
 

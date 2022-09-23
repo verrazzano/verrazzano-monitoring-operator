@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"github.com/verrazzano/verrazzano/pkg/log/vzlog"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

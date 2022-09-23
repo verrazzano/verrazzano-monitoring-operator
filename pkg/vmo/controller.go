@@ -23,7 +23,7 @@ import (
 	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"github.com/verrazzano/verrazzano/pkg/log/vzlog"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -477,7 +477,8 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	*********************************************/
 	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
 	if err != nil {
-		c.log.Errorf("Failed to migrate old indices to data stream: %v", err)
+		c.log.ErrorfThrottled("Failed to migrate old indices to data stream: %v", err)
+		//c.log.Errorf("Failed to migrate old indices to data stream: %v", err)
 		errorObserved = true
 	}
 
@@ -486,7 +487,8 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateRoleBindings(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Role Bindings for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create Role Bindings for VMI %s: %v", vmo.Name, err)
+		//c.log.Errorf("Failed to create Role Bindings for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -495,7 +497,8 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create configmaps for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create configmaps for VMI %s: %v", vmo.Name, err)
+		//c.log.Errorf("Failed to create configmaps for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -504,7 +507,8 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateServices(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create Services for VMI %s: %v", vmo.Name, err)
+		//c.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -513,7 +517,9 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	pvcToAdMap, err := CreatePersistentVolumeClaims(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create/update PVCs for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create/update PVCs for VMI %s: %v", vmo.Name, err)
+
+		//c.log.Errorf("Failed to create/update PVCs for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -522,7 +528,9 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	existingCluster, err := CreateStatefulSets(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create/update statefulsets for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create/update statefulsets for VMI %s: %v", vmo.Name, err)
+
+		//c.log.Errorf("Failed to create/update statefulsets for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -543,7 +551,9 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateIngresses(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Ingresses for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create Ingresses for VMI %s: %v", vmo.Name, err)
+
+		//c.log.Errorf("Failed to create Ingresses for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 

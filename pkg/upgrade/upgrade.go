@@ -11,7 +11,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
 	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"github.com/verrazzano/verrazzano/pkg/log/vzlog"
 )
 
 type Monitor struct {
