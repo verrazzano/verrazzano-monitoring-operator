@@ -6,7 +6,6 @@ package vmo
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -198,18 +197,8 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 		controller.log.Errorf("Failed to get the Grafana Verrazzano credential secret %s: %v", vzUserSecretName, err)
 		return 0, err
 	}
-	vzUserByte, err := base64.URLEncoding.DecodeString(string(vzUserSecret.Data["username"]))
-	if err != nil {
-		controller.log.Errorf("Failed to decode the Verrazzano username data: %v", err)
-		return 0, err
-	}
-	vzPassByte, err := base64.URLEncoding.DecodeString(string(vzUserSecret.Data["password"]))
-	if err != nil {
-		controller.log.Errorf("Failed to decode the Verrazzano password data: %v", err)
-		return 0, err
-	}
-	vzUser := string(vzUserByte)
-	vzPass := string(vzPassByte)
+	vzUser := string(vzUserSecret.Data["username"])
+	vzPass := string(vzUserSecret.Data["password"])
 
 	// Always check that the Verrazzano is not the admin user first
 	// This prevents the pod from continually getting recycled and updated
@@ -235,7 +224,7 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 	return Setup, nil
 }
 
-// reuqestGrafanaAdmin handles the request to Grafana to grant the Verrazzano user admin permissions
+// requestGrafanaAdmin handles the request to Grafana to grant the Verrazzano user admin permissions
 func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	// Get the Verrazzano user ID for the admin request
 	grafanaURL.Path = "api/users/lookup"
