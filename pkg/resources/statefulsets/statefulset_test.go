@@ -313,7 +313,7 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal("master,data,ingest", env[6].Value, "Incorrect Env[6].Value")
 	assert.Equal("discovery.type", env[7].Name, "Incorrect Env[7].Name")
 	assert.Equal("single-node", env[7].Value, "Incorrect Env[7].Value")
-	assert.Equal("ES_JAVA_OPTS", env[8].Name, "Incorrect Env[8].Name")
+	assert.Equal("OPENSEARCH_JAVA_OPTS", env[8].Name, "Incorrect Env[8].Name")
 	assert.Equal("-Xms700m -Xmx700m", env[8].Value, "Incorrect Env[8].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,

@@ -142,7 +142,7 @@ fi
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
 
 			// supported via legacy compatibility
-			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
+			corev1.EnvVar{Name: "OPENSEARCH_JAVA_OPTS", Value: javaOpts},
 		)
 	} else {
 		envVars = append(envVars,

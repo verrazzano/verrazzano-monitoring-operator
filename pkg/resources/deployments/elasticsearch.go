@@ -5,6 +5,7 @@ package deployments
 
 import (
 	"fmt"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
@@ -112,7 +113,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 			corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)},
 			corev1.EnvVar{Name: "NETWORK_HOST", Value: "0.0.0.0"},
 			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&nodeList[i])},
-			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
+			corev1.EnvVar{Name: "OPENSEARCH_JAVA_OPTS", Value: javaOpts},
 		)
 		// add the required istio annotations to allow inter-es component communication
 		if ingestDeployment.Spec.Template.Annotations == nil {
@@ -186,7 +187,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 				corev1.EnvVar{Name: "discovery.seed_hosts", Value: resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)},
 				corev1.EnvVar{Name: "node.attr.availability_domain", Value: availabilityDomain},
 				corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&nodeList[idx])},
-				corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
+				corev1.EnvVar{Name: "OPENSEARCH_JAVA_OPTS", Value: javaOpts},
 				corev1.EnvVar{Name: constants.ObjectStoreAccessKeyVarName,
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
