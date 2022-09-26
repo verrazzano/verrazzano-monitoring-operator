@@ -252,6 +252,7 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 		registerResponse, err := http.Post(grafanaURL.String(), "application/json", bytes.NewBuffer(requestData))
 		if err != nil {
 			controller.log.Errorf("Failed to request the Verrazzano user creation with %d status: %v", registerResponse.StatusCode, err)
+			return 0, err
 		}
 	}
 	controller.log.Progressf("Request to get Verrazzano user info from from the Grafana pod was unsuccessful status: %d", grafanaResponse.StatusCode)
@@ -271,14 +272,14 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	grafanaURL.Path = "api/users/lookup"
 	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
 	grafanaResponse, err := http.Get(grafanaURL.String())
-	if err != nil {
-		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
+	if err != nil || grafanaResponse.StatusCode != 200 {
+		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s, status %d: %v", grafanaURL.String(), grafanaResponse.StatusCode, err)
 		return err
 	}
 	var vzUserInfo grafanaUserInfo
 	err = json.NewDecoder(grafanaResponse.Body).Decode(&vzUserInfo)
 	if err != nil {
-		controller.log.Errorf("Failed to decode the response body of the Verrazzano user information: %v", err)
+		controller.log.Errorf("Failed to decode the response body of the Verrazzano user information %s: %v", err)
 		return err
 	}
 
@@ -366,7 +367,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			if val, ok := vmo.Annotations[grafanaAdminAnnotation]; ok && val == "true" && strings.Contains(curDeployment.Name, config.Grafana.Name) {
 				grafanaDirty, err = updateGrafanaAdminUser(controller, vmo, existingDeployment, curDeployment)
 				if err != nil {
-					return false, err
+					return grafanaDirty, err
 				}
 			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				openSearchDeployments = append(openSearchDeployments, curDeployment)
