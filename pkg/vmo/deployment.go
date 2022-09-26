@@ -33,8 +33,6 @@ const (
 	grafanaAdminAnnotation = "grafana-admin-update"
 	authProxyEnvName       = "GF_AUTH_PROXY_ENABLED"
 	basicAuthEnvName       = "GF_AUTH_BASIC_ENABLED"
-	vzUserEnvName          = "GF_SECURITY_ADMIN_USER"
-	vzPassEnvName          = "GF_SECURITY_ADMIN_PASSWORD" //nolint:gosec
 )
 
 // GrafanaAdminState Grafana Admin Update state enum
