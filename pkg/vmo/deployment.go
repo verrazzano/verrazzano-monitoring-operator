@@ -183,38 +183,16 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 
 // determineGrafanaState returns a Grafana Admin State based on the status of the Grafana deployment
 func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment, grafanaURL url.URL) (grafanaAdminState, error) {
-	// Collect necessary information from the Grafana pod env vars
-	basicAuthEnabled := false
-	authProxyEnabled := false
-	var vzUserSecretName string
-	for _, envVar := range deployment.Spec.Template.Spec.Containers[0].Env {
-		if envVar.Name == authProxyEnvName && envVar.Value == "true" {
-			authProxyEnabled = true
-		}
-		if envVar.Name == basicAuthEnvName && envVar.Value == "true" {
-			basicAuthEnabled = true
-		}
-		if (envVar.Name == vzUserEnvName || envVar.Name == vzPassEnvName) && envVar.ValueFrom.SecretKeyRef != nil {
-			vzUserSecretName = envVar.ValueFrom.SecretKeyRef.Name
-		}
-	}
-
-	// Get the secret data from the Grafana admin credential secret
-	vzUserSecret, err := controller.secretLister.Secrets(deployment.Namespace).Get(vzUserSecretName)
-	if err != nil {
-		controller.log.Errorf("Failed to get the Grafana Verrazzano credential secret %s: %v", vzUserSecretName, err)
-		return 0, err
-	}
-	vzUser := string(vzUserSecret.Data["username"])
-	vzPass := string(vzUserSecret.Data["password"])
-
 	// Always check that the Verrazzano is not the admin user first
 	// This prevents the pod from continually getting recycled and updated
 	// Setup Get request as the verrazzano user, we will use the Grafana credential secret for authentication
 	grafanaURL.Path = "api/users/lookup"
 	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
-	grafanaURL.User = url.UserPassword(vzUser, vzPass)
 	grafanaResponse, err := http.Get(grafanaURL.String())
+	if grafanaResponse.StatusCode == 503 {
+		controller.log.Progressf("Waiting for Grafana pod to be ready before request, status: %d", grafanaResponse.StatusCode)
+		return Setup, nil
+	}
 	if err != nil && grafanaResponse.StatusCode != 404 {
 		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
 		return 0, err
@@ -230,16 +208,22 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 			return Complete, nil
 		}
 	}
-	if grafanaResponse.StatusCode == 503 {
-		controller.log.Progressf("Waiting for Grafana pod to be ready before request, status: %d", grafanaResponse.StatusCode)
-		return Setup, nil
-	}
-
-	controller.log.Progressf("Request to get Verrazzano user info from from the Grafana pod was unsuccessful status: %d", grafanaResponse.StatusCode)
+	controller.log.Progressf("Verrazzano user info was not found or Verrazzano user is not admin, status: %d", grafanaResponse.StatusCode)
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
 	// If so, we should enter the request state
 	// If not, we should enter the setup state
+	// Collect necessary information from the Grafana pod env vars
+	basicAuthEnabled := false
+	authProxyEnabled := false
+	for _, envVar := range deployment.Spec.Template.Spec.Containers[0].Env {
+		if envVar.Name == authProxyEnvName && envVar.Value == "true" {
+			authProxyEnabled = true
+		}
+		if envVar.Name == basicAuthEnvName && envVar.Value == "true" {
+			basicAuthEnabled = true
+		}
+	}
 	if basicAuthEnabled && !authProxyEnabled {
 		return Request, nil
 	}
