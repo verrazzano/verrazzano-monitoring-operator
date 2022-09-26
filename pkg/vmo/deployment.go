@@ -230,31 +230,6 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 			return Complete, nil
 		}
 	}
-	// if the Verrazzano user is not found, we need to create one
-	// this occurs if the console is not accessed before this process is run
-	if grafanaResponse.StatusCode == 404 {
-		vzUserReg := grafanaUserRegistration{
-			Name:  "",
-			Email: "verrazzano",
-			Login: "verrazzano",
-			// because we use an auth proxy to authenticate, we do not need to supply a valid password here
-			// This field is required, so it must be populated
-			Password: "verrazzano",
-		}
-		requestData, err := json.Marshal(&vzUserReg)
-		if err != nil {
-			controller.log.Errorf("Failed to encode the request to create the Verrazzano user: %v", err)
-			return 0, err
-		}
-		grafanaURL.Path = "api/admin/users"
-		grafanaURL.RawQuery = ""
-		grafanaURL.User = url.UserPassword("admin", "admin")
-		registerResponse, err := http.Post(grafanaURL.String(), "application/json", bytes.NewBuffer(requestData))
-		if err != nil || registerResponse.StatusCode != 200 {
-			controller.log.Errorf("Failed to request the Verrazzano user creation, status %d: %v", registerResponse.StatusCode, err)
-			return 0, err
-		}
-	}
 	if grafanaResponse.StatusCode == 503 {
 		controller.log.Progressf("Waiting for Grafana pod to be ready before request, status: %d", grafanaResponse.StatusCode)
 		return Setup, nil
@@ -277,10 +252,37 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	grafanaURL.Path = "api/users/lookup"
 	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
 	grafanaResponse, err := http.Get(grafanaURL.String())
-	if err != nil || grafanaResponse.StatusCode != 200 {
+	if err != nil && grafanaResponse.StatusCode != 404 {
 		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s, status %d: %v", grafanaURL.String(), grafanaResponse.StatusCode, err)
 		return err
 	}
+	// if the Verrazzano user is not found, we need to create one
+	// this occurs if the console is not accessed before this process is run
+	if grafanaResponse.StatusCode == 404 {
+		controller.log.Once("Failed to find Verrazzano user in Grafana, creating now")
+		vzUserReg := grafanaUserRegistration{
+			Name:  "",
+			Email: "verrazzano",
+			Login: "verrazzano",
+			// because we use an auth proxy to authenticate, we do not need to supply a valid password here
+			// This field is required, so it must be populated
+			Password: "verrazzano",
+		}
+		requestData, errReg := json.Marshal(&vzUserReg)
+		if errReg != nil {
+			controller.log.Errorf("Failed to encode the request to create the Verrazzano user: %v", errReg)
+			return errReg
+		}
+		grafanaURL.Path = "api/admin/users"
+		grafanaURL.RawQuery = ""
+		registerResponse, errReg := http.Post(grafanaURL.String(), "application/json", bytes.NewBuffer(requestData))
+		if errReg != nil || registerResponse.StatusCode != 200 {
+			controller.log.Errorf("Failed to request the Verrazzano user creation, status %d: %v", registerResponse.StatusCode, errReg)
+			return err
+		}
+		return err
+	}
+
 	var vzUserInfo grafanaUserInfo
 	err = json.NewDecoder(grafanaResponse.Body).Decode(&vzUserInfo)
 	if err != nil {
