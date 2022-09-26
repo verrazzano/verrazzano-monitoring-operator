@@ -63,6 +63,14 @@ type grafanaUserInfo struct {
 	AvatarURL      string      `json:"avatarUrl"`
 }
 
+// grafanaUserRegistration is used to register a new user in Grafana
+type grafanaUserRegistration struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}
+
 // grafanaAdminRequest is the request body used to grant a user Grafana admin permissions
 type grafanaAdminRequest struct {
 	IsGrafanaAdmin bool `json:"isGrafanaAdmin"`
@@ -222,6 +230,30 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 			return Complete, nil
 		}
 	}
+	// if the Verrazzano user is not found, we need to create one
+	// this occurs if the console is not accessed before this process is run
+	if grafanaResponse.StatusCode == 404 {
+		vzUserReg := grafanaUserRegistration{
+			Name:  "",
+			Email: "verrazzano",
+			Login: "verrazzano",
+			// because we use an auth proxy to authenticate, we do not need to supply a valid password here
+			// This field is required, so it must be populated
+			Password: "verrazzano",
+		}
+		requestData, err := json.Marshal(&vzUserReg)
+		if err != nil {
+			controller.log.Errorf("Failed to encode the request to create the Verrazzano user: %v", err)
+			return 0, err
+		}
+		grafanaURL.Path = "api/admin/users"
+		grafanaURL.RawQuery = ""
+		grafanaURL.User = url.UserPassword("admin", "admin")
+		registerResponse, err := http.Post(grafanaURL.String(), "application/json", bytes.NewBuffer(requestData))
+		if err != nil {
+			controller.log.Errorf("Failed to request the Verrazzano user creation with %d status: %v", registerResponse.StatusCode, err)
+		}
+	}
 	controller.log.Progressf("Request to get Verrazzano user info from from the Grafana pod was unsuccessful status: %d", grafanaResponse.StatusCode)
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
@@ -279,7 +311,7 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 		return err
 	}
 	if adminUserResponse.Message != "User permissions updated" {
-		controller.log.Errorf("Failed to update user permissions, Grafana response: %v", adminUserResponse.Message)
+		controller.log.Errorf("Failed to update user permissions, Grafana response: %s", adminUserResponse.Message)
 	}
 	return nil
 }
