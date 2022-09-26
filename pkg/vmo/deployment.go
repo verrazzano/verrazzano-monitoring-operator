@@ -182,11 +182,17 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 			return false, err
 		}
 		// we need to add a completed label to the pod, so that the reconciliation does not continue infinitely
+		if len(curDeployment.Annotations) == 0 {
+			curDeployment.Annotations = make(map[string]string)
+		}
 		curDeployment.Annotations[grafanaAdminAnnotation] = completeVal
 		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	case Complete:
 		controller.log.Oncef("The Verrazzano user admin update for Grafana has completed successfully")
 		// this will maintain the completed state
+		if len(curDeployment.Annotations) == 0 {
+			curDeployment.Annotations = make(map[string]string)
+		}
 		curDeployment.Annotations[grafanaAdminAnnotation] = completeVal
 		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	}
