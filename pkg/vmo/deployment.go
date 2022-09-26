@@ -250,11 +250,16 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 		grafanaURL.RawQuery = ""
 		grafanaURL.User = url.UserPassword("admin", "admin")
 		registerResponse, err := http.Post(grafanaURL.String(), "application/json", bytes.NewBuffer(requestData))
-		if err != nil {
-			controller.log.Errorf("Failed to request the Verrazzano user creation with %d status: %v", registerResponse.StatusCode, err)
+		if err != nil || registerResponse.StatusCode != 200 {
+			controller.log.Errorf("Failed to request the Verrazzano user creation, status %d: %v", registerResponse.StatusCode, err)
 			return 0, err
 		}
 	}
+	if grafanaResponse.StatusCode == 503 {
+		controller.log.Progressf("Waiting for Grafana pod to be ready before request, status: %d", grafanaResponse.StatusCode)
+		return Setup, nil
+	}
+
 	controller.log.Progressf("Request to get Verrazzano user info from from the Grafana pod was unsuccessful status: %d", grafanaResponse.StatusCode)
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
@@ -299,8 +304,8 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	grafanaRequest.Header.Set("Content-type", "application/json")
 	client := http.Client{}
 	grafanaResponse, err = client.Do(grafanaRequest)
-	if err != nil {
-		controller.log.Errorf("Failed to request admin permissions for the Verrazzano user: %v", err)
+	if err != nil || grafanaResponse.StatusCode != 200 {
+		controller.log.Errorf("Failed to request admin permissions for the Verrazzano user, status %d: %v", grafanaResponse.StatusCode, err)
 		return err
 	}
 
