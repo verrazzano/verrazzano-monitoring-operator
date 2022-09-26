@@ -215,7 +215,7 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
 	grafanaURL.User = url.UserPassword(vzUser, vzPass)
 	grafanaResponse, err := http.Get(grafanaURL.String())
-	if err != nil {
+	if err != nil && grafanaResponse.StatusCode != 404 {
 		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
 		return 0, err
 	}
