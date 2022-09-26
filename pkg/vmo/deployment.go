@@ -137,7 +137,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 }
 
 // updateGrafanaAdminUser updates the Grafana deployment to make the Verrazzano user a Grafana Admin
-func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, grafanaDeployment *appsv1.Deployment, curDeployment *appsv1.Deployment) (dirty bool, err error) {
+func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, grafanaDeployment *appsv1.Deployment, curDeployment *appsv1.Deployment) (bool, error) {
 	grafanaURL := url.URL{
 		Scheme: "HTTP",
 		Host:   fmt.Sprintf("%s.%s.svc.cluster.local:3000", resources.GetMetaName(vmo.Name, config.Grafana.Name), vmo.Namespace),
@@ -278,7 +278,7 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 		registerResponse, errReg := http.Post(grafanaURL.String(), "application/json", bytes.NewBuffer(requestData))
 		if errReg != nil || registerResponse.StatusCode != 200 {
 			controller.log.Errorf("Failed to request the Verrazzano user creation, status %d: %v", registerResponse.StatusCode, errReg)
-			return err
+			return errReg
 		}
 		return err
 	}
@@ -321,6 +321,8 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	if adminUserResponse.Message != "User permissions updated" {
 		controller.log.Errorf("Failed to update user permissions, Grafana response: %s", adminUserResponse.Message)
 	}
+
+	controller.log.Once("Verrazzano user successfully updated to Grafana admin")
 	return nil
 }
 
@@ -371,10 +373,15 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			}
 		} else if existingDeployment != nil {
 			// if the Grafana Admin annotation is set to "true", do the Grafana Admin update process
-			if val, ok := vmo.Annotations[grafanaAdminAnnotation]; ok && val == "true" && strings.Contains(curDeployment.Name, config.Grafana.Name) {
-				grafanaDirty, err = updateGrafanaAdminUser(controller, vmo, existingDeployment, curDeployment)
-				if err != nil {
-					return grafanaDirty, err
+			if val, ok := vmo.Annotations[grafanaAdminAnnotation]; ok && val == "true" && strings.Contains(curDeployment.Name, resources.GetMetaName(vmo.Name, config.Grafana.Name)) {
+				// The reconciliation for the Deployment update is only passed through once without an error
+				// to continue the Grafana update, we must reconcile all states at once
+				contGrafanaUpdate := true
+				for contGrafanaUpdate {
+					contGrafanaUpdate, err = updateGrafanaAdminUser(controller, vmo, existingDeployment, curDeployment)
+					if err != nil {
+						return false, err
+					}
 				}
 			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				openSearchDeployments = append(openSearchDeployments, curDeployment)
