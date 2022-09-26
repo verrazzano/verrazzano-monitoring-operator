@@ -350,7 +350,6 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	var openSearchDeployments []*appsv1.Deployment
 	var deploymentNames []string
-	var grafanaDirty bool
 	controller.log.Oncef("Creating/updating ExpectedDeployments for VMI %s", vmo.Name)
 	for _, curDeployment := range deployList {
 		deploymentName := curDeployment.Name
@@ -438,7 +437,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		}
 	}
 
-	return openSearchDirty || grafanaDirty, nil
+	return openSearchDirty, nil
 }
 
 func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, deployment *appsv1.Deployment) error {
