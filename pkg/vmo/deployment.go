@@ -31,6 +31,7 @@ import (
 
 const (
 	grafanaAdminAnnotation = "grafana-admin-update"
+	completeVal            = "complete"
 	authProxyEnvName       = "GF_AUTH_PROXY_ENABLED"
 	basicAuthEnvName       = "GF_AUTH_BASIC_ENABLED"
 )
@@ -176,9 +177,17 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 		return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	case Request:
 		controller.log.Oncef("Requesting the Grafana deployment for the Verrazzano user admin update")
-		return true, requestGrafanaAdmin(controller, grafanaURL)
+		err := requestGrafanaAdmin(controller, grafanaURL)
+		if err != nil {
+			return false, err
+		}
+		// we need to add a completed label to the pod, so that the reconciliation does not continue infinitely
+		curDeployment.Annotations[grafanaAdminAnnotation] = completeVal
+		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	case Complete:
 		controller.log.Oncef("The Verrazzano user admin update for Grafana has completed successfully")
+		// this will maintain the completed state
+		curDeployment.Annotations[grafanaAdminAnnotation] = completeVal
 		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	}
 	return false, nil
@@ -186,32 +195,11 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 
 // determineGrafanaState returns a Grafana Admin State based on the status of the Grafana deployment
 func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment, grafanaURL url.URL) (grafanaAdminState, error) {
-	// Always check that the Verrazzano is not the admin user first
-	// This prevents the pod from continually getting recycled and updated
-	// Setup Get request as the verrazzano user, we will use the Grafana credential secret for authentication
-	grafanaURL.Path = "api/users/lookup"
-	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
-	grafanaResponse, err := http.Get(grafanaURL.String())
-	if grafanaResponse.StatusCode == 503 {
-		controller.log.Progressf("Waiting for Grafana pod to be ready before request, status: %d", grafanaResponse.StatusCode)
-		return Unready, nil
+	// to prevent continually reconciling, we first should check the completed annotation
+	if val, ok := deployment.Annotations[grafanaAdminAnnotation]; ok && val == completeVal {
+		return Complete, nil
 	}
-	if err != nil && grafanaResponse.StatusCode != 404 {
-		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
-		return 0, err
-	}
-	if grafanaResponse.StatusCode == 200 {
-		var vzUserInfo grafanaUserInfo
-		err = json.NewDecoder(grafanaResponse.Body).Decode(&vzUserInfo)
-		if err != nil {
-			controller.log.Errorf("Failed to decode the response body of the successful verrazzano request: %v", err)
-			return 0, err
-		}
-		if vzUserInfo.IsGrafanaAdmin {
-			return Complete, nil
-		}
-	}
-	controller.log.Progressf("Verrazzano user info was not found or Verrazzano user is not admin, status: %d", grafanaResponse.StatusCode)
+	controller.log.Progress("Verrazzano user has not yet been upgraded to admin in Grafana")
 
 	// Check the deployment pod env vars to determine if basic auth is enabled
 	// If so, we should enter the request state
