@@ -41,7 +41,8 @@ const (
 type grafanaAdminState int
 
 const (
-	Setup grafanaAdminState = iota
+	Unready grafanaAdminState = iota
+	Setup
 	Request
 	Complete
 )
@@ -150,6 +151,10 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 	}
 
 	switch grafanaState {
+	// We have to include this state to prevent the Grafana pod from continually being recycled
+	// while allowing the Grafana reconcile to continue
+	case Unready:
+		return true, nil
 	case Setup:
 		controller.log.Oncef("Setting up the Grafana deployment for the Verrazzano user admin update")
 		// Update the existing authentication env vars to enable basic auth
@@ -191,7 +196,7 @@ func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment
 	grafanaResponse, err := http.Get(grafanaURL.String())
 	if grafanaResponse.StatusCode == 503 {
 		controller.log.Progressf("Waiting for Grafana pod to be ready before request, status: %d", grafanaResponse.StatusCode)
-		return Setup, nil
+		return Unready, nil
 	}
 	if err != nil && grafanaResponse.StatusCode != 404 {
 		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s: %v", grafanaURL.String(), err)
