@@ -143,7 +143,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 	}
 	grafanaURL.User = url.UserPassword("admin", "admin")
 
-	grafanaState, err := determineGrafanaState(controller, grafanaDeployment, grafanaURL)
+	grafanaState, err := determineGrafanaState(controller, grafanaDeployment)
 	if err != nil {
 		return false, err
 	}
