@@ -40,8 +40,7 @@ const (
 type grafanaAdminState int
 
 const (
-	Unready grafanaAdminState = iota
-	Setup
+	Setup grafanaAdminState = iota
 	Request
 	Complete
 )
@@ -150,10 +149,6 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 	}
 
 	switch grafanaState {
-	// We have to include this state to prevent the Grafana pod from continually being recycled
-	// while allowing the Grafana reconcile to continue
-	case Unready:
-		return true, nil
 	case Setup:
 		controller.log.Oncef("Setting up the Grafana deployment for the Verrazzano user admin update")
 		// Update the existing authentication env vars to enable basic auth
@@ -186,7 +181,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 			curDeployment.Annotations = make(map[string]string)
 		}
 		curDeployment.Annotations[grafanaAdminAnnotation] = completeVal
-		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+		return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
 	case Complete:
 		controller.log.Oncef("The Verrazzano user admin update for Grafana has completed successfully")
 		// this will maintain the completed state
@@ -233,7 +228,7 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	grafanaURL.Path = "api/users/lookup"
 	grafanaURL.RawQuery = "loginOrEmail=verrazzano"
 	grafanaResponse, err := http.Get(grafanaURL.String())
-	if err != nil && grafanaResponse.StatusCode != 404 {
+	if err != nil && grafanaResponse.StatusCode != 404 && grafanaResponse.StatusCode != 200 {
 		controller.log.Errorf("Failed to get Verrazzano user information from Grafana with request %s, status %d: %v", grafanaURL.String(), grafanaResponse.StatusCode, err)
 		return err
 	}
@@ -267,7 +262,7 @@ func requestGrafanaAdmin(controller *Controller, grafanaURL url.URL) error {
 	var vzUserInfo grafanaUserInfo
 	err = json.NewDecoder(grafanaResponse.Body).Decode(&vzUserInfo)
 	if err != nil {
-		controller.log.Errorf("Failed to decode the response body of the Verrazzano user information %s: %v", err)
+		controller.log.Errorf("Failed to decode the response body of the Verrazzano user information %s", err)
 		return err
 	}
 
@@ -359,6 +354,11 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 				contGrafanaUpdate := true
 				for contGrafanaUpdate {
 					contGrafanaUpdate, err = updateGrafanaAdminUser(controller, vmo, existingDeployment, curDeployment)
+					if err != nil {
+						return false, err
+					}
+					// We need to refresh the existing deployment to pick up status changes
+					existingDeployment, err = controller.deploymentLister.Deployments(vmo.Namespace).Get(deploymentName)
 					if err != nil {
 						return false, err
 					}
