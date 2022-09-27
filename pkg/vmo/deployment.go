@@ -115,7 +115,7 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 			*osd.Spec.Replicas = *existingDeployment.Spec.Replicas + 1
 			controller.log.Oncef("Incrementing replica count of deployment %s/%s to %d", osd.Namespace, osd.Name, *osd.Spec.Replicas)
 		}
-		if err = updateDeployment(controller, vmo, existingDeployment, osd); err == nil {
+		if err = updateDeployment(controller, vmo, existingDeployment, osd, true); err == nil {
 			// Return a temporary error if not finished scaling up to the desired replica count
 			if *resources.NewVal(vmo.Spec.Kibana.Replicas) != *existingDeployment.Spec.Replicas {
 				return fmt.Errorf("waiting to bring OS Dashboards replica up to full count")
@@ -169,7 +169,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 		}
 
 		// Update the existing deployment to match the newly modified deployment
-		return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+		return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment, false)
 	case Request:
 		controller.log.Oncef("Requesting the Grafana deployment for the Verrazzano user admin update")
 		shouldRequestAgain, err := requestGrafanaAdmin(controller, grafanaURL)
@@ -179,7 +179,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 		// We might want to request again if the user is being created
 		// Thus we should skip the labeling of the deployment to prevent the complete stage
 		if shouldRequestAgain {
-			return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+			return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment, false)
 		}
 		// If we've decided not to request again
 		// we need to add a completed label to the pod, so that the reconciliation does not continue infinitely
@@ -187,7 +187,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 			curDeployment.Annotations = make(map[string]string)
 		}
 		curDeployment.Annotations[grafanaAdminAnnotation] = completeVal
-		return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+		return true, updateDeployment(controller, vmo, grafanaDeployment, curDeployment, false)
 	case Complete:
 		controller.log.Oncef("The Verrazzano user admin update for Grafana has completed successfully")
 		// this will maintain the completed state
@@ -195,7 +195,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 			curDeployment.Annotations = make(map[string]string)
 		}
 		curDeployment.Annotations[grafanaAdminAnnotation] = completeVal
-		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment)
+		return false, updateDeployment(controller, vmo, grafanaDeployment, curDeployment, false)
 	}
 	return false, nil
 }
@@ -373,7 +373,7 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 			} else if existingDeployment.Spec.Template.Labels[constants.ServiceAppLabel] == fmt.Sprintf("%s-%s", vmo.Name, config.ElasticsearchData.Name) {
 				openSearchDeployments = append(openSearchDeployments, curDeployment)
 			} else {
-				err = updateDeployment(controller, vmo, existingDeployment, curDeployment)
+				err = updateDeployment(controller, vmo, existingDeployment, curDeployment, true)
 			}
 		}
 		if err != nil {
@@ -450,7 +450,7 @@ func deleteDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	return nil
 }
 
-func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment) error {
+func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingDeployment, curDeployment *appsv1.Deployment, logDiff bool) error {
 	if metric, metricErr := metricsexporter.GetCounterMetrics(metricsexporter.NamesDeploymentUpdateCounter); metricErr != nil {
 		controller.log.Errorf("Failed to get error metric %s: %v", metricsexporter.NamesDeploymentUpdateCounter, metricErr)
 	} else {
@@ -460,7 +460,9 @@ func updateDeployment(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMoni
 	curDeployment.Spec.Selector = existingDeployment.Spec.Selector
 	specDiffs := diff.Diff(existingDeployment, curDeployment)
 	if specDiffs != "" {
-		controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
+		if logDiff {
+			controller.log.Oncef("Deployment %s/%s has spec differences %s", curDeployment.Namespace, curDeployment.Name, specDiffs)
+		}
 		controller.log.Oncef("Updating deployment %s/%s", curDeployment.Namespace, curDeployment.Name)
 		_, err = controller.kubeclientset.AppsV1().Deployments(vmo.Namespace).Update(context.TODO(), curDeployment, metav1.UpdateOptions{})
 	}
