@@ -203,7 +203,7 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Equal(int32(constants.OSHTTPPort), sts.Spec.Template.Spec.Containers[0].Ports[1].ContainerPort, "Incorrect Container HostPort")
 
 	env := sts.Spec.Template.Spec.Containers[0].Env
-	assert.Len(env, 9, "Incorrect number of Env Vars")
+	assert.Len(env, 10, "Incorrect number of Env Vars")
 	assert.Equal("node.name", env[0].Name, "Incorrect Env[0].Name")
 	assert.Equal("metadata.name", env[0].ValueFrom.FieldRef.FieldPath,
 		"Incorrect Env[0].ValueFrom")
@@ -221,10 +221,12 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	assert.Equal(constants.VerrazzanoBackupScrtName, env[5].ValueFrom.SecretKeyRef.Name, "Incorrect Env[5] Secret name")
 	assert.Equal("node.roles", env[6].Name, "Incorrect Env[6].Name")
 	assert.Equal("master,data,ingest", env[6].Value, "Incorrect Env[6].Value")
-	assert.Equal("discovery.seed_hosts", env[7].Name, "Incorrect Env[7].Name")
-	assert.Equal(resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), env[7].Value, "Incorrect Env[7].Value")
-	assert.Equal("cluster.initial_master_nodes", env[8].Name, "Incorrect Env[8].Name")
-	assert.Equal("vmi-system-es-master-0,vmi-system-es-master-1,vmi-system-es-master-2", env[8].Value, "Incorrect Env[8].Value")
+	assert.Equal("OPENSEARCH_JAVA_OPTS", env[7].Name, "Incorrect Env[7].Name")
+	assert.Equal("-Xms700m -Xmx700m", env[7].Value, "Incorrect Env[7].Value")
+	assert.Equal("discovery.seed_hosts", env[8].Name, "Incorrect Env[8].Name")
+	assert.Equal(resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name), env[8].Value, "Incorrect Env[7].Value")
+	assert.Equal("cluster.initial_master_nodes", env[9].Name, "Incorrect Env[9].Name")
+	assert.Equal("vmi-system-es-master-0,vmi-system-es-master-1,vmi-system-es-master-2", env[9].Value, "Incorrect Env[9].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
 		"Incorrect Readiness Probe InitialDelaySeconds")
@@ -311,10 +313,10 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(constants.VerrazzanoBackupScrtName, env[5].ValueFrom.SecretKeyRef.Name, "Incorrect Env[6] Secret name")
 	assert.Equal("node.roles", env[6].Name, "Incorrect Env[6].Name")
 	assert.Equal("master,data,ingest", env[6].Value, "Incorrect Env[6].Value")
-	assert.Equal("discovery.type", env[7].Name, "Incorrect Env[7].Name")
-	assert.Equal("single-node", env[7].Value, "Incorrect Env[7].Value")
-	assert.Equal("OPENSEARCH_JAVA_OPTS", env[8].Name, "Incorrect Env[8].Name")
-	assert.Equal("-Xms700m -Xmx700m", env[8].Value, "Incorrect Env[8].Value")
+	assert.Equal("OPENSEARCH_JAVA_OPTS", env[7].Name, "Incorrect Env[7].Name")
+	assert.Equal("-Xms700m -Xmx700m", env[7].Value, "Incorrect Env[7].Value")
+	assert.Equal("discovery.type", env[8].Name, "Incorrect Env[8].Name")
+	assert.Equal("single-node", env[8].Value, "Incorrect Env[8].Value")
 
 	assert.Equal(int32(90), sts.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds,
 		"Incorrect Readiness Probe InitialDelaySeconds")

@@ -122,6 +122,20 @@ fi
 		},
 	}
 	var readinessProbeCondition string
+	javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
+	if err != nil {
+		javaOpts = constants.DefaultDevProfileESMemArgs
+		log.Errorf("Failed to derive heap sizes from MasterNodes pod, using default %s: %v", javaOpts, err)
+	}
+
+	if node.JavaOpts != "" {
+		javaOpts = node.JavaOpts
+	}
+
+	envVars = append(envVars,
+		corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
+		corev1.EnvVar{Name: "OPENSEARCH_JAVA_OPTS", Value: javaOpts},
+	)
 	if nodes.IsSingleNodeCluster(vmo) {
 		node.Roles = []vmcontrollerv1.NodeRole{
 			vmcontrollerv1.MasterRole,
@@ -129,24 +143,11 @@ fi
 			vmcontrollerv1.IngestRole,
 		}
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
-		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
-		if err != nil {
-			javaOpts = constants.DefaultDevProfileESMemArgs
-			log.Errorf("Failed to derive heap sizes from MasterNodes pod, using default %s: %v", javaOpts, err)
-		}
-		if node.JavaOpts != "" {
-			javaOpts = node.JavaOpts
-		}
 		envVars = append(envVars,
-			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
-
-			// supported via legacy compatibility
-			corev1.EnvVar{Name: "OPENSEARCH_JAVA_OPTS", Value: javaOpts},
 		)
 	} else {
 		envVars = append(envVars,
-			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{
 				Name:  "discovery.seed_hosts",
 				Value: headlessService,

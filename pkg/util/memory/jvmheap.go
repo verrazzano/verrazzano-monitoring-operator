@@ -19,7 +19,7 @@ const UnitG = 1024 * UnitM
 // FormatJvmHeapMinMax returns the identical min and max JVM heap setting in the format
 // Java expects like "-Xms2g -Xmx2g"
 func FormatJvmHeapMinMax(heap string) string {
-	return fmt.Sprintf("\"-Xms%s -Xmx%s\"", heap, heap)
+	return fmt.Sprintf("-Xms%s -Xmx%s", heap, heap)
 }
 
 // FormatJvmHeapSize formats the string based on the size of the input value
