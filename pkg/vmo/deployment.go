@@ -201,7 +201,7 @@ func updateGrafanaAdminUser(controller *Controller, vmo *vmcontrollerv1.Verrazza
 }
 
 // determineGrafanaState returns a Grafana Admin State based on the status of the Grafana deployment
-func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment, grafanaURL url.URL) (grafanaAdminState, error) {
+func determineGrafanaState(controller *Controller, deployment *appsv1.Deployment) (grafanaAdminState, error) {
 	// to prevent continually reconciling, we first should check the completed annotation
 	if val, ok := deployment.Annotations[grafanaAdminAnnotation]; ok && val == completeVal {
 		return Complete, nil
