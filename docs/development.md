@@ -81,10 +81,21 @@ kubectl apply -f k8s/manifests/verrazzano-monitoring-operator.yaml
 
 ## Running unit and integration tests
 
+To perform static analysis:
+
+```
+make golangci-lint
+```
 To run unit tests:
 
 ```
 make unit-test
+```
+
+To perform both static analysis and run unit test in one go:
+
+```
+make check
 ```
 
 To run integration tests against a real Kubernetes cluster, first start the VMO using either the
