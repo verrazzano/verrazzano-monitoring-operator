@@ -85,7 +85,7 @@ fi
 
 if [ "${OPENSEARCH_JAVA_OPTS:-}" ]; then
     echo "Commenting heap settings in jvm.options..."
-	sed -i -e '/-Xms/s/^/#/g' -e '/-Xmx/s/^/#/g' config/jvm.options
+	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' -e '/^#-Xms/s/$/\n'"${OPENSEARCH_JAVA_OPTS% *}"'/g'  -e '/^#-Xmx/s/$/\n'"${OPENSEARCH_JAVA_OPTS#* }"'/g' config/jvm.options
 fi
 
 /usr/local/bin/docker-entrypoint.sh`,
