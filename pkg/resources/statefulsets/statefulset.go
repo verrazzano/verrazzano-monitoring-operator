@@ -79,6 +79,15 @@ if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
     echo "Updating object store secret key..."
 	echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
 fi
+
+# Comment the jvm heap settings in jvm.options
+# Required for settings in OPENSEARCH_JAVA_OPTS to take effect
+
+if [ "${OPENSEARCH_JAVA_OPTS:-}" ]; then
+    echo "Commenting heap settings in jvm.options..."
+	sed -i -e '/-Xms/s/^/#/g' -e '/-Xmx/s/^/#/g' config/jvm.options
+fi
+
 /usr/local/bin/docker-entrypoint.sh`,
 	}
 	var envVars = []corev1.EnvVar{
