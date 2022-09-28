@@ -80,7 +80,7 @@ if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
 	echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
 fi
 
-# Comment the jvm heap settings in jvm.options
+# Replace the jvm heap settings in jvm.options
 # Required for settings in OPENSEARCH_JAVA_OPTS to take effect
 
 if [ "${OPENSEARCH_JAVA_OPTS:-}" ]; then
