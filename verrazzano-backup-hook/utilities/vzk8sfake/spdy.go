@@ -13,18 +13,18 @@ import (
 // PodSTDOUT can be used to output arbitrary strings during unit testing
 var PodSTDOUT = ""
 
-//NewPodExecutor should be used instead of remotecommand.NewSPDYExecutor in unit tests
+// NewPodExecutor should be used instead of remotecommand.NewSPDYExecutor in unit tests
 func NewPodExecutor(config *rest.Config, method string, url *url.URL) (remotecommand.Executor, error) {
 	return &dummyExecutor{method: method, url: url}, nil
 }
 
-//dummyExecutor is for unit testing
+// dummyExecutor is for unit testing
 type dummyExecutor struct {
 	method string
 	url    *url.URL
 }
 
-//Stream on a dummyExecutor sets stdout to PodSTDOUT
+// Stream on a dummyExecutor sets stdout to PodSTDOUT
 func (f *dummyExecutor) Stream(options remotecommand.StreamOptions) error {
 	if options.Stdout != nil {
 		buf := new(bytes.Buffer)

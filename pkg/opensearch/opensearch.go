@@ -43,7 +43,7 @@ func NewOSClient(statefulSetLister appslistersv1.StatefulSetLister) *OSClient {
 	return o
 }
 
-//IsDataResizable returns an error unless these conditions of the OpenSearch cluster are met
+// IsDataResizable returns an error unless these conditions of the OpenSearch cluster are met
 // - at least 2 data nodes
 // - 'green' health
 // - all expected nodes are present in the cluster status
@@ -54,20 +54,20 @@ func (o *OSClient) IsDataResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	return o.opensearchHealth(vmo, true, true)
 }
 
-//IsUpdated returns an error unless these conditions of the OpenSearch cluster are met
+// IsUpdated returns an error unless these conditions of the OpenSearch cluster are met
 // - 'green' health
 // - all expected nodes are present in the cluster status
 func (o *OSClient) IsUpdated(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	return o.opensearchHealth(vmo, true, true)
 }
 
-//IsGreen returns an error unless these conditions of the OpenSearch cluster are met
+// IsGreen returns an error unless these conditions of the OpenSearch cluster are met
 // - 'green' health
 func (o *OSClient) IsGreen(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	return o.opensearchHealth(vmo, false, false)
 }
 
-//ConfigureISM sets up the ISM Policies
+// ConfigureISM sets up the ISM Policies
 // The returned channel should be read for exactly one response, which tells whether ISM configuration succeeded.
 func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)

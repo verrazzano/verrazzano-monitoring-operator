@@ -42,8 +42,9 @@ var delegate = metricsexporter.TestDelegate
 
 // TestInitializeAllMetricsArray tests that the metrics maps are added to the allmetrics array
 // GIVEN populated metrics maps
-//  WHEN I call initializeAllMetricsArray
-//  THEN all the needed metrics are placed in the allmetrics array
+//
+//	WHEN I call initializeAllMetricsArray
+//	THEN all the needed metrics are placed in the allmetrics array
 func TestInitializeAllMetricsArray(t *testing.T) {
 	clearMetrics()
 	assert := assert.New(t)
@@ -54,8 +55,9 @@ func TestInitializeAllMetricsArray(t *testing.T) {
 
 // TestNoMetrics, TestValid & TestInvalid tests that metrics in the allmetrics array are registered and failedMetrics are retried
 // GIVEN a populated allMetrics array
-//  WHEN I call registerMetricsHandlers
-//  THEN all the valid metrics are registered and failedMetrics are retried
+//
+//	WHEN I call registerMetricsHandlers
+//	THEN all the valid metrics are registered and failedMetrics are retried
 func TestRegistrationSystem(t *testing.T) {
 	testCases := []registerTest{
 		{
@@ -212,8 +214,9 @@ func createControllerForTesting() (*Controller, *vmctl.VerrazzanoMonitoringInsta
 
 // TestReconcileMetrics tests that the FunctionMetrics methods record metrics properly when the reconcile function is called
 // GIVEN a FunctionMetric corresponding to the reconcile function
-//  WHEN I call reconcile
-//  THEN the metrics for the reconcile function are to be captured
+//
+//	WHEN I call reconcile
+//	THEN the metrics for the reconcile function are to be captured
 func TestReconcileAndUpdateMetrics(t *testing.T) {
 
 	controller, vmo := createControllerForTesting()
@@ -237,8 +240,9 @@ func TestReconcileAndUpdateMetrics(t *testing.T) {
 
 // TestDeploymentMetrics tests that the FunctionMetrics methods record metrics properly when the createDeployment function is called
 // GIVEN a FunctionMetric corresponding to the deployment function
-//  WHEN I call createDeployments
-//  THEN the metrics for the CreateDeployments function are to be captured, with the exception of (trivial) error metrics
+//
+//	WHEN I call createDeployments
+//	THEN the metrics for the CreateDeployments function are to be captured, with the exception of (trivial) error metrics
 func TestDeploymentMetrics(t *testing.T) {
 
 	controller, vmo := createControllerForTesting()
@@ -306,7 +310,7 @@ func TestServiceMetrics(t *testing.T) {
 	assert.LessOrEqual(t, int64(newTimeStamp*10)/10, time.Now().Unix())
 }
 
-//helper function to ensure consistency between tests
+// helper function to ensure consistency between tests
 func clearMetrics() {
 	*allMetrics = []prometheus.Collector{}
 	for c := range metricsexporter.TestDelegate.GetFailedMetricsMap() {

@@ -36,7 +36,7 @@ type (
 	}
 )
 
-//CreatePlan creates a plan for sts that need to be created, updated, or deleted.
+// CreatePlan creates a plan for sts that need to be created, updated, or deleted.
 // if the cluster is not safe to scale down, updates/deletes will be rejected.
 func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1.StatefulSet) *StatefulSetPlan {
 	mapping := createStatefulSetMapping(existingList, expectedList)
@@ -77,7 +77,7 @@ func CreatePlan(log vzlog.VerrazzanoLogger, existingList, expectedList []*appsv1
 	return plan
 }
 
-//createStatefulSetMapping creates a mapping of statefulset and checks if the plan would scale the cluster to an inconsistent state.
+// createStatefulSetMapping creates a mapping of statefulset and checks if the plan would scale the cluster to an inconsistent state.
 // A cluster cannot be scaled down if:
 // - if has less than minClusterSize master replicas
 // - the scale down would remove half or more of the master replicas
@@ -111,7 +111,7 @@ func createStatefulSetMapping(existingList, expectedList []*appsv1.StatefulSet) 
 	return mapping
 }
 
-//CopyFromExisting copies fields that should not be changed from existing to expected.
+// CopyFromExisting copies fields that should not be changed from existing to expected.
 func CopyFromExisting(expected, existing *appsv1.StatefulSet) {
 	// Changes to volume claim templates are forbidden
 	expected.Spec.VolumeClaimTemplates = existing.Spec.VolumeClaimTemplates

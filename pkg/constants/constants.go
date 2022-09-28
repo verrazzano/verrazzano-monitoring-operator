@@ -71,7 +71,7 @@ const DefaultNamespace = "default"
 // ServiceAppLabel label name for service app
 const ServiceAppLabel = "app"
 
-//ClusterInitialMasterNodes is the parameter for the OpenSearch cluster initial master nodes
+// ClusterInitialMasterNodes is the parameter for the OpenSearch cluster initial master nodes
 const ClusterInitialMasterNodes = "cluster.initial_master_nodes"
 
 // K8SAppLabel label name for k8s app
@@ -197,11 +197,11 @@ const (
 	ObjectStoreCustomerKey        = "object_store_secret_key"
 )
 
-//ComponentLabel - the label for a specific component
+// ComponentLabel - the label for a specific component
 const ComponentLabel = "verrazzano-component"
 
-//ComponentOpenSearchValue - the value for opensearch component
+// ComponentOpenSearchValue - the value for opensearch component
 const ComponentOpenSearchValue = "opensearch"
 
-//NodeGroupLabel for specifying a node's group
+// NodeGroupLabel for specifying a node's group
 const NodeGroupLabel = "node-group"

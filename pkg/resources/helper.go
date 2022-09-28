@@ -30,7 +30,7 @@ var (
 
 const serviceClusterLocal = ".svc.cluster.local"
 
-//CopyImmutableEnvVars copies the initial master node environment variable from an existing container to an expected container
+// CopyImmutableEnvVars copies the initial master node environment variable from an existing container to an expected container
 // cluster.initial_master_nodes shouldn't be changed after it's set.
 func CopyImmutableEnvVars(expected, existing []corev1.Container, containerName string) {
 	getContainer := func(containers []corev1.Container) (int, *corev1.Container) {
@@ -61,7 +61,7 @@ func CopyImmutableEnvVars(expected, existing []corev1.Container, containerName s
 	expected[idx] = *currentContainer
 }
 
-//GetEnvVar retrieves a container EnvVar if it is present
+// GetEnvVar retrieves a container EnvVar if it is present
 func GetEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
 	for _, envVar := range container.Env {
 		if envVar.Name == name {
@@ -71,7 +71,7 @@ func GetEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
 	return nil
 }
 
-//SetEnvVar sets a container EnvVar, overriding if it was laready present
+// SetEnvVar sets a container EnvVar, overriding if it was laready present
 func SetEnvVar(container *corev1.Container, envVar *corev1.EnvVar) {
 	for idx, env := range container.Env {
 		if env.Name == envVar.Name {
@@ -114,7 +114,7 @@ func GetOwnerLabels(owner string) map[string]string {
 	}
 }
 
-//GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
+// GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
 func GetNewRandomID(size int) (string, error) {
 	builder := strings.Builder{}
 	for i := 0; i < size; i++ {
@@ -382,7 +382,7 @@ func OidcProxyIngressHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, comp
 	return fmt.Sprintf("%s.%s", host, vmo.Spec.URI)
 }
 
-//CreateOidcProxy creates OpenID Connect (OIDC) proxy container and config Volume
+// CreateOidcProxy creates OpenID Connect (OIDC) proxy container and config Volume
 func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources, component *config.ComponentDetails) ([]corev1.Volume, *corev1.Container) {
 	var volumes []corev1.Volume
 	configName := OidcProxyConfigName(vmo.Name, component.Name)
@@ -409,7 +409,7 @@ func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResour
 	return volumes, &oidcProxContainer
 }
 
-//OidcProxyService creates OidcProxy Service
+// OidcProxyService creates OidcProxy Service
 func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

@@ -8,7 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-//GetPVCNames generates the expected PVC names of a statefulset, given its replica count
+// GetPVCNames generates the expected PVC names of a statefulset, given its replica count
 // {volumeClaimTemplate name}-{sts name}-{replica ordinal}
 func GetPVCNames(statefulSet *appsv1.StatefulSet) []string {
 	var pvcNames []string

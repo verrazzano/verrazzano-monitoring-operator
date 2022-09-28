@@ -83,7 +83,7 @@ func logReturnError(log vzlog.VerrazzanoLogger, sts *appsv1.StatefulSet, err err
 	return log.ErrorfNewErr("Failed to update StatefulSets %s:%s: %v", sts.Namespace, sts.Name, err)
 }
 
-//getInitialMasterNodes returns the initial master nodes string if the cluster is not already bootstrapped
+// getInitialMasterNodes returns the initial master nodes string if the cluster is not already bootstrapped
 func getInitialMasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existing []*appsv1.StatefulSet) string {
 	if len(existing) > 0 {
 		return ""
@@ -110,7 +110,7 @@ func updateStatefulSet(c *Controller, sts *appsv1.StatefulSet, vmo *vmcontroller
 	return nil
 }
 
-//scaleDownStatefulSet scales down a statefulset, and deletes the statefulset if it is already at 1 or fewer replicas.
+// scaleDownStatefulSet scales down a statefulset, and deletes the statefulset if it is already at 1 or fewer replicas.
 func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, statefulSet *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	deleteSTS := func() error {
 		err := c.kubeclientset.AppsV1().StatefulSets(vmo.Namespace).Delete(context.TODO(), statefulSet.Name, metav1.DeleteOptions{})

@@ -301,7 +301,7 @@ func updateAllDeployments(controller *Controller, vmo *vmcontrollerv1.Verrazzano
 	return false, nil
 }
 
-//isUpdateAllowed checks if OpenSearch nodes are allowed to update. If a data node is removed when the cluster is yellow,
+// isUpdateAllowed checks if OpenSearch nodes are allowed to update. If a data node is removed when the cluster is yellow,
 // data loss may occur.
 func isUpdateAllowed(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, current *appsv1.Deployment) bool {
 	// if current is an OpenSearch data node

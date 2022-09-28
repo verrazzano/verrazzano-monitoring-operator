@@ -80,7 +80,7 @@ func createOpenSearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	}
 }
 
-//OpenSearchPodSelector creates a pod selector like
+// OpenSearchPodSelector creates a pod selector like
 // 'app in (system-es-master, system-es-data, system-es-ingest)'
 // to select all pods in the vmi cluster
 func OpenSearchPodSelector(vmoName string) string {
@@ -92,7 +92,7 @@ func OpenSearchPodSelector(vmoName string) string {
 	)
 }
 
-//UseNodeRoleSelector verifies if all OpenSearch pods are using node role selectors.
+// UseNodeRoleSelector verifies if all OpenSearch pods are using node role selectors.
 // If all pods are using node role selectors, this implies service selectors can be updated
 // to use node roles instead of service app labels.
 func UseNodeRoleSelector(pods *corev1.PodList) bool {

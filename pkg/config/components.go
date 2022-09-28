@@ -52,7 +52,7 @@ var Grafana = ComponentDetails{
 
 // Prometheus is the default Prometheus configuration
 // Note: Update promtool version to match any version changes here
-//    - vmo/images/cirith-server-for-operator/docker-images
+//   - vmo/images/cirith-server-for-operator/docker-images
 var Prometheus = ComponentDetails{
 	Name:              "prometheus",
 	EnvName:           "PROMETHEUS_IMAGE",

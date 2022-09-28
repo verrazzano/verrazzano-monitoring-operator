@@ -32,8 +32,9 @@ var storageClass = storagev1.StorageClass{
 
 // TestVMOEmptyStatefulSetSize tests the creation of a VMI without StatefulSets
 // GIVEN a VMI spec with an empty ElasticSearch spec
-//  WHEN I call New
-//  THEN there should be no StatefulSets created
+//
+//	WHEN I call New
+//	THEN there should be no StatefulSets created
 func TestVMOEmptyStatefulSetSize(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{}
 	statefulsets, err := New(vzlog.DefaultLogger(), vmo, &storageClass, "vmi-system-es-master-0")
@@ -45,8 +46,9 @@ func TestVMOEmptyStatefulSetSize(t *testing.T) {
 
 // TestVMOEmptyStatefulSetSize tests the creation of a VMI without StatefulSets
 // GIVEN a VMI spec with an ElasticSearch spec having 'enabled' set to false
-//  WHEN I call New
-//  THEN there should be no StatefulSets created
+//
+//	WHEN I call New
+//	THEN there should be no StatefulSets created
 func TestVMODisabledSpecs(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
@@ -64,19 +66,21 @@ func TestVMODisabledSpecs(t *testing.T) {
 
 // TestVMOProdProfile tests the creation of a VMI StatefulSets for a Production profile
 // GIVEN a VMI spec with an ElasticSearch spec
-//  WHEN I call New
-//  THEN there should a StatefulSet for ElasticSearch
-//   AND the object should have the expected values
+//
+//	WHEN I call New
+//	THEN there should a StatefulSet for ElasticSearch
+//	 AND the object should have the expected values
 func TestVMOProdProfile(t *testing.T) {
 	runTestVMO(t, false)
 }
 
 // TestVMODevProfile tests the creation of a VMI StatefulSets for a Development/small-memory profile
 // GIVEN a VMI spec with an ElasticSearch spec
-//  WHEN I call New
-//  THEN there should a StatefulSet for ElasticSearch
-//   AND the object should have the expected values
-//   AND ElasticSearch should be configured for a single-node cluster type
+//
+//	WHEN I call New
+//	THEN there should a StatefulSet for ElasticSearch
+//	 AND the object should have the expected values
+//	 AND ElasticSearch should be configured for a single-node cluster type
 func TestVMODevProfile(t *testing.T) {
 	runTestVMO(t, true)
 }
