@@ -142,7 +142,6 @@ fi
 	}
 
 	envVars = append(envVars,
-		corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 		corev1.EnvVar{Name: "OPENSEARCH_JAVA_OPTS", Value: javaOpts},
 	)
 	if nodes.IsSingleNodeCluster(vmo) {
@@ -153,10 +152,12 @@ fi
 		}
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
 		envVars = append(envVars,
+			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
 		)
 	} else {
 		envVars = append(envVars,
+			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{
 				Name:  "discovery.seed_hosts",
 				Value: headlessService,
