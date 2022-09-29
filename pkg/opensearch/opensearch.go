@@ -150,7 +150,7 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 	return ch
 }
 
-//IsOpenSearchReady returns true when all OpenSearch pods are ready, false otherwise
+// IsOpenSearchReady returns true when all OpenSearch pods are ready, false otherwise
 func (o *OSClient) IsOpenSearchReady(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) bool {
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmi.Name, constants.ComponentLabel: constants.ComponentOpenSearchValue})
 	statefulSets, err := o.statefulSetLister.StatefulSets(vmi.Namespace).List(selector)
