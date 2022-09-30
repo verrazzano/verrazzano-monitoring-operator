@@ -220,29 +220,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			dataDeployment.Spec.Template.Spec.Containers[0].Command = []string{
 				"sh",
 				"-c",
-				`#!/usr/bin/env bash -e
-
-# Updating elastic search keystore with keys
-# required for the repository-s3 plugin
-
-if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
-    echo "Updating object store access key..."
-	echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
-fi
-if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
-    echo "Updating object store secret key..."
-	echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
-fi
-
-# Replace the jvm heap settings in jvm.options
-# Required for settings in OPENSEARCH_JAVA_OPTS to take effect
-
-if [ "${OPENSEARCH_JAVA_OPTS:-}" ]; then
-    echo "Commenting heap settings in jvm.options..."
-	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' -e '/^#-Xms/s/$/\n'"${OPENSEARCH_JAVA_OPTS% *}"'/g'  -e '/^#-Xmx/s/$/\n'"${OPENSEARCH_JAVA_OPTS#* }"'/g' config/jvm.options
-fi
-
-/usr/local/bin/docker-entrypoint.sh`,
+				resources.CreateOpenSearchContainerCMD(javaOpts),
 			}
 
 			// add the required istio annotations to allow inter-es component communication
