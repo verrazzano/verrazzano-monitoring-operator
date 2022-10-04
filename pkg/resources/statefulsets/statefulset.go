@@ -64,22 +64,20 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 	esMasterContainer.Ports[0].Name = "transport"
 	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.OSHTTPPort), Protocol: "TCP"})
 
+	javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
+	if err != nil {
+		javaOpts = constants.DefaultDevProfileESMemArgs
+		log.Errorf("Failed to derive heap sizes from MasterNodes pod, using default %s: %v", javaOpts, err)
+	}
+
+	if node.JavaOpts != "" {
+		javaOpts = node.JavaOpts
+	}
 	// Adding command for add keystore values at pod bootup
 	esMasterContainer.Command = []string{
 		"sh",
 		"-c",
-		`#!/usr/bin/env bash -e
-# Updating elastic search keystore with keys
-# required for the repository-s3 plugin
-if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
-    echo "Updating object store access key..."
-	echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
-fi
-if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
-    echo "Updating object store secret key..."
-	echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
-fi
-/usr/local/bin/docker-entrypoint.sh`,
+		resources.CreateOpenSearchContainerCMD(javaOpts),
 	}
 	var envVars = []corev1.EnvVar{
 		{
@@ -122,6 +120,9 @@ fi
 		},
 	}
 	var readinessProbeCondition string
+	envVars = append(envVars,
+		corev1.EnvVar{Name: "OPENSEARCH_JAVA_OPTS", Value: javaOpts},
+	)
 	if nodes.IsSingleNodeCluster(vmo) {
 		node.Roles = []vmcontrollerv1.NodeRole{
 			vmcontrollerv1.MasterRole,
@@ -129,20 +130,9 @@ fi
 			vmcontrollerv1.IngestRole,
 		}
 		log.Oncef("ES topology for %s indicates a single-node cluster (single master node only)", vmo.Name)
-		javaOpts, err := memory.PodMemToJvmHeapArgs(node.Resources.RequestMemory, constants.DefaultDevProfileESMemArgs) // Default JVM heap settings if none provided
-		if err != nil {
-			javaOpts = constants.DefaultDevProfileESMemArgs
-			log.Errorf("Failed to derive heap sizes from MasterNodes pod, using default %s: %v", javaOpts, err)
-		}
-		if node.JavaOpts != "" {
-			javaOpts = node.JavaOpts
-		}
 		envVars = append(envVars,
 			corev1.EnvVar{Name: "node.roles", Value: nodes.GetRolesString(&node)},
 			corev1.EnvVar{Name: "discovery.type", Value: "single-node"},
-
-			// supported via legacy compatibility
-			corev1.EnvVar{Name: "ES_JAVA_OPTS", Value: javaOpts},
 		)
 	} else {
 		envVars = append(envVars,
