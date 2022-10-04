@@ -66,7 +66,7 @@ const (
 	vmiManagedPolicy = "__vmi-managed__"
 )
 
-//createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
+// createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
 // If the policy already exsts and its spec matches the VMO policy spec, no update will be issued
 func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) error {
 	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.PolicyName)
@@ -99,7 +99,7 @@ func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	return existingPolicy, nil
 }
 
-//putUpdatedPolicy updates a policy in place, if the update is required. If no update was necessary, the returned
+// putUpdatedPolicy updates a policy in place, if the update is required. If no update was necessary, the returned
 // ISMPolicy will be nil.
 func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
 	if !policyNeedsUpdate(policy, existingPolicy) {
@@ -150,7 +150,7 @@ func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrol
 	return updatedISMPolicy, nil
 }
 
-//addPolicyToExistingIndices updates any pre-existing cluster indices to be managed by the ISMPolicy
+// addPolicyToExistingIndices updates any pre-existing cluster indices to be managed by the ISMPolicy
 func (o *OSClient) addPolicyToExistingIndices(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, updatedPolicy *ISMPolicy) error {
 	// If no policy was updated, then there is nothing to do
 	if updatedPolicy == nil {
@@ -240,7 +240,7 @@ func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) 
 		!expectedPolicyMap[*policy.ID]
 }
 
-//policyNeedsUpdate returns true if the policy document has changed
+// policyNeedsUpdate returns true if the policy document has changed
 func policyNeedsUpdate(policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) bool {
 	newPolicyDocument := toISMPolicy(policy).Policy
 	oldPolicyDocument := existingPolicy.Policy

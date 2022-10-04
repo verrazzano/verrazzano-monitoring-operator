@@ -22,7 +22,7 @@ func PodMemToJvmHeapArgs(size, defaultValue string) (string, error) {
 }
 
 // PodMemToJvmHeap converts a pod resource memory (.5Gi) to the JVM heap setting
-//in the format java expects (e.g. 512m)
+// in the format java expects (e.g. 512m)
 func PodMemToJvmHeap(size string) (string, error) {
 	q, err := resource.ParseQuantity(size)
 	if err != nil {

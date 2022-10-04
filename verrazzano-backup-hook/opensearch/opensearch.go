@@ -118,7 +118,7 @@ func (o *OpensearchImpl) EnsureOpenSearchIsReachable() error {
 	return nil
 }
 
-//EnsureOpenSearchIsHealthy ensures OpenSearch cluster is healthy
+// EnsureOpenSearchIsHealthy ensures OpenSearch cluster is healthy
 func (o *OpensearchImpl) EnsureOpenSearchIsHealthy() error {
 	o.Log.Infof("Checking if cluster is healthy")
 	var clusterHealth types.OpenSearchHealthResponse

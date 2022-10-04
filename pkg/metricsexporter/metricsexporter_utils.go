@@ -54,7 +54,11 @@ func RegisterMetrics() {
 func StartMetricsServer() {
 	go wait.Until(func() {
 		http.Handle("/metrics", promhttp.Handler())
-		err := http.ListenAndServe(":9100", nil)
+		server := &http.Server{
+			Addr:              ":9100",
+			ReadHeaderTimeout: 3 * time.Second,
+		}
+		err := server.ListenAndServe()
 		if err != nil {
 			zap.S().Errorf("Failed to start metrics server for VMO: %v", err)
 		}

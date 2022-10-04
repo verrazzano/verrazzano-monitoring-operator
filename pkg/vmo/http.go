@@ -16,8 +16,12 @@ import (
 func StartHTTPServer(controller *Controller, certdir string, port string) {
 	setupHandlers(controller)
 	go wait.Until(func() {
+		server := &http.Server{
+			Addr:              ":" + port,
+			ReadHeaderTimeout: 3 * time.Second,
+		}
 		controller.log.Oncef("Starting HTTP server")
-		err := http.ListenAndServeTLS(":"+port, path.Join(certdir, "tls.crt"), path.Join(certdir, "tls.key"), nil)
+		err := server.ListenAndServeTLS(path.Join(certdir, "tls.crt"), path.Join(certdir, "tls.key"))
 		if err != nil {
 			controller.log.Errorf("Failed to start HTTP server for VMI: %v", err)
 		}

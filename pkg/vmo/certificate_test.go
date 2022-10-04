@@ -16,8 +16,9 @@ import (
 
 // TestCreateCertificates tests that the certificates needed for webhooks are created
 // GIVEN an output directory for certificates
-//  WHEN I call CreateCertificates
-//  THEN all the needed certificate artifacts are created
+//
+//	WHEN I call CreateCertificates
+//	THEN all the needed certificate artifacts are created
 func TestCreateCertificates(t *testing.T) {
 	assert := assert.New(t)
 
@@ -50,8 +51,9 @@ func TestCreateCertificates(t *testing.T) {
 
 // TestCreateWebhookCertificatesFail tests that the certificates needed for webhooks are not created
 // GIVEN an invalid output directory for certificates
-//  WHEN I call CreateCertificates
-//  THEN all the needed certificate artifacts are not created
+//
+//	WHEN I call CreateCertificates
+//	THEN all the needed certificate artifacts are not created
 func TestCreateWebhookCertificatesFail(t *testing.T) {
 	assert := assert.New(t)
 

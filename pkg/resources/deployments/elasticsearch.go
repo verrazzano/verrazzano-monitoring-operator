@@ -22,7 +22,7 @@ import (
 type ElasticsearchBasic struct {
 }
 
-//IsOpenSearchDataDeployment checks template label to see if a given deployment is an OpenSearch data deployment
+// IsOpenSearchDataDeployment checks template label to see if a given deployment is an OpenSearch data deployment
 func IsOpenSearchDataDeployment(vmoName string, deployment *appsv1.Deployment) bool {
 	return deployment.Spec.Template.Labels[constants.ServiceAppLabel] == vmoName+"-"+config.ElasticsearchData.Name
 }
