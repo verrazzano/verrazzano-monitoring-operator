@@ -23,12 +23,36 @@ import (
 )
 
 var (
-	runes                  = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
-	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
+	runes = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 )
 
-const serviceClusterLocal = ".svc.cluster.local"
+const (
+	serviceClusterLocal    = ".svc.cluster.local"
+	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
+	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
+	containerCmdTmpl       = `#!/usr/bin/env bash -e
+
+	# Updating elastic search keystore with keys
+	# required for the repository-s3 plugin
+	if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
+		echo "Updating object store access key..."
+		echo $OBJECT_STORE_ACCESS_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.access_key;
+	fi
+	if [ "${OBJECT_STORE_SECRET_KEY_ID:-}" ]; then
+		echo "Updating object store secret key..."
+		echo $OBJECT_STORE_SECRET_KEY_ID | /usr/share/opensearch/bin/opensearch-keystore add --stdin --force s3.client.default.secret_key;
+	fi
+	
+	%s
+	
+	/usr/local/bin/docker-entrypoint.sh`
+
+	jvmOptsDisableCmd = `
+	# Disable the jvm heap settings in jvm.options
+	echo "Commenting out java heap settings in jvm.options..."
+	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
+	`
+)
 
 //CopyImmutableEnvVars copies the initial master node environment variable from an existing container to an expected container
 // cluster.initial_master_nodes shouldn't be changed after it's set.
@@ -445,4 +469,30 @@ func ConvertToRegexp(pattern string) string {
 	// Add $ at the end
 	result.WriteString("$")
 	return result.String()
+}
+
+//CreateElasticSearchContainerCMD creates the CMD for OpenSearch containers.
+//The resulting CMD also contains command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
+//and contains java min/max heap settings
+func CreateOpenSearchContainerCMD(javaOpts string) string {
+	if javaOpts != "" {
+		jvmOptsPair := strings.Split(javaOpts, " ")
+		minHeapMemory := ""
+		maxHeapMemory := ""
+		for _, opt := range jvmOptsPair {
+			if strings.HasPrefix(opt, "-Xms") {
+				minHeapMemory = opt
+			}
+
+			if strings.HasPrefix(opt, "-Xmx") {
+				maxHeapMemory = opt
+			}
+		}
+
+		if minHeapMemory != "" && maxHeapMemory != "" {
+			return fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd)
+		}
+	}
+
+	return fmt.Sprintf(containerCmdTmpl, "")
 }
