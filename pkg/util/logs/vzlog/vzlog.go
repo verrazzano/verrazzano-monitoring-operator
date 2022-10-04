@@ -79,6 +79,12 @@ type ProgressLogger interface {
 	// ErrorfNewErr formats an error, logs it, then returns the formatted error
 	ErrorfNewErr(template string, args ...interface{}) error
 
+	// ErrorfThrottledNewErr Records a formatted error message throttled at the ProgressLogger frequency then returns the formatted error
+	ErrorfThrottledNewErr(template string, args ...interface{}) error
+
+	// ErrorfThrottled Records a formatted error message throttled at the ProgressLogger frequency
+	ErrorfThrottled(template string, args ...interface{})
+
 	// SetFrequency sets the logging frequency of a progress message
 	SetFrequency(secs int) VerrazzanoLogger
 }
@@ -136,14 +142,14 @@ type verrazzanoLogger struct {
 	// trashMessages is a set of log messages that can never be displayed again
 	trashMessages map[string]bool
 
-	// lastLog keeps track of the last logged message
-	*lastLog
+	// progressHistory is a map of progress log messages that are displayed periodically
+	progressHistory map[string]*logEvent
 }
 
-// lastLog tracks the last message logged
-type lastLog struct {
-	// lastLogTime is the last time the message was logged
-	lastLogTime *time.Time
+// lastLog tracks the last message logged for progress messages
+type logEvent struct {
+	// logTime is the last time the message was logged
+	logTime *time.Time
 
 	// msgLogged is the message that was logged
 	msgLogged string
@@ -225,9 +231,10 @@ func (c *LogContext) EnsureLogger(key string, sLogger SugaredLogger, zap *zap.Su
 	log, ok := c.loggerMap[key]
 	if !ok {
 		log = &verrazzanoLogger{
-			context:       c,
-			frequencySecs: 60,
-			trashMessages: make(map[string]bool),
+			context:         c,
+			frequencySecs:   60,
+			trashMessages:   make(map[string]bool),
+			progressHistory: make(map[string]*logEvent),
 		}
 		c.loggerMap[key] = log
 	}
@@ -273,42 +280,64 @@ func (v *verrazzanoLogger) Progress(args ...interface{}) {
 // If the log message is new or has changed then it is logged immediately.
 func (v *verrazzanoLogger) doLog(once bool, args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	now := time.Now()
+	cacheUpdated := v.shouldLogMessage(once, msg)
+	if cacheUpdated {
+		v.sLogger.Info(msg)
+	}
+}
+
+// doError Logs an error message first checking against the log cache; same behavior as doLog() except that messages
+// are recorded as errors at the throttling frequency.  Errors are never once-only.
+func (v *verrazzanoLogger) doError(args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	doLog := v.shouldLogMessage(false, msg)
+	if doLog {
+		v.sLogger.Error(msg)
+	}
+}
+
+// shouldLogMessage Checks candidate log message against the cache and returns true if that message should be recorded in the log.
+//
+// A message should be recorded when
+// - A message is newly added to the cache (seen for the first time)
+// - A message is throttled, but it has not exceeded its frequency threshold since the last occurrence
+func (v *verrazzanoLogger) shouldLogMessage(once bool, msg string) bool {
+	lock.Lock()
+	defer lock.Unlock()
 
 	// If the message is in the trash, that means it should never be logged again.
 	_, ok := v.trashMessages[msg]
 	if ok {
-		return
+		return false
 	}
-	// Log now if the message changed or wait time exceeded
-	logNow := true
 
-	// If this is log once save in trash so it is never logged again
+	// If this is log "once", log it and save in trash so it is never logged again, then return
 	if once {
 		v.trashMessages[msg] = true
+		return true
 	}
 
-	// If we have already logged a message then ...
-	if v.lastLog != nil {
-		// If message did not change then check if time to log
-		if msg == v.lastLog.msgLogged {
-			waitSecs := time.Duration(v.frequencySecs) * time.Second
-			nextLogTime := v.lastLog.lastLogTime.Add(waitSecs)
-			logNow = now.Equal(nextLogTime) || now.After(nextLogTime)
-		} else {
-			// This is a new message.  Never display the old one again
-			v.trashMessages[v.lastLog.msgLogged] = true
-		}
-	}
+	// If this message has already been logged, then check if time to log again
+	now := time.Now()
+	history := v.progressHistory[msg]
+	if history != nil {
+		waitSecs := time.Duration(v.frequencySecs) * time.Second
+		nextLogTime := history.logTime.Add(waitSecs)
 
-	// Log the message and save it in lastlog
-	if logNow {
-		v.sLogger.Info(msg)
-		v.lastLog = &lastLog{
-			lastLogTime: &now,
-			msgLogged:   msg,
+		// Log now if the message wait time exceeded
+		if now.Equal(nextLogTime) || now.After(nextLogTime) {
+			history.logTime = &now
+			return true
 		}
+	} else {
+		// This is a new message log it
+		v.progressHistory[msg] = &logEvent{
+			logTime:   &now,
+			msgLogged: msg,
+		}
+		return true
 	}
+	return false
 }
 
 // SetFrequency sets the log frequency
@@ -351,6 +380,17 @@ func (v *verrazzanoLogger) ErrorfNewErr(template string, args ...interface{}) er
 	err := fmt.Errorf(template, args...)
 	v.Error2(err)
 	return err
+}
+
+func (v *verrazzanoLogger) ErrorfThrottledNewErr(template string, args ...interface{}) error {
+	err := fmt.Errorf(template, args...)
+	v.doError(err.Error())
+	return err
+}
+
+func (v *verrazzanoLogger) ErrorfThrottled(template string, args ...interface{}) {
+	s := fmt.Sprintf(template, args...)
+	v.doError(s)
 }
 
 // Debug is a wrapper for SugaredLogger Debug

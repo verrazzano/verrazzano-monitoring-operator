@@ -477,7 +477,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	*********************************************/
 	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
 	if err != nil {
-		c.log.Errorf("Failed to migrate old indices to data stream: %v", err)
+		c.log.ErrorfThrottled("Failed to migrate old indices to data stream: %v", err)
 		errorObserved = true
 	}
 
@@ -486,7 +486,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateRoleBindings(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Role Bindings for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create Role Bindings for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -495,7 +495,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = CreateConfigmaps(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create configmaps for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create configmaps for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -504,7 +504,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateServices(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Services for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create Services for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -513,7 +513,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	pvcToAdMap, err := CreatePersistentVolumeClaims(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create/update PVCs for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create/update PVCs for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -522,7 +522,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	existingCluster, err := CreateStatefulSets(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create/update statefulsets for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create/update statefulsets for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -533,7 +533,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	if !errorObserved {
 		deploymentsDirty, err = CreateDeployments(c, vmo, pvcToAdMap, existingCluster)
 		if err != nil {
-			c.log.Errorf("Failed to create/update deployments for VMI %s: %v", vmo.Name, err)
+			c.log.ErrorfThrottled("Failed to create/update deployments for VMI %s: %v", vmo.Name, err)
 			functionMetric.IncError()
 			errorObserved = true
 		}
@@ -543,7 +543,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	err = CreateIngresses(c, vmo)
 	if err != nil {
-		c.log.Errorf("Failed to create Ingresses for VMI %s: %v", vmo.Name, err)
+		c.log.ErrorfThrottled("Failed to create Ingresses for VMI %s: %v", vmo.Name, err)
 		errorObserved = true
 	}
 
@@ -569,13 +569,13 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	autoExpandIndexErr := <-autoExpandIndexChannel
 	if autoExpandIndexErr != nil {
-		c.log.Errorf("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
+		c.log.ErrorfThrottled("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
 		errorObserved = true
 	}
 
 	ismErr := <-ismChannel
 	if ismErr != nil {
-		c.log.Errorf("Failed to configure ISM Policies: %v", ismErr)
+		c.log.ErrorfThrottled("Failed to configure ISM Policies: %v", ismErr)
 		errorObserved = true
 	}
 
