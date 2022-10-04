@@ -471,9 +471,9 @@ func ConvertToRegexp(pattern string) string {
 	return result.String()
 }
 
-//CreateElasticSearchContainerCMD creates the CMD for OpenSearch containers.
-//The resulting CMD also contains command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
-//and contains java min/max heap settings
+// CreateElasticSearchContainerCMD creates the CMD for OpenSearch containers.
+// The resulting CMD also contains command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
+// and contains java min/max heap settings
 func CreateOpenSearchContainerCMD(javaOpts string) string {
 	if javaOpts != "" {
 		jvmOptsPair := strings.Split(javaOpts, " ")
