@@ -192,3 +192,39 @@ func TestDeepCopyMap(t *testing.T) {
 		})
 	}
 }
+
+//GIVEN a string representing java options settings for an OpenSerach container
+//WHEN  CreateOpenSearchContainerCMD is invoked to get the command for the OpenSearch container
+//THEN the command contains a subcommand to disable the jvm heap settings, if input contains java heap settings
+func TestCreateOpenSearchContainerCMD(t *testing.T) {
+	containerCmdWithoutJavaOpts := fmt.Sprintf(containerCmdTmpl, "")
+	containerCmdWithJavaOpts := fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd)
+	var tests = []struct {
+		description    string
+		javaOpts       string
+		expectedResult string
+	}{
+		{
+			"testCreateOpenSearchContainerCMD with empty jvmOpts",
+			"",
+			containerCmdWithoutJavaOpts,
+		},
+		{
+			"testCreateOpenSearchContainerCMD with jvmOpts not containing jvm memory settings",
+			"-Xsomething",
+			containerCmdWithoutJavaOpts,
+		},
+		{
+			"testCreateOpenSearchContainerCMD with jvmOpts containing jvm memory settings",
+			"-Xms1g -Xmx2g",
+			containerCmdWithJavaOpts,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := CreateOpenSearchContainerCMD(tt.javaOpts)
+			assert.Equal(t, tt.expectedResult, r)
+		})
+	}
+}
