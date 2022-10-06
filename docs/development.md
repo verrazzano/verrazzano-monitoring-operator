@@ -61,7 +61,7 @@ The official way to run a Kubernetes operator is to run it as a pod within Kuber
 Docker image, assigning it a temporary tag based on the current timestamp:
 
 ```
-make docker-build
+make build
 ```
 
 If your `$KUBECONFIG` points to a remote cluster, you'll have to push this image to a real Docker registry:
@@ -69,7 +69,7 @@ If your `$KUBECONFIG` points to a remote cluster, you'll have to push this image
 ```
 docker login --username agent <docker repo>
 # Password is a secret!
-make docker-push
+make push
 ```
 
 Now, replace the VMO Docker image in `k8s/manifests/verrazzano-monitoring-operator.yaml` with the temporary image built
@@ -81,10 +81,21 @@ kubectl apply -f k8s/manifests/verrazzano-monitoring-operator.yaml
 
 ## Running unit and integration tests
 
+To perform static analysis:
+
+```
+make golangci-lint
+```
 To run unit tests:
 
 ```
 make unit-test
+```
+
+To perform both static analysis and run unit test in one go:
+
+```
+make check
 ```
 
 To run integration tests against a real Kubernetes cluster, first start the VMO using either the
