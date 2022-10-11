@@ -266,6 +266,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
 		}
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "SERVER_HOST", Value: "0.0.0.0"})
 
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 120
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds = 3
