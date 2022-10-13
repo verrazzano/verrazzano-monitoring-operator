@@ -305,19 +305,19 @@ func initDurationMetricMap() map[metricName]*DurationMetric {
 func initTimestampMetricMap() map[metricName]*TimestampMetric {
 	return map[metricName]*TimestampMetric{
 		NamesConfigMap: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_configmap_last_succesful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"configMap_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_configmap_last_successful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"configMap_index"}),
 			labelFunction: &configMapLabelFunction,
 		},
 		NamesServices: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_services_last_succesful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"service_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_services_last_successful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"service_index"}),
 			labelFunction: &servicesLabelFunction,
 		},
 		NamesRoleBindings: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_rolebindings_last_succesful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"rolebindings_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_rolebindings_last_successful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"rolebindings_index"}),
 			labelFunction: &roleBindingLabelFunction,
 		},
 		NamesVMOUpdate: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_update_last_succesful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"update_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_update_last_successful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"update_index"}),
 			labelFunction: &VMOUpdateLabelFunction,
 		},
 	}
@@ -356,7 +356,7 @@ func (md *metricsDelegate) initializeFailedMetricsArray() {
 	}
 }
 
-// registerMetricsHandlersHelper loops through the failed metrics map and deletes metrics which have been registered succesfully
+// registerMetricsHandlersHelper loops through the failed metrics map and deletes metrics which have been registered succesSfully
 func (md *metricsDelegate) registerMetricsHandlersHelper() error {
 	var errorObserved error
 	for metric := range MetricsExp.internalConfig.failedMetrics {
