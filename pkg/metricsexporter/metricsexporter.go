@@ -356,7 +356,7 @@ func (md *metricsDelegate) initializeFailedMetricsArray() {
 	}
 }
 
-// registerMetricsHandlersHelper loops through the failed metrics map and deletes metrics which have been registered succesSfully
+// registerMetricsHandlersHelper loops through the failed metrics map and deletes metrics which have been registered successfully
 func (md *metricsDelegate) registerMetricsHandlersHelper() error {
 	var errorObserved error
 	for metric := range MetricsExp.internalConfig.failedMetrics {
