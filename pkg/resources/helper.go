@@ -406,15 +406,6 @@ func OidcProxyIngressHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, comp
 	return fmt.Sprintf("%s.%s", host, vmo.Spec.URI)
 }
 
-// OidcProxyIngressHost returns OIDC Proxy ingress host.
-func OidcProxyIngressHostES(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) string {
-	host := "elasticsearch-testing"
-	if component.EndpointName != "" {
-		host = component.EndpointName
-	}
-	return fmt.Sprintf("%s.%s", host, vmo.Spec.URI)
-}
-
 // CreateOidcProxy creates OpenID Connect (OIDC) proxy container and config Volume
 func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources, component *config.ComponentDetails) ([]corev1.Volume, *corev1.Container) {
 	var volumes []corev1.Volume

@@ -235,27 +235,6 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 			},
 		},
 	}
-	ingressESRule := netv1.IngressRule{
-		Host: resources.OidcProxyIngressHostES(vmo, component),
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path:     "/()(.*)",
-						PathType: &pathType,
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Name: serviceName,
-								Port: netv1.ServiceBackendPort{
-									Number: int32(port),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 	ingress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
@@ -270,12 +249,8 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 					Hosts:      []string{ingressHost},
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
-				{
-					Hosts:      []string{resources.OidcProxyIngressHostES(vmo, component)},
-					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
-				},
 			},
-			Rules:            []netv1.IngressRule{ingressRule, ingressESRule},
+			Rules:            []netv1.IngressRule{ingressRule},
 			IngressClassName: &ingressClassName,
 		},
 	}
