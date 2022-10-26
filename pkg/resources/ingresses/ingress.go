@@ -212,10 +212,32 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	}
 	serviceName := resources.AuthProxyMetaName()
 	ingressHost := resources.OidcProxyIngressHost(vmo, component)
+	ingressHostES := resources.OidcProxyIngressHostES(vmo, component)
 	pathType := netv1.PathTypeImplementationSpecific
 	ingressClassName := getIngressClassName(vmo)
 	ingressRule := netv1.IngressRule{
 		Host: ingressHost,
+		IngressRuleValue: netv1.IngressRuleValue{
+			HTTP: &netv1.HTTPIngressRuleValue{
+				Paths: []netv1.HTTPIngressPath{
+					{
+						Path:     "/()(.*)",
+						PathType: &pathType,
+						Backend: netv1.IngressBackend{
+							Service: &netv1.IngressServiceBackend{
+								Name: serviceName,
+								Port: netv1.ServiceBackendPort{
+									Number: int32(port),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ingressRuleES := netv1.IngressRule{
+		Host: ingressHostES,
 		IngressRuleValue: netv1.IngressRuleValue{
 			HTTP: &netv1.HTTPIngressRuleValue{
 				Paths: []netv1.HTTPIngressPath{
@@ -249,8 +271,12 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 					Hosts:      []string{ingressHost},
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
+				{
+					Hosts:      []string{ingressHostES},
+					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
+				},
 			},
-			Rules:            []netv1.IngressRule{ingressRule},
+			Rules:            []netv1.IngressRule{ingressRule, ingressRuleES},
 			IngressClassName: &ingressClassName,
 		},
 	}
