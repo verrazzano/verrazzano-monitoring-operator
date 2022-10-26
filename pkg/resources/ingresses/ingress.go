@@ -268,11 +268,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 		Spec: netv1.IngressSpec{
 			TLS: []netv1.IngressTLS{
 				{
-					Hosts:      []string{ingressHost},
-					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
-				},
-				{
-					Hosts:      []string{ingressHostES},
+					Hosts:      []string{ingressHost, ingressHostES},
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
 			},
