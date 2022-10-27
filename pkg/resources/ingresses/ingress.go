@@ -167,10 +167,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			ingressES := newOidcProxyIngressOS(vmo, &config.ElasticsearchIngest)
+			ingressOS := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
-			ingressES.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			ingresses = append(ingresses, ingressES)
+			ingressOS.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+			ingresses = append(ingresses, ingressOS)
 		} else {
 			var ingress *netv1.Ingress
 			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
@@ -273,93 +273,6 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 				{
 					Hosts:      []string{ingressHost},
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
-				},
-			},
-			Rules:            []netv1.IngressRule{ingressRule},
-			IngressClassName: &ingressClassName,
-		},
-	}
-	ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = constants.NginxClientMaxBodySize
-	if len(vmo.Spec.IngressTargetDNSName) != 0 {
-		ingress.Annotations["external-dns.alpha.kubernetes.io/target"] = vmo.Spec.IngressTargetDNSName
-		ingress.Annotations["external-dns.alpha.kubernetes.io/ttl"] = strconv.Itoa(constants.ExternalDNSTTLSeconds)
-	}
-	if vmo.Spec.AutoSecret {
-		ingress.Annotations["kubernetes.io/tls-acme"] = "true"
-	} else {
-		ingress.Annotations["kubernetes.io/tls-acme"] = "false"
-	}
-	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
-	setNginxRoutingAnnotations(ingress)
-	ingress.Annotations["cert-manager.io/common-name"] = ingressHost
-	return ingress
-}
-
-// newOidcProxyIngress creates the Ingress of the OidcProxy
-func newOidcProxyIngressOS(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *netv1.Ingress {
-	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
-	if err != nil {
-		port = 8775
-	}
-	serviceName := resources.AuthProxyMetaName()
-	ingressHost := resources.OidcProxyIngressHostOS(vmo, component)
-	pathType := netv1.PathTypeImplementationSpecific
-	ingressClassName := getIngressClassName(vmo)
-	ingressRule := netv1.IngressRule{
-		Host: ingressHost,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path:     "/()(.*)",
-						PathType: &pathType,
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Name: serviceName,
-								Port: netv1.ServiceBackendPort{
-									Number: int32(port),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	/*	ingressRuleES := netv1.IngressRule{
-		Host: ingressHostES,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path:     "/()(.*)",
-						PathType: &pathType,
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Name: serviceName,
-								Port: netv1.ServiceBackendPort{
-									Number: int32(port),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}*/
-	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations:     map[string]string{},
-			Labels:          resources.GetMetaLabels(vmo),
-			Name:            fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, "os-ingest"),
-			Namespace:       vmo.Namespace,
-			OwnerReferences: resources.GetOwnerReferences(vmo),
-		},
-		Spec: netv1.IngressSpec{
-			TLS: []netv1.IngressTLS{
-				{
-					Hosts:      []string{ingressHost},
-					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, "os-ingest"),
 				},
 			},
 			Rules:            []netv1.IngressRule{ingressRule},

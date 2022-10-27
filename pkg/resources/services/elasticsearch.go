@@ -25,6 +25,17 @@ func createOpenSearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitor
 	return openSearchIngestService
 }
 
+// Creates OpenSearch Client service element
+func createOSIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
+	var openSearchIngestService = createServiceElement(vmo, config.OpensearchIngest)
+	if nodes.IsSingleNodeCluster(vmo) {
+		openSearchIngestService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
+		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
+		openSearchIngestService.Spec.Ports = []corev1.ServicePort{resources.GetServicePort(config.ElasticsearchData)}
+	}
+	return openSearchIngestService
+}
+
 // Creates OpenSearch MasterNodes service element
 func createOpenSearchMasterServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
 	openSearchMasterService := createServiceElement(vmo, config.ElasticsearchMaster)
@@ -63,6 +74,7 @@ func createOpenSearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	masterServiceHTTP := createMasterServiceHTTP(vmo)
 	dataService := createOpenSearchDataServiceElements(vmo)
 	ingestService := createOpenSearchIngestServiceElements(vmo)
+	ingestServiceOS := createOSIngestServiceElements(vmo)
 
 	// if the cluster supports node role selectors, use those instead of service app selectors
 	if useNodeRoleSelectors {
@@ -77,6 +89,7 @@ func createOpenSearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 		masterServiceHTTP,
 		dataService,
 		ingestService,
+		ingestServiceOS,
 	}
 }
 
