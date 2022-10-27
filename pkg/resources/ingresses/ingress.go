@@ -167,6 +167,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+			ingress.Annotations["nginx.ingress.kubernetes.io/server-alias"] = resources.OidcProxyIngressHostES(vmo, &config.ElasticsearchIngest)
 			ingresses = append(ingresses, ingress)
 		} else {
 			var ingress *netv1.Ingress
@@ -236,7 +237,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 			},
 		},
 	}
-	ingressRuleES := netv1.IngressRule{
+	/*ingressRuleES := netv1.IngressRule{
 		Host: ingressHostES,
 		IngressRuleValue: netv1.IngressRuleValue{
 			HTTP: &netv1.HTTPIngressRuleValue{
@@ -256,7 +257,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 				},
 			},
 		},
-	}
+	}*/
 	ingress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
@@ -272,7 +273,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
 			},
-			Rules:            []netv1.IngressRule{ingressRule, ingressRuleES},
+			Rules:            []netv1.IngressRule{ingressRule},
 			IngressClassName: &ingressClassName,
 		},
 	}
