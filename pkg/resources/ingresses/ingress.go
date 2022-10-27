@@ -167,7 +167,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			ingressES := newOidcProxyIngressES(vmo, &config.ElasticsearchIngest)
+			ingressES := newOidcProxyIngressOS(vmo, &config.ElasticsearchIngest)
 			ingresses = append(ingresses, ingress)
 			ingressES.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 			ingresses = append(ingresses, ingressES)
@@ -296,14 +296,13 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 }
 
 // newOidcProxyIngress creates the Ingress of the OidcProxy
-func newOidcProxyIngressES(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *netv1.Ingress {
+func newOidcProxyIngressOS(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *netv1.Ingress {
 	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
 	if err != nil {
 		port = 8775
 	}
 	serviceName := resources.AuthProxyMetaName()
-	//ingressHost := resources.OidcProxyIngressHost(vmo, component)
-	ingressHost := resources.OidcProxyIngressHostES(vmo, component)
+	ingressHost := resources.OidcProxyIngressHostOS(vmo, component)
 	pathType := netv1.PathTypeImplementationSpecific
 	ingressClassName := getIngressClassName(vmo)
 	ingressRule := netv1.IngressRule{
@@ -352,7 +351,7 @@ func newOidcProxyIngressES(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, com
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     map[string]string{},
 			Labels:          resources.GetMetaLabels(vmo),
-			Name:            fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, "es-ingest"),
+			Name:            fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, "os-ingest"),
 			Namespace:       vmo.Namespace,
 			OwnerReferences: resources.GetOwnerReferences(vmo),
 		},
@@ -360,7 +359,7 @@ func newOidcProxyIngressES(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, com
 			TLS: []netv1.IngressTLS{
 				{
 					Hosts:      []string{ingressHost},
-					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, "es-ingest"),
+					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, "os-ingest"),
 				},
 			},
 			Rules:            []netv1.IngressRule{ingressRule},

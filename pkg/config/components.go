@@ -108,8 +108,8 @@ var OidcProxy = ComponentDetails{
 
 // ElasticsearchIngest is the default Elasticsearch IngestNodes configuration
 var ElasticsearchIngest = ComponentDetails{
-	Name:         "os-ingest",
-	EndpointName: "opensearch",
+	Name:         "es-ingest",
+	EndpointName: "elasticsearch",
 	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
