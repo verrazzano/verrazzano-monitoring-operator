@@ -165,7 +165,7 @@ func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]
 func GetCompLabel(componentName string) string {
 	var componentLabelValue string
 	switch componentName {
-	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name:
+	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name, config.OpensearchIngest.Name:
 		componentLabelValue = constants.ComponentOpenSearchValue
 	default:
 		componentLabelValue = componentName
