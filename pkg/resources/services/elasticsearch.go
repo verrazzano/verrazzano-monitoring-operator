@@ -82,6 +82,7 @@ func createOpenSearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 		masterServiceHTTP.Spec.Selector = map[string]string{nodes.RoleMaster: nodes.RoleAssigned}
 		dataService.Spec.Selector = map[string]string{nodes.RoleData: nodes.RoleAssigned}
 		ingestService.Spec.Selector = map[string]string{nodes.RoleIngest: nodes.RoleAssigned}
+		ingestServiceOS.Spec.Selector = map[string]string{nodes.RoleIngest: nodes.RoleAssigned}
 	}
 
 	return []*corev1.Service{
