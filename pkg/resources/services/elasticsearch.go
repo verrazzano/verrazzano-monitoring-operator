@@ -102,6 +102,7 @@ func OpenSearchPodSelector(vmoName string) string {
 		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchMaster.Name),
 		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchData.Name),
 		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchIngest.Name),
+		fmt.Sprintf("%s-%s", vmoName, config.OpensearchIngest.Name),
 	)
 }
 
