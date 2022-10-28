@@ -97,7 +97,7 @@ func createOpenSearchServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 // 'app in (system-es-master, system-es-data, system-es-ingest)'
 // to select all pods in the vmi cluster
 func OpenSearchPodSelector(vmoName string) string {
-	return fmt.Sprintf("%s in (%s, %s, %s)",
+	return fmt.Sprintf("%s in (%s, %s, %s, %s)",
 		constants.ServiceAppLabel,
 		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchMaster.Name),
 		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchData.Name),
