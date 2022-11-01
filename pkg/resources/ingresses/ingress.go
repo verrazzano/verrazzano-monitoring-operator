@@ -172,7 +172,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 			ingressRules := append(ingress.Spec.Rules, ingressRuleES)
 			ingress.Spec.Rules = ingressRules
 			//Add ES host to ingress tls
-			ingressHostES := resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
+			ingressHostES := resources.OidcProxyIngressHost(vmo, &config.ElasticsearchIngest)
 			ingressTLS := setIngressTLSHostES(ingressHostES, ingress.Spec.TLS)
 			ingress.Spec.TLS = ingressTLS
 			ingresses = append(ingresses, ingress)
