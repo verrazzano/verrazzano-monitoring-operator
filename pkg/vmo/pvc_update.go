@@ -22,7 +22,9 @@ import (
 func resizePVC(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingPVC, expectedPVC *corev1.PersistentVolumeClaim, storageClass *storagev1.StorageClass) (*string, error) {
 	if storageClass.AllowVolumeExpansion != nil && *storageClass.AllowVolumeExpansion {
 		// Volume expansion means dynamic resize is possible - we can do an Update of the PVC in place
-		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Update(context.TODO(), expectedPVC, metav1.UpdateOptions{})
+		updatedPVC := existingPVC.DeepCopy()
+		updatedPVC.Spec.Resources = expectedPVC.Spec.Resources
+		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Update(context.TODO(), updatedPVC, metav1.UpdateOptions{})
 		return nil, err
 	}
 
