@@ -23,9 +23,7 @@ func resizePVC(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	if storageClass.AllowVolumeExpansion != nil && *storageClass.AllowVolumeExpansion {
 		// Volume expansion means dynamic resize is possible - we can do an Update of the PVC in place
 		_, err := controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Update(context.TODO(), expectedPVC, metav1.UpdateOptions{})
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	// If we are updating an OpenSearch PVC, we need to make sure the OpenSearch cluster is ready
