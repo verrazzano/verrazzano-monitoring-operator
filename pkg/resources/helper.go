@@ -407,10 +407,10 @@ func OidcProxyIngressHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, comp
 }
 
 // OidcProxyIngressHost returns OIDC Proxy ingress host.
-func OidcProxyIngressHostOS(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) string {
+func OidcProxyIngressHostES(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) string {
 	host := component.Name
 	if component.EndpointName != "" {
-		host = "opensearch"
+		host = "elasticsearch"
 	}
 	return fmt.Sprintf("%s.%s", host, vmo.Spec.URI)
 }

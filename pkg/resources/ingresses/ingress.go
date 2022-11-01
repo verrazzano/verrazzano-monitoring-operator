@@ -165,12 +165,17 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
 		if config.ElasticsearchIngest.OidcProxy != nil {
-			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
+			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			//ingressOS := newOidcProxyIngress(vmo, &config.OpensearchIngest)
+			//Add ingress rule for ES
+			ingressRuleES := getIngressRuleForESHost(vmo, &config.ElasticsearchIngest)
+			ingressRules := append(ingress.Spec.Rules, ingressRuleES)
+			ingress.Spec.Rules = ingressRules
+			//Add ES host to ingress tls
+			ingressHostES := resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
+			ingressTLS := setIngressTLSHostES(ingressHostES, ingress.Spec.TLS)
+			ingress.Spec.TLS = ingressTLS
 			ingresses = append(ingresses, ingress)
-			//ingressOS.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			//ingresses = append(ingresses, ingressOS)
 		} else {
 			var ingress *netv1.Ingress
 			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
@@ -185,7 +190,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 		}
 
 	}
-
 	return ingresses, nil
 }
 
@@ -207,19 +211,23 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 `
 }
 
-// newOidcProxyIngress creates the Ingress of the OidcProxy
-func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *netv1.Ingress {
+func setIngressTLSHostES(ingressHost string, ingressTLS []netv1.IngressTLS) []netv1.IngressTLS {
+	hosts := append(ingressTLS[0].Hosts, ingressHost)
+	ingressTLS[0].Hosts = hosts
+	return ingressTLS
+}
+
+func getIngressRuleForESHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) netv1.IngressRule {
+
 	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
 	if err != nil {
 		port = 8775
 	}
-	serviceName := resources.AuthProxyMetaName()
-	ingressHost := resources.OidcProxyIngressHost(vmo, component)
-	ingressHostES := resources.OidcProxyIngressHostOS(vmo, component)
 	pathType := netv1.PathTypeImplementationSpecific
-	ingressClassName := getIngressClassName(vmo)
+	serviceName := resources.AuthProxyMetaName()
+	ingressHostES := resources.OidcProxyIngressHostES(vmo, component)
 	ingressRule := netv1.IngressRule{
-		Host: ingressHost,
+		Host: ingressHostES,
 		IngressRuleValue: netv1.IngressRuleValue{
 			HTTP: &netv1.HTTPIngressRuleValue{
 				Paths: []netv1.HTTPIngressPath{
@@ -239,8 +247,22 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 			},
 		},
 	}
-	ingressRuleES := netv1.IngressRule{
-		Host: ingressHostES,
+
+	return ingressRule
+}
+
+// newOidcProxyIngress creates the Ingress of the OidcProxy
+func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *netv1.Ingress {
+	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
+	if err != nil {
+		port = 8775
+	}
+	serviceName := resources.AuthProxyMetaName()
+	ingressHost := resources.OidcProxyIngressHost(vmo, component)
+	pathType := netv1.PathTypeImplementationSpecific
+	ingressClassName := getIngressClassName(vmo)
+	ingressRule := netv1.IngressRule{
+		Host: ingressHost,
 		IngressRuleValue: netv1.IngressRuleValue{
 			HTTP: &netv1.HTTPIngressRuleValue{
 				Paths: []netv1.HTTPIngressPath{
@@ -271,11 +293,11 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 		Spec: netv1.IngressSpec{
 			TLS: []netv1.IngressTLS{
 				{
-					Hosts:      []string{ingressHost, ingressHostES},
+					Hosts:      []string{ingressHost},
 					SecretName: fmt.Sprintf("%s-tls-%s", vmo.Name, component.Name),
 				},
 			},
-			Rules:            []netv1.IngressRule{ingressRule, ingressRuleES},
+			Rules:            []netv1.IngressRule{ingressRule},
 			IngressClassName: &ingressClassName,
 		},
 	}
