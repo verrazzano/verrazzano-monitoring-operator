@@ -98,6 +98,18 @@ var Kibana = ComponentDetails{
 	OidcProxy:         &OidcProxy,
 }
 
+// OpenSearchDashboards is the default Kibana configuration
+var OpenSearchDashboards = ComponentDetails{
+	Name:              "OpenSearchDashboards",
+	EnvName:           "KIBANA_IMAGE",
+	ImagePullPolicy:   constants.DefaultImagePullPolicy,
+	Port:              5601,
+	LivenessHTTPPath:  "/api/status",
+	ReadinessHTTPPath: "/api/status",
+	Privileged:        false,
+	OidcProxy:         &OidcProxy,
+}
+
 // OidcProxy is the default OIDC proxy configuration
 var OidcProxy = ComponentDetails{
 	Name:            "oidc",

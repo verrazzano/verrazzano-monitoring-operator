@@ -149,7 +149,16 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 	}
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Kibana))
+			ingressOSD := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
+			//Add ingress rule for ES
+			ingressRuleOSD := getIngressRuleForESHost(vmo, &config.Kibana)
+			ingressRules := append(ingressOSD.Spec.Rules, ingressRuleOSD)
+			ingressOSD.Spec.Rules = ingressRules
+			//Add ES host to ingress tls
+			ingressHostES := resources.OidcProxyIngressHost(vmo, &config.Kibana)
+			ingressOSDTLS := setIngressTLSHostES(ingressHostES, ingressOSD.Spec.TLS)
+			ingressOSD.Spec.TLS = ingressOSDTLS
+			ingresses = append(ingresses, ingressOSD)
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
 			ingRule := createIngressRuleElement(vmo, config.Kibana)
