@@ -98,7 +98,7 @@ var Kibana = ComponentDetails{
 	OidcProxy:         &OidcProxy,
 }
 
-// OpenSearchDashboards is the default Kibana configuration
+// OpenSearchDashboards is the default OpenSearchDashboards configuration
 var OpenSearchDashboards = ComponentDetails{
 	Name:              "OpenSearchDashboards",
 	EnvName:           "KIBANA_IMAGE",
