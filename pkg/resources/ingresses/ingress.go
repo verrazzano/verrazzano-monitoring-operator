@@ -161,9 +161,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 			ingresses = append(ingresses, ingressOSD)
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
-			ingRule := createIngressRuleElement(vmo, config.Kibana)
+			ingRule := createIngressRuleElement(vmo, config.OpenSearchDashboards)
 			host := config.Kibana.Name + "." + vmo.Spec.URI
-			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Kibana)
+			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.OpenSearchDashboards)
 
 			ingress, err := createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
 			if err != nil {
