@@ -43,6 +43,9 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	var ingressNames []string
 	controller.log.Oncef("Creating/updating Ingresses for VMI %s", vmo.Name)
 
+	// OSIngest and OSDIngest is required to save new opensearch ingress object
+	// These variables are used to update ingress rules and TLS hosts if deprecated vmi-system-es-ingress exists
+	// Following this approach to avoid a loop to retrieve newly created OS and OSD ingress.
 	OSIngest := &netv1.Ingress{}
 	OSDIngest := &netv1.Ingress{}
 	for _, curIngress := range ingList {
@@ -61,17 +64,12 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
 			if existingIngress.Name == "vmi-system-os-ingest" {
-				controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
-				controller.log.Oncef("rule.Host %v == resources.OidcProxyIngressHost(vmo, componentDetails%v", existingIngress.Spec.Rules[0].Host, resources.OidcProxyIngressHost(vmo, &config.ElasticsearchIngest))
 				if DoesIngressContainDeprecatedESHost(existingIngress, vmo, &config.ElasticsearchIngest) {
-					controller.log.Oncef("DoesIngressContainDeprecatedESHost--Inside vmi-system-os-ingest object assignment -------")
 					curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
 				}
 				OSIngest = curIngress
 			} else if existingIngress.Name == "vmi-system-opensearchdashboards" {
-				controller.log.Oncef("Inside vmi-system-opensearchdashboards object assignment")
 				if DoesIngressContainDeprecatedESHost(existingIngress, vmo, &config.Kibana) {
-					controller.log.Oncef("DoesIngressContainDeprecatedESHost--------Inside vmi-system-opensearchdashboards object assignment")
 					curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
 				}
 				OSDIngest = curIngress
@@ -107,25 +105,19 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
-
-			// For upgrade check if the user has deprecated Elasticsearch/Kibana ingress
-			// If exists then update the new opensearch/opensearchdashboards ingress with an old Elasticsearch/Kibana rule and host
-			// To support access to the deprecated Elasticsearch/Kibana URL.
+			// For upgrade check, if the user has deprecated Elasticsearch/Kibana ingress
+			// Then update the new opensearch/opensearchdashboards ingress with additional Elasticsearch/Kibana rule and hosts
+			// To support access to the deprecated Elasticsearch/Kibana URL. This case is only for upgrade.
 			if ingress.Name == "vmi-system-es-ingest" && OSIngest != nil {
-				controller.log.Info("Inside vmi-system-es-ingest--%v--------%v-------%s", OSIngest.Spec.Rules, OSIngest.Spec.Rules, OSIngest.Name)
 				OSIngest = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
 				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), OSIngest, metav1.UpdateOptions{})
-				controller.log.Info("UPDATED INGRESS PRINT vmi-system-os-ingest%v ------%v------_%s", OSIngest.Spec.Rules, OSIngest.Spec.TLS, OSIngest.Name)
 				if err != nil {
 					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, OSIngest, err)
 					functionMetric.IncError()
 					return err
 				}
-			}
-			if ingress.Name == "vmi-system-kibana" && OSDIngest != nil {
-				controller.log.Info("Inside vmi-system-kibana %v -----%v-------%s ", OSDIngest.Spec.Rules, OSDIngest.Spec.TLS, OSDIngest.Name)
+			} else if ingress.Name == "vmi-system-kibana" && OSDIngest != nil {
 				OSDIngest = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
-				controller.log.Info("UPDATED INGRESS PRINT vmi-system-kibana%v ------%v------%s", OSDIngest.Spec.Rules, OSDIngest.Spec.TLS, OSDIngest.Name)
 				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), OSDIngest, metav1.UpdateOptions{})
 				if err != nil {
 					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, OSDIngest, err)
