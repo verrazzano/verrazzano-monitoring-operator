@@ -106,11 +106,18 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			// To support access to the deprecated Elasticsearch/Kibana URL.
 			if ingress.Name == "vmi-system-es-ingest" && OSIngest != nil {
 				controller.log.Info("Inside vmi-system-es-ingest")
-				ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
+				ingress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
+				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingress, metav1.UpdateOptions{})
 			}
 			if ingress.Name == "vmi-system-kibana" && OSDIngest != nil {
 				controller.log.Info("Inside vmi-system-kibana")
-				ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
+				ingress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
+				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingress, metav1.UpdateOptions{})
+			}
+			if err != nil {
+				controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, ingress, err)
+				functionMetric.IncError()
+				return err
 			}
 
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
