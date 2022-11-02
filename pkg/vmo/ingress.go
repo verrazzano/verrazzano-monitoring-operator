@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/verrazzano/pkg/diff"
@@ -47,12 +48,14 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	OSDIngest := &netv1.Ingress{}
 	for _, curIngress := range ingList {
 		//Save Ingress object for later use -
-		if curIngress.Name == "vmi-system-os-ingest" {
+		if curIngress.Name == "vmi-system-os-ingest" && DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.ElasticsearchIngest) {
 			controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
+			curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
 			OSIngest = curIngress
 		}
-		if curIngress.Name == "vmi-system-opensearchdashboards" {
+		if curIngress.Name == "vmi-system-opensearchdashboards" && DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.Kibana) {
 			controller.log.Oncef("Inside vmi-system-opensearchdashboards object assignment")
+			curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
 			OSDIngest = curIngress
 		}
 
@@ -113,7 +116,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 					_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOS, metav1.UpdateOptions{})
 				}
 				controller.log.Info("UPDATED INGRESS PRINT vmi-system-os-ingest%v ------%v------_%s", ingressOS.Spec.Rules, ingressOS.Spec.TLS, ingressOS.Name)
-				//_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOS, metav1.UpdateOptions{})
 				if err != nil {
 					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, ingressOS, err)
 					functionMetric.IncError()
@@ -129,7 +131,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 					controller.log.Oncef("OSD Ingress %s : Spec differences %s", OSDIngest.Name, specDiffs)
 					_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOSD, metav1.UpdateOptions{})
 				}
-				//_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOSD, metav1.UpdateOptions{})
 				if err != nil {
 					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, ingressOSD, err)
 					functionMetric.IncError()
@@ -152,4 +153,13 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 
 	return nil
+}
+
+func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails *config.ComponentDetails) bool {
+	for _, rule := range ingress.Spec.Rules {
+		if rule.Host == resources.OidcProxyIngressHost(vmo, componentDetails) {
+			return true
+		}
+	}
+	return false
 }

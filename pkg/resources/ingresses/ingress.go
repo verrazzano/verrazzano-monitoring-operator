@@ -250,7 +250,7 @@ func getIngressRuleForESHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, c
 	}
 	pathType := netv1.PathTypeImplementationSpecific
 	serviceName := resources.AuthProxyMetaName()
-	ingressHostES := resources.OidcProxyIngressHostES(vmo, component)
+	ingressHostES := resources.OidcProxyIngressHost(vmo, component)
 	ingressRule := netv1.IngressRule{
 		Host: ingressHostES,
 		IngressRuleValue: netv1.IngressRuleValue{
