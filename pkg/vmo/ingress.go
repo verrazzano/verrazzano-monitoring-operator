@@ -48,9 +48,11 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	for _, curIngress := range ingList {
 		//Save Ingress object for later use -
 		if curIngress.Name == "vmi-system-os-ingest" {
+			controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
 			OSIngest = curIngress
 		}
-		if curIngress.Name == "vmi-system-kibana" {
+		if curIngress.Name == "vmi-system-opensearchdashboards" {
+			controller.log.Oncef("Inside vmi-system-opensearchdashboards object assignment")
 			OSDIngest = curIngress
 		}
 
@@ -102,10 +104,12 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			// For upgrade check if the user has deprecated Elasticsearch/Kibana ingress
 			// If exists then update the new opensearch/opensearchdashboards ingress with an old Elasticsearch/Kibana rule and host
 			// To support access to the deprecated Elasticsearch/Kibana URL.
-			if ingress.Name == "vmi-system-es-ingest" {
+			if ingress.Name == "vmi-system-es-ingest" && OSIngest != nil {
+				controller.log.Info("Inside vmi-system-es-ingest")
 				ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
 			}
-			if ingress.Name == "vmi-system-kibana" {
+			if ingress.Name == "vmi-system-kibana" && OSDIngest != nil {
+				controller.log.Info("Inside vmi-system-kibana")
 				ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
 			}
 

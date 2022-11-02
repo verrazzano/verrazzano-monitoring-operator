@@ -350,7 +350,6 @@ func getIngressClassName(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) strin
 }
 
 func AddNewRuleAndHostTLSForIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *netv1.Ingress, componentDetails *config.ComponentDetails) *netv1.Ingress {
-
 	//Add ingress rule for ES
 	ingressRuleES := getIngressRuleForESHost(vmo, componentDetails)
 	ingressRules := append(ingress.Spec.Rules, ingressRuleES)
