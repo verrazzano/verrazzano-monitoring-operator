@@ -48,14 +48,18 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	OSDIngest := &netv1.Ingress{}
 	for _, curIngress := range ingList {
 		//Save Ingress object for later use -
-		if curIngress.Name == "vmi-system-os-ingest" && DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.ElasticsearchIngest) {
+		if curIngress.Name == "vmi-system-os-ingest") {
 			controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
-			curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
+			if DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.ElasticsearchIngest) {
+				curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
+			}
 			OSIngest = curIngress
 		}
-		if curIngress.Name == "vmi-system-opensearchdashboards" && DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.Kibana) {
+		if curIngress.Name == "vmi-system-opensearchdashboards" {
 			controller.log.Oncef("Inside vmi-system-opensearchdashboards object assignment")
-			curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
+			if DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.Kibana) {
+				curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
+			}
 			OSDIngest = curIngress
 		}
 
