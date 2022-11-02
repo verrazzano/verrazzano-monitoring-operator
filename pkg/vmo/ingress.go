@@ -46,24 +46,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	OSIngest := &netv1.Ingress{}
 	OSDIngest := &netv1.Ingress{}
 	for _, curIngress := range ingList {
-		//Save Ingress object for later use -
-		if curIngress.Name == "vmi-system-os-ingest" {
-			controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
-			controller.log.Oncef("rule.Host %v == resources.OidcProxyIngressHost(vmo, componentDetails%v", curIngress.Spec.Rules, resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest))
-			if DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.ElasticsearchIngest) {
-				controller.log.Oncef("DoesIngressContainDeprecatedESHost--Inside vmi-system-os-ingest object assignment -------")
-				curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
-			}
-			OSIngest = curIngress
-		}
-		if curIngress.Name == "vmi-system-opensearchdashboards" {
-			controller.log.Oncef("Inside vmi-system-opensearchdashboards object assignment")
-			if DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.Kibana) {
-				controller.log.Oncef("DoesIngressContainDeprecatedESHost--------Inside vmi-system-opensearchdashboards object assignment")
-				curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
-			}
-			OSDIngest = curIngress
-		}
 
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
@@ -80,10 +62,28 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
 			specDiffs := diff.Diff(existingIngress, curIngress)
+
 			if specDiffs != "" {
+				if existingIngress.Name == "vmi-system-os-ingest" {
+					controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
+					controller.log.Oncef("rule.Host %v == resources.OidcProxyIngressHost(vmo, componentDetails%v", existingIngress.Spec.Rules[0].Host, resources.OidcProxyIngressHost(vmo, &config.ElasticsearchIngest))
+					if DoesIngressContainDeprecatedESHost(existingIngress, vmo, &config.ElasticsearchIngest) {
+						controller.log.Oncef("DoesIngressContainDeprecatedESHost--Inside vmi-system-os-ingest object assignment -------")
+						curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
+					}
+					OSIngest = curIngress
+				} else if existingIngress.Name == "vmi-system-opensearchdashboards" {
+					controller.log.Oncef("Inside vmi-system-opensearchdashboards object assignment")
+					if DoesIngressContainDeprecatedESHost(existingIngress, vmo, &config.Kibana) {
+						controller.log.Oncef("DoesIngressContainDeprecatedESHost--------Inside vmi-system-opensearchdashboards object assignment")
+						curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
+					}
+					OSDIngest = curIngress
+				}
 				controller.log.Debugf("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
 				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), curIngress, metav1.UpdateOptions{})
 			}
+
 		} else if k8serrors.IsNotFound(err) {
 			_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Create(context.TODO(), curIngress, metav1.CreateOptions{})
 		} else {
@@ -115,22 +115,22 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			// To support access to the deprecated Elasticsearch/Kibana URL.
 			if ingress.Name == "vmi-system-es-ingest" && OSIngest != nil {
 				controller.log.Info("Inside vmi-system-es-ingest--%v--------%v-------%s", OSIngest.Spec.Rules, OSIngest.Spec.Rules, OSIngest.Name)
-				ingressOS := ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
-				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOS, metav1.UpdateOptions{})
-				controller.log.Info("UPDATED INGRESS PRINT vmi-system-os-ingest%v ------%v------_%s", ingressOS.Spec.Rules, ingressOS.Spec.TLS, ingressOS.Name)
+				OSIngest = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
+				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), OSIngest, metav1.UpdateOptions{})
+				controller.log.Info("UPDATED INGRESS PRINT vmi-system-os-ingest%v ------%v------_%s", OSIngest.Spec.Rules, OSIngest.Spec.TLS, OSIngest.Name)
 				if err != nil {
-					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, ingressOS, err)
+					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, OSIngest, err)
 					functionMetric.IncError()
 					return err
 				}
 			}
 			if ingress.Name == "vmi-system-kibana" && OSDIngest != nil {
 				controller.log.Info("Inside vmi-system-kibana %v -----%v-------%s ", OSDIngest.Spec.Rules, OSDIngest.Spec.TLS, OSDIngest.Name)
-				ingressOSD := ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
-				controller.log.Info("UPDATED INGRESS PRINT vmi-system-kibana%v ------%v------%s", ingressOSD.Spec.Rules, ingressOSD.Spec.TLS, ingressOSD.Name)
-				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOSD, metav1.UpdateOptions{})
+				OSDIngest = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
+				controller.log.Info("UPDATED INGRESS PRINT vmi-system-kibana%v ------%v------%s", OSDIngest.Spec.Rules, OSDIngest.Spec.TLS, OSDIngest.Name)
+				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), OSDIngest, metav1.UpdateOptions{})
 				if err != nil {
-					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, ingressOSD, err)
+					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, OSDIngest, err)
 					functionMetric.IncError()
 					return err
 				}
