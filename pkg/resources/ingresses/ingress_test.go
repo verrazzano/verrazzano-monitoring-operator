@@ -61,10 +61,10 @@ func TestVMOWithIngresses(t *testing.T) {
 	assert.Equal(t, 1, len(ingresses[0].Spec.TLS[0].Hosts), "Number of hosts in generated Ingress")
 	assert.Equal(t, "api.example.com", ingresses[0].Spec.TLS[0].Hosts[0], "TLS hosts")
 	assert.Equal(t, "grafana.example.com", ingresses[1].Spec.TLS[0].Hosts[0], "TLS hosts")
-	assert.Equal(t, "elasticsearch.example.com", ingresses[2].Spec.TLS[0].Hosts[0], "TLS hosts")
+	assert.Equal(t, "opensearch.example.com", ingresses[2].Spec.TLS[0].Hosts[0], "TLS hosts")
 	assert.Equal(t, vmiName+"-tls-api", ingresses[0].Spec.TLS[0].SecretName, "TLS secret")
 	assert.Equal(t, vmiName+"-tls-grafana", ingresses[1].Spec.TLS[0].SecretName, "TLS secret")
-	assert.Equal(t, vmiName+"-tls-es-ingest", ingresses[2].Spec.TLS[0].SecretName, "TLS secret")
+	assert.Equal(t, vmiName+"-tls-os-ingest", ingresses[2].Spec.TLS[0].SecretName, "TLS secret")
 	assert.Equal(t, "basic", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-type"], "Auth type")
 	assert.Equal(t, "secret", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-secret"], "Auth secret")
 	assert.Equal(t, "example.com auth", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-realm"], "Auth realm")
@@ -72,7 +72,7 @@ func TestVMOWithIngresses(t *testing.T) {
 	assert.Equal(t, "${service_name}.${namespace}.svc.cluster.local", ingresses[0].Annotations["nginx.ingress.kubernetes.io/upstream-vhost"], "Upstream vhost")
 	assert.Equal(t, "api.example.com", ingresses[0].Annotations["cert-manager.io/common-name"], "TLS cert CN")
 	assert.Equal(t, "grafana.example.com", ingresses[1].Annotations["cert-manager.io/common-name"], "TLS cert CN")
-	assert.Equal(t, "elasticsearch.example.com", ingresses[2].Annotations["cert-manager.io/common-name"], "TLS cert CN")
+	assert.Equal(t, "opensearch.example.com", ingresses[2].Annotations["cert-manager.io/common-name"], "TLS cert CN")
 	assert.Equal(t, getIngressClassName(vmo), *ingresses[0].Spec.IngressClassName)
 }
 
