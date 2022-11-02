@@ -6,16 +6,14 @@ package vmo
 import (
 	"context"
 	"errors"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	netv1 "k8s.io/api/networking/v1"
-	controllerruntime "sigs.k8s.io/controller-runtime"
-
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
+	netv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -52,6 +50,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		if curIngress.Name == "vmi-system-os-ingest" {
 			controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
 			if DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.ElasticsearchIngest) {
+				controller.log.Oncef("DoesIngressContainDeprecatedESHost--Inside vmi-system-os-ingest object assignment -------")
 				curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
 			}
 			OSIngest = curIngress
@@ -59,6 +58,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		if curIngress.Name == "vmi-system-opensearchdashboards" {
 			controller.log.Oncef("Inside vmi-system-opensearchdashboards object assignment")
 			if DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.Kibana) {
+				controller.log.Oncef("DoesIngressContainDeprecatedESHost--------Inside vmi-system-opensearchdashboards object assignment")
 				curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
 			}
 			OSDIngest = curIngress
@@ -155,10 +155,8 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails *config.ComponentDetails) bool {
 	for _, rule := range ingress.Spec.Rules {
 		if rule.Host == resources.OidcProxyIngressHost(vmo, componentDetails) {
-			controllerruntime.Log.Info("DoesIngressContainDeprecatedESHost returns true")
 			return true
 		}
 	}
-	controllerruntime.Log.Info("DoesIngressContainDeprecatedESHost returns false")
 	return false
 }
