@@ -238,8 +238,7 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 }
 
 func setIngressTLSHostES(ingressHost string, ingressTLS []netv1.IngressTLS) []netv1.IngressTLS {
-	hosts := append(ingressTLS[0].Hosts, ingressHost)
-	ingressTLS[0].Hosts = hosts
+	ingressTLS[0].Hosts = append(ingressTLS[0].Hosts, ingressHost)
 	return ingressTLS
 }
 
