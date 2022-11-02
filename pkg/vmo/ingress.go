@@ -9,6 +9,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	netv1 "k8s.io/api/networking/v1"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -154,8 +155,10 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails *config.ComponentDetails) bool {
 	for _, rule := range ingress.Spec.Rules {
 		if rule.Host == resources.OidcProxyIngressHost(vmo, componentDetails) {
+			controllerruntime.Log.Info("DoesIngressContainDeprecatedESHost returns true")
 			return true
 		}
 	}
+	controllerruntime.Log.Info("DoesIngressContainDeprecatedESHost returns false")
 	return false
 }
