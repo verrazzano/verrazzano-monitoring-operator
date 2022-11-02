@@ -150,37 +150,16 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
 			ingressOSD := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
-
-			/*			//Add ingress rule for ES
-						ingressRuleOSD := getIngressRuleForESHost(vmo, &config.Kibana)
-						ingressRules := append(ingressOSD.Spec.Rules, ingressRuleOSD)
-						ingressOSD.Spec.Rules = ingressRules
-						//Add ES host to ingress tls
-						ingressHostES := resources.OidcProxyIngressHost(vmo, &config.Kibana)
-						ingressOSDTLS := setIngressTLSHostES(ingressHostES, ingressOSD.Spec.TLS)
-						ingressOSD.Spec.TLS = ingressOSDTLS
-			*/
 			ingresses = append(ingresses, ingressOSD)
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
 			ingRule := createIngressRuleElement(vmo, config.OpenSearchDashboards)
 			host := config.Kibana.Name + "." + vmo.Spec.URI
 			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.OpenSearchDashboards)
-
 			ingress, err := createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
 			if err != nil {
 				return ingresses, err
 			}
-
-			/*			//Add ingress rule for ES
-						ingressRuleOSD := getIngressRuleForESHost(vmo, &config.Kibana)
-						ingressRules := append(ingress.Spec.Rules, ingressRuleOSD)
-						ingress.Spec.Rules = ingressRules
-						//Add ES host to ingress tls
-						ingressHostES := resources.OidcProxyIngressHost(vmo, &config.Kibana)
-						ingressOSDTLS := setIngressTLSHostES(ingressHostES, ingress.Spec.TLS)
-						ingress.Spec.TLS = ingressOSDTLS*/
-
 			ingresses = append(ingresses, ingress)
 		}
 	}
@@ -188,7 +167,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-
 			ingresses = append(ingresses, ingress)
 		} else {
 			var ingress *netv1.Ingress
@@ -199,19 +177,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 			if err != nil {
 				return ingresses, err
 			}
-
-			/*			//Add ingress rule for ES
-						ingressRuleES := getIngressRuleForESHost(vmo, &config.ElasticsearchIngest)
-						ingressRules := append(ingress.Spec.Rules, ingressRuleES)
-						ingress.Spec.Rules = ingressRules
-						//Add ES host to ingress tls
-						ingressHostES := resources.OidcProxyIngressHost(vmo, &config.ElasticsearchIngest)
-						ingressTLS := setIngressTLSHostES(ingressHostES, ingress.Spec.TLS)
-						ingress.Spec.TLS = ingressTLS
-			*/
-
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
-
 			ingresses = append(ingresses, ingress)
 		}
 
