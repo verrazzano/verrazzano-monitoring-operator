@@ -48,7 +48,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	OSDIngest := &netv1.Ingress{}
 	for _, curIngress := range ingList {
 		//Save Ingress object for later use -
-		if curIngress.Name == "vmi-system-os-ingest") {
+		if curIngress.Name == "vmi-system-os-ingest" {
 			controller.log.Oncef("Inside vmi-system-os-ingest object assignment")
 			if DoesIngressContainDeprecatedESHost(curIngress, vmo, &config.ElasticsearchIngest) {
 				curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
