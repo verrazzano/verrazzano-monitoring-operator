@@ -114,11 +114,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			if ingress.Name == "vmi-system-es-ingest" && OSIngest != nil {
 				controller.log.Info("Inside vmi-system-es-ingest--%v--------%v-------%s", OSIngest.Spec.Rules, OSIngest.Spec.Rules, OSIngest.Name)
 				ingressOS := ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
-				specDiffs := diff.Diff(OSIngest, ingressOS)
-				if specDiffs != "" {
-					controller.log.Oncef("ES Ingress %s : Spec differences %s", OSIngest.Name, specDiffs)
-					_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOS, metav1.UpdateOptions{})
-				}
+				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOS, metav1.UpdateOptions{})
 				controller.log.Info("UPDATED INGRESS PRINT vmi-system-os-ingest%v ------%v------_%s", ingressOS.Spec.Rules, ingressOS.Spec.TLS, ingressOS.Name)
 				if err != nil {
 					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, ingressOS, err)
@@ -130,11 +126,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 				controller.log.Info("Inside vmi-system-kibana %v -----%v-------%s ", OSDIngest.Spec.Rules, OSDIngest.Spec.TLS, OSDIngest.Name)
 				ingressOSD := ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
 				controller.log.Info("UPDATED INGRESS PRINT vmi-system-kibana%v ------%v------%s", ingressOSD.Spec.Rules, ingressOSD.Spec.TLS, ingressOSD.Name)
-				specDiffs := diff.Diff(OSDIngest, ingressOSD)
-				if specDiffs != "" {
-					controller.log.Oncef("OSD Ingress %s : Spec differences %s", OSDIngest.Name, specDiffs)
-					_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOSD, metav1.UpdateOptions{})
-				}
+				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOSD, metav1.UpdateOptions{})
 				if err != nil {
 					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, ingressOSD, err)
 					functionMetric.IncError()
