@@ -105,12 +105,12 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			// If exists then update the new opensearch/opensearchdashboards ingress with an old Elasticsearch/Kibana rule and host
 			// To support access to the deprecated Elasticsearch/Kibana URL.
 			if ingress.Name == "vmi-system-es-ingest" && OSIngest != nil {
-				controller.log.Info("Inside vmi-system-es-ingest")
+				controller.log.Info("Inside vmi-system-es-ingest", OSIngest.Spec.Rules)
 				ingressOS := ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
 				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOS, metav1.UpdateOptions{})
 			}
 			if ingress.Name == "vmi-system-kibana" && OSDIngest != nil {
-				controller.log.Info("Inside vmi-system-kibana")
+				controller.log.Info("Inside vmi-system-kibana", OSDIngest.Spec.Rules)
 				ingressOSD := ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
 				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), ingressOSD, metav1.UpdateOptions{})
 			}
