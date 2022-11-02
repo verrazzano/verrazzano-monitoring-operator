@@ -6,6 +6,8 @@ package vmo
 import (
 	"context"
 	"errors"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
@@ -40,7 +42,18 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	var ingressNames []string
 	controller.log.Oncef("Creating/updating Ingresses for VMI %s", vmo.Name)
+
+	OSIngest := &netv1.Ingress{}
+	OSDIngest := &netv1.Ingress{}
 	for _, curIngress := range ingList {
+		//Save Ingress object for later use -
+		if curIngress.Name == "vmi-system-os-ingest" {
+			OSIngest = curIngress
+		}
+		if curIngress.Name == "vmi-system-kibana" {
+			OSDIngest = curIngress
+		}
+
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
 		if ingName == "" {
@@ -85,6 +98,17 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
+
+			// For upgrade check if the user has deprecated Elasticsearch/Kibana ingress
+			// If exists then update the new opensearch/opensearchdashboards ingress with an old Elasticsearch/Kibana rule and host
+			// To support access to the deprecated Elasticsearch/Kibana URL.
+			if ingress.Name == "vmi-system-es-ingest" {
+				ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
+			}
+			if ingress.Name == "vmi-system-kibana" {
+				ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
+			}
+
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
