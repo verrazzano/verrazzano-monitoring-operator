@@ -143,6 +143,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	return nil
 }
 
+// DoesIngressContainDeprecatedESHost Checks if the ingress contain Deprecated ES host
 func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails *config.ComponentDetails) bool {
 	for _, rule := range ingress.Spec.Rules {
 		if rule.Host == resources.OidcProxyIngressHost(vmo, componentDetails) {
