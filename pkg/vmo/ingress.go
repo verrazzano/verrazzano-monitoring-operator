@@ -29,8 +29,11 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	} else {
 		return functionError
 	}
+	//Get existing ingresses from the cluster
+	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
+	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 
-	ingList, err := ingresses.New(vmo, getRequiredExistingIngresses(controller, vmo))
+	ingList, err := ingresses.New(vmo, getRequiredExistingIngresses(existingIngressList, vmo))
 	if err != nil {
 		controller.log.Errorf("Failed to create Ingress specs for VMI %s: %v", vmo.Name, err)
 		functionMetric.IncError()
@@ -42,9 +45,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	var ingressNames []string
 	controller.log.Oncef("Creating/updating Ingresses for VMI %s", vmo.Name)
-
 	for _, curIngress := range ingList {
-
 		ingName := curIngress.Name
 		ingressNames = append(ingressNames, ingName)
 		if ingName == "" {
@@ -80,8 +81,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 
 	// Delete ingresses that shouldn't exist
 	controller.log.Oncef("Deleting unwanted Ingresses for VMI %s", vmo.Name)
-	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
-	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
+
 	if err != nil {
 		functionMetric.IncError()
 		return err
@@ -106,32 +106,30 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 }
 
 // getRequiredExistingIngresses retrieves the required ingress objects
-func getRequiredExistingIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]*netv1.Ingress {
+func getRequiredExistingIngresses(existingIngressList []*netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]*netv1.Ingress {
 	existingIngressMap := make(map[string]*netv1.Ingress)
 
-	// Get Elasticsearch ingress object
-	ingressName := resources.GetMetaName(vmo.Name, config.ElasticsearchIngest.Name)
-	ingressObject, _ := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
-	if ingressObject != nil {
-		existingIngressMap[ingressName] = ingressObject
-	}
-	// Get kibana ingress object
-	ingressName = resources.GetMetaName(vmo.Name, config.Kibana.Name)
-	ingressObject, _ = controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
-	if ingressObject != nil {
-		existingIngressMap[ingressName] = ingressObject
-	}
-	// Get Opensearch ingress object
-	ingressName = resources.GetMetaName(vmo.Name, config.OpensearchIngest.Name)
-	ingressObject, _ = controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
-	if ingressObject != nil {
-		existingIngressMap[ingressName] = ingressObject
-	}
-	// Get Opensearchdashboards ingress object
-	ingressName = resources.GetMetaName(vmo.Name, config.OpenSearchDashboards.Name)
-	ingressObject, _ = controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
-	if ingressObject != nil {
-		existingIngressMap[ingressName] = ingressObject
+	for _, existingIngress := range existingIngressList {
+		// Get Elasticsearch ingress object
+		ingressName := resources.GetMetaName(vmo.Name, config.ElasticsearchIngest.Name)
+		if existingIngress.Name == ingressName {
+			existingIngressMap[ingressName] = existingIngress
+		}
+		// Get kibana ingress object
+		ingressName = resources.GetMetaName(vmo.Name, config.Kibana.Name)
+		if existingIngress.Name == ingressName {
+			existingIngressMap[ingressName] = existingIngress
+		}
+		// Get Opensearch ingress object
+		ingressName = resources.GetMetaName(vmo.Name, config.OpensearchIngest.Name)
+		if existingIngress.Name == ingressName {
+			existingIngressMap[ingressName] = existingIngress
+		}
+		// Get Opensearchdashboards ingress object
+		ingressName = resources.GetMetaName(vmo.Name, config.OpenSearchDashboards.Name)
+		if existingIngress.Name == ingressName {
+			existingIngressMap[ingressName] = existingIngress
+		}
 	}
 	return existingIngressMap
 }
