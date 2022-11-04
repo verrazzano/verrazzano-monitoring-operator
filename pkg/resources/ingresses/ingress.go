@@ -111,7 +111,7 @@ func createIngressElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, host
 }
 
 // New will return a new Service for VMO that needs to executed for on Complete
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map[string]*netv1.Ingress) ([]*netv1.Ingress, error) {
 	var ingresses []*netv1.Ingress
 
 	// Only create ingress if URI and secret name specified
@@ -149,8 +149,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 	}
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
-			ingressOSD := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
-			ingresses = append(ingresses, ingressOSD)
+			ingress := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
+			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.Kibana, &config.OpenSearchDashboards)
+			ingresses = append(ingresses, ingress)
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
 			ingRule := createIngressRuleElement(vmo, config.OpenSearchDashboards)
@@ -160,6 +161,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 			if err != nil {
 				return ingresses, err
 			}
+			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.Kibana, &config.OpenSearchDashboards)
 			ingresses = append(ingresses, ingress)
 		}
 	}
@@ -167,6 +169,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
 		} else {
 			var ingress *netv1.Ingress
@@ -178,6 +181,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 				return ingresses, err
 			}
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
+			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpenSearchDashboards)
 			ingresses = append(ingresses, ingress)
 		}
 
@@ -315,8 +319,8 @@ func getIngressClassName(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) strin
 	return defaultIngressClassName
 }
 
-// AddNewRuleAndHostTLSForIngress updates ingress with additional Rule and TLS Host
-func AddNewRuleAndHostTLSForIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *netv1.Ingress, componentDetails *config.ComponentDetails) *netv1.Ingress {
+// addNewRuleAndHostTLSForIngress updates ingress with additional Rule and TLS Host
+func addNewRuleAndHostTLSForIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *netv1.Ingress, componentDetails *config.ComponentDetails) *netv1.Ingress {
 	//Add ingress rule for ES
 	ingressRuleES := getIngressRuleForESHost(vmo, componentDetails)
 	ingressRules := append(ingress.Spec.Rules, ingressRuleES)
@@ -326,4 +330,32 @@ func AddNewRuleAndHostTLSForIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInst
 	ingressTLS := setIngressTLSHostES(ingressHostES, ingress.Spec.TLS)
 	ingress.Spec.TLS = ingressTLS
 	return ingress
+}
+
+// DoesIngressContainDeprecatedESHost Checks if the ingress contain Deprecated ES host
+func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails *config.ComponentDetails) bool {
+	for _, rule := range ingress.Spec.Rules {
+		if rule.Host == resources.OidcProxyIngressHost(vmo, componentDetails) {
+			return true
+		}
+	}
+	return false
+}
+
+// addDeprecatedHostsIfNecessary updates new ingress objects with deprecated hosts if required
+func addDeprecatedHostsIfNecessary(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map[string]*netv1.Ingress, newIngressObject *netv1.Ingress, deprecatedIngressComponent *config.ComponentDetails, component *config.ComponentDetails) *netv1.Ingress {
+
+	// If the existing ingress with deprecated component name exists then update a new ingress object with deprecated Rule and TLS host
+	if _, ok := existingIngresses[resources.GetMetaName(vmo.Name, deprecatedIngressComponent.Name)]; ok {
+		newIngressObject = addNewRuleAndHostTLSForIngress(vmo, newIngressObject, deprecatedIngressComponent)
+	}
+
+	// If existing ingress already contain additional host and rule then update the new ingress object with the same host and rule.
+	// This is required to preserve the additional hosts for periodic reconciliation
+	if existingIngress, ok := existingIngresses[resources.GetMetaName(vmo.Name, component.Name)]; ok {
+		if DoesIngressContainDeprecatedESHost(existingIngress, vmo, deprecatedIngressComponent) {
+			newIngressObject = addNewRuleAndHostTLSForIngress(vmo, newIngressObject, deprecatedIngressComponent)
+		}
+	}
+	return newIngressObject
 }
