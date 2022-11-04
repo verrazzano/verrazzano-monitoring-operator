@@ -30,6 +30,10 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	//Get existing ingresses from the cluster
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
+	if err != nil {
+		functionMetric.IncError()
+		return err
+	}
 
 	ingList, err := ingresses.New(vmo, getExistingIngresses(existingIngressList, vmo))
 	if err != nil {
@@ -76,14 +80,8 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			return err
 		}
 	}
-
 	// Delete ingresses that shouldn't exist
 	controller.log.Oncef("Deleting unwanted Ingresses for VMI %s", vmo.Name)
-
-	if err != nil {
-		functionMetric.IncError()
-		return err
-	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
@@ -99,7 +97,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			metric.Inc()
 		}
 	}
-
 	return nil
 }
 
