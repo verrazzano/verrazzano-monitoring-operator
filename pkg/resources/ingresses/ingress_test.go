@@ -4,6 +4,7 @@
 package ingresses
 
 import (
+	netv1 "k8s.io/api/networking/v1"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,7 @@ func TestVMONoIngress(t *testing.T) {
 			},
 		},
 	}
-	ingresses, err := New(vmo)
+	ingresses, err := New(vmo, map[string]*netv1.Ingress{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,7 +53,7 @@ func TestVMOWithIngresses(t *testing.T) {
 		},
 	}
 	vmo.Name = vmiName
-	ingresses, err := New(vmo)
+	ingresses, err := New(vmo, map[string]*netv1.Ingress{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -111,7 +112,8 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			},
 		},
 	}
-	ingresses, err := New(vmo)
+
+	ingresses, err := New(vmo, map[string]*netv1.Ingress{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -122,7 +124,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 
 	// Without CascadingDelete
 	vmo.Spec.CascadingDelete = false
-	ingresses, err = New(vmo)
+	ingresses, err = New(vmo, map[string]*netv1.Ingress{})
 	if err != nil {
 		t.Error(err)
 	}

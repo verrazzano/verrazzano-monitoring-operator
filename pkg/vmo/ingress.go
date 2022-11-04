@@ -30,7 +30,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		return functionError
 	}
 
-	ingList, err := ingresses.New(vmo)
+	ingList, err := ingresses.New(vmo, getRequiredExistingIngresses(controller, vmo))
 	if err != nil {
 		controller.log.Errorf("Failed to create Ingress specs for VMI %s: %v", vmo.Name, err)
 		functionMetric.IncError()
@@ -43,11 +43,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	var ingressNames []string
 	controller.log.Oncef("Creating/updating Ingresses for VMI %s", vmo.Name)
 
-	// OSIngest and OSDIngest is required to save new opensearch ingress object
-	// These variables are used to update ingress rules and TLS hosts if deprecated vmi-system-es-ingress exists
-	// Following this approach to avoid a loop to retrieve newly created OS and OSD ingress.
-	OSIngest := &netv1.Ingress{}
-	OSDIngest := &netv1.Ingress{}
 	for _, curIngress := range ingList {
 
 		ingName := curIngress.Name
@@ -63,18 +58,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 		controller.log.Debugf("Applying Ingress '%s' in namespace '%s' for VMI '%s'\n", ingName, vmo.Namespace, vmo.Name)
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
-			if existingIngress.Name == "vmi-system-os-ingest" {
-				if DoesIngressContainDeprecatedESHost(existingIngress, vmo, &config.ElasticsearchIngest) {
-					curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.ElasticsearchIngest)
-				}
-				OSIngest = curIngress
-			} else if existingIngress.Name == "vmi-system-opensearchdashboards" {
-				if DoesIngressContainDeprecatedESHost(existingIngress, vmo, &config.Kibana) {
-					curIngress = ingresses.AddNewRuleAndHostTLSForIngress(vmo, curIngress, &config.Kibana)
-				}
-				OSDIngest = curIngress
-			}
-
 			specDiffs := diff.Diff(existingIngress, curIngress)
 			if specDiffs != "" {
 				controller.log.Debugf("Ingress %s : Spec differences %s", curIngress.Name, specDiffs)
@@ -105,27 +88,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
-			// For upgrade check, if the user has deprecated Elasticsearch/Kibana ingress
-			// Then update the new opensearch/opensearchdashboards ingress with additional Elasticsearch/Kibana rule and hosts
-			// To support access to the deprecated Elasticsearch/Kibana URL. This case is only for upgrade.
-			if ingress.Name == "vmi-system-es-ingest" && OSIngest != nil {
-				OSIngest = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSIngest, &config.ElasticsearchIngest)
-				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), OSIngest, metav1.UpdateOptions{})
-				if err != nil {
-					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, OSIngest, err)
-					functionMetric.IncError()
-					return err
-				}
-			} else if ingress.Name == "vmi-system-kibana" && OSDIngest != nil {
-				OSDIngest = ingresses.AddNewRuleAndHostTLSForIngress(vmo, OSDIngest, &config.Kibana)
-				_, err = controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Update(context.TODO(), OSDIngest, metav1.UpdateOptions{})
-				if err != nil {
-					controller.log.Errorf("Failed to update Ingress %s/%s: %v", vmo.Namespace, OSDIngest, err)
-					functionMetric.IncError()
-					return err
-				}
-			}
-
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
 			err := controller.kubeclientset.NetworkingV1().Ingresses(vmo.Namespace).Delete(context.TODO(), ingress.Name, metav1.DeleteOptions{})
 			if err != nil {
@@ -143,12 +105,37 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	return nil
 }
 
-// DoesIngressContainDeprecatedESHost Checks if the ingress contain Deprecated ES host
-func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails *config.ComponentDetails) bool {
-	for _, rule := range ingress.Spec.Rules {
-		if rule.Host == resources.OidcProxyIngressHost(vmo, componentDetails) {
-			return true
-		}
+// For upgrade check, if the user has deprecated Elasticsearch/Kibana ingress
+// Then update the new opensearch/opensearchdashboards ingress with additional Elasticsearch/Kibana rule and hosts
+// To support access to the deprecated Elasticsearch/Kibana URL. This case is only for upgrade.
+
+// getRequiredExistingIngresses retrieves the required ingress objects
+func getRequiredExistingIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]*netv1.Ingress {
+	existingIngressMap := make(map[string]*netv1.Ingress)
+
+	// Get Elasticsearch ingress object
+	ingressName := resources.GetMetaName(vmo.Name, config.ElasticsearchIngest.Name)
+	ingressObject, _ := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
+	if ingressObject != nil {
+		existingIngressMap[ingressName] = ingressObject
 	}
-	return false
+	// Get kibana ingress object
+	ingressName = resources.GetMetaName(vmo.Name, config.Kibana.Name)
+	ingressObject, _ = controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
+	if ingressObject != nil {
+		existingIngressMap[ingressName] = ingressObject
+	}
+	// Get Opensearch ingress object
+	ingressName = resources.GetMetaName(vmo.Name, config.OpensearchIngest.Name)
+	ingressObject, _ = controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
+	if ingressObject != nil {
+		existingIngressMap[ingressName] = ingressObject
+	}
+	// Get Opensearchdashboards ingress object
+	ingressName = resources.GetMetaName(vmo.Name, config.OpenSearchDashboards.Name)
+	ingressObject, _ = controller.ingressLister.Ingresses(vmo.Namespace).Get(ingressName)
+	if ingressObject != nil {
+		existingIngressMap[ingressName] = ingressObject
+	}
+	return existingIngressMap
 }
