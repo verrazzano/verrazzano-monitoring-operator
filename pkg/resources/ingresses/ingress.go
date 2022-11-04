@@ -215,7 +215,6 @@ func setIngressTLSHostES(ingressHost string, ingressTLS []netv1.IngressTLS) []ne
 
 // getIngressRuleForESHost creates ingress rule
 func getIngressRuleForESHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) netv1.IngressRule {
-
 	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
 	if err != nil {
 		port = 8775
