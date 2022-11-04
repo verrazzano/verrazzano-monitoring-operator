@@ -8,10 +8,8 @@ import (
 	"errors"
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
 	netv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +31,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
 	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
 
-	ingList, err := ingresses.New(vmo, getRequiredExistingIngresses(existingIngressList, vmo))
+	ingList, err := ingresses.New(vmo, getExistingIngresses(existingIngressList, vmo))
 	if err != nil {
 		controller.log.Errorf("Failed to create Ingress specs for VMI %s: %v", vmo.Name, err)
 		functionMetric.IncError()
@@ -105,31 +103,12 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	return nil
 }
 
-// getRequiredExistingIngresses retrieves the required ingress objects
-func getRequiredExistingIngresses(existingIngressList []*netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]*netv1.Ingress {
+// getExistingIngresses retrieves the required ingress objects
+func getExistingIngresses(existingIngressList []*netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]*netv1.Ingress {
 	existingIngressMap := make(map[string]*netv1.Ingress)
 
-	for _, existingIngress := range existingIngressList {
-		// Get Elasticsearch ingress object
-		ingressName := resources.GetMetaName(vmo.Name, config.ElasticsearchIngest.Name)
-		if existingIngress.Name == ingressName {
-			existingIngressMap[ingressName] = existingIngress
-		}
-		// Get kibana ingress object
-		ingressName = resources.GetMetaName(vmo.Name, config.Kibana.Name)
-		if existingIngress.Name == ingressName {
-			existingIngressMap[ingressName] = existingIngress
-		}
-		// Get Opensearch ingress object
-		ingressName = resources.GetMetaName(vmo.Name, config.OpensearchIngest.Name)
-		if existingIngress.Name == ingressName {
-			existingIngressMap[ingressName] = existingIngress
-		}
-		// Get Opensearchdashboards ingress object
-		ingressName = resources.GetMetaName(vmo.Name, config.OpenSearchDashboards.Name)
-		if existingIngress.Name == ingressName {
-			existingIngressMap[ingressName] = existingIngress
-		}
+	for _, ingress := range existingIngressList {
+		existingIngressMap[ingress.Name] = ingress
 	}
 	return existingIngressMap
 }
