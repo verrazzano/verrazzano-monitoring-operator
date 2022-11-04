@@ -101,25 +101,7 @@ func TestIngressesToAddDeprecatedHosts(t *testing.T) {
 	}
 	vmo.Name = vmiName
 	ingressESHost := resources.OidcProxyIngressHost(vmo, &config.ElasticsearchIngest)
-	ingressESRule := netv1.IngressRule{
-		Host: ingressESHost,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path: "/()(.*)",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Port: netv1.ServiceBackendPort{
-									Number: int32(8775),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	ingressESRule := resources.GetIngressRule(ingressESHost)
 	deprecatedESIngress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name),
@@ -139,25 +121,7 @@ func TestIngressesToAddDeprecatedHosts(t *testing.T) {
 	existingIngress[resources.GetMetaName("system", config.ElasticsearchIngest.Name)] = deprecatedESIngress
 
 	ingressKibanaHost := resources.OidcProxyIngressHost(vmo, &config.Kibana)
-	ingressKibanaRule := netv1.IngressRule{
-		Host: ingressKibanaHost,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path: "/()(.*)",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Port: netv1.ServiceBackendPort{
-									Number: int32(8775),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	ingressKibanaRule := resources.GetIngressRule(ingressKibanaHost)
 	deprecatedKibanaIngress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, config.Kibana.Name),
@@ -220,45 +184,9 @@ func TestIngressesToPreserveAdditionalDeprecatedHosts(t *testing.T) {
 	}
 	vmo.Name = vmiName
 	ingressESHost := resources.OidcProxyIngressHost(vmo, &config.ElasticsearchIngest)
-	ingressESRule := netv1.IngressRule{
-		Host: ingressESHost,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path: "/()(.*)",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Port: netv1.ServiceBackendPort{
-									Number: int32(8775),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	ingressESRule := resources.GetIngressRule(ingressESHost)
 	ingressOSHost := resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-	ingressOSRule := netv1.IngressRule{
-		Host: ingressOSHost,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path: "/()(.*)",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Port: netv1.ServiceBackendPort{
-									Number: int32(8775),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	ingressOSRule := resources.GetIngressRule(ingressOSHost)
 	deprecatedESIngress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name),
@@ -278,45 +206,9 @@ func TestIngressesToPreserveAdditionalDeprecatedHosts(t *testing.T) {
 	existingIngress[resources.GetMetaName("system", config.ElasticsearchIngest.Name)] = deprecatedESIngress
 
 	ingressKibanaHost := resources.OidcProxyIngressHost(vmo, &config.Kibana)
-	ingressKibanaRule := netv1.IngressRule{
-		Host: ingressKibanaHost,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path: "/()(.*)",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Port: netv1.ServiceBackendPort{
-									Number: int32(8775),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	ingressKibanaRule := resources.GetIngressRule(ingressKibanaHost)
 	ingressOSDHost := resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
-	ingressOSDRule := netv1.IngressRule{
-		Host: ingressOSDHost,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path: "/()(.*)",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Port: netv1.ServiceBackendPort{
-									Number: int32(8775),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	ingressOSDRule := resources.GetIngressRule(ingressOSDHost)
 	deprecatedKibanaIngress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s%s-%s", constants.VMOServiceNamePrefix, vmo.Name, config.Kibana.Name),
