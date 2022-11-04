@@ -105,10 +105,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	return nil
 }
 
-// For upgrade check, if the user has deprecated Elasticsearch/Kibana ingress
-// Then update the new opensearch/opensearchdashboards ingress with additional Elasticsearch/Kibana rule and hosts
-// To support access to the deprecated Elasticsearch/Kibana URL. This case is only for upgrade.
-
 // getRequiredExistingIngresses retrieves the required ingress objects
 func getRequiredExistingIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]*netv1.Ingress {
 	existingIngressMap := make(map[string]*netv1.Ingress)

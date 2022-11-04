@@ -343,6 +343,9 @@ func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrolle
 }
 
 // addDeprecatedHostsIfNecessary updates new ingress objects with deprecated hosts if required
+// For upgrade check, if the user has deprecated Elasticsearch/Kibana ingress
+// Then update the new opensearch/opensearchdashboards ingress with additional Elasticsearch/Kibana rule and hosts
+// To support access to the deprecated Elasticsearch/Kibana URL and this scenario is only for upgrade.
 func addDeprecatedHostsIfNecessary(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map[string]*netv1.Ingress, newIngressObject *netv1.Ingress, deprecatedIngressComponent *config.ComponentDetails, component *config.ComponentDetails) *netv1.Ingress {
 
 	// If the existing ingress with deprecated component name exists then update a new ingress object with deprecated Rule and TLS host
