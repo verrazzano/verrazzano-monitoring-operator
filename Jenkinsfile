@@ -64,6 +64,21 @@ pipeline {
             }
         }
 
+        stage('Check Repo Clean') {
+            steps {
+                checkRepoClean()
+            }
+            post {
+                failure {
+                    script {
+                        sh """
+                            echo 'Error: Found modified files after manifest/generate actions...'
+                        """
+                    }
+                }
+            }
+        }
+
         stage('Build') {
             when { not { buildingTag() } }
             steps {
@@ -191,5 +206,12 @@ pipeline {
             }
         }
     }
+}
 
+def checkRepoClean() {
+    sh """
+        cd ${GO_REPO_PATH}/verrazzano-monitoring-operator
+        echo 'Check for forgotten manifest/generate actions...'
+        (make check-repo-clean)
+    """
 }
