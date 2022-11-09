@@ -19,7 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// Elasticsearch interface
+// Opensearch interface
 type Elasticsearch interface {
 	createElasticsearchDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment
 	createElasticsearchDataDeploymentElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, pvcToAdMap map[string]string) []*appsv1.Deployment
@@ -256,13 +256,13 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	var deployment *appsv1.Deployment
 	if vmo.Spec.Kibana.Enabled {
 		elasticsearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.ElasticsearchIngest.Name, config.ElasticsearchIngest.Port)
-		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.Kibana, config.Kibana.Name)
+		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.OpenSearchDashboards, config.OpenSearchDashboards.Name)
 
 		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 			Type: appsv1.RecreateDeploymentStrategyType,
 		}
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
-		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
+		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.OpenSearchDashboards.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
 		}
