@@ -97,7 +97,7 @@ func createDevProfileOS() *vmcontrollerv1.VerrazzanoMonitoringInstance {
 
 func TestOpenSearchPodSelector(t *testing.T) {
 	selector := OpenSearchPodSelector("system")
-	expected := "app in (system-es-master, system-es-data, system-os-ingest)"
+	expected := "app in (system-es-master, system-es-data, system-es-ingest)"
 	assert.Equal(t, expected, selector)
 }
 

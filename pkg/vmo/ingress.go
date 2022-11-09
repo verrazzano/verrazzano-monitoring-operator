@@ -6,12 +6,12 @@ package vmo
 import (
 	"context"
 	"errors"
+
 	"github.com/verrazzano/pkg/diff"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/ingresses"
-	netv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -27,15 +27,8 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 	} else {
 		return functionError
 	}
-	//Get existing ingresses from the cluster
-	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
-	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
-	if err != nil {
-		functionMetric.IncError()
-		return err
-	}
 
-	ingList, err := ingresses.New(vmo, getExistingIngresses(existingIngressList, vmo))
+	ingList, err := ingresses.New(vmo)
 	if err != nil {
 		controller.log.Errorf("Failed to create Ingress specs for VMI %s: %v", vmo.Name, err)
 		functionMetric.IncError()
@@ -58,6 +51,7 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			functionMetric.IncError()
 			return nil
 		}
+
 		controller.log.Debugf("Applying Ingress '%s' in namespace '%s' for VMI '%s'\n", ingName, vmo.Namespace, vmo.Name)
 		existingIngress, err := controller.ingressLister.Ingresses(vmo.Namespace).Get(ingName)
 		if existingIngress != nil {
@@ -80,8 +74,15 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			return err
 		}
 	}
+
 	// Delete ingresses that shouldn't exist
 	controller.log.Oncef("Deleting unwanted Ingresses for VMI %s", vmo.Name)
+	selector := labels.SelectorFromSet(map[string]string{constants.VMOLabel: vmo.Name})
+	existingIngressList, err := controller.ingressLister.Ingresses(vmo.Namespace).List(selector)
+	if err != nil {
+		functionMetric.IncError()
+		return err
+	}
 	for _, ingress := range existingIngressList {
 		if !contains(ingressNames, ingress.Name) {
 			controller.log.Oncef("Deleting ingress %s", ingress.Name)
@@ -97,15 +98,6 @@ func CreateIngresses(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonit
 			metric.Inc()
 		}
 	}
+
 	return nil
-}
-
-// getExistingIngresses retrieves the required ingress objects
-func getExistingIngresses(existingIngressList []*netv1.Ingress, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]*netv1.Ingress {
-	existingIngressMap := make(map[string]*netv1.Ingress)
-
-	for _, ingress := range existingIngressList {
-		existingIngressMap[ingress.Name] = ingress
-	}
-	return existingIngressMap
 }
