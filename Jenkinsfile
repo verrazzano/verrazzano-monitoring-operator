@@ -68,15 +68,6 @@ pipeline {
             steps {
                 checkRepoClean()
             }
-            post {
-                failure {
-                    script {
-                        sh """
-                            echo 'Error: Found modified files after manifest/generate actions...'
-                        """
-                    }
-                }
-            }
         }
 
         stage('Build') {
