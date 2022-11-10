@@ -100,8 +100,8 @@ var Kibana = ComponentDetails{
 
 // OpenSearchDashboards is the default OpenSearchDashboards configuration
 var OpenSearchDashboards = ComponentDetails{
-	Name:              "opensearchdashboards",
-	EnvName:           "KIBANA_IMAGE",
+	Name:              "osd",
+	EnvName:           "OSD_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
 	LivenessHTTPPath:  "/api/status",
@@ -137,7 +137,7 @@ var OpensearchIngest = ComponentDetails{
 	Name:         "os-ingest",
 	EndpointName: "opensearch",
 	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
-	EnvName:           "ELASTICSEARCH_IMAGE",
+	EnvName:           "OPENSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
 	LivenessHTTPPath:  "/_cluster/health",
