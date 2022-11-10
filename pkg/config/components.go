@@ -100,7 +100,7 @@ var Kibana = ComponentDetails{
 
 // OpenSearchDashboards is the default OpenSearchDashboards configuration
 var OpenSearchDashboards = ComponentDetails{
-	Name:              "osdashboards",
+	Name:              "osd",
 	EnvName:           "KIBANA_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
