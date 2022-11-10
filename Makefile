@@ -13,6 +13,14 @@ DOCKER_IMAGE_TAG ?= local-$(shell git rev-parse --short HEAD)
 
 CREATE_LATEST_TAG=0
 
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+
 ifeq ($(MAKECMDGOALS),$(filter $(MAKECMDGOALS),push push-tag push-eswait push-tag-eswait))
     ifndef DOCKER_REPO
         $(error DOCKER_REPO must be defined as the name of the docker repository where image will be pushed)
@@ -70,11 +78,11 @@ generate:
 
 .PHONY: controller-gen
 controller-gen:
-ifeq (, $(shell command -v controller-gen))
+ifeq (, $(shell which controller-gen))
 	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION}
 	$(eval CONTROLLER_GEN=$(GOBIN)/controller-gen)
 else
-	$(eval CONTROLLER_GEN=$(shell command -v controller-gen))
+	$(eval CONTROLLER_GEN=$(shell which controller-gen))
 endif
 	@{ \
 	set -eu; \
