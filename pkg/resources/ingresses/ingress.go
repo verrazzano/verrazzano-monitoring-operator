@@ -150,6 +150,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
+			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
 			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.Kibana, &config.OpenSearchDashboards)
 			ingresses = append(ingresses, ingress)
 		} else {
@@ -169,6 +170,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
 			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
 		} else {
