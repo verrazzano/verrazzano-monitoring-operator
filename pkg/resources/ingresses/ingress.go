@@ -175,8 +175,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
+			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
+			ingress.Annotations["ingress.kubernetes.io/configuration-snippet"] = `| if ($host = 'blog.yourdomain.com') {
+        return 301 https://yournewblogurl.com;
+      }`
 			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
 			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
@@ -190,8 +192,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 				return ingresses, err
 			}
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
+			ingress.Annotations["ingress.kubernetes.io/configuration-snippet"] = `| if ($host = 'elasticsearch.vmi.system.default.172.18.0.231.nip.io') {
+        return 301 opensearch.vmi.system.default.172.18.0.231.nip.io;
+      }`
 			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
 			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
