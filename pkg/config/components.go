@@ -110,6 +110,18 @@ var OpenSearchDashboards = ComponentDetails{
 	OidcProxy:         &OidcProxy,
 }
 
+// OpenSearchDashboardsRedirect is the default OpenSearchDashboardsRedirect configuration
+var OpenSearchDashboardsRedirect = ComponentDetails{
+	Name:              "kibana",
+	EnvName:           "KIBANA_IMAGE",
+	ImagePullPolicy:   constants.DefaultImagePullPolicy,
+	Port:              5601,
+	LivenessHTTPPath:  "/api/status",
+	ReadinessHTTPPath: "/api/status",
+	Privileged:        false,
+	OidcProxy:         &OidcProxy,
+}
+
 // OidcProxy is the default OIDC proxy configuration
 var OidcProxy = ComponentDetails{
 	Name:            "oidc",
@@ -146,7 +158,7 @@ var OpensearchIngest = ComponentDetails{
 	OidcProxy:         &OidcProxy,
 }
 
-// OpensearchIngestRedirect is the default Opensearch IngestNodes configuration
+// OpensearchIngestRedirect is the default OpensearchIngestRedirect IngestNodes configuration
 var OpensearchIngestRedirect = ComponentDetails{
 	Name:         "os-redirect",
 	EndpointName: "elasticsearch",
