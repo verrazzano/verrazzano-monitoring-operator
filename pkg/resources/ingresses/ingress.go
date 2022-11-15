@@ -151,8 +151,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 		if config.Kibana.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
 			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.Kibana, &config.OpenSearchDashboards)
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
+			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
+			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
 			ingresses = append(ingresses, ingress)
 		} else {
@@ -165,8 +165,8 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 				return ingresses, err
 			}
 			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.Kibana, &config.OpenSearchDashboards)
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
-			ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
+			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
+			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
 			ingresses = append(ingresses, ingress)
 		}
@@ -175,13 +175,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-			ingress.Annotations["ingress.kubernetes.io/configuration-snippet"] = `| if ($host = 'elasticsearch.vmi.system.default.172.18.0.231.nip.io') {
-        return 301 opensearch.vmi.system.default.172.18.0.231.nip.io;
-      }`
-			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
-			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
+			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.ElasticsearchIngest, &config.OpensearchIngestRedirect)
+			redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+			redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
+			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
+			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
+			ingresses = append(ingresses, redirectIngress)
 		} else {
 			var ingress *netv1.Ingress
 			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
@@ -192,9 +192,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 				return ingresses, err
 			}
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
-			ingress.Annotations["ingress.kubernetes.io/configuration-snippet"] = `| if ($host = 'elasticsearch.vmi.system.default.172.18.0.231.nip.io') {
-        return 301 opensearch.vmi.system.default.172.18.0.231.nip.io;
-      }`
 			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
 			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
@@ -356,6 +353,20 @@ func DoesIngressContainDeprecatedESHost(ingress *netv1.Ingress, vmo *vmcontrolle
 		}
 	}
 	return false
+}
+
+func createRedirectIngressIfNecessary(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map[string]*netv1.Ingress, deprecatedIngressComponent *config.ComponentDetails, component *config.ComponentDetails) *netv1.Ingress {
+	var ingress *netv1.Ingress
+	// If the existing ingress with deprecated component name exists then create a new redirect ingress
+	if _, ok := existingIngresses[resources.GetMetaName(vmo.Name, deprecatedIngressComponent.Name)]; ok {
+		ingress = newOidcProxyIngress(vmo, component)
+	}
+
+	// If the redirect ingress exists then return the same.
+	if existingIngress, ok := existingIngresses[resources.GetMetaName(vmo.Name, component.Name)]; ok {
+		ingress = existingIngress
+	}
+	return ingress
 }
 
 // addDeprecatedHostsIfNecessary updates new ingress objects with deprecated hosts if required
