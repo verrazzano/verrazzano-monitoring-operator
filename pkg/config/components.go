@@ -149,7 +149,7 @@ var OpensearchIngest = ComponentDetails{
 // OpensearchIngestRedirect is the default Opensearch IngestNodes configuration
 var OpensearchIngestRedirect = ComponentDetails{
 	Name:         "os-redirect",
-	EndpointName: "opensearch",
+	EndpointName: "elasticsearch",
 	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
