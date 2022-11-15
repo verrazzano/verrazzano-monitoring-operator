@@ -177,11 +177,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 			ingresses = append(ingresses, ingress)
 			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.ElasticsearchIngest, &config.OpensearchIngestRedirect)
-			redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-			redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
-			//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
-			ingresses = append(ingresses, redirectIngress)
+			if redirectIngress != nil {
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
+				//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
+				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
+				ingresses = append(ingresses, redirectIngress)
+			}
 		} else {
 			var ingress *netv1.Ingress
 			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
@@ -193,7 +195,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			}
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
 			//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
-			ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
+			//ingress = addDeprecatedHostsIfNecessary(vmo, existingIngresses, ingress, &config.ElasticsearchIngest, &config.OpensearchIngest)
 			ingresses = append(ingresses, ingress)
 		}
 
