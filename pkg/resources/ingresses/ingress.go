@@ -154,8 +154,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.Kibana, &config.OpenSearchDashboardsRedirect)
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
-				redirectIngress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
 				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
@@ -172,8 +171,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.Kibana, &config.OpenSearchDashboardsRedirect)
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
-				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
-				redirectIngress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
 				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
@@ -188,7 +186,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-				//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
 				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
@@ -207,7 +204,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-				//ingress.Annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"] = "true"
 				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
@@ -239,40 +235,6 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 func setIngressTLSHostES(ingressHost string, ingressTLS []netv1.IngressTLS) []netv1.IngressTLS {
 	ingressTLS[0].Hosts = append(ingressTLS[0].Hosts, ingressHost)
 	return ingressTLS
-}
-
-// getIngressRuleForESHost creates ingress rule
-func getIngressRuleForESHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) netv1.IngressRule {
-	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
-	if err != nil {
-		port = 8775
-	}
-	pathType := netv1.PathTypeImplementationSpecific
-	serviceName := resources.AuthProxyMetaName()
-	ingressHostES := resources.OidcProxyIngressHost(vmo, component)
-	ingressRule := netv1.IngressRule{
-		Host: ingressHostES,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path:     "/()(.*)",
-						PathType: &pathType,
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Name: serviceName,
-								Port: netv1.ServiceBackendPort{
-									Number: int32(port),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	return ingressRule
 }
 
 // newOidcProxyIngress creates the Ingress of the OidcProxy
