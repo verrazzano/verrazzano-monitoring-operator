@@ -231,12 +231,6 @@ func noAuthOnHealthCheckSnippet(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 `
 }
 
-// setIngressTLSHostES updates ingress with additional host
-func setIngressTLSHostES(ingressHost string, ingressTLS []netv1.IngressTLS) []netv1.IngressTLS {
-	ingressTLS[0].Hosts = append(ingressTLS[0].Hosts, ingressHost)
-	return ingressTLS
-}
-
 // newOidcProxyIngress creates the Ingress of the OidcProxy
 func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *netv1.Ingress {
 	port, err := strconv.ParseInt(resources.AuthProxyPort(), 10, 32)
