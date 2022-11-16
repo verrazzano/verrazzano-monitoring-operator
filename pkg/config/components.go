@@ -112,7 +112,8 @@ var OpenSearchDashboards = ComponentDetails{
 
 // OpenSearchDashboardsRedirect is the default OpenSearchDashboardsRedirect configuration
 var OpenSearchDashboardsRedirect = ComponentDetails{
-	Name:              "kibana",
+	Name:              "osd-redirect",
+	EndpointName:      "kibana",
 	EnvName:           "KIBANA_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
