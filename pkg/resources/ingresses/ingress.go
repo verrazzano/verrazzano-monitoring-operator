@@ -348,19 +348,6 @@ func getIngressClassName(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) strin
 	return defaultIngressClassName
 }
 
-// addNewRuleAndHostTLSForIngress updates ingress with additional Rule and TLS Host
-func addNewRuleAndHostTLSForIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ingress *netv1.Ingress, componentDetails *config.ComponentDetails) *netv1.Ingress {
-	//Add ingress rule for ES
-	ingressRuleES := getIngressRuleForESHost(vmo, componentDetails)
-	ingressRules := append(ingress.Spec.Rules, ingressRuleES)
-	ingress.Spec.Rules = ingressRules
-	//Add ES host to ingress tls
-	ingressHostES := resources.OidcProxyIngressHost(vmo, componentDetails)
-	ingressTLS := setIngressTLSHostES(ingressHostES, ingress.Spec.TLS)
-	ingress.Spec.TLS = ingressTLS
-	return ingress
-}
-
 // createRedirectIngressIfNecessary creates a new ingress for permanent redirection if required
 // For upgrade, if the user has deprecated Elasticsearch/Kibana ingress
 // Then create a new ingress for permanent redirection
@@ -370,10 +357,9 @@ func createRedirectIngressIfNecessary(vmo *vmcontrollerv1.VerrazzanoMonitoringIn
 	if _, ok := existingIngresses[resources.GetMetaName(vmo.Name, deprecatedIngressComponent.Name)]; ok {
 		ingress = newOidcProxyIngress(vmo, component)
 	}
-
-	// If the redirect ingress exists then return the same.
-	if existingIngress, ok := existingIngresses[resources.GetMetaName(vmo.Name, component.Name)]; ok {
-		ingress = existingIngress
+	// If the redirect ingress exists then return the original redirect ingress.
+	if _, ok := existingIngresses[resources.GetMetaName(vmo.Name, component.Name)]; ok {
+		ingress = newOidcProxyIngress(vmo, component)
 	}
 	return ingress
 }
