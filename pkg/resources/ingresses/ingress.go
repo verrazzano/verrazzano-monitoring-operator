@@ -155,7 +155,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
-				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
 		} else {
@@ -172,7 +171,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
-				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
 		}
@@ -186,7 +184,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
 		} else {
@@ -204,7 +201,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			if redirectIngress != nil {
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
-				//ingress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect-code"] = "308"
 				ingresses = append(ingresses, redirectIngress)
 			}
 		}
