@@ -133,9 +133,8 @@ var OidcProxy = ComponentDetails{
 
 // ElasticsearchIngest is the default Elasticsearch IngestNodes configuration
 var ElasticsearchIngest = ComponentDetails{
-	Name:         "es-ingest",
-	EndpointName: "elasticsearch",
-	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
+	Name:              "es-ingest",
+	EndpointName:      "elasticsearch",
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
@@ -147,9 +146,8 @@ var ElasticsearchIngest = ComponentDetails{
 
 // OpensearchIngest is the default Opensearch IngestNodes configuration
 var OpensearchIngest = ComponentDetails{
-	Name:         "os-ingest",
-	EndpointName: "opensearch",
-	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
+	Name:              "os-ingest",
+	EndpointName:      "opensearch",
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
@@ -161,9 +159,8 @@ var OpensearchIngest = ComponentDetails{
 
 // OpensearchIngestRedirect is the default OpensearchIngestRedirect IngestNodes configuration
 var OpensearchIngestRedirect = ComponentDetails{
-	Name:         "os-redirect",
-	EndpointName: "elasticsearch",
-	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
+	Name:              "os-redirect",
+	EndpointName:      "elasticsearch",
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
