@@ -111,7 +111,7 @@ func createIngressElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, host
 }
 
 // New will return a new Service for VMO that needs to executed for on Complete
-func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, error) {
+func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map[string]*netv1.Ingress) ([]*netv1.Ingress, error) {
 	var ingresses []*netv1.Ingress
 
 	// Only create ingress if URI and secret name specified
@@ -149,25 +149,43 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 	}
 	if vmo.Spec.Kibana.Enabled {
 		if config.Kibana.OidcProxy != nil {
-			ingresses = append(ingresses, newOidcProxyIngress(vmo, &config.Kibana))
+			ingress := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
+			ingresses = append(ingresses, ingress)
+			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.Kibana, &config.OpenSearchDashboardsRedirect)
+			if redirectIngress != nil {
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
+				ingresses = append(ingresses, redirectIngress)
+			}
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
-			ingRule := createIngressRuleElement(vmo, config.Kibana)
+			ingRule := createIngressRuleElement(vmo, config.OpenSearchDashboards)
 			host := config.Kibana.Name + "." + vmo.Spec.URI
-			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.Kibana)
-
+			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.OpenSearchDashboards)
 			ingress, err := createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
 			if err != nil {
 				return ingresses, err
 			}
 			ingresses = append(ingresses, ingress)
+			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.Kibana, &config.OpenSearchDashboardsRedirect)
+			if redirectIngress != nil {
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpenSearchDashboards)
+				ingresses = append(ingresses, redirectIngress)
+			}
 		}
 	}
 	if vmo.Spec.Elasticsearch.Enabled {
 		if config.ElasticsearchIngest.OidcProxy != nil {
-			ingress := newOidcProxyIngress(vmo, &config.ElasticsearchIngest)
+			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 			ingresses = append(ingresses, ingress)
+			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.ElasticsearchIngest, &config.OpensearchIngestRedirect)
+			if redirectIngress != nil {
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
+				ingresses = append(ingresses, redirectIngress)
+			}
 		} else {
 			var ingress *netv1.Ingress
 			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
@@ -179,10 +197,15 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) ([]*netv1.Ingress, er
 			}
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"] = constants.NginxProxyReadTimeoutForKibana
 			ingresses = append(ingresses, ingress)
+			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.ElasticsearchIngest, &config.OpensearchIngestRedirect)
+			if redirectIngress != nil {
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
+				redirectIngress.Annotations["nginx.ingress.kubernetes.io/permanent-redirect"] = "https://" + resources.OidcProxyIngressHost(vmo, &config.OpensearchIngest)
+				ingresses = append(ingresses, redirectIngress)
+			}
 		}
 
 	}
-
 	return ingresses, nil
 }
 
@@ -275,4 +298,20 @@ func getIngressClassName(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) strin
 		return *vmi.Spec.IngressClassName
 	}
 	return defaultIngressClassName
+}
+
+// createRedirectIngressIfNecessary creates a new ingress for permanent redirection if required
+// For upgrade, if the user has deprecated Elasticsearch/Kibana ingress
+// Then create a new ingress for permanent redirection
+func createRedirectIngressIfNecessary(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map[string]*netv1.Ingress, deprecatedIngressComponent *config.ComponentDetails, component *config.ComponentDetails) *netv1.Ingress {
+	var ingress *netv1.Ingress
+	// If the existing ingress with deprecated component name exists then create a new ingress for permanent redirection
+	if _, ok := existingIngresses[resources.GetMetaName(vmo.Name, deprecatedIngressComponent.Name)]; ok {
+		ingress = newOidcProxyIngress(vmo, component)
+	}
+	// If the redirect ingress exists then return the original redirect ingress.
+	if _, ok := existingIngresses[resources.GetMetaName(vmo.Name, component.Name)]; ok {
+		ingress = newOidcProxyIngress(vmo, component)
+	}
+	return ingress
 }

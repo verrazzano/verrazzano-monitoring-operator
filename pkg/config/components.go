@@ -98,6 +98,31 @@ var Kibana = ComponentDetails{
 	OidcProxy:         &OidcProxy,
 }
 
+// OpenSearchDashboards is the default OpenSearchDashboards configuration
+var OpenSearchDashboards = ComponentDetails{
+	Name:              "osd",
+	EnvName:           "KIBANA_IMAGE",
+	ImagePullPolicy:   constants.DefaultImagePullPolicy,
+	Port:              5601,
+	LivenessHTTPPath:  "/api/status",
+	ReadinessHTTPPath: "/api/status",
+	Privileged:        false,
+	OidcProxy:         &OidcProxy,
+}
+
+// OpenSearchDashboardsRedirect is the default OpenSearchDashboardsRedirect configuration
+var OpenSearchDashboardsRedirect = ComponentDetails{
+	Name:              "osd-redirect",
+	EndpointName:      "kibana",
+	EnvName:           "KIBANA_IMAGE",
+	ImagePullPolicy:   constants.DefaultImagePullPolicy,
+	Port:              5601,
+	LivenessHTTPPath:  "/api/status",
+	ReadinessHTTPPath: "/api/status",
+	Privileged:        false,
+	OidcProxy:         &OidcProxy,
+}
+
 // OidcProxy is the default OIDC proxy configuration
 var OidcProxy = ComponentDetails{
 	Name:            "oidc",
@@ -108,9 +133,34 @@ var OidcProxy = ComponentDetails{
 
 // ElasticsearchIngest is the default Elasticsearch IngestNodes configuration
 var ElasticsearchIngest = ComponentDetails{
-	Name:         "es-ingest",
-	EndpointName: "elasticsearch",
-	//NOTE: update ELASTICSEARCH_WAIT_TARGET_VERSION env (constants.ESWaitTargetVersionEnv) value to match the version reported by this image
+	Name:              "es-ingest",
+	EndpointName:      "elasticsearch",
+	EnvName:           "ELASTICSEARCH_IMAGE",
+	ImagePullPolicy:   constants.DefaultImagePullPolicy,
+	Port:              constants.OSHTTPPort,
+	LivenessHTTPPath:  "/_cluster/health",
+	ReadinessHTTPPath: "/_cluster/health",
+	Privileged:        false,
+	OidcProxy:         &OidcProxy,
+}
+
+// OpensearchIngest is the default Opensearch IngestNodes configuration
+var OpensearchIngest = ComponentDetails{
+	Name:              "os-ingest",
+	EndpointName:      "opensearch",
+	EnvName:           "ELASTICSEARCH_IMAGE",
+	ImagePullPolicy:   constants.DefaultImagePullPolicy,
+	Port:              constants.OSHTTPPort,
+	LivenessHTTPPath:  "/_cluster/health",
+	ReadinessHTTPPath: "/_cluster/health",
+	Privileged:        false,
+	OidcProxy:         &OidcProxy,
+}
+
+// OpensearchIngestRedirect is the default OpensearchIngestRedirect IngestNodes configuration
+var OpensearchIngestRedirect = ComponentDetails{
+	Name:              "os-redirect",
+	EndpointName:      "elasticsearch",
 	EnvName:           "ELASTICSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
