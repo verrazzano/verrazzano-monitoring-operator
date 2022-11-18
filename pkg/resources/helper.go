@@ -127,7 +127,7 @@ func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitorin
 	if len(dashboardsServiceEndpoint) > 0 {
 		return dashboardsServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s.%s%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
+	return fmt.Sprintf("http://%s.%s%s:%d", GetMetaName(vmo.Name, config.OpenSearchDashboards.Name),
 		vmo.Namespace,
 		serviceClusterLocal,
 		constants.OSDashboardsHTTPPort)

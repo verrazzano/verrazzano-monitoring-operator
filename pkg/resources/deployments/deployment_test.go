@@ -265,7 +265,7 @@ func TestVMOWithReplicas(t *testing.T) {
 	for _, deployment := range deployments {
 		if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
 			assert.Equal(t, *resources.NewVal(2), *deployment.Spec.Replicas, "Api replicas")
-		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.Kibana.Name) {
+		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.OpenSearchDashboards.Name) {
 			assert.Equal(t, *resources.NewVal(4), *deployment.Spec.Replicas, "Kibana replicas")
 		}
 	}

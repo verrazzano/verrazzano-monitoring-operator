@@ -26,7 +26,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, useNodeRoleSelectors 
 		services = append(services, createOpenSearchServiceElements(vmo, useNodeRoleSelectors)...)
 	}
 	if vmo.Spec.Kibana.Enabled {
-		service := createServiceElement(vmo, config.Kibana)
+		service := createServiceElement(vmo, config.OpenSearchDashboards)
 		services = append(services, service)
 	}
 	if !config.API.Disabled {
