@@ -147,6 +147,10 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	// Create the OSD deployment
 	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
+	controller.log.Oncef("OSD NAME---------- %s", config.OpenSearchDashboards.Name)
+	controller.log.Oncef("OSD Image---------- %s", config.OpenSearchDashboards.Image)
+	controller.log.Oncef("Kibana NAME---------- %s", config.Kibana.Name)
+	controller.log.Oncef("Kibana Image---------- %s", config.Kibana.Image)
 	if osd != nil {
 		controller.log.Oncef("After NewOpenSearchDashboardsDeployment")
 		deploymentNames = append(deploymentNames, osd.Name)
