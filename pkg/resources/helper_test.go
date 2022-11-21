@@ -25,7 +25,7 @@ func createTestVMI() *vmov1.VerrazzanoMonitoringInstance {
 
 func TestGetOpenSearchDashboardsHTTPEndpoint(t *testing.T) {
 	osdEndpoint := GetOpenSearchDashboardsHTTPEndpoint(createTestVMI())
-	assert.Equal(t, "http://vmi-system-kibana.test.svc.cluster.local:5601", osdEndpoint)
+	assert.Equal(t, "http://vmi-system-osd.test.svc.cluster.local:5601", osdEndpoint)
 }
 
 func TestGetOpenSearchHTTPEndpoint(t *testing.T) {
