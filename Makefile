@@ -13,6 +13,14 @@ DOCKER_IMAGE_TAG ?= local-$(shell git rev-parse --short HEAD)
 
 CREATE_LATEST_TAG=0
 
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+
 ifeq ($(MAKECMDGOALS),$(filter $(MAKECMDGOALS),push push-tag push-eswait push-tag-eswait))
     ifndef DOCKER_REPO
         $(error DOCKER_REPO must be defined as the name of the docker repository where image will be pushed)
@@ -49,7 +57,7 @@ INTEG_RUN_REGEX=Test
 INGRESS_CONTROLLER_SVC_NAME:=ingress-controller
 GO ?= go
 HELM_CHART_NAME ?= verrazzano-monitoring-operator
-CONTROLLER_GEN_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/controller-tools)
+CONTROLLER_GEN_VERSION ?= v0.8.0
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 CRD_PATH:=./k8s/crds
 CRD_FILE:=./k8s/crds/verrazzano.io_verrazzanomonitoringinstances.yaml
@@ -70,17 +78,18 @@ generate:
 
 .PHONY: controller-gen
 controller-gen:
-ifeq (, $(shell command -v controller-gen))
-	$(GO) get sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION}
+ifeq (, $(shell which controller-gen))
+	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION}
 	$(eval CONTROLLER_GEN=$(GOBIN)/controller-gen)
 else
-	$(eval CONTROLLER_GEN=$(shell command -v controller-gen))
+	$(eval CONTROLLER_GEN=$(shell which controller-gen))
 endif
 	@{ \
 	set -eu; \
 	ACTUAL_CONTROLLER_GEN_VERSION=$$(${CONTROLLER_GEN} --version | awk '{print $$2}') ; \
 	if [ "$${ACTUAL_CONTROLLER_GEN_VERSION}" != "${CONTROLLER_GEN_VERSION}" ] ; then \
 		echo  "Bad controller-gen version $${ACTUAL_CONTROLLER_GEN_VERSION}, please install ${CONTROLLER_GEN_VERSION}" ; \
+		exit 1; \
 	fi ; \
 	}
 
@@ -187,3 +196,8 @@ ifeq (, $(shell command -v golangci-lint))
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.49.0
 endif
 	golangci-lint run
+
+# check if the repo is clean after running generate
+.PHONY: check-repo-clean
+check-repo-clean: generate manifests
+	./build/scripts/check_if_clean_after_generate.sh
