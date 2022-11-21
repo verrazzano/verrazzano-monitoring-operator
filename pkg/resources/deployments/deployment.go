@@ -256,6 +256,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	var deployment *appsv1.Deployment
 	if vmo.Spec.Kibana.Enabled {
 		opensearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.OpensearchIngest.Name, config.OpensearchIngest.Port)
+
 		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.OpenSearchDashboards, config.OpenSearchDashboards.Name)
 		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 			Type: appsv1.RecreateDeploymentStrategyType,
