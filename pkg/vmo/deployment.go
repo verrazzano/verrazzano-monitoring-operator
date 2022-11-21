@@ -34,7 +34,6 @@ func updateOpenSearchDashboardsDeployment(osd *appsv1.Deployment, controller *Co
 	}
 
 	existingDeployment, err := controller.deploymentLister.Deployments(vmo.Namespace).Get(osd.Name)
-	controller.log.Oncef("existingDeployment: After getting OSD deployment, %s- ----%v", osd.Name, err)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			controller.log.Oncef("Creating deployment %s/%s", osd.Namespace, osd.Name)
@@ -147,17 +146,10 @@ func CreateDeployments(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	// Create the OSD deployment
 	osd := deployments.NewOpenSearchDashboardsDeployment(vmo)
-	controller.log.Oncef("OSD NAME---------- %s", config.OpenSearchDashboards.Name)
-	controller.log.Oncef("OSD Image---------- %s", config.OpenSearchDashboards.Image)
-	controller.log.Oncef("Kibana NAME---------- %s", config.Kibana.Name)
-	controller.log.Oncef("Kibana Image---------- %s", config.Kibana.Image)
 	if osd != nil {
-		controller.log.Oncef("After NewOpenSearchDashboardsDeployment")
 		deploymentNames = append(deploymentNames, osd.Name)
-		controller.log.Oncef("Error: Before updateOpenSearchDashboardsDeployment")
 		err = updateOpenSearchDashboardsDeployment(osd, controller, vmo)
 		if err != nil {
-			controller.log.Oncef("Error: After updateOpenSearchDashboardsDeployment")
 			return false, err
 		}
 	}
