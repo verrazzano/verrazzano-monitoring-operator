@@ -127,6 +127,7 @@ func main() {
 				}
 				retryCount = retryCount + 1
 				// setting k8sContextReady flag to true so that this valid checks pass
+				log.Info("Resetting k8s context flag to true...")
 				k8sContextReady = true
 			}
 		} else {
