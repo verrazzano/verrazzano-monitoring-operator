@@ -126,12 +126,13 @@ func main() {
 					log.Panic(err)
 				}
 				retryCount = retryCount + 1
+				// setting k8sContextReady flag to true so that this valid checks pass
+				k8sContextReady = true
 			}
 		} else {
 			done = true
 			log.Info("kubecontext retrieval successful")
 		}
-
 	}
 
 	// Initialize K8s object
