@@ -126,7 +126,8 @@ func main() {
 					log.Panic(err)
 				}
 				retryCount = retryCount + 1
-				// setting k8sContextReady flag to true so that this valid checks pass
+				// setting k8sContextReady flag to true os that subsequent checks dont re-use old value
+				// This flag will be changed to false if any k8s go-client retrieval fails.
 				log.Info("Resetting k8s context flag to true...")
 				k8sContextReady = true
 			}
