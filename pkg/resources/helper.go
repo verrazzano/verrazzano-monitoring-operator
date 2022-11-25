@@ -30,14 +30,14 @@ var (
 )
 
 const (
-	serviceClusterLocal    = ".svc.cluster.local"
-	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
-	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
+	serviceClusterLocal     = ".svc.cluster.local"
+	masterHTTPEndpoint      = "VMO_MASTER_HTTP_ENDPOINT"
+	dashboardsHTTPEndpoint  = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 	OpenSearchIngestCmdTmpl = `#!/usr/bin/env bash -e
 	set -euo pipefail
     %s
     `
-	containerCmdTmpl       = `#!/usr/bin/env bash -e
+	containerCmdTmpl = `#!/usr/bin/env bash -e
 	set -euo pipefail
 	# Updating elastic search keystore with keys
 	# required for the repository-s3 plugin
@@ -540,7 +540,7 @@ func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
 	return fmt.Sprintf(containerCmdTmpl, "", pluginsInstallTmpl)
 }
 
-func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string{
+func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
 	if vmo.Spec.Elasticsearch.Enabled &&
 		vmo.Spec.Elasticsearch.InstallPlugins.Enabled &&
 		len(vmo.Spec.Elasticsearch.InstallPlugins.Plugins) > 0 {
@@ -554,5 +554,5 @@ func GetOSPluginsInstallTmpl(plugins []string) string {
 	for _, plugin := range plugins {
 		pluginsInstallTmpl += fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin))
 	}
-	return  pluginsInstallTmpl
+	return pluginsInstallTmpl
 }

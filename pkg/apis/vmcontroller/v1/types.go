@@ -126,14 +126,14 @@ type (
 
 	// Elasticsearch details
 	Elasticsearch struct {
-		Enabled    bool                    `json:"enabled" yaml:"enabled"`
-		Storage    Storage                 `json:"storage,omitempty"`
-		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
-		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
-		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
-		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
-		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
-		InstallPlugins InstallPlugins `json:"installPlugins,omitempty"`
+		Enabled        bool                    `json:"enabled" yaml:"enabled"`
+		Storage        Storage                 `json:"storage,omitempty"`
+		IngestNode     ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode     ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode       ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies       []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes          []ElasticsearchNode     `json:"nodes,omitempty"`
+		InstallPlugins InstallPlugins          `json:"installPlugins,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
@@ -178,7 +178,7 @@ type (
 	}
 
 	InstallPlugins struct {
-		Enabled bool 	`json:"enabled" yaml:"enabled"`
+		Enabled bool `json:"enabled" yaml:"enabled"`
 		// List of plugins urls
 		Plugins []string `json:"plugins,omitempty"`
 	}
