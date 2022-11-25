@@ -6,21 +6,23 @@ package resources
 import (
 	"crypto/rand"
 	"fmt"
-	netv1 "k8s.io/api/networking/v1"
 	"math/big"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	netv1 "k8s.io/api/networking/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 )
 
 var (
@@ -31,8 +33,12 @@ const (
 	serviceClusterLocal    = ".svc.cluster.local"
 	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
 	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
+	OpenSearchIngestCmdTmpl = `#!/usr/bin/env bash -e
+	set -euo pipefail
+    %s
+    `
 	containerCmdTmpl       = `#!/usr/bin/env bash -e
-
+	set -euo pipefail
 	# Updating elastic search keystore with keys
 	# required for the repository-s3 plugin
 	if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
@@ -45,6 +51,8 @@ const (
 	fi
 	
 	%s
+
+    %s 
 	
 	/usr/local/bin/docker-entrypoint.sh`
 
@@ -52,6 +60,13 @@ const (
 	# Disable the jvm heap settings in jvm.options
 	echo "Commenting out java heap settings in jvm.options..."
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
+	`
+	OSPluginsInstallTmpl = `
+     # Install provided OS plugins that are not bundled with OS
+     %s
+    `
+	OSPluginsInstallCmd = `
+    /usr/share/opensearch/bin/opensearch-plugin install -b %s
 	`
 )
 
@@ -497,9 +512,12 @@ func ConvertToRegexp(pattern string) string {
 }
 
 // CreateElasticSearchContainerCMD creates the CMD for OpenSearch containers.
-// The resulting CMD also contains command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
+// The resulting CMD also contains
+// command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
+// OS plugins installation commands if plugins are provided
 // and contains java min/max heap settings
-func CreateOpenSearchContainerCMD(javaOpts string) string {
+func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
+	pluginsInstallTmpl := GetOSPluginsInstallTmpl(plugins)
 	if javaOpts != "" {
 		jvmOptsPair := strings.Split(javaOpts, " ")
 		minHeapMemory := ""
@@ -515,9 +533,26 @@ func CreateOpenSearchContainerCMD(javaOpts string) string {
 		}
 
 		if minHeapMemory != "" && maxHeapMemory != "" {
-			return fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd)
+			return fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd, pluginsInstallTmpl)
 		}
 	}
 
-	return fmt.Sprintf(containerCmdTmpl, "")
+	return fmt.Sprintf(containerCmdTmpl, "", pluginsInstallTmpl)
+}
+
+func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string{
+	if vmo.Spec.Elasticsearch.Enabled &&
+		vmo.Spec.Elasticsearch.InstallPlugins.Enabled &&
+		len(vmo.Spec.Elasticsearch.InstallPlugins.Plugins) > 0 {
+		return vmo.Spec.Elasticsearch.InstallPlugins.Plugins
+	}
+	return []string{}
+}
+
+func GetOSPluginsInstallTmpl(plugins []string) string {
+	var pluginsInstallTmpl string
+	for _, plugin := range plugins {
+		pluginsInstallTmpl += fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin))
+	}
+	return  pluginsInstallTmpl
 }

@@ -208,6 +208,18 @@ spec:
                     required:
                     - javaOpts
                     type: object
+                  installPlugins:
+                    properties:
+                      enabled:
+                        type: boolean
+                      plugins:
+                        description: List of plugins urls
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - enabled
+                    type: object
                   masterNode:
                     description: ElasticsearchNode Type details
                     properties:

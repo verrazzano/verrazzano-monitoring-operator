@@ -133,6 +133,7 @@ type (
 		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
 		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
 		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
+		InstallPlugins InstallPlugins `json:"installPlugins,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
@@ -169,12 +170,17 @@ type (
 		// Minimum count of documents in an index before it is rolled over
 		MinDocCount *int `json:"minDocCount,omitempty"`
 	}
-
 	// Kibana details
 	Kibana struct {
 		Enabled   bool      `json:"enabled" yaml:"enabled"`
 		Resources Resources `json:"resources,omitempty"`
 		Replicas  int32     `json:"replicas,omitempty"`
+	}
+
+	InstallPlugins struct {
+		Enabled bool 	`json:"enabled" yaml:"enabled"`
+		// List of plugins urls
+		Plugins []string `json:"plugins,omitempty"`
 	}
 
 	// API details
