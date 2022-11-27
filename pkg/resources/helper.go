@@ -12,17 +12,16 @@ import (
 	"strconv"
 	"strings"
 
-	netv1 "k8s.io/api/networking/v1"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 )
 
 var (
@@ -540,6 +539,9 @@ func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
 	return fmt.Sprintf(containerCmdTmpl, "", pluginsInstallTmpl)
 }
 
+// GetOpenSearchPluginList retrieves the list of plugins provided in the VMI CRD.
+// GIVEN VMI CRD
+// RETURN list of provided plugins. If there is no plugins in VMI CRD, empty list is returned.
 func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
 	if vmo.Spec.Elasticsearch.Enabled &&
 		vmo.Spec.Elasticsearch.InstallPlugins.Enabled &&
@@ -549,6 +551,7 @@ func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) [
 	return []string{}
 }
 
+// GetOSPluginsInstallTmpl returns the OSPluginsInstallTmpl by updating it with the given plugins.
 func GetOSPluginsInstallTmpl(plugins []string) string {
 	var pluginsInstallTmpl string
 	for _, plugin := range plugins {
