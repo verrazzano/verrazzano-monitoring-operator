@@ -33,11 +33,11 @@ const (
 	masterHTTPEndpoint      = "VMO_MASTER_HTTP_ENDPOINT"
 	dashboardsHTTPEndpoint  = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 	OpenSearchIngestCmdTmpl = `#!/usr/bin/env bash -e
-	set -euo pipefail
+	set -uo pipefail
     %s
-    `
+	/usr/local/bin/docker-entrypoint.sh`
 	containerCmdTmpl = `#!/usr/bin/env bash -e
-	set -euo pipefail
+	set -uo pipefail
 	# Updating elastic search keystore with keys
 	# required for the repository-s3 plugin
 	if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
