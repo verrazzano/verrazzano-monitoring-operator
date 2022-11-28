@@ -26,7 +26,8 @@ type K8s interface {
 	CheckAllPodsAfterRestore() error
 	IsPodReady(pod *v1.Pod) (bool, error)
 	ExecPod(cfg *rest.Config, pod *v1.Pod, container string, command []string) (string, string, error)
-	UpdateKeystore(connData *model.ConnectionData) (bool, error)
+	UpdateKeystore(connData *model.ConnectionData, timeout string) (bool, error)
+	ExecRetry(pod *v1.Pod, container, timeout string, execCmd []string) error
 }
 
 type K8sImpl struct {
