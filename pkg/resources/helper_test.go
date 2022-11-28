@@ -155,7 +155,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 	testPlugins := []string{"testPluginURL"}
 	tests := []struct {
 		name string
-		vmo *vmov1.VerrazzanoMonitoringInstance
+		vmo  *vmov1.VerrazzanoMonitoringInstance
 		want []string
 	}{
 		{
@@ -169,10 +169,9 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 							Enabled: true,
 						},
 					},
-					},
 				},
+			},
 			testPlugins,
-
 		},
 		{
 			"TestGetOpenSearchPluginList when plugins are not provided in VMI CRD",
@@ -187,7 +186,6 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 				},
 			},
 			[]string{},
-
 		},
 	}
 	for _, tt := range tests {
@@ -206,15 +204,15 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 func TestGetOSPluginsInstallTmpl(t *testing.T) {
 	plugin := "testPluginsURL"
 	tests := []struct {
-		name string
+		name    string
 		plugins []string
-		want string
+		want    string
 	}{
-	   {
+		{
 			"TestGetOSPluginsInstallTmpl when list of plugins is provided",
 			[]string{plugin},
-		   fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin)),
-	   },
+			fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin)),
+		},
 		{
 			"TestGetOSPluginsInstallTmpl when no plugin is provided",
 			[]string{},
