@@ -25,8 +25,6 @@ import (
 	"testing"
 )
 
-const resultString = "{\"result\":\"result\"}"
-
 var (
 	TestPod = v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
