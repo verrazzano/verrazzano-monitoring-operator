@@ -410,13 +410,13 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 		return false, err
 	}
 	for _, pod := range esMasterPods.Items {
-		err = k.ExecRetry(&pod, timeout, accessKeyCmd)
+		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, accessKeyCmd)
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
 		}
 
-		err = k.ExecRetry(&pod, timeout, secretKeyCmd)
+		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, secretKeyCmd)
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
@@ -427,17 +427,18 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 	listOptions = metav1.ListOptions{LabelSelector: constants.OpenSearchDataLabel}
 	esDataPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
 	if err != nil {
+		k.Log.Errorf("Unable to fetch list of opensearch data pods")
 		return false, err
 	}
 
 	for _, pod := range esDataPods.Items {
-		k.Log.Infof("Updating keystore in pod '%s'", pod.Name)
-		_, _, err = k.ExecPod(&pod, constants.OpenSearchDataPodContainerName, accessKeyCmd) //nolint:gosec //#gosec G601
+		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, accessKeyCmd)
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
 		}
-		_, _, err = k.ExecPod(&pod, constants.OpenSearchDataPodContainerName, secretKeyCmd) //nolint:gosec //#gosec G601
+
+		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, secretKeyCmd)
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
@@ -448,7 +449,7 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 
 }
 
-func (k *K8sImpl) ExecRetry(pod *v1.Pod, timeout string, execCmd []string) error {
+func (k *K8sImpl) ExecRetry(pod *v1.Pod, container, timeout string, execCmd []string) error {
 	var timeSeconds float64
 	done := false
 
@@ -461,7 +462,7 @@ func (k *K8sImpl) ExecRetry(pod *v1.Pod, timeout string, execCmd []string) error
 
 	for !done {
 		k.Log.Infof("Updating keystore in pod '%s'", pod.Name)
-		_, _, err = k.ExecPod(pod, constants.OpenSearchMasterPodContainerName, execCmd) //nolint:gosec //#gosec G601
+		_, _, err = k.ExecPod(pod, container, execCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			if timeSeconds < totalSeconds {
 				message := fmt.Sprintf("Unable to exec into pod '%s'", pod.Name)
