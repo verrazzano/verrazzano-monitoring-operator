@@ -11,6 +11,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	model "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	futil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities"
+	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s/fake"
 	"go.uber.org/zap"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -380,7 +381,15 @@ func (k *K8sImpl) ExecPod(pod *v1.Pod, container string, command []string) (stri
 			Stderr:    true,
 			TTY:       true,
 		}, scheme.ParameterCodec)
-	executor, err := NewPodExecutor(k.K8sConfig, "POST", request.URL())
+
+	var executor remotecommand.Executor
+	var err error
+	if futil.GetEnvWithDefault(constants.DevKey, constants.FalseString) == constants.TrueString {
+		executor, err = vmofake.NewPodExecutor(k.K8sConfig, "POST", request.URL())
+	} else {
+		executor, err = NewPodExecutor(k.K8sConfig, "POST", request.URL())
+	}
+
 	if err != nil {
 		return "", "", err
 	}
