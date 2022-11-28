@@ -410,13 +410,13 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 		return false, err
 	}
 	for _, pod := range esMasterPods.Items {
-		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, accessKeyCmd)
+		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, accessKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
 		}
 
-		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, secretKeyCmd)
+		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, secretKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
@@ -432,13 +432,13 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 	}
 
 	for _, pod := range esDataPods.Items {
-		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, accessKeyCmd)
+		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, accessKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
 		}
 
-		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, secretKeyCmd)
+		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, secretKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
