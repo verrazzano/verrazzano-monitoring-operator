@@ -124,7 +124,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		ingestDeployment.Spec.Template.Spec.Containers[0].Command = []string{
 			"sh",
 			"-c",
-			fmt.Sprintf(resources.OpenSearchIngestCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOpenSearchPluginList(vmo))),
+			fmt.Sprintf(resources.OpenSearchIngestCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOpenSearchPluginList(vmo),resources.OSPluginsInstallCmd)),
 		}
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
