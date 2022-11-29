@@ -71,7 +71,7 @@ const (
     /usr/share/opensearch/bin/opensearch-plugin install -b %s
 	`
 	OSDashboardPluginsInstallCmd = `
-    /usr/share/opensearch/bin/opensearch-dashboards-plugin install -b %s
+    /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin install -b %s
 	`
 )
 
