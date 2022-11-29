@@ -282,6 +282,12 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			deployment.Spec.Template.Annotations = make(map[string]string)
 		}
 		deployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = fmt.Sprintf("%d", constants.OSHTTPPort)
+		// Adding command to install OS plugins at pod bootup
+		deployment.Spec.Template.Spec.Containers[0].Command = []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(resources.OpenSearchDashboardCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOSDashboardPluginList(vmo), resources.OSDashboardPluginsInstallCmd)),
+		}
 	}
 
 	return deployment

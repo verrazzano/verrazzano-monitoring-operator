@@ -299,6 +299,7 @@ func (in *InstallPlugins) DeepCopy() *InstallPlugins {
 func (in *Kibana) DeepCopyInto(out *Kibana) {
 	*out = *in
 	out.Resources = in.Resources
+	in.InstallPlugins.DeepCopyInto(&out.InstallPlugins)
 	return
 }
 
@@ -535,7 +536,7 @@ func (in *VerrazzanoMonitoringInstanceSpec) DeepCopyInto(out *VerrazzanoMonitori
 	in.Prometheus.DeepCopyInto(&out.Prometheus)
 	out.AlertManager = in.AlertManager
 	in.Elasticsearch.DeepCopyInto(&out.Elasticsearch)
-	out.Kibana = in.Kibana
+	in.Kibana.DeepCopyInto(&out.Kibana)
 	out.API = in.API
 	if in.NatGatewayIPs != nil {
 		in, out := &in.NatGatewayIPs, &out.NatGatewayIPs

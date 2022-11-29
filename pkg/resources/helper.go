@@ -33,11 +33,13 @@ const (
 	masterHTTPEndpoint      = "VMO_MASTER_HTTP_ENDPOINT"
 	dashboardsHTTPEndpoint  = "VMO_DASHBOARDS_HTTP_ENDPOINT"
 	OpenSearchIngestCmdTmpl = `#!/usr/bin/env bash -e
-	set -uo pipefail
+	set -euo pipefail
     %s
 	/usr/local/bin/docker-entrypoint.sh`
+	OpenSearchDashboardCmdTmpl = `#!/usr/bin/env bash -e
+    %s
+	/usr/local/bin/opensearch-dashboards-docker`
 	containerCmdTmpl = `#!/usr/bin/env bash -e
-	set -uo pipefail
 	# Updating elastic search keystore with keys
 	# required for the repository-s3 plugin
 	if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
@@ -61,11 +63,15 @@ const (
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
 	`
 	OSPluginsInstallTmpl = `
-     # Install provided OS plugins that are not bundled with OS
+     set -euo pipefail
+     # Install OS plugins that are not bundled with OS
      %s
     `
 	OSPluginsInstallCmd = `
     /usr/share/opensearch/bin/opensearch-plugin install -b %s
+	`
+	OSDashboardPluginsInstallCmd = `
+    /usr/share/opensearch/bin/opensearch-dashboards-plugin install -b %s
 	`
 )
 
@@ -516,7 +522,7 @@ func ConvertToRegexp(pattern string) string {
 // OS plugins installation commands if plugins are provided
 // and contains java min/max heap settings
 func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
-	pluginsInstallTmpl := GetOSPluginsInstallTmpl(plugins)
+	pluginsInstallTmpl := GetOSPluginsInstallTmpl(plugins, OSPluginsInstallCmd)
 	if javaOpts != "" {
 		jvmOptsPair := strings.Split(javaOpts, " ")
 		minHeapMemory := ""
@@ -539,9 +545,9 @@ func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
 	return fmt.Sprintf(containerCmdTmpl, "", pluginsInstallTmpl)
 }
 
-// GetOpenSearchPluginList retrieves the list of plugins provided in the VMI CRD.
+// GetOpenSearchPluginList retrieves the list of plugins provided in the VMI CRD for OpenSearch.
 // GIVEN VMI CRD
-// RETURN list of provided plugins. If there is no plugins in VMI CRD, empty list is returned.
+// RETURN the list of provided os plugins. If there is no plugins in VMI CRD, empty list is returned.
 func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
 	if vmo.Spec.Elasticsearch.Enabled &&
 		vmo.Spec.Elasticsearch.InstallPlugins.Enabled &&
@@ -551,11 +557,23 @@ func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) [
 	return []string{}
 }
 
-// GetOSPluginsInstallTmpl returns the OSPluginsInstallTmpl by updating it with the given plugins.
-func GetOSPluginsInstallTmpl(plugins []string) string {
+// GetOSDashboardPluginList retrieves the list of plugins provided in the VMI CRD for OpenSearch dashboard.
+// GIVEN VMI CRD
+// RETURN the list of provided OSD plugins. If there is no plugins in VMI CRD, empty list is returned.
+func GetOSDashboardPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
+	if vmo.Spec.Kibana.Enabled &&
+		vmo.Spec.Kibana.InstallPlugins.Enabled &&
+		len(vmo.Spec.Kibana.InstallPlugins.Plugins) > 0 {
+		return vmo.Spec.Kibana.InstallPlugins.Plugins
+	}
+	return []string{}
+}
+
+// GetOSPluginsInstallTmpl returns the OSPluginsInstallTmpl by updating it with the given plugins and plugins installation cmd.
+func GetOSPluginsInstallTmpl(plugins []string, osPluginInstallCmd string) string {
 	var pluginsInstallTmpl string
 	for _, plugin := range plugins {
-		pluginsInstallTmpl += fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin))
+		pluginsInstallTmpl += fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(osPluginInstallCmd, plugin))
 	}
 	return pluginsInstallTmpl
 }

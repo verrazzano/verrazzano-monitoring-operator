@@ -451,6 +451,18 @@ spec:
                 properties:
                   enabled:
                     type: boolean
+                  installPlugins:
+                    properties:
+                      enabled:
+                        type: boolean
+                      plugins:
+                        description: List of plugins urls
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - enabled
+                    type: object
                   replicas:
                     format: int32
                     type: integer

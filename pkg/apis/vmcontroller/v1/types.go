@@ -172,9 +172,10 @@ type (
 	}
 	// Kibana details
 	Kibana struct {
-		Enabled   bool      `json:"enabled" yaml:"enabled"`
-		Resources Resources `json:"resources,omitempty"`
-		Replicas  int32     `json:"replicas,omitempty"`
+		Enabled        bool           `json:"enabled" yaml:"enabled"`
+		Resources      Resources      `json:"resources,omitempty"`
+		Replicas       int32          `json:"replicas,omitempty"`
+		InstallPlugins InstallPlugins `json:"installPlugins,omitempty"`
 	}
 
 	InstallPlugins struct {
