@@ -559,7 +559,7 @@ func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) [
 
 // GetOSDashboardPluginList retrieves the list of plugins provided in the VMI CRD for OpenSearch dashboard.
 // GIVEN VMI CRD
-// RETURN the list of provided OSD plugins. If there is no plugins in VMI CRD, empty list is returned.
+// RETURN the list of provided OSD plugins. If there is no plugin in VMI CRD, an empty list is returned.
 func GetOSDashboardPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
 	if vmo.Spec.Kibana.Enabled &&
 		vmo.Spec.Kibana.Plugins.Enabled &&

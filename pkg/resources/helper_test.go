@@ -164,9 +164,9 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Elasticsearch: vmov1.Elasticsearch{
 						Enabled: true,
-						InstallPlugins: vmov1.InstallPlugins{
-							Plugins: testPlugins,
-							Enabled: true,
+						Plugins: vmov1.Plugins{
+							InstallList: testPlugins,
+							Enabled:     true,
 						},
 					},
 				},
@@ -179,7 +179,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Elasticsearch: vmov1.Elasticsearch{
 						Enabled: true,
-						InstallPlugins: vmov1.InstallPlugins{
+						Plugins: vmov1.Plugins{
 							Enabled: false,
 						},
 					},
@@ -214,9 +214,9 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Kibana: vmov1.Kibana{
 						Enabled: true,
-						InstallPlugins: vmov1.InstallPlugins{
-							Plugins: testPlugins,
-							Enabled: true,
+						Plugins: vmov1.Plugins{
+							InstallList: testPlugins,
+							Enabled:     true,
 						},
 					},
 				},
@@ -229,7 +229,7 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Kibana: vmov1.Kibana{
 						Enabled: true,
-						InstallPlugins: vmov1.InstallPlugins{
+						Plugins: vmov1.Plugins{
 							Enabled: false,
 						},
 					},
@@ -248,7 +248,7 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 }
 
 // TestGetOSPluginsInstallTmpl tests GetOSPluginsInstallTmpl
-// GIVEN list of plugins urls
+// GIVEN list of plugins name, URLs to plugins zip file or Maven coordinates.
 // WHEN GetOSPluginsInstallTmpl is called
 // THEN template is returned with updated plugins urls
 func TestGetOSPluginsInstallTmpl(t *testing.T) {
