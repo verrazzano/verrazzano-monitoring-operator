@@ -126,14 +126,14 @@ type (
 
 	// Elasticsearch details
 	Elasticsearch struct {
-		Enabled        bool                    `json:"enabled" yaml:"enabled"`
-		Storage        Storage                 `json:"storage,omitempty"`
-		IngestNode     ElasticsearchNode       `json:"ingestNode,omitempty"`
-		MasterNode     ElasticsearchNode       `json:"masterNode,omitempty"`
-		DataNode       ElasticsearchNode       `json:"dataNode,omitempty"`
-		Policies       []IndexManagementPolicy `json:"policies,omitempty"`
-		Nodes          []ElasticsearchNode     `json:"nodes,omitempty"`
-		InstallPlugins InstallPlugins          `json:"installPlugins,omitempty"`
+		Enabled    bool                    `json:"enabled" yaml:"enabled"`
+		Storage    Storage                 `json:"storage,omitempty"`
+		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
+		Plugins    Plugins                 `json:"plugins,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
@@ -172,16 +172,16 @@ type (
 	}
 	// Kibana details
 	Kibana struct {
-		Enabled        bool           `json:"enabled" yaml:"enabled"`
-		Resources      Resources      `json:"resources,omitempty"`
-		Replicas       int32          `json:"replicas,omitempty"`
-		InstallPlugins InstallPlugins `json:"installPlugins,omitempty"`
+		Enabled   bool      `json:"enabled" yaml:"enabled"`
+		Resources Resources `json:"resources,omitempty"`
+		Replicas  int32     `json:"replicas,omitempty"`
+		Plugins   Plugins   `json:"plugins,omitempty"`
 	}
 
-	InstallPlugins struct {
+	Plugins struct {
 		Enabled bool `json:"enabled" yaml:"enabled"`
-		// List of plugins urls
-		Plugins []string `json:"plugins,omitempty"`
+		// InstallList could be the list of plugin names, URLs to the plugin zip file or Maven coordinates.
+		InstallList []string `json:"installList,omitempty"`
 	}
 
 	// API details

@@ -208,18 +208,6 @@ spec:
                     required:
                     - javaOpts
                     type: object
-                  installPlugins:
-                    properties:
-                      enabled:
-                        type: boolean
-                      plugins:
-                        description: List of plugins urls
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - enabled
-                    type: object
                   masterNode:
                     description: ElasticsearchNode Type details
                     properties:
@@ -326,6 +314,19 @@ spec:
                       - javaOpts
                       type: object
                     type: array
+                  plugins:
+                    properties:
+                      enabled:
+                        type: boolean
+                      installList:
+                        description: InstallList could be the list of plugin names,
+                          URLs to the plugin zip file or Maven coordinates.
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - enabled
+                    type: object
                   policies:
                     items:
                       description: IndexManagementPolicy Defines a policy for managing
@@ -451,12 +452,13 @@ spec:
                 properties:
                   enabled:
                     type: boolean
-                  installPlugins:
+                  plugins:
                     properties:
                       enabled:
                         type: boolean
-                      plugins:
-                        description: List of plugins urls
+                      installList:
+                        description: InstallList could be the list of plugin names,
+                          URLs to the plugin zip file or Maven coordinates.
                         items:
                           type: string
                         type: array
