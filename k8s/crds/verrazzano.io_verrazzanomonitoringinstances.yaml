@@ -317,6 +317,8 @@ spec:
                   plugins:
                     properties:
                       enabled:
+                        description: To enable or disable the non-bundled plugins
+                          installation.
                         type: boolean
                       installList:
                         description: InstallList could be the list of plugin names,
@@ -455,6 +457,8 @@ spec:
                   plugins:
                     properties:
                       enabled:
+                        description: To enable or disable the non-bundled plugins
+                          installation.
                         type: boolean
                       installList:
                         description: InstallList could be the list of plugin names,

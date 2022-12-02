@@ -250,7 +250,7 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 // TestGetOSPluginsInstallTmpl tests GetOSPluginsInstallTmpl
 // GIVEN list of plugins name, URLs to plugins zip file or Maven coordinates.
 // WHEN GetOSPluginsInstallTmpl is called
-// THEN template is returned with updated plugins urls
+// THEN template is returned with updated plugins URls
 func TestGetOSPluginsInstallTmpl(t *testing.T) {
 	plugin := "testPluginsURL"
 	tests := []struct {
