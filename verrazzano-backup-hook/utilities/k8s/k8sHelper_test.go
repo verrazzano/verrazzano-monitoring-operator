@@ -9,6 +9,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/log"
 	kutil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s"
+	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s/fake"
 	"go.uber.org/zap"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -361,4 +363,37 @@ func TestIsPodReady(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, ok, false)
 
+}
+
+// TestExecRetry tests the ExecRetry method for the following use case.
+// GIVEN k8s client
+// WHEN exec command fails
+// THEN there is a retry of the exec command
+
+func TestExecRetry(t *testing.T) {
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "ns",
+			Name:      "foo",
+		},
+	}
+
+	log, f := logHelper()
+	defer os.Remove(f)
+	defer os.Unsetenv(constants.DevKey)
+
+	os.Setenv(constants.OpenSearchHealthCheckTimeoutKey, "1s")
+	os.Setenv(constants.DevKey, constants.TrueString)
+
+	var clientk client.Client
+	config, fc := vmofake.NewClientsetConfig()
+	dclient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+	k8s := kutil.New(dclient, clientk, fc, config, "default", log)
+
+	var accessKeyCmd []string
+	accessKeyCmd = append(accessKeyCmd, "/bin/sh", "-c", fmt.Sprintf("echo %s | %s", strconv.Quote("ACCESS_KEY"), constants.OpenSearchKeystoreAccessKeyCmd))
+
+	err := k8s.ExecRetry(pod, constants.OpenSearchDataPodContainerName, "1s", accessKeyCmd)
+	assert.Nil(t, err)
 }

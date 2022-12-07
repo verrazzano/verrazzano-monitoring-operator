@@ -126,12 +126,15 @@ func main() {
 					log.Panic(err)
 				}
 				retryCount = retryCount + 1
+				// setting k8sContextReady flag to true os that subsequent checks dont re-use old value
+				// This flag will be changed to false if any k8s go-client retrieval fails.
+				log.Info("Resetting k8s context flag to true...")
+				k8sContextReady = true
 			}
 		} else {
 			done = true
 			log.Info("kubecontext retrieval successful")
 		}
-
 	}
 
 	// Initialize K8s object
@@ -146,7 +149,7 @@ func main() {
 	}
 
 	// Update OpenSearch keystore
-	_, err = k8s.UpdateKeystore(openSearchConData)
+	_, err = k8s.UpdateKeystore(openSearchConData, globalTimeout)
 	if err != nil {
 		log.Errorf("Unable to update keystore")
 		os.Exit(1)

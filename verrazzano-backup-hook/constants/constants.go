@@ -74,7 +74,7 @@ const (
 	IngestLabelSelector = "app=system-es-ingest"
 
 	// KibanaDeploymentName Kibana deployment name
-	KibanaDeploymentName = "vmi-system-kibana"
+	KibanaDeploymentName = "vmi-system-osd"
 
 	// KibanaLabelSelector Label selector for Kibana pod
 	KibanaLabelSelector = "app=system-kibana"

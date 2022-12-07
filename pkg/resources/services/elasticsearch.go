@@ -16,7 +16,7 @@ import (
 
 // Creates OpenSearch Client service element
 func createOpenSearchIngestServiceElements(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *corev1.Service {
-	var openSearchIngestService = createServiceElement(vmo, config.ElasticsearchIngest)
+	var openSearchIngestService = createServiceElement(vmo, config.OpensearchIngest)
 	if nodes.IsSingleNodeCluster(vmo) {
 		openSearchIngestService.Spec.Selector = resources.GetSpecID(vmo.Name, config.ElasticsearchMaster.Name)
 		// In dev mode, only a single node/pod all ingest/data goes to the 9200 port on the back end node
@@ -88,7 +88,7 @@ func OpenSearchPodSelector(vmoName string) string {
 		constants.ServiceAppLabel,
 		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchMaster.Name),
 		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchData.Name),
-		fmt.Sprintf("%s-%s", vmoName, config.ElasticsearchIngest.Name),
+		fmt.Sprintf("%s-%s", vmoName, config.OpensearchIngest.Name),
 	)
 }
 

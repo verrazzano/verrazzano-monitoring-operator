@@ -1042,7 +1042,7 @@ func verifyKibana(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 		esPort = kbPort
 		httpProtocol = "https://"
 	} else {
-		kbPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.Kibana.Name)
+		kbPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.OpenSearchDashboards.Name)
 		esPort = getPortFromService(t, f.Namespace, constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchIngest.Name)
 		httpProtocol = "http://"
 	}

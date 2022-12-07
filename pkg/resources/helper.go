@@ -6,6 +6,7 @@ package resources
 import (
 	"crypto/rand"
 	"fmt"
+	netv1 "k8s.io/api/networking/v1"
 	"math/big"
 	"os"
 	"regexp"
@@ -126,7 +127,7 @@ func GetOpenSearchDashboardsHTTPEndpoint(vmo *vmcontrollerv1.VerrazzanoMonitorin
 	if len(dashboardsServiceEndpoint) > 0 {
 		return dashboardsServiceEndpoint
 	}
-	return fmt.Sprintf("http://%s.%s%s:%d", GetMetaName(vmo.Name, config.Kibana.Name),
+	return fmt.Sprintf("http://%s.%s%s:%d", GetMetaName(vmo.Name, config.OpenSearchDashboards.Name),
 		vmo.Namespace,
 		serviceClusterLocal,
 		constants.OSDashboardsHTTPPort)
@@ -165,7 +166,7 @@ func GetMetaLabels(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]
 func GetCompLabel(componentName string) string {
 	var componentLabelValue string
 	switch componentName {
-	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name:
+	case config.ElasticsearchMaster.Name, config.ElasticsearchData.Name, config.ElasticsearchIngest.Name, config.OpensearchIngest.Name:
 		componentLabelValue = constants.ComponentOpenSearchValue
 	default:
 		componentLabelValue = componentName
@@ -431,6 +432,30 @@ func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResour
 	}
 	volumes = append(volumes, configVolume)
 	return volumes, &oidcProxContainer
+}
+
+// getIngressRule returns the ingressRule with the provided ingress host
+func GetIngressRule(ingressHost string) netv1.IngressRule {
+	ingressRule := netv1.IngressRule{
+		Host: ingressHost,
+		IngressRuleValue: netv1.IngressRuleValue{
+			HTTP: &netv1.HTTPIngressRuleValue{
+				Paths: []netv1.HTTPIngressPath{
+					{
+						Path: "/()(.*)",
+						Backend: netv1.IngressBackend{
+							Service: &netv1.IngressServiceBackend{
+								Port: netv1.ServiceBackendPort{
+									Number: int32(8775),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	return ingressRule
 }
 
 // OidcProxyService creates OidcProxy Service
