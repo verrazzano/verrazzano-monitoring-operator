@@ -516,10 +516,10 @@ func ConvertToRegexp(pattern string) string {
 	return result.String()
 }
 
-// CreateElasticSearchContainerCMD creates the CMD for OpenSearch containers.
-// The resulting CMD also contains
+// CreateOpenSearchContainerCMD creates the CMD for OpenSearch containers.
+// The resulting CMD contains
 // command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
-// OS plugins installation commands if plugins are provided
+// OS plugins installation commands if OpenSearch plugins are provided
 // and contains java min/max heap settings
 func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
 	pluginsInstallTmpl := GetOSPluginsInstallTmpl(plugins, OSPluginsInstallCmd)

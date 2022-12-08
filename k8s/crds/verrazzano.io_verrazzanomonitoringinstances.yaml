@@ -314,7 +314,7 @@ spec:
                       - javaOpts
                       type: object
                     type: array
-                  plugins:
+                  openSearchPlugins:
                     properties:
                       enabled:
                         description: To enable or disable the non-bundled plugins
@@ -454,7 +454,7 @@ spec:
                 properties:
                   enabled:
                     type: boolean
-                  plugins:
+                  openSearchDashboardsPlugins:
                     properties:
                       enabled:
                         description: To enable or disable the non-bundled plugins

@@ -172,7 +172,7 @@ func (in *Elasticsearch) DeepCopyInto(out *Elasticsearch) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.Plugins.DeepCopyInto(&out.Plugins)
+	in.OpenSearchPlugins.DeepCopyInto(&out.OpenSearchPlugins)
 	return
 }
 
@@ -278,7 +278,7 @@ func (in *IndexManagementPolicy) DeepCopy() *IndexManagementPolicy {
 func (in *Kibana) DeepCopyInto(out *Kibana) {
 	*out = *in
 	out.Resources = in.Resources
-	in.Plugins.DeepCopyInto(&out.Plugins)
+	in.OpenSearchDashboardsPlugins.DeepCopyInto(&out.OpenSearchDashboardsPlugins)
 	return
 }
 
