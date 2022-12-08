@@ -550,9 +550,9 @@ func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
 // RETURN the list of provided os plugins. If there is no plugins in VMI CRD, empty list is returned.
 func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
 	if vmo.Spec.Elasticsearch.Enabled &&
-		vmo.Spec.Elasticsearch.OpenSearchPlugins.Enabled &&
-		len(vmo.Spec.Elasticsearch.OpenSearchPlugins.InstallList) > 0 {
-		return vmo.Spec.Elasticsearch.OpenSearchPlugins.InstallList
+		vmo.Spec.Elasticsearch.Plugins.Enabled &&
+		len(vmo.Spec.Elasticsearch.Plugins.InstallList) > 0 {
+		return vmo.Spec.Elasticsearch.Plugins.InstallList
 	}
 	return []string{}
 }
@@ -562,9 +562,9 @@ func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) [
 // RETURN the list of provided OSD plugins. If there is no plugin in VMI CRD, an empty list is returned.
 func GetOSDashboardPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
 	if vmo.Spec.Kibana.Enabled &&
-		vmo.Spec.Kibana.OpenSearchDashboardsPlugins.Enabled &&
-		len(vmo.Spec.Kibana.OpenSearchDashboardsPlugins.InstallList) > 0 {
-		return vmo.Spec.Kibana.OpenSearchDashboardsPlugins.InstallList
+		vmo.Spec.Kibana.Plugins.Enabled &&
+		len(vmo.Spec.Kibana.Plugins.InstallList) > 0 {
+		return vmo.Spec.Kibana.Plugins.InstallList
 	}
 	return []string{}
 }

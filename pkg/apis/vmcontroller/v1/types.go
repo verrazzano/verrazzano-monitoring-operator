@@ -126,14 +126,14 @@ type (
 
 	// Elasticsearch details
 	Elasticsearch struct {
-		Enabled           bool                    `json:"enabled" yaml:"enabled"`
-		Storage           Storage                 `json:"storage,omitempty"`
-		IngestNode        ElasticsearchNode       `json:"ingestNode,omitempty"`
-		MasterNode        ElasticsearchNode       `json:"masterNode,omitempty"`
-		DataNode          ElasticsearchNode       `json:"dataNode,omitempty"`
-		Policies          []IndexManagementPolicy `json:"policies,omitempty"`
-		Nodes             []ElasticsearchNode     `json:"nodes,omitempty"`
-		OpenSearchPlugins Plugins                 `json:"openSearchPlugins,omitempty"`
+		Enabled    bool                    `json:"enabled" yaml:"enabled"`
+		Storage    Storage                 `json:"storage,omitempty"`
+		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
+		Plugins    OpenSearchPlugins       `json:"plugins,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
@@ -172,10 +172,10 @@ type (
 	}
 	// Kibana details
 	Kibana struct {
-		Enabled                     bool      `json:"enabled" yaml:"enabled"`
-		Resources                   Resources `json:"resources,omitempty"`
-		Replicas                    int32     `json:"replicas,omitempty"`
-		OpenSearchDashboardsPlugins Plugins   `json:"openSearchDashboardsPlugins,omitempty"`
+		Enabled   bool                        `json:"enabled" yaml:"enabled"`
+		Resources Resources                   `json:"resources,omitempty"`
+		Replicas  int32                       `json:"replicas,omitempty"`
+		Plugins   OpenSearchDashboardsPlugins `json:"plugins,omitempty"`
 	}
 
 	Plugins struct {
@@ -184,6 +184,8 @@ type (
 		// InstallList could be the list of plugin names, URLs to the plugin zip file or Maven coordinates.
 		InstallList []string `json:"installList,omitempty"`
 	}
+	OpenSearchPlugins           Plugins
+	OpenSearchDashboardsPlugins Plugins
 
 	// API details
 	API struct {

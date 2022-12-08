@@ -164,7 +164,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Elasticsearch: vmov1.Elasticsearch{
 						Enabled: true,
-						OpenSearchPlugins: vmov1.Plugins{
+						Plugins: vmov1.OpenSearchPlugins{
 							InstallList: testPlugins,
 							Enabled:     true,
 						},
@@ -179,7 +179,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Elasticsearch: vmov1.Elasticsearch{
 						Enabled: true,
-						OpenSearchPlugins: vmov1.Plugins{
+						Plugins: vmov1.OpenSearchPlugins{
 							Enabled: false,
 						},
 					},
@@ -214,7 +214,7 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Kibana: vmov1.Kibana{
 						Enabled: true,
-						OpenSearchDashboardsPlugins: vmov1.Plugins{
+						Plugins: vmov1.OpenSearchDashboardsPlugins{
 							InstallList: testPlugins,
 							Enabled:     true,
 						},
@@ -229,7 +229,7 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
 					Kibana: vmov1.Kibana{
 						Enabled: true,
-						OpenSearchDashboardsPlugins: vmov1.Plugins{
+						Plugins: vmov1.OpenSearchDashboardsPlugins{
 							Enabled: false,
 						},
 					},
