@@ -315,6 +315,8 @@ spec:
                       type: object
                     type: array
                   plugins:
+                    description: OpenSearchPlugins Enable to add 3rd Party / Custom
+                      plugins not offered in the default OpenSearch image
                     properties:
                       enabled:
                         description: To enable or disable the non-bundled plugins
@@ -455,6 +457,10 @@ spec:
                   enabled:
                     type: boolean
                   plugins:
+                    description: OpenSearchDashboardsPlugins is an alias of OpenSearchPlugins
+                      as both have the same properties. Enable to add 3rd Party /
+                      Custom plugins not offered in the default OpenSearch-Dashboards
+                      image
                     properties:
                       enabled:
                         description: To enable or disable the non-bundled plugins

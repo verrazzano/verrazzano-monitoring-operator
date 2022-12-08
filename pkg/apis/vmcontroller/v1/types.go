@@ -178,6 +178,7 @@ type (
 		Plugins   OpenSearchDashboardsPlugins `json:"plugins,omitempty"`
 	}
 
+	// OpenSearchPlugins Enable to add 3rd Party / Custom plugins not offered in the default OpenSearch image
 	OpenSearchPlugins struct {
 		// To enable or disable the non-bundled plugins installation.
 		Enabled bool `json:"enabled" yaml:"enabled"`
@@ -185,7 +186,8 @@ type (
 		InstallList []string `json:"installList,omitempty"`
 	}
 
-	// OpenSearchDashboardsPlugins is an alias of OpenSearchPlugins as both have same properties.
+	// OpenSearchDashboardsPlugins is an alias of OpenSearchPlugins as both have the same properties.
+	// Enable to add 3rd Party / Custom plugins not offered in the default OpenSearch-Dashboards image
 	OpenSearchDashboardsPlugins OpenSearchPlugins
 
 	// API details
