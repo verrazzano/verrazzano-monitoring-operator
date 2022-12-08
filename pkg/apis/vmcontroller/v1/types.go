@@ -184,6 +184,8 @@ type (
 		// InstallList could be the list of plugin names, URLs to the plugin zip file or Maven coordinates.
 		InstallList []string `json:"installList,omitempty"`
 	}
+
+	// OpenSearchDashboardsPlugins is an alias of OpenSearchPlugins as both have same properties.
 	OpenSearchDashboardsPlugins OpenSearchPlugins
 
 	// API details
