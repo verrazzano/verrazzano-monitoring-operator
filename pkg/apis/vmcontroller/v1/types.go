@@ -178,14 +178,13 @@ type (
 		Plugins   OpenSearchDashboardsPlugins `json:"plugins,omitempty"`
 	}
 
-	Plugins struct {
+	OpenSearchPlugins struct {
 		// To enable or disable the non-bundled plugins installation.
 		Enabled bool `json:"enabled" yaml:"enabled"`
 		// InstallList could be the list of plugin names, URLs to the plugin zip file or Maven coordinates.
 		InstallList []string `json:"installList,omitempty"`
 	}
-	OpenSearchPlugins           Plugins
-	OpenSearchDashboardsPlugins Plugins
+	OpenSearchDashboardsPlugins OpenSearchPlugins
 
 	// API details
 	API struct {
