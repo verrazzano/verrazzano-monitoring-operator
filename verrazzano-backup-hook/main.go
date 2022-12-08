@@ -149,7 +149,7 @@ func main() {
 	}
 
 	// Update OpenSearch keystore
-	_, err = k8s.UpdateKeystore(openSearchConData)
+	_, err = k8s.UpdateKeystore(openSearchConData, globalTimeout)
 	if err != nil {
 		log.Errorf("Unable to update keystore")
 		os.Exit(1)
