@@ -13,6 +13,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -77,7 +78,7 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 	esMasterContainer.Command = []string{
 		"sh",
 		"-c",
-		resources.CreateOpenSearchContainerCMD(javaOpts),
+		resources.CreateOpenSearchContainerCMD(javaOpts, resources.GetOpenSearchPluginList(vmo)),
 	}
 	var envVars = []corev1.EnvVar{
 		{

@@ -12,6 +12,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/memory"
+
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -119,6 +120,12 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		if ingestDeployment.Spec.Template.Annotations == nil {
 			ingestDeployment.Spec.Template.Annotations = make(map[string]string)
 		}
+		// Adding command to install OS plugins at pod bootup
+		ingestDeployment.Spec.Template.Spec.Containers[0].Command = []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(resources.OpenSearchIngestCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOpenSearchPluginList(vmo), resources.OSPluginsInstallCmd)),
+		}
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 		deployments = append(deployments, ingestDeployment)
@@ -216,11 +223,11 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 				},
 			)
 
-			// Adding command for add keystore values at pod bootup
+			// Adding command for add keystore values and OS plugins installation at pod bootup
 			dataDeployment.Spec.Template.Spec.Containers[0].Command = []string{
 				"sh",
 				"-c",
-				resources.CreateOpenSearchContainerCMD(javaOpts),
+				resources.CreateOpenSearchContainerCMD(javaOpts, resources.GetOpenSearchPluginList(vmo)),
 			}
 
 			// add the required istio annotations to allow inter-es component communication

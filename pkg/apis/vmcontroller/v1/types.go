@@ -133,6 +133,7 @@ type (
 		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
 		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
 		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
+		Plugins    OpenSearchPlugins       `json:"plugins,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
@@ -169,13 +170,25 @@ type (
 		// Minimum count of documents in an index before it is rolled over
 		MinDocCount *int `json:"minDocCount,omitempty"`
 	}
-
 	// Kibana details
 	Kibana struct {
-		Enabled   bool      `json:"enabled" yaml:"enabled"`
-		Resources Resources `json:"resources,omitempty"`
-		Replicas  int32     `json:"replicas,omitempty"`
+		Enabled   bool                        `json:"enabled" yaml:"enabled"`
+		Resources Resources                   `json:"resources,omitempty"`
+		Replicas  int32                       `json:"replicas,omitempty"`
+		Plugins   OpenSearchDashboardsPlugins `json:"plugins,omitempty"`
 	}
+
+	// OpenSearchPlugins Enable to add 3rd Party / Custom plugins not offered in the default OpenSearch image
+	OpenSearchPlugins struct {
+		// To enable or disable the non-bundled plugins installation.
+		Enabled bool `json:"enabled" yaml:"enabled"`
+		// InstallList could be the list of plugin names, URLs to the plugin zip file or Maven coordinates.
+		InstallList []string `json:"installList,omitempty"`
+	}
+
+	// OpenSearchDashboardsPlugins is an alias of OpenSearchPlugins as both have the same properties.
+	// Enable to add 3rd Party / Custom plugins not offered in the default OpenSearch-Dashboards image
+	OpenSearchDashboardsPlugins OpenSearchPlugins
 
 	// API details
 	API struct {
