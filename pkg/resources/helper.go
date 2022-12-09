@@ -15,6 +15,7 @@ import (
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,11 +28,17 @@ var (
 )
 
 const (
-	serviceClusterLocal    = ".svc.cluster.local"
-	masterHTTPEndpoint     = "VMO_MASTER_HTTP_ENDPOINT"
-	dashboardsHTTPEndpoint = "VMO_DASHBOARDS_HTTP_ENDPOINT"
-	containerCmdTmpl       = `#!/usr/bin/env bash -e
-
+	serviceClusterLocal     = ".svc.cluster.local"
+	masterHTTPEndpoint      = "VMO_MASTER_HTTP_ENDPOINT"
+	dashboardsHTTPEndpoint  = "VMO_DASHBOARDS_HTTP_ENDPOINT"
+	OpenSearchIngestCmdTmpl = `#!/usr/bin/env bash -e
+	set -euo pipefail
+    %s
+	/usr/local/bin/docker-entrypoint.sh`
+	OpenSearchDashboardCmdTmpl = `#!/usr/bin/env bash -e
+    %s
+	/usr/local/bin/opensearch-dashboards-docker`
+	containerCmdTmpl = `#!/usr/bin/env bash -e
 	# Updating elastic search keystore with keys
 	# required for the repository-s3 plugin
 	if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
@@ -44,6 +51,8 @@ const (
 	fi
 	
 	%s
+
+    %s 
 	
 	/usr/local/bin/docker-entrypoint.sh`
 
@@ -52,9 +61,20 @@ const (
 	echo "Commenting out java heap settings in jvm.options..."
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
 	`
+	OSPluginsInstallTmpl = `
+     set -euo pipefail
+     # Install OS plugins that are not bundled with OS
+     %s
+    `
+	OSPluginsInstallCmd = `
+    /usr/share/opensearch/bin/opensearch-plugin install -b %s
+	`
+	OSDashboardPluginsInstallCmd = `
+    /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin install %s
+	`
 )
 
-//CopyImmutableEnvVars copies the initial master node environment variable from an existing container to an expected container
+// CopyImmutableEnvVars copies the initial master node environment variable from an existing container to an expected container
 // cluster.initial_master_nodes shouldn't be changed after it's set.
 func CopyImmutableEnvVars(expected, existing []corev1.Container, containerName string) {
 	getContainer := func(containers []corev1.Container) (int, *corev1.Container) {
@@ -85,7 +105,7 @@ func CopyImmutableEnvVars(expected, existing []corev1.Container, containerName s
 	expected[idx] = *currentContainer
 }
 
-//GetEnvVar retrieves a container EnvVar if it is present
+// GetEnvVar retrieves a container EnvVar if it is present
 func GetEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
 	for _, envVar := range container.Env {
 		if envVar.Name == name {
@@ -95,7 +115,7 @@ func GetEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
 	return nil
 }
 
-//SetEnvVar sets a container EnvVar, overriding if it was laready present
+// SetEnvVar sets a container EnvVar, overriding if it was laready present
 func SetEnvVar(container *corev1.Container, envVar *corev1.EnvVar) {
 	for idx, env := range container.Env {
 		if env.Name == envVar.Name {
@@ -138,7 +158,7 @@ func GetOwnerLabels(owner string) map[string]string {
 	}
 }
 
-//GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
+// GetNewRandomID generates a random alphanumeric string of the format [a-z0-9]{size}
 func GetNewRandomID(size int) (string, error) {
 	builder := strings.Builder{}
 	for i := 0; i < size; i++ {
@@ -406,7 +426,7 @@ func OidcProxyIngressHost(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, comp
 	return fmt.Sprintf("%s.%s", host, vmo.Spec.URI)
 }
 
-//CreateOidcProxy creates OpenID Connect (OIDC) proxy container and config Volume
+// CreateOidcProxy creates OpenID Connect (OIDC) proxy container and config Volume
 func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResources *vmcontrollerv1.Resources, component *config.ComponentDetails) ([]corev1.Volume, *corev1.Container) {
 	var volumes []corev1.Volume
 	configName := OidcProxyConfigName(vmo.Name, component.Name)
@@ -433,7 +453,7 @@ func CreateOidcProxy(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, vmoResour
 	return volumes, &oidcProxContainer
 }
 
-//OidcProxyService creates OidcProxy Service
+// OidcProxyService creates OidcProxy Service
 func OidcProxyService(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, component *config.ComponentDetails) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -471,10 +491,13 @@ func ConvertToRegexp(pattern string) string {
 	return result.String()
 }
 
-//CreateElasticSearchContainerCMD creates the CMD for OpenSearch containers.
-//The resulting CMD also contains command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
-//and contains java min/max heap settings
-func CreateOpenSearchContainerCMD(javaOpts string) string {
+// CreateOpenSearchContainerCMD creates the CMD for OpenSearch containers.
+// The resulting CMD contains
+// command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
+// OS plugins installation commands if OpenSearch plugins are provided
+// and contains java min/max heap settings
+func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
+	pluginsInstallTmpl := GetOSPluginsInstallTmpl(plugins, OSPluginsInstallCmd)
 	if javaOpts != "" {
 		jvmOptsPair := strings.Split(javaOpts, " ")
 		minHeapMemory := ""
@@ -490,9 +513,42 @@ func CreateOpenSearchContainerCMD(javaOpts string) string {
 		}
 
 		if minHeapMemory != "" && maxHeapMemory != "" {
-			return fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd)
+			return fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd, pluginsInstallTmpl)
 		}
 	}
 
-	return fmt.Sprintf(containerCmdTmpl, "")
+	return fmt.Sprintf(containerCmdTmpl, "", pluginsInstallTmpl)
+}
+
+// GetOpenSearchPluginList retrieves the list of plugins provided in the VMI CRD for OpenSearch.
+// GIVEN VMI CRD
+// RETURN the list of provided os plugins. If there is no plugins in VMI CRD, empty list is returned.
+func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
+	if vmo.Spec.Elasticsearch.Enabled &&
+		vmo.Spec.Elasticsearch.Plugins.Enabled &&
+		len(vmo.Spec.Elasticsearch.Plugins.InstallList) > 0 {
+		return vmo.Spec.Elasticsearch.Plugins.InstallList
+	}
+	return []string{}
+}
+
+// GetOSDashboardPluginList retrieves the list of plugins provided in the VMI CRD for OpenSearch dashboard.
+// GIVEN VMI CRD
+// RETURN the list of provided OSD plugins. If there is no plugin in VMI CRD, an empty list is returned.
+func GetOSDashboardPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
+	if vmo.Spec.Kibana.Enabled &&
+		vmo.Spec.Kibana.Plugins.Enabled &&
+		len(vmo.Spec.Kibana.Plugins.InstallList) > 0 {
+		return vmo.Spec.Kibana.Plugins.InstallList
+	}
+	return []string{}
+}
+
+// GetOSPluginsInstallTmpl returns the OSPluginsInstallTmpl by updating it with the given plugins and plugins installation cmd.
+func GetOSPluginsInstallTmpl(plugins []string, osPluginInstallCmd string) string {
+	var pluginsInstallTmpl string
+	for _, plugin := range plugins {
+		pluginsInstallTmpl += fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(osPluginInstallCmd, plugin))
+	}
+	return pluginsInstallTmpl
 }
