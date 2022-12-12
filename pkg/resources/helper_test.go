@@ -5,6 +5,7 @@ package resources
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,8 +115,8 @@ func TestDeepCopyMap(t *testing.T) {
 //WHEN  CreateOpenSearchContainerCMD is invoked to get the command for the OpenSearch container
 //THEN the command contains a subcommand to disable the jvm heap settings, if input contains java heap settings
 func TestCreateOpenSearchContainerCMD(t *testing.T) {
-	containerCmdWithoutJavaOpts := fmt.Sprintf(containerCmdTmpl, "")
-	containerCmdWithJavaOpts := fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd)
+	containerCmdWithoutJavaOpts := fmt.Sprintf(containerCmdTmpl, "", "")
+	containerCmdWithJavaOpts := fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd, "")
 	var tests = []struct {
 		description    string
 		javaOpts       string
@@ -140,8 +141,139 @@ func TestCreateOpenSearchContainerCMD(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			r := CreateOpenSearchContainerCMD(tt.javaOpts)
+			r := CreateOpenSearchContainerCMD(tt.javaOpts, []string{})
 			assert.Equal(t, tt.expectedResult, r)
+		})
+	}
+}
+
+// TestGetOpenSearchPluginList tests the GetOpenSearchPluginList
+// GIVEN VMI CRD
+// WHEN GetOpenSearchPluginList is called
+// THEN returns the list of given OS plugins if there are plugins in VMI crd for OS, else empty list is returned
+func TestGetOpenSearchPluginList(t *testing.T) {
+	testPlugins := []string{"testPluginURL"}
+	tests := []struct {
+		name string
+		vmo  *vmov1.VerrazzanoMonitoringInstance
+		want []string
+	}{
+		{
+			"TestGetOpenSearchPluginList when plugins are provided in VMI CRD",
+			&vmov1.VerrazzanoMonitoringInstance{
+				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
+					Elasticsearch: vmov1.Elasticsearch{
+						Enabled: true,
+						Plugins: vmov1.OpenSearchPlugins{
+							InstallList: testPlugins,
+							Enabled:     true,
+						},
+					},
+				},
+			},
+			testPlugins,
+		},
+		{
+			"TestGetOpenSearchPluginList when plugins are not provided in VMI CRD",
+			&vmov1.VerrazzanoMonitoringInstance{
+				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
+					Elasticsearch: vmov1.Elasticsearch{
+						Enabled: true,
+						Plugins: vmov1.OpenSearchPlugins{
+							Enabled: false,
+						},
+					},
+				},
+			},
+			[]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetOpenSearchPluginList(tt.vmo); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetOpenSearchPluginList() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestGetOSDashboardPluginList tests the GetOSDashboardPluginList
+// GIVEN VMI CRD
+// WHEN GetOSDashboardPluginList is called
+// THEN returns the list of given OSD plugins if there are plugins provided in VMI crd for OSD, else empty list is returned
+func TestGetOSDashboardPluginList(t *testing.T) {
+	testPlugins := []string{"testOSDPluginURL"}
+	tests := []struct {
+		name string
+		vmo  *vmov1.VerrazzanoMonitoringInstance
+		want []string
+	}{
+		{
+			"TestGetOSDashboardPluginList when plugins are provided in VMI CRD",
+			&vmov1.VerrazzanoMonitoringInstance{
+				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
+					Kibana: vmov1.Kibana{
+						Enabled: true,
+						Plugins: vmov1.OpenSearchDashboardsPlugins{
+							InstallList: testPlugins,
+							Enabled:     true,
+						},
+					},
+				},
+			},
+			testPlugins,
+		},
+		{
+			"TestGetOSDashboardPluginList when plugins are not provided in VMI CRD",
+			&vmov1.VerrazzanoMonitoringInstance{
+				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
+					Kibana: vmov1.Kibana{
+						Enabled: true,
+						Plugins: vmov1.OpenSearchDashboardsPlugins{
+							Enabled: false,
+						},
+					},
+				},
+			},
+			[]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetOSDashboardPluginList(tt.vmo); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetOSDashboardPluginList() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestGetOSPluginsInstallTmpl tests GetOSPluginsInstallTmpl
+// GIVEN list of plugins name, URLs to plugins zip file or Maven coordinates.
+// WHEN GetOSPluginsInstallTmpl is called
+// THEN template is returned with updated plugins URls
+func TestGetOSPluginsInstallTmpl(t *testing.T) {
+	plugin := "testPluginsURL"
+	tests := []struct {
+		name    string
+		plugins []string
+		want    string
+	}{
+		{
+			"TestGetOSPluginsInstallTmpl when list of plugins is provided",
+			[]string{plugin},
+			fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin)),
+		},
+		{
+			"TestGetOSPluginsInstallTmpl when no plugin is provided",
+			[]string{},
+			"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetOSPluginsInstallTmpl(tt.plugins, OSPluginsInstallCmd); got != tt.want {
+				t.Errorf("GetOSPluginsInstallTmpl() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
