@@ -343,6 +343,14 @@ func CreateContainerElement(vmoStorage *vmcontrollerv1.Storage,
 	}
 }
 
+func CreateSidecarContainer(sidecar config.ComponentSidecar) corev1.Container {
+	return corev1.Container{
+		Name:            sidecar.Name,
+		Image:           sidecar.Image,
+		ImagePullPolicy: sidecar.ImagePullPolicy,
+	}
+}
+
 // CreateZoneAntiAffinityElement return an Affinity resource for a given VMO instance and component
 func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Affinity {
 	return &corev1.Affinity{

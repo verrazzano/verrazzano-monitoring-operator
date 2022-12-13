@@ -212,6 +212,23 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, volumes...)
 
+		// Setup the sidecar for the dashboard reloader
+		for i, sidecar := range config.Grafana.Sidecars {
+			if sidecar.Disabled {
+				continue
+			}
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, resources.CreateSidecarContainer(sidecar))
+			deployment.Spec.Template.Spec.Containers[i+1].Env = append(deployment.Spec.Template.Spec.Containers[i+1].Env, []corev1.EnvVar{
+				{Name: "LABEL", Value: "grafana_dashboards"},
+				{Name: "LABEL_VALUE", Value: "\"1\""},
+				{Name: "FOLDER", Value: "/etc/grafana/provisioning/dashboards"},
+			}...)
+			deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts, corev1.VolumeMount{
+				Name:      "dashboards-volume",
+				MountPath: "/etc/grafana/provisioning/dashboards",
+			})
+		}
+
 		// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
 		// initially owned by root/root.  Previous versions of the Grafana image were run as "root", and chown'd the mounted
 		// directory to "grafana", but we don't want to run as "root".  The current Grafana image creates a group
