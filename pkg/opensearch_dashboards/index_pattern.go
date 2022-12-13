@@ -13,17 +13,17 @@ import (
 const VZSystemIndexPattern = "verrazzano-system*"
 const VZAppIndexPattern = "verrazzano-application*"
 
-var DefaultIndexPatterns = []string{VZSystemIndexPattern, VZAppIndexPattern}
+var defaultIndexPatterns = [...]string{VZSystemIndexPattern, VZAppIndexPattern}
 
-// CreateIndexPattern creates the DefaultIndexPatterns in the OpenSearchDashboards if not existed
-func (od *OSDashboardsClient) CreateIndexPattern(openSearchDashboardsEndpoint string) error {
-	defaultIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s or %s)*", VZAppIndexPattern, VZAppIndexPattern))
+// CreateDefaultIndexPatterns creates the defaultIndexPatterns in the OpenSearchDashboards if not existed
+func (od *OSDashboardsClient) CreateDefaultIndexPatterns(openSearchDashboardsEndpoint string) error {
+	existingIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s or %s)*", VZAppIndexPattern, VZAppIndexPattern))
 	if err != nil {
 		return err
 	}
 	var savedObjectPayload []SavedObject
-	for _, indexPattern := range DefaultIndexPatterns {
-		isPatternExist, ok := defaultIndexPatterns[indexPattern]
+	for _, indexPattern := range defaultIndexPatterns {
+		isPatternExist, ok := existingIndexPatterns[indexPattern]
 		if isPatternExist && ok {
 			continue
 		}
@@ -34,7 +34,18 @@ func (od *OSDashboardsClient) CreateIndexPattern(openSearchDashboardsEndpoint st
 		}
 		savedObjectPayload = append(savedObjectPayload, savedObject)
 	}
-	savedObjectBytes, err := json.Marshal(savedObjectPayload)
+	if len(savedObjectPayload) > 0 {
+		err = od.creatIndexPatterns(savedObjectPayload, openSearchDashboardsEndpoint)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// creatIndexPatterns creates the given IndexPattern in the OpenSearch-Dashboards by calling bulk API.
+func (od *OSDashboardsClient) creatIndexPatterns(savedObjectList []SavedObject, openSearchDashboardsEndpoint string) error {
+	savedObjectBytes, err := json.Marshal(savedObjectList)
 	if err != nil {
 		return err
 	}
@@ -56,7 +67,7 @@ func (od *OSDashboardsClient) CreateIndexPattern(openSearchDashboardsEndpoint st
 	return nil
 }
 
-// getDefaultIndexPatterns fetches the existing DefaultIndexPatterns.
+// getDefaultIndexPatterns fetches the existing defaultIndexPatterns.
 func (od *OSDashboardsClient) getDefaultIndexPatterns(openSearchDashboardsEndpoint string, perPage int, searchQuery string) (map[string]bool, error) {
 	defaultIndexPattern := map[string]bool{}
 	savedObjects, err := od.getPatterns(openSearchDashboardsEndpoint, perPage, searchQuery)
