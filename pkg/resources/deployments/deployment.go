@@ -212,7 +212,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, volumes...)
 
-		// Setup the sidecar for the dashboard reloader
+		// Setup the sidecar for the dashboard creator
 		for i, sidecar := range config.Grafana.Sidecars {
 			if sidecar.Disabled {
 				continue
