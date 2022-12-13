@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -61,10 +62,15 @@ func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int
 
 	// Index Pattern is a paginated response type, so we need to page out all data
 	for {
-		url := fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title&per_page=%d&page=%d", dashboardsEndPoint, perPage, currentPage)
+		params := url.Values{}
+		params.Add("type", "index-pattern")
+		params.Add("fields", "title")
+		params.Add("page", string(currentPage))
+		params.Add("per_page", string(perPage))
 		if searchQuery != "" {
-			url = fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title&search=%s&per_page=%d&page=%d", dashboardsEndPoint, searchQuery, perPage, currentPage)
+			params.Add("search", searchQuery)
 		}
+		url := fmt.Sprintf("%s/api/saved_objects/_find?%s", dashboardsEndPoint, params.Encode())
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err

@@ -46,6 +46,7 @@ func (od *OSDashboardsClient) CreateIndexPattern(openSearchDashboardsEndpoint st
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("osd-xsrf", "true")
 	resp, err := od.DoHTTP(req)
+	defer resp.Body.Close()
 	if err != nil {
 		return fmt.Errorf("failed to post index patterns in OpenSearch dashboards: %v", err)
 	}
