@@ -10,20 +10,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/verrazzano/pkg/diff"
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	clientset "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned"
-	clientsetscheme "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/scheme"
-	informers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/informers/externalversions"
-	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
-	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -44,6 +30,23 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+
+	"github.com/verrazzano/pkg/diff"
+
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	clientset "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned"
+	clientsetscheme "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/scheme"
+	informers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/informers/externalversions"
+	listers "github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/metricsexporter"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch"
+	dashboards "github.com/verrazzano/verrazzano-monitoring-operator/pkg/opensearch_dashboards"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/signals"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/upgrade"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
 const controllerAgentName = "vmo-controller"
@@ -576,6 +579,14 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	ismErr := <-ismChannel
 	if ismErr != nil {
 		c.log.ErrorfThrottled("Failed to configure ISM Policies: %v", ismErr)
+		errorObserved = true
+	}
+	/*********************
+	* Add default index patterns
+	**********************/
+	err = c.osDashboardsClient.CreateOrUpdateIndexPattern(resources.GetOpenSearchDashboardsHTTPEndpoint(vmo))
+	if err != nil {
+		c.log.ErrorfThrottled("Failed to add default index patterns : %v", err)
 		errorObserved = true
 	}
 

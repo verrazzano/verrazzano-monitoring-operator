@@ -6,13 +6,14 @@ package dashboards
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
 const updatePatternPayload = `{"attributes":{"title":"%s"}}`
@@ -36,7 +37,7 @@ type (
 
 func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger, dashboardsEndPoint string) error {
 	// Get index patterns configured in OpenSearch Dashboards
-	savedObjects, err := od.getPatterns(dashboardsEndPoint, 100)
+	savedObjects, err := od.getPatterns(dashboardsEndPoint, 100, "")
 	if err != nil {
 		return err
 	}
@@ -54,13 +55,16 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 	return nil
 }
 
-func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int) ([]SavedObject, error) {
+func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int, searchQuery string) ([]SavedObject, error) {
 	var savedObjects []SavedObject
 	currentPage := 1
 
 	// Index Pattern is a paginated response type, so we need to page out all data
 	for {
 		url := fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title&per_page=%d&page=%d", dashboardsEndPoint, perPage, currentPage)
+		if searchQuery != "" {
+			url = fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title&search=%s&per_page=%d&page=%d", dashboardsEndPoint, searchQuery, perPage, currentPage)
+		}
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
