@@ -12,7 +12,8 @@ const VZAppIndexPattern = "verrazzano-application*"
 
 var DefaultIndexPatterns = []string{VZSystemIndexPattern, VZAppIndexPattern}
 
-func (od *OSDashboardsClient) CreateOrUpdateIndexPattern(openSearchDashboardsEndpoint string) error {
+// CreateIndexPattern creates the DefaultIndexPatterns in the OpenSearchDashboards if not existed
+func (od *OSDashboardsClient) CreateIndexPattern(openSearchDashboardsEndpoint string) error {
 	defaultIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s or %s)*", VZAppIndexPattern, VZAppIndexPattern))
 	if err != nil {
 		return err
@@ -51,6 +52,7 @@ func (od *OSDashboardsClient) CreateOrUpdateIndexPattern(openSearchDashboardsEnd
 	return nil
 }
 
+// getDefaultIndexPatterns fetches the existing DefaultIndexPatterns.
 func (od *OSDashboardsClient) getDefaultIndexPatterns(openSearchDashboardsEndpoint string, perPage int, searchQuery string) (map[string]bool, error) {
 	defaultIndexPattern := map[string]bool{}
 	savedObjects, err := od.getPatterns(openSearchDashboardsEndpoint, perPage, searchQuery)
