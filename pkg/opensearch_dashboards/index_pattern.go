@@ -17,7 +17,7 @@ var DefaultIndexPatterns = []string{VZSystemIndexPattern, VZAppIndexPattern}
 
 // CreateIndexPattern creates the DefaultIndexPatterns in the OpenSearchDashboards if not existed
 func (od *OSDashboardsClient) CreateIndexPattern(openSearchDashboardsEndpoint string) error {
-	defaultIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s or %s)*", VZAppIndexPattern, VZAppIndexPattern))
+	defaultIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s%20or%20%s)*", VZAppIndexPattern, VZAppIndexPattern))
 	if err != nil {
 		return err
 	}
