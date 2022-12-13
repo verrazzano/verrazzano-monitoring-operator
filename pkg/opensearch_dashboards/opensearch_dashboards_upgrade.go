@@ -65,8 +65,8 @@ func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int
 		params := url.Values{}
 		params.Add("type", "index-pattern")
 		params.Add("fields", "title")
-		params.Add("page", string(currentPage))
-		params.Add("per_page", string(perPage))
+		params.Add("page", fmt.Sprint(currentPage))
+		params.Add("per_page", fmt.Sprint(perPage))
 		if searchQuery != "" {
 			params.Add("search", searchQuery)
 		}
