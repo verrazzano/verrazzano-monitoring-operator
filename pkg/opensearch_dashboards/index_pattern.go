@@ -22,7 +22,7 @@ type SavedObjectType struct {
 
 // CreateDefaultIndexPatterns creates the defaultIndexPatterns in the OpenSearchDashboards if not existed
 func (od *OSDashboardsClient) CreateDefaultIndexPatterns(log vzlog.VerrazzanoLogger, openSearchDashboardsEndpoint string) error {
-	existingIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s or %s)*", constants.VZSystemIndexPattern, constants.VZAppIndexPattern))
+	existingIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("%s+or+%s*", strings.Replace(constants.VZSystemIndexPattern, "*", "\\*", -1), strings.Replace(constants.VZAppIndexPattern, "*", "\\*", -1)))
 	if err != nil {
 		return err
 	}
