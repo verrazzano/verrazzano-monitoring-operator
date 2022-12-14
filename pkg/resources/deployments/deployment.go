@@ -182,11 +182,17 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		// dashboard volume
 		volumes := []corev1.Volume{
 			{
-				Name: "dashboards-volume",
+				Name: "dashboards-provider-volume",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
 					},
+				},
+			},
+			{
+				Name: "dashboards-volume",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			},
 			{
@@ -200,10 +206,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		}
 		volumeMounts := []corev1.VolumeMount{
 			{
-				Name:      "dashboards-volume",
+				Name:      "dashboards-provider-volume",
 				MountPath: "/etc/grafana/provisioning/dashboards",
 			},
-
+			{
+				Name:      "dashboards-volume",
+				MountPath: "/etc/grafana/provisioning/dashboardjson",
+			},
 			{
 				Name:      "datasources-volume",
 				MountPath: "/etc/grafana/provisioning/datasources",
@@ -223,11 +232,11 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				// This label allows us to select the correct dashboard ConfigMaps to be deployed in Grafana
 				{Name: "LABEL", Value: "grafana_dashboard"},
 				{Name: "LABEL_VALUE", Value: "\"1\""},
-				{Name: "FOLDER", Value: "/etc/grafana/provisioning/dashboards"},
+				{Name: "FOLDER", Value: "/etc/grafana/provisioning/dashboardjson"},
 			}...)
 			deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts, corev1.VolumeMount{
 				Name:      "dashboards-volume",
-				MountPath: "/etc/grafana/provisioning/dashboards",
+				MountPath: "/etc/grafana/provisioning/dashboardjson",
 			})
 		}
 
