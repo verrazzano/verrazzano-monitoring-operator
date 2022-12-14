@@ -207,7 +207,7 @@ const ComponentOpenSearchValue = "opensearch"
 const NodeGroupLabel = "node-group"
 
 // VZSystemIndexPattern for Verrazzano System default index pattern
-const VZSystemIndexPattern = "verrazzano-system*"
+const VZSystemIndexPattern = "verrazzano-system"
 
 // VZAppIndexPattern for Verrazzano app default index pattern
 const VZAppIndexPattern = "verrazzano-application*"
