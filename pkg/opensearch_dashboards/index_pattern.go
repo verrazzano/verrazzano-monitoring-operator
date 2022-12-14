@@ -55,7 +55,7 @@ func (od *OSDashboardsClient) creatIndexPatterns(log vzlog.VerrazzanoLogger, sav
 	if err != nil {
 		return err
 	}
-	log.Oncef("creating default index patterns")
+	log.Infof("Creating default index patterns")
 	indexPatternURL := fmt.Sprintf("%s/api/saved_objects/_bulk_create", openSearchDashboardsEndpoint)
 	req, err := http.NewRequest("POST", indexPatternURL, strings.NewReader(string(savedObjectBytes)))
 	if err != nil {
