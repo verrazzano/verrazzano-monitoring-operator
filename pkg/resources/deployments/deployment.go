@@ -228,10 +228,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 			}
 			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, resources.CreateSidecarContainer(sidecar))
 			deployment.Spec.Template.Spec.Containers[i+1].Env = append(deployment.Spec.Template.Spec.Containers[i+1].Env, []corev1.EnvVar{
-				// These values are also used in the grafana-deployment helm chart in Verrazzano
+				// These values are also used in the Grafana Helm chart in Verrazzano
 				// This label allows us to select the correct dashboard ConfigMaps to be deployed in Grafana
 				{Name: "LABEL", Value: "grafana_dashboard"},
-				{Name: "LABEL_VALUE", Value: "\"1\""},
+				{Name: "LABEL_VALUE", Value: "1"},
 				{Name: "FOLDER", Value: "/etc/grafana/provisioning/dashboardjson"},
 			}...)
 			deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts, corev1.VolumeMount{
