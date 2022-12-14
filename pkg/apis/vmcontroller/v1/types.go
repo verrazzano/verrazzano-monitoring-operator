@@ -63,8 +63,8 @@ type (
 		// Prometheus details
 		AlertManager AlertManager `json:"alertmanager"`
 
-		// Elasticsearch details
-		Elasticsearch Elasticsearch `json:"elasticsearch"`
+		// Opensearch details
+		Opensearch Opensearch `json:"opensearch"`
 
 		// Kibana details
 		Kibana Kibana `json:"kibana"`
@@ -124,20 +124,20 @@ type (
 		Replicas          int32     `json:"replicas,omitempty"`
 	}
 
-	// Elasticsearch details
-	Elasticsearch struct {
+	// Opensearch details
+	Opensearch struct {
 		Enabled    bool                    `json:"enabled" yaml:"enabled"`
 		Storage    Storage                 `json:"storage,omitempty"`
-		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
-		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
-		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
+		IngestNode OpensearchNode          `json:"ingestNode,omitempty"`
+		MasterNode OpensearchNode          `json:"masterNode,omitempty"`
+		DataNode   OpensearchNode          `json:"dataNode,omitempty"`
 		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
-		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
+		Nodes      []OpensearchNode        `json:"nodes,omitempty"`
 		Plugins    OpenSearchPlugins       `json:"plugins,omitempty"`
 	}
 
-	// ElasticsearchNode Type details
-	ElasticsearchNode struct {
+	// OpensearchNode Type details
+	OpensearchNode struct {
 		Name      string     `json:"name,omitempty"`
 		Replicas  int32      `json:"replicas,omitempty"`
 		JavaOpts  string     `json:"javaOpts" yaml:"javaOpts,omitempty"`

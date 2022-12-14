@@ -128,7 +128,7 @@ func WaitForElasticSearchIndexDocCount(ElasticSearchIndexDocCountURL string, cou
 
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
-		fmt.Println("Elasticsearch Index Doc Count output: \n" + string(body))
+		fmt.Println("Opensearch Index Doc Count output: \n" + string(body))
 
 		docCount := string(body)[strings.LastIndex(string(body), " ")+1:]
 		docCount = strings.TrimSuffix(docCount, "\n")

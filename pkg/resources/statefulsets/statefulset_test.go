@@ -52,7 +52,7 @@ func TestVMOEmptyStatefulSetSize(t *testing.T) {
 func TestVMODisabledSpecs(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: false,
 			},
 		},
@@ -104,9 +104,9 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 			Name: "system",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
-				MasterNode: vmcontrollerv1.ElasticsearchNode{
+				MasterNode: vmcontrollerv1.OpensearchNode{
 					Name:     "es-master",
 					Replicas: masterNodeReplicas,
 					Storage: &vmcontrollerv1.Storage{
@@ -118,7 +118,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 						vmcontrollerv1.IngestRole,
 					},
 				},
-				DataNode: vmcontrollerv1.ElasticsearchNode{
+				DataNode: vmcontrollerv1.OpensearchNode{
 					Name:     "es-data",
 					Replicas: dataNodeReplicas,
 					Storage: &vmcontrollerv1.Storage{
@@ -128,7 +128,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 						vmcontrollerv1.DataRole,
 					},
 				},
-				IngestNode: vmcontrollerv1.ElasticsearchNode{
+				IngestNode: vmcontrollerv1.OpensearchNode{
 					Name:     "es-ingest",
 					Replicas: ingestNodeReplicas,
 					Roles: []vmcontrollerv1.NodeRole{
@@ -182,7 +182,7 @@ func verifyDevProfileVMOComponents(t *testing.T, statefulsets []*appsv1.Stateful
 	}
 }
 
-// Verify the Statefulset used by Elasticsearch master
+// Verify the Statefulset used by Opensearch master
 func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	sts *appsv1.StatefulSet, replicas int32, storageSize string) {
 
@@ -190,12 +190,12 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	const esMasterVolName = "elasticsearch-master"
 	const esMasterData = "/usr/share/opensearch/data"
 
-	assert.Equal(*resources.NewVal(replicas), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
+	assert.Equal(*resources.NewVal(replicas), *sts.Spec.Replicas, "Incorrect Opensearch MasterNodes replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
-	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
+	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Opensearch affinity")
 	var elasticsearchUID int64 = 1000
 	assert.Equal(elasticsearchUID, *sts.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser,
-		"Incorrect Elasticsearch.SecurityContext.RunAsUser")
+		"Incorrect Opensearch.SecurityContext.RunAsUser")
 
 	assert.Len(sts.Spec.Template.Spec.Containers, 1, "Incorrect number of Containers")
 	assert.Len(sts.Spec.Template.Spec.Containers[0].Ports, 2, "Incorrect number of Ports")
@@ -270,7 +270,7 @@ func verifyElasticSearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		"Incorrect VolumeClaimTemplate resource request size")
 }
 
-// Verify the Statefulset used by Elasticsearch master
+// Verify the Statefulset used by Opensearch master
 func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	sts *appsv1.StatefulSet, replicas int32, storageSize string) {
 
@@ -282,12 +282,12 @@ func verifyElasticSearchDevProfile(t *testing.T, vmo *vmcontrollerv1.VerrazzanoM
 	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleData])
 	assert.Equal(nodes.RoleAssigned, sts.Spec.Template.ObjectMeta.Labels[nodes.RoleIngest])
 
-	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Elasticsearch MasterNodes replicas count")
+	assert.Equal(*resources.NewVal(int32(replicas)), *sts.Spec.Replicas, "Incorrect Opensearch MasterNodes replicas count")
 	affin := resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
-	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Elasticsearch affinity")
+	assert.Equal(affin, sts.Spec.Template.Spec.Affinity, "Incorrect Opensearch affinity")
 	var elasticsearchUID int64 = 1000
 	assert.Equal(elasticsearchUID, *sts.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser,
-		"Incorrect Elasticsearch.SecurityContext.RunAsUser")
+		"Incorrect Opensearch.SecurityContext.RunAsUser")
 
 	assert.Len(sts.Spec.Template.Spec.Containers, 1, "Incorrect number of Containers")
 	assert.Len(sts.Spec.Template.Spec.Containers[0].Ports, 2, "Incorrect number of Ports")
@@ -365,9 +365,9 @@ func TestCreateMultiMasterWithStorage(t *testing.T) {
 			Name: "os",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
-				Nodes: []vmcontrollerv1.ElasticsearchNode{
+				Nodes: []vmcontrollerv1.OpensearchNode{
 					{
 						Name:     "leader",
 						Replicas: 3,

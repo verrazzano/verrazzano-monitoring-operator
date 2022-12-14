@@ -53,15 +53,15 @@ var changePassword = generateRandomString()
 // - Verify service endpoint connectivity
 // - Upload dashboard via Grafana HTTP API
 // - GET/DELETE dashboard via Grafana HTTP API
-// Elasticsearch Server validations
+// Opensearch Server validations
 // - Verify service endpoint connectivity
-// - Upload new document via Elasticsearch HTTP API
-// - GET/DELETE document via Elasticsearch HTTP API
+// - Upload new document via Opensearch HTTP API
+// - GET/DELETE document via Opensearch HTTP API
 // Kibana Server validations
 // - Verify service endpoint connectivity
-// - Upload new document via Elasticsearch HTTP API
+// - Upload new document via Opensearch HTTP API
 // - search for document via Kibana HTTP API
-// - GET/DELETE entire index via Elasticsearch HTTP API
+// - GET/DELETE entire index via Opensearch HTTP API
 // ********************************************************
 
 func TestBasic1VMO(t *testing.T) {
@@ -123,7 +123,7 @@ func TestBasic2VMOWithDataVolumes(t *testing.T) {
 
 	// Create VMO
 	vmo := testutil.NewVMO(f.RunID+"-vmo-data", secretName)
-	vmo.Spec.Elasticsearch.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
+	vmo.Spec.Opensearch.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.Grafana.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.API.Replicas = 2
 	if f.Ingress {
@@ -416,10 +416,10 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.API.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name:              vmo.Spec.Kibana.Replicas,
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Elasticsearch.IngestNode.Replicas,
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchMaster.Name: vmo.Spec.Elasticsearch.MasterNode.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Opensearch.IngestNode.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchMaster.Name: vmo.Spec.Opensearch.MasterNode.Replicas,
 	}
-	for i := 0; i < int(vmo.Spec.Elasticsearch.DataNode.Replicas); i++ {
+	for i := 0; i < int(vmo.Spec.Opensearch.DataNode.Replicas); i++ {
 		deploymentNamesToReplicas[constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchData.Name+"-"+strconv.Itoa(i)] = 1
 	}
 
@@ -448,7 +448,7 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	verifyAPI(t, vmo)
 	fmt.Println("Step 3: Verify Grafana")
 	verifyGrafana(t, vmo)
-	fmt.Println("Step 4: Verify Elasticsearch")
+	fmt.Println("Step 4: Verify Opensearch")
 	verifyElasticsearch(t, vmo, true, false)
 	fmt.Println("Step 5: Verify Kibana")
 	verifyKibana(t, vmo)
@@ -847,7 +847,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	var err error
 	var headers = map[string]string{}
 
-	if !vmo.Spec.Elasticsearch.Enabled {
+	if !vmo.Spec.Opensearch.Enabled {
 		return
 	}
 
@@ -867,13 +867,13 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	host = "elasticsearch." + vmo.Spec.URI
 
 	// Verify service endpoint connectivity
-	waitForEndpoint(t, vmo, "Elasticsearch", esPort, "/_cluster/health")
-	waitForEndpoint(t, vmo, "Elasticsearch", esPort, "/_cat/indices")
+	waitForEndpoint(t, vmo, "Opensearch", esPort, "/_cluster/health")
+	waitForEndpoint(t, vmo, "Opensearch", esPort, "/_cat/indices")
 	fmt.Println("  ==> Service endpoint is available")
 
 	// Verify expected cluster size
-	expectedClusterSize := vmo.Spec.Elasticsearch.MasterNode.Replicas + vmo.Spec.Elasticsearch.IngestNode.Replicas + vmo.Spec.Elasticsearch.DataNode.Replicas
-	fmt.Printf("  ==> Verifying Elasticsearch cluster size is as expected (%d)\n", expectedClusterSize)
+	expectedClusterSize := vmo.Spec.Opensearch.MasterNode.Replicas + vmo.Spec.Opensearch.IngestNode.Replicas + vmo.Spec.Opensearch.DataNode.Replicas
+	fmt.Printf("  ==> Verifying Opensearch cluster size is as expected (%d)\n", expectedClusterSize)
 	err = waitForKeyWithValueResponse(host, f.ExternalIP, esPort, "/_cluster/stats", "successful", strconv.Itoa(int(expectedClusterSize)))
 	if err != nil {
 		t.Fatal(err)
@@ -1074,7 +1074,7 @@ func verifyKibana(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 			t.Fatalf("Expected response code %d from POST but got %d: (%v)", http.StatusCreated, resp.StatusCode, resp)
 		}
 		fmt.Println("  ==> Document " + docPath + " created")
-		// Deal with possible Elasticsearch index delay on a newly created document
+		// Deal with possible Opensearch index delay on a newly created document
 		time.Sleep(10 * time.Second)
 	}
 	if testutil.RunAfterPhase(f) {

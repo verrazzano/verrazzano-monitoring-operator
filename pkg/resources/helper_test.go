@@ -162,7 +162,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 			"TestGetOpenSearchPluginList when plugins are provided in VMI CRD",
 			&vmov1.VerrazzanoMonitoringInstance{
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmov1.Elasticsearch{
+					Opensearch: vmov1.Opensearch{
 						Enabled: true,
 						Plugins: vmov1.OpenSearchPlugins{
 							InstallList: testPlugins,
@@ -177,7 +177,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 			"TestGetOpenSearchPluginList when plugins are not provided in VMI CRD",
 			&vmov1.VerrazzanoMonitoringInstance{
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmov1.Elasticsearch{
+					Opensearch: vmov1.Opensearch{
 						Enabled: true,
 						Plugins: vmov1.OpenSearchPlugins{
 							Enabled: false,

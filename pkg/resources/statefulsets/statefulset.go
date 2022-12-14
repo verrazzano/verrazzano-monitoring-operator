@@ -27,7 +27,7 @@ func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	var statefulSets []*appsv1.StatefulSet
 
 	// OpenSearch MasterNodes
-	if vmo.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Opensearch.Enabled {
 		statefulSets = append(statefulSets, createOpenSearchStatefulSets(log, vmo, storageClass, initialMasterNodes)...)
 	}
 	return statefulSets, nil
@@ -46,7 +46,7 @@ func createOpenSearchStatefulSets(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv
 }
 
 // Creates StatefulSet for OpenSearch
-func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass, node vmcontrollerv1.ElasticsearchNode, initialMasterNodes string) *appsv1.StatefulSet {
+func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClass *storagev1.StorageClass, node vmcontrollerv1.OpensearchNode, initialMasterNodes string) *appsv1.StatefulSet {
 	// Headless service for OpenSearch
 	headlessService := resources.GetMetaName(vmo.Name, config.ElasticsearchMaster.Name)
 	statefulSetName := resources.GetMetaName(vmo.Name, node.Name)
@@ -172,7 +172,7 @@ http () {
     curl -v -XGET -s -k ` + basicAuthParams + ` --fail http://127.0.0.1:9200${path}
 }
 if [ -f "${START_FILE}" ]; then
-    echo 'Elasticsearch is already running, lets check the node is healthy'
+    echo 'Opensearch is already running, lets check the node is healthy'
     http "` + config.ElasticsearchMaster.ReadinessHTTPPath + `"
 else
     echo 'Waiting for elasticsearch cluster to become cluster to be ready'

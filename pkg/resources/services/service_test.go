@@ -22,7 +22,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},

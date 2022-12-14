@@ -228,7 +228,7 @@ func TestReindexAndDeleteIndices(t *testing.T) {
 		},
 	}
 	vmi := createISMVMI("1d", true)
-	vmi.Spec.Elasticsearch.Policies = []vmcontrollerv1.IndexManagementPolicy{
+	vmi.Spec.Opensearch.Policies = []vmcontrollerv1.IndexManagementPolicy{
 		*createTestPolicy("1d", "1d", "verrazzano-*", "1d", 1),
 	}
 	for _, tt := range tests {

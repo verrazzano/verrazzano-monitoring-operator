@@ -175,7 +175,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			}
 		}
 	}
-	if vmo.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Opensearch.Enabled {
 		if config.ElasticsearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
@@ -301,7 +301,7 @@ func getIngressClassName(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) strin
 }
 
 // createRedirectIngressIfNecessary creates a new ingress for permanent redirection if required
-// For upgrade, if the user has deprecated Elasticsearch/Kibana ingress
+// For upgrade, if the user has deprecated Opensearch/Kibana ingress
 // Then create a new ingress for permanent redirection
 func createRedirectIngressIfNecessary(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map[string]*netv1.Ingress, deprecatedIngressComponent *config.ComponentDetails, component *config.ComponentDetails) *netv1.Ingress {
 	var ingress *netv1.Ingress

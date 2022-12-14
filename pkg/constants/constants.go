@@ -110,13 +110,13 @@ const OSDashboardsHTTPPort = 5601
 // OidcProxyPort default OidcProxy HTTP port
 const OidcProxyPort = 8775
 
-// DefaultDevProfileESMemArgs default Elasticsearch dev mode memory settings
+// DefaultDevProfileESMemArgs default Opensearch dev mode memory settings
 const DefaultDevProfileESMemArgs = "-Xms700m -Xmx700m"
 
-// DefaultESIngestMemArgs default Elasticsearch IngestNodes memory settings
+// DefaultESIngestMemArgs default Opensearch IngestNodes memory settings
 const DefaultESIngestMemArgs = "-Xms2g -Xmx2g"
 
-// DefaultESDataMemArgs default Elasticsearch DataNodes memory settings
+// DefaultESDataMemArgs default Opensearch DataNodes memory settings
 const DefaultESDataMemArgs = "-Xms4g -Xmx4g"
 
 // K8sTaintNoScheduleEffect constant for Noschedule

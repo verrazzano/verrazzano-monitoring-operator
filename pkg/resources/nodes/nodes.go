@@ -32,24 +32,24 @@ var (
 )
 
 // MasterNodes returns the list of master role containing nodes in the VMI spec. These nodes will be created as statefulsets.
-func MasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.MasterNode}, filterNodes(vmo, masterNodeMatcher)...)
+func MasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.OpensearchNode {
+	return append([]vmcontrollerv1.OpensearchNode{vmo.Spec.Opensearch.MasterNode}, filterNodes(vmo, masterNodeMatcher)...)
 }
 
 // DataNodes returns the list of data nodes (that are not masters) in the VMI spec.
-func DataNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.DataNode}, filterNodes(vmo, dataNodeMatcher)...)
+func DataNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.OpensearchNode {
+	return append([]vmcontrollerv1.OpensearchNode{vmo.Spec.Opensearch.DataNode}, filterNodes(vmo, dataNodeMatcher)...)
 }
 
 // IngestNodes returns the list of ingest nodes in the VMI spec. These nodes will have no other role but ingest.
-func IngestNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.IngestNode}, filterNodes(vmo, ingestNodeMatcher)...)
+func IngestNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.OpensearchNode {
+	return append([]vmcontrollerv1.OpensearchNode{vmo.Spec.Opensearch.IngestNode}, filterNodes(vmo, ingestNodeMatcher)...)
 }
 
 // GetRolesString turns a nodes role list into a role string
 // roles: [master, ingest, data] => "master,ingest,data"
 // we have to use a buffer because NodeRole is a type alias
-func GetRolesString(node *vmcontrollerv1.ElasticsearchNode) string {
+func GetRolesString(node *vmcontrollerv1.OpensearchNode) string {
 	var buf bytes.Buffer
 	for idx, role := range node.Roles {
 		buf.WriteString(string(role))
@@ -66,7 +66,7 @@ func GetRoleLabel(role vmcontrollerv1.NodeRole) string {
 
 // SetNodeRoleLabels adds node role labels to an existing label map
 // role labels follow the format: opensearch.verrazzano.io/role-<role name>=true
-func SetNodeRoleLabels(node *vmcontrollerv1.ElasticsearchNode, labels map[string]string) {
+func SetNodeRoleLabels(node *vmcontrollerv1.OpensearchNode, labels map[string]string) {
 	for _, role := range node.Roles {
 		labels[GetRoleLabel(role)] = RoleAssigned
 	}
@@ -98,7 +98,7 @@ func GetNodeCount(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *NodeCount {
 }
 
 // InitialMasterNodes returns a comma separated list of master nodes for cluster bootstrapping
-func InitialMasterNodes(vmoName string, masterNodes []vmcontrollerv1.ElasticsearchNode) string {
+func InitialMasterNodes(vmoName string, masterNodes []vmcontrollerv1.OpensearchNode) string {
 	var j int32
 	var initialMasterNodes []string
 	for _, node := range masterNodes {
@@ -110,13 +110,13 @@ func InitialMasterNodes(vmoName string, masterNodes []vmcontrollerv1.Elasticsear
 }
 
 // AllNodes returns a list of all nodes that need to be created
-func AllNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append(vmo.Spec.Elasticsearch.Nodes, vmo.Spec.Elasticsearch.MasterNode, vmo.Spec.Elasticsearch.DataNode, vmo.Spec.Elasticsearch.IngestNode)
+func AllNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.OpensearchNode {
+	return append(vmo.Spec.Opensearch.Nodes, vmo.Spec.Opensearch.MasterNode, vmo.Spec.Opensearch.DataNode, vmo.Spec.Opensearch.IngestNode)
 }
 
-func filterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, matcher func(node vmcontrollerv1.ElasticsearchNode) bool) []vmcontrollerv1.ElasticsearchNode {
-	var nodes []vmcontrollerv1.ElasticsearchNode
-	for _, node := range vmo.Spec.Elasticsearch.Nodes {
+func filterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, matcher func(node vmcontrollerv1.OpensearchNode) bool) []vmcontrollerv1.OpensearchNode {
+	var nodes []vmcontrollerv1.OpensearchNode
+	for _, node := range vmo.Spec.Opensearch.Nodes {
 		if matcher(node) {
 			nodes = append(nodes, node)
 		}
@@ -124,8 +124,8 @@ func filterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, matcher func(
 	return nodes
 }
 
-func matcherFactory(excluded, matched func(role vmcontrollerv1.NodeRole) bool) func(node vmcontrollerv1.ElasticsearchNode) bool {
-	return func(node vmcontrollerv1.ElasticsearchNode) bool {
+func matcherFactory(excluded, matched func(role vmcontrollerv1.NodeRole) bool) func(node vmcontrollerv1.OpensearchNode) bool {
+	return func(node vmcontrollerv1.OpensearchNode) bool {
 		var isMatch bool
 		for _, role := range node.Roles {
 			if excluded(role) {

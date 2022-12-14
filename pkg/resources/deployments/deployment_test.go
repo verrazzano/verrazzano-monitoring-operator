@@ -41,11 +41,11 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				IngestNode: vmcontrollerv1.OpensearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.OpensearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.OpensearchNode{Replicas: 1},
 			},
 		},
 	}
@@ -70,10 +70,10 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{
+				IngestNode: vmcontrollerv1.OpensearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.OpensearchNode{
 					Replicas: 1,
 					Roles: []vmcontrollerv1.NodeRole{
 						vmcontrollerv1.MasterRole,
@@ -81,7 +81,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 						vmcontrollerv1.DataRole,
 					},
 				},
-				DataNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				DataNode: vmcontrollerv1.OpensearchNode{Replicas: 0},
 			},
 		},
 	}
@@ -107,11 +107,11 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
+				IngestNode: vmcontrollerv1.OpensearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.OpensearchNode{Replicas: 0},
+				DataNode:   vmcontrollerv1.OpensearchNode{Replicas: 0},
 			},
 		},
 	}
@@ -131,9 +131,9 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.OpensearchNode{Replicas: 1},
 			},
 		},
 	}
@@ -184,9 +184,9 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 					RequestMemory: "63M",
 				},
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
-				IngestNode: vmcontrollerv1.ElasticsearchNode{
+				IngestNode: vmcontrollerv1.OpensearchNode{
 					Name:     config.ElasticsearchIngest.Name,
 					Replicas: 1,
 					Resources: vmcontrollerv1.Resources{
@@ -197,12 +197,12 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 					},
 					Roles: []vmcontrollerv1.NodeRole{vmcontrollerv1.IngestRole},
 				},
-				DataNode: vmcontrollerv1.ElasticsearchNode{
+				DataNode: vmcontrollerv1.OpensearchNode{
 					Name:     config.ElasticsearchData.Name,
 					Replicas: 1,
 					Roles:    []vmcontrollerv1.NodeRole{vmcontrollerv1.DataRole},
 				},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.OpensearchNode{Replicas: 1},
 			},
 		},
 	}

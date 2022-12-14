@@ -21,7 +21,7 @@ func TestVMONoStorageVolumes(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -45,7 +45,7 @@ func TestVMOWithStorageVolumes1(t *testing.T) {
 				},
 			},
 			// An empty size element is interpreted as no storage
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
 					Size:               "",
@@ -64,9 +64,9 @@ func TestVMOWithStorageVolumes1(t *testing.T) {
 func TestVMOWithStorageVolumes2(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
-				DataNode: vmcontrollerv1.ElasticsearchNode{
+				DataNode: vmcontrollerv1.OpensearchNode{
 					Storage: &vmcontrollerv1.Storage{
 						Size:               "50Gi",
 						AvailabilityDomain: "AD1",
@@ -86,9 +86,9 @@ func TestVMOWithStorageVolumes2(t *testing.T) {
 func TestVMOWithStorageVolumes3(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
-				Nodes: []vmcontrollerv1.ElasticsearchNode{
+				Nodes: []vmcontrollerv1.OpensearchNode{
 					{
 						Name: "data",
 						Roles: []vmcontrollerv1.NodeRole{
@@ -104,7 +104,7 @@ func TestVMOWithStorageVolumes3(t *testing.T) {
 						},
 					},
 				},
-				DataNode: vmcontrollerv1.ElasticsearchNode{
+				DataNode: vmcontrollerv1.OpensearchNode{
 					Storage: &vmcontrollerv1.Storage{
 						Size:               "50Gi",
 						AvailabilityDomain: "AD1",
@@ -132,14 +132,14 @@ func TestVMODevModeWithStorageVolumes(t *testing.T) {
 					PvcNames:           []string{"grafana-pvc"},
 				},
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
 					Size: "",
 				},
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 0},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+				IngestNode: vmcontrollerv1.OpensearchNode{Replicas: 0},
+				DataNode:   vmcontrollerv1.OpensearchNode{Replicas: 0},
+				MasterNode: vmcontrollerv1.OpensearchNode{Replicas: 1},
 			},
 		},
 	}
@@ -169,7 +169,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 				},
 			},
 			// An empty size element is interpreted as no storage
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
 					Size:               "50Gi",

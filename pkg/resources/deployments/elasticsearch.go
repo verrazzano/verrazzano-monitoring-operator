@@ -29,7 +29,7 @@ func IsOpenSearchDataDeployment(vmoName string, deployment *appsv1.Deployment) b
 }
 
 // Returns a common base deployment structure for all Elasticsearch components
-func (es ElasticsearchBasic) createCommonDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, node vmcontrollerv1.ElasticsearchNode, componentDetails config.ComponentDetails, index int) *appsv1.Deployment {
+func (es ElasticsearchBasic) createCommonDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, node vmcontrollerv1.OpensearchNode, componentDetails config.ComponentDetails, index int) *appsv1.Deployment {
 
 	deploymentElement := createDeploymentElementByPvcIndex(vmo, node.Storage, &node.Resources, componentDetails, index, node.Name)
 	esContainer := &deploymentElement.Spec.Template.Spec.Containers[0]
@@ -59,7 +59,7 @@ func (es ElasticsearchBasic) createCommonDeployment(vmo *vmcontrollerv1.Verrazza
 		{Name: "transport", ContainerPort: int32(constants.OSTransportPort)},
 	}
 
-	// Common Elasticsearch readiness and liveness settings
+	// Common Opensearch readiness and liveness settings
 	if esContainer.LivenessProbe != nil {
 		esContainer.LivenessProbe.InitialDelaySeconds = 60
 		esContainer.LivenessProbe.TimeoutSeconds = 3

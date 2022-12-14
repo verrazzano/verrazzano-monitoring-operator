@@ -244,7 +244,7 @@ func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	case config.Grafana.Name:
 		return &vmo.Spec.Grafana.Storage
 	case config.ElasticsearchData.Name:
-		return vmo.Spec.Elasticsearch.DataNode.Storage
+		return vmo.Spec.Opensearch.DataNode.Storage
 	}
 	return nil
 }
@@ -255,7 +255,7 @@ func GetReplicasForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, c
 	case config.Grafana.Name:
 		return int32(1)
 	case config.ElasticsearchData.Name:
-		return vmo.Spec.Elasticsearch.DataNode.Replicas
+		return vmo.Spec.Opensearch.DataNode.Replicas
 	}
 	return 0
 }
@@ -371,7 +371,7 @@ func CreateZoneAntiAffinityElement(vmoName string, component string) *corev1.Aff
 	}
 }
 
-// GetElasticsearchMasterInitContainer return an Elasticsearch Init container for the master.  This changes ownership of
+// GetElasticsearchMasterInitContainer return an Opensearch Init container for the master.  This changes ownership of
 // the ES directory permissions needed to access PV volume data.  Also set the max map count.
 func GetElasticsearchMasterInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
@@ -381,7 +381,7 @@ func GetElasticsearchMasterInitContainer() *corev1.Container {
 	return &elasticsearchInitContainer
 }
 
-// GetElasticsearchInitContainer returns an Elasticsearch Init container object
+// GetElasticsearchInitContainer returns an Opensearch Init container object
 func GetElasticsearchInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
 	elasticsearchInitContainer.Args = []string{"sysctl", "-w", "vm.max_map_count=262144"}
@@ -564,10 +564,10 @@ func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
 // GIVEN VMI CRD
 // RETURN the list of provided os plugins. If there is no plugins in VMI CRD, empty list is returned.
 func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
-	if vmo.Spec.Elasticsearch.Enabled &&
-		vmo.Spec.Elasticsearch.Plugins.Enabled &&
-		len(vmo.Spec.Elasticsearch.Plugins.InstallList) > 0 {
-		return vmo.Spec.Elasticsearch.Plugins.InstallList
+	if vmo.Spec.Opensearch.Enabled &&
+		vmo.Spec.Opensearch.Plugins.Enabled &&
+		len(vmo.Spec.Opensearch.Plugins.InstallList) > 0 {
+		return vmo.Spec.Opensearch.Plugins.InstallList
 	}
 	return []string{}
 }

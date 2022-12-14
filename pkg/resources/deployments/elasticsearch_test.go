@@ -74,10 +74,10 @@ func TestElasticsearchDefaultDeployments1(t *testing.T) {
 			Name: "myVMO",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
-				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
+			Opensearch: vmcontrollerv1.Opensearch{
+				IngestNode: vmcontrollerv1.OpensearchNode{Replicas: 1},
+				MasterNode: vmcontrollerv1.OpensearchNode{Replicas: 1},
+				DataNode:   vmcontrollerv1.OpensearchNode{Replicas: 1},
 				Enabled:    true,
 				Storage: vmcontrollerv1.Storage{
 					Size:     "50GI",
@@ -97,14 +97,14 @@ func TestElasticsearchDefaultDeployments2(t *testing.T) {
 			Name: "myVMO",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
-				IngestNode: vmcontrollerv1.ElasticsearchNode{
+			Opensearch: vmcontrollerv1.Opensearch{
+				IngestNode: vmcontrollerv1.OpensearchNode{
 					Replicas: 5,
 					Roles:    []vmcontrollerv1.NodeRole{vmcontrollerv1.IngestRole},
 					Name:     config.ElasticsearchIngest.Name,
 				},
-				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 4},
-				DataNode: vmcontrollerv1.ElasticsearchNode{
+				MasterNode: vmcontrollerv1.OpensearchNode{Replicas: 4},
+				DataNode: vmcontrollerv1.OpensearchNode{
 					Replicas: 3,
 					Storage: &vmcontrollerv1.Storage{
 						Size:     "50GI",

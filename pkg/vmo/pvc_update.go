@@ -154,12 +154,12 @@ func updateVMOStorageForPVC(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ol
 
 	// Look for the PVC reference and update it
 	updateStorage(&vmo.Spec.Grafana.Storage)
-	updateStorage(vmo.Spec.Elasticsearch.DataNode.Storage)
+	updateStorage(vmo.Spec.Opensearch.DataNode.Storage)
 }
 
 // setPerNodeStorage updates the VMO OpenSearch storage spec to reflect the current API
 func setPerNodeStorage(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
-	updateFunc := func(storage *vmcontrollerv1.Storage, node *vmcontrollerv1.ElasticsearchNode) {
+	updateFunc := func(storage *vmcontrollerv1.Storage, node *vmcontrollerv1.OpensearchNode) {
 		if node.Replicas > 0 && node.Storage == nil {
 			node.Storage = &vmcontrollerv1.Storage{
 				Size: storage.Size,
@@ -167,12 +167,12 @@ func setPerNodeStorage(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 		}
 	}
 
-	updateFunc(&vmo.Spec.Elasticsearch.Storage, &vmo.Spec.Elasticsearch.MasterNode)
-	updateFunc(&vmo.Spec.Elasticsearch.Storage, &vmo.Spec.Elasticsearch.DataNode)
-	if vmo.Spec.Elasticsearch.DataNode.Storage != nil && len(vmo.Spec.Elasticsearch.Storage.PvcNames) > 0 {
-		vmo.Spec.Elasticsearch.DataNode.Storage.PvcNames = make([]string, len(vmo.Spec.Elasticsearch.Storage.PvcNames))
-		copy(vmo.Spec.Elasticsearch.DataNode.Storage.PvcNames, vmo.Spec.Elasticsearch.Storage.PvcNames)
+	updateFunc(&vmo.Spec.Opensearch.Storage, &vmo.Spec.Opensearch.MasterNode)
+	updateFunc(&vmo.Spec.Opensearch.Storage, &vmo.Spec.Opensearch.DataNode)
+	if vmo.Spec.Opensearch.DataNode.Storage != nil && len(vmo.Spec.Opensearch.Storage.PvcNames) > 0 {
+		vmo.Spec.Opensearch.DataNode.Storage.PvcNames = make([]string, len(vmo.Spec.Opensearch.Storage.PvcNames))
+		copy(vmo.Spec.Opensearch.DataNode.Storage.PvcNames, vmo.Spec.Opensearch.Storage.PvcNames)
 	}
 
-	vmo.Spec.Elasticsearch.Storage = vmcontrollerv1.Storage{}
+	vmo.Spec.Opensearch.Storage = vmcontrollerv1.Storage{}
 }

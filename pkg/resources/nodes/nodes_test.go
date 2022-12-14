@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-var testMasterNodes = []vmcontrollerv1.ElasticsearchNode{
+var testMasterNodes = []vmcontrollerv1.OpensearchNode{
 	{
 		Name:     "es-master",
 		Replicas: 2,
@@ -26,8 +26,8 @@ var testMasterNodes = []vmcontrollerv1.ElasticsearchNode{
 
 var testMultiNodeVMI = vmcontrollerv1.VerrazzanoMonitoringInstance{
 	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-		Elasticsearch: vmcontrollerv1.Elasticsearch{
-			Nodes: []vmcontrollerv1.ElasticsearchNode{
+		Opensearch: vmcontrollerv1.Opensearch{
+			Nodes: []vmcontrollerv1.OpensearchNode{
 				{
 					Roles: []vmcontrollerv1.NodeRole{
 						vmcontrollerv1.MasterRole,
@@ -50,19 +50,19 @@ var testMultiNodeVMI = vmcontrollerv1.VerrazzanoMonitoringInstance{
 					Replicas: 1,
 				},
 			},
-			MasterNode: vmcontrollerv1.ElasticsearchNode{
+			MasterNode: vmcontrollerv1.OpensearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.MasterRole,
 				},
 				Replicas: 1,
 			},
-			DataNode: vmcontrollerv1.ElasticsearchNode{
+			DataNode: vmcontrollerv1.OpensearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.DataRole,
 				},
 				Replicas: 1,
 			},
-			IngestNode: vmcontrollerv1.ElasticsearchNode{
+			IngestNode: vmcontrollerv1.OpensearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.IngestRole,
 				},
@@ -80,11 +80,11 @@ func TestInitialMasterNodes(t *testing.T) {
 
 func TestGetRolesString(t *testing.T) {
 	var tests = []struct {
-		node      vmcontrollerv1.ElasticsearchNode
+		node      vmcontrollerv1.OpensearchNode
 		nodeRoles string
 	}{
 		{
-			vmcontrollerv1.ElasticsearchNode{
+			vmcontrollerv1.OpensearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.MasterRole,
 				},
@@ -92,7 +92,7 @@ func TestGetRolesString(t *testing.T) {
 			"master",
 		},
 		{
-			vmcontrollerv1.ElasticsearchNode{
+			vmcontrollerv1.OpensearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.MasterRole,
 					vmcontrollerv1.DataRole,
@@ -101,7 +101,7 @@ func TestGetRolesString(t *testing.T) {
 			"master,data",
 		},
 		{
-			vmcontrollerv1.ElasticsearchNode{
+			vmcontrollerv1.OpensearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.MasterRole,
 					vmcontrollerv1.DataRole,
@@ -111,7 +111,7 @@ func TestGetRolesString(t *testing.T) {
 			"master,data,ingest",
 		},
 		{
-			vmcontrollerv1.ElasticsearchNode{
+			vmcontrollerv1.OpensearchNode{
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.DataRole,
 					vmcontrollerv1.IngestRole,
@@ -143,8 +143,8 @@ func TestIsSingleNodeCluster(t *testing.T) {
 			"Single master VMO is single node",
 			&vmcontrollerv1.VerrazzanoMonitoringInstance{
 				Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmcontrollerv1.Elasticsearch{
-						MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Opensearch: vmcontrollerv1.Opensearch{
+						MasterNode: vmcontrollerv1.OpensearchNode{
 							Roles: []vmcontrollerv1.NodeRole{
 								vmcontrollerv1.MasterRole,
 							},
@@ -159,8 +159,8 @@ func TestIsSingleNodeCluster(t *testing.T) {
 			"Multi master VMO is not single node",
 			&vmcontrollerv1.VerrazzanoMonitoringInstance{
 				Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmcontrollerv1.Elasticsearch{
-						MasterNode: vmcontrollerv1.ElasticsearchNode{
+					Opensearch: vmcontrollerv1.Opensearch{
+						MasterNode: vmcontrollerv1.OpensearchNode{
 							Roles: []vmcontrollerv1.NodeRole{
 								vmcontrollerv1.MasterRole,
 								vmcontrollerv1.IngestRole,

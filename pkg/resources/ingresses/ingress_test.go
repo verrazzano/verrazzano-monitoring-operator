@@ -28,7 +28,7 @@ func TestVMONoIngress(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -52,7 +52,7 @@ func TestVMOWithIngresses(t *testing.T) {
 			Prometheus: vmcontrollerv1.Prometheus{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -93,7 +93,7 @@ func TestToCreateNewIngressesWithRedirects(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -197,7 +197,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},

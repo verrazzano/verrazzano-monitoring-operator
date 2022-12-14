@@ -12,29 +12,29 @@ import (
 func TestInitNode(t *testing.T) {
 	var tests = []struct {
 		name     string
-		node     *vmcontrollerv1.ElasticsearchNode
-		expected *vmcontrollerv1.ElasticsearchNode
+		node     *vmcontrollerv1.OpensearchNode
+		expected *vmcontrollerv1.OpensearchNode
 	}{
 		{
 			"adds role, and role based name when name/role are empty",
-			&vmcontrollerv1.ElasticsearchNode{
+			&vmcontrollerv1.OpensearchNode{
 				Name: "",
 			},
-			&vmcontrollerv1.ElasticsearchNode{
+			&vmcontrollerv1.OpensearchNode{
 				Name:  "es-master",
 				Roles: []vmcontrollerv1.NodeRole{vmcontrollerv1.MasterRole},
 			},
 		},
 		{
 			"does not change name/role when they are present",
-			&vmcontrollerv1.ElasticsearchNode{
+			&vmcontrollerv1.OpensearchNode{
 				Name: "foobar",
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.DataRole,
 					vmcontrollerv1.MasterRole,
 				},
 			},
-			&vmcontrollerv1.ElasticsearchNode{
+			&vmcontrollerv1.OpensearchNode{
 				Name: "foobar",
 				Roles: []vmcontrollerv1.NodeRole{
 					vmcontrollerv1.DataRole,
