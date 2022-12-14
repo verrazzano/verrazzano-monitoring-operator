@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
 // TestCreateDefaultIndexPatterns tests the CreateDefaultIndexPatterns to verify the creation of default index patterns
@@ -29,13 +32,13 @@ func TestCreateDefaultIndexPatterns(t *testing.T) {
 			{
 				ID: "ID1",
 				Attributes: Attributes{
-					Title: VZAppIndexPattern,
+					Title: constants.VZAppIndexPattern,
 				},
 			},
 			{
 				ID: "ID2",
 				Attributes: Attributes{
-					Title: VZSystemIndexPattern,
+					Title: constants.VZSystemIndexPattern,
 				},
 			},
 		},
@@ -112,7 +115,7 @@ func TestCreateDefaultIndexPatterns(t *testing.T) {
 				httpClient: tt.fields.httpClient,
 				DoHTTP:     tt.fields.DoHTTP,
 			}
-			if err = od.CreateDefaultIndexPatterns(tt.args.openSearchDashboardsEndpoint); (err != nil) != tt.wantErr {
+			if err = od.CreateDefaultIndexPatterns(vzlog.DefaultLogger(), tt.args.openSearchDashboardsEndpoint); (err != nil) != tt.wantErr {
 				t.Errorf("CreateDefaultIndexPatterns() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

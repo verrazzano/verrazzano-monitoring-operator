@@ -8,26 +8,32 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
-const VZSystemIndexPattern = "verrazzano-system*"
-const VZAppIndexPattern = "verrazzano-application*"
+var defaultIndexPatterns = [...]string{constants.VZSystemIndexPattern, constants.VZAppIndexPattern}
 
-var defaultIndexPatterns = [...]string{VZSystemIndexPattern, VZAppIndexPattern}
+type SavedObjectType struct {
+	Type       string `json:"type"`
+	Attributes `json:"attributes"`
+}
 
 // CreateDefaultIndexPatterns creates the defaultIndexPatterns in the OpenSearchDashboards if not existed
-func (od *OSDashboardsClient) CreateDefaultIndexPatterns(openSearchDashboardsEndpoint string) error {
-	existingIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s or %s)*", VZAppIndexPattern, VZAppIndexPattern))
+func (od *OSDashboardsClient) CreateDefaultIndexPatterns(log vzlog.VerrazzanoLogger, openSearchDashboardsEndpoint string) error {
+	existingIndexPatterns, err := od.getDefaultIndexPatterns(openSearchDashboardsEndpoint, 50, fmt.Sprintf("(%s or %s)*", constants.VZSystemIndexPattern, constants.VZAppIndexPattern))
 	if err != nil {
 		return err
 	}
-	var savedObjectPayload []SavedObject
+	var savedObjectPayload []SavedObjectType
 	for _, indexPattern := range defaultIndexPatterns {
 		isPatternExist, ok := existingIndexPatterns[indexPattern]
 		if isPatternExist && ok {
 			continue
 		}
-		savedObject := SavedObject{
+		savedObject := SavedObjectType{
+			Type: constants.IndexPattern,
 			Attributes: Attributes{
 				Title: indexPattern,
 			},
@@ -35,7 +41,7 @@ func (od *OSDashboardsClient) CreateDefaultIndexPatterns(openSearchDashboardsEnd
 		savedObjectPayload = append(savedObjectPayload, savedObject)
 	}
 	if len(savedObjectPayload) > 0 {
-		err = od.creatIndexPatterns(savedObjectPayload, openSearchDashboardsEndpoint)
+		err = od.creatIndexPatterns(log, savedObjectPayload, openSearchDashboardsEndpoint)
 		if err != nil {
 			return err
 		}
@@ -44,7 +50,7 @@ func (od *OSDashboardsClient) CreateDefaultIndexPatterns(openSearchDashboardsEnd
 }
 
 // creatIndexPatterns creates the given IndexPattern in the OpenSearch-Dashboards by calling bulk API.
-func (od *OSDashboardsClient) creatIndexPatterns(savedObjectList []SavedObject, openSearchDashboardsEndpoint string) error {
+func (od *OSDashboardsClient) creatIndexPatterns(log vzlog.VerrazzanoLogger, savedObjectList []SavedObjectType, openSearchDashboardsEndpoint string) error {
 	savedObjectBytes, err := json.Marshal(savedObjectList)
 	if err != nil {
 		return err
@@ -52,12 +58,14 @@ func (od *OSDashboardsClient) creatIndexPatterns(savedObjectList []SavedObject, 
 	indexPatternURL := fmt.Sprintf("%s/api/saved_objects/_bulk_create", openSearchDashboardsEndpoint)
 	req, err := http.NewRequest("POST", indexPatternURL, strings.NewReader(string(savedObjectBytes)))
 	if err != nil {
+		log.Errorf("failed to create bulk request for default index patterns %s", err.Error())
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("osd-xsrf", "true")
 	resp, err := od.DoHTTP(req)
 	if err != nil {
+		log.Errorf("failed to create bulk index patterns %s", err.Error())
 		return fmt.Errorf("failed to post index patterns in OpenSearch dashboards: %v", err)
 	}
 	defer resp.Body.Close()
@@ -75,11 +83,11 @@ func (od *OSDashboardsClient) getDefaultIndexPatterns(openSearchDashboardsEndpoi
 		return defaultIndexPattern, err
 	}
 	for _, savedObject := range savedObjects {
-		if savedObject.Title == VZAppIndexPattern {
-			defaultIndexPattern[VZAppIndexPattern] = true
+		if savedObject.Title == constants.VZSystemIndexPattern {
+			defaultIndexPattern[constants.VZSystemIndexPattern] = true
 		}
-		if savedObject.Title == VZSystemIndexPattern {
-			defaultIndexPattern[VZSystemIndexPattern] = true
+		if savedObject.Title == constants.VZAppIndexPattern {
+			defaultIndexPattern[constants.VZAppIndexPattern] = true
 		}
 	}
 	return defaultIndexPattern, nil
