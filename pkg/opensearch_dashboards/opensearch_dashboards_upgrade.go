@@ -63,7 +63,7 @@ func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int
 	for {
 		url := fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&fields=title&per_page=%d&page=%d", dashboardsEndPoint, perPage, currentPage)
 		if searchQuery != "" {
-			url = fmt.Sprintf("%s/api/saved_objects/_find?search=%stype=index-pattern&fields=title&per_page=%d&page=%d", dashboardsEndPoint, searchQuery, perPage, currentPage)
+			url = fmt.Sprintf("%s/api/saved_objects/_find?search=%s&type=index-pattern&fields=title&per_page=%d&page=%d", dashboardsEndPoint, searchQuery, perPage, currentPage)
 		}
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
