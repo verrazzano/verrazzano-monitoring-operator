@@ -206,16 +206,16 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 	return map[metricName]*FunctionMetrics{
 		NamesReconcile: {
 			durationMetric: DurationMetric{
-				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
+				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vz_monitoring_operator_reconcile_duration_seconds", Help: "Tracks the duration of the reconcile function in seconds"}),
 			},
 			callsTotal: CounterMetric{
-				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_reconcile_total", Help: "Tracks how many times the syncHandlerStandardMode function is called. thisMetric corresponds to the number of reconciles performed by the VMO"}),
+				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_reconcile_total", Help: "Tracks how many times the syncHandlerStandardMode function is called. thisMetric corresponds to the number of reconciles performed by the VMO"}),
 			},
 			lastCallTimestamp: TimestampMetric{
-				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_reconcile_last_timestamp_seconds", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"}),
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vz_monitoring_operator_reconcile_last_timestamp_seconds", Help: "The timestamp of the last time the syncHandlerStandardMode function completed"}, []string{"reconcile_index"}),
 			},
 			errorTotal: ErrorMetric{
-				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_reconcile_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"}),
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vz_monitoring_operator_reconcile_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"reconcile_index"}),
 			},
 			index:         int64(0),
 			labelFunction: &DefaultLabelFunction,
@@ -223,16 +223,16 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 
 		NamesDeployment: {
 			durationMetric: DurationMetric{
-				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_deployment_duration_seconds", Help: "The duration of the last call to the deployment function"}),
+				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vz_monitoring_operator_deployment_duration_seconds", Help: "The duration of the last call to the deployment function"}),
 			},
 			callsTotal: CounterMetric{
-				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_total", Help: "Tracks how many times the deployment function is called"}),
+				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_deployment_total", Help: "Tracks how many times the deployment function is called"}),
 			},
 			lastCallTimestamp: TimestampMetric{
-				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"deployment_index"}),
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vz_monitoring_operator_deployment_last_timestamp_seconds", Help: "The timestamp of the last time the deployment function completed"}, []string{"deployment_index"}),
 			},
 			errorTotal: ErrorMetric{
-				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_error_total", Help: "Tracks how many times the deployment failed"}, []string{"deployment_index"}),
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vz_monitoring_operator_deployment_error_total", Help: "Tracks how many times the deployment failed"}, []string{"deployment_index"}),
 			},
 			index:         int64(0),
 			labelFunction: &DefaultLabelFunction,
@@ -240,16 +240,16 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 
 		NamesIngress: {
 			durationMetric: DurationMetric{
-				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vmo_ingress_duration_seconds", Help: "Tracks the duration of the ingress function in seconds"}),
+				metric: prometheus.NewSummary(prometheus.SummaryOpts{Name: "vz_monitoring_operator_ingress_duration_seconds", Help: "Tracks the duration of the ingress function in seconds"}),
 			},
 			callsTotal: CounterMetric{
-				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_ingress_total", Help: "Tracks how many times the ingress function is called. This metric corresponds to the number of ingress requests performed by the VMO"}),
+				metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_ingress_total", Help: "Tracks how many times the ingress function is called. This metric corresponds to the number of ingress requests performed by the VMO"}),
 			},
 			lastCallTimestamp: TimestampMetric{
-				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_ingress_last_timestamp_seconds", Help: "The timestamp of the last time the ingress function completed"}, []string{"ingress_index"}),
+				metric: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vz_monitoring_operator_ingress_last_timestamp_seconds", Help: "The timestamp of the last time the ingress function completed"}, []string{"ingress_index"}),
 			},
 			errorTotal: ErrorMetric{
-				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_ingress_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"ingress_index"}),
+				metric: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vz_monitoring_operator_ingress_error_total", Help: "Tracks how many times the syncHandlerStandardMode function encounters an error"}, []string{"ingress_index"}),
 			},
 			index:         int64(0),
 			labelFunction: &DefaultLabelFunction,
@@ -261,28 +261,28 @@ func initFunctionMetricsMap() map[metricName]*FunctionMetrics {
 func initCounterMetricMap() map[metricName]*CounterMetric {
 	return map[metricName]*CounterMetric{
 		NamesDeploymentUpdateCounter: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_deployment_update_total", Help: "Tracks how many times a deployment update is attempted"}),
 		},
 		NamesDeploymentDeleteCounter: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_deployment_delete_total", Help: "Tracks how many times the delete functionality is invoked"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_deployment_delete_total", Help: "Tracks how many times the delete functionality is invoked"}),
 		},
 		NamesIngressDeleted: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_ingress_delete_total", Help: "Tracks how many ingresses are deleted"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_ingress_delete_total", Help: "Tracks how many ingresses are deleted"}),
 		},
 		NamesConfigMap: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_configmap_total", Help: "Tracks how many times the configMap functionality is invoked"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_configmap_total", Help: "Tracks how many times the configMap functionality is invoked"}),
 		},
 		NamesServices: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_services_total", Help: "Tracks how many times the services functionality is invoked"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_services_total", Help: "Tracks how many times the services functionality is invoked"}),
 		},
 		NamesServicesCreated: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_services_created_total", Help: "Tracks how many services are created"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_services_created_total", Help: "Tracks how many services are created"}),
 		},
 		NamesRoleBindings: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_rolebindings_total", Help: "Tracks how many times the rolebindings functionality is invoked"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_rolebindings_total", Help: "Tracks how many times the rolebindings functionality is invoked"}),
 		},
 		NamesVMOUpdate: {
-			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vmo_updates_total", Help: "Tracks how many times the update functionality is invoked"}),
+			metric: prometheus.NewCounter(prometheus.CounterOpts{Name: "vz_monitoring_operator_updates_total", Help: "Tracks how many times the update functionality is invoked"}),
 		},
 	}
 }
@@ -291,7 +291,7 @@ func initCounterMetricMap() map[metricName]*CounterMetric {
 func initGaugeMetricMap() map[metricName]*GaugeMetric {
 	return map[metricName]*GaugeMetric{
 		NamesQueue: {
-			metric: prometheus.NewGauge(prometheus.GaugeOpts{Name: "vmo_work_queue_size", Help: "Tracks the size of the VMO work queue"}),
+			metric: prometheus.NewGauge(prometheus.GaugeOpts{Name: "vz_monitoring_operator_work_queue_size", Help: "Tracks the size of the VMO work queue"}),
 		},
 	}
 }
@@ -305,19 +305,19 @@ func initDurationMetricMap() map[metricName]*DurationMetric {
 func initTimestampMetricMap() map[metricName]*TimestampMetric {
 	return map[metricName]*TimestampMetric{
 		NamesConfigMap: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_configmap_last_successful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"configMap_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vz_monitoring_operator_configmap_last_successful_timestamp", Help: "The timestamp of the last time the configMap function completed successfully"}, []string{"configMap_index"}),
 			labelFunction: &configMapLabelFunction,
 		},
 		NamesServices: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_services_last_successful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"service_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vz_monitoring_operator_services_last_successful_timestamp", Help: "The timestamp of the last time the createService function completed successfully"}, []string{"service_index"}),
 			labelFunction: &servicesLabelFunction,
 		},
 		NamesRoleBindings: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_rolebindings_last_successful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"rolebindings_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vz_monitoring_operator_rolebindings_last_successful_timestamp", Help: "The timestamp of the last time the roleBindings function completed successfully"}, []string{"rolebindings_index"}),
 			labelFunction: &roleBindingLabelFunction,
 		},
 		NamesVMOUpdate: {
-			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vmo_update_last_successful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"update_index"}),
+			metric:        prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "vz_monitoring_operator_update_last_successful_timestamp", Help: "The timestamp of the last time the vmo update completed successfully"}, []string{"update_index"}),
 			labelFunction: &VMOUpdateLabelFunction,
 		},
 	}
@@ -327,11 +327,11 @@ func initTimestampMetricMap() map[metricName]*TimestampMetric {
 func initErrorMetricMap() map[metricName]*ErrorMetric {
 	return map[metricName]*ErrorMetric{
 		NamesDeploymentUpdateError: {
-			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"deployment_index"}),
+			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vz_monitoring_operator_deployment_update_error_total", Help: "Tracks how many times a deployment update fails"}, []string{"deployment_index"}),
 			labelFunction: &deploymentLabelFunction,
 		},
 		NamesDeploymentDeleteError: {
-			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vmo_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"deployment_index"}),
+			metric:        prometheus.NewCounterVec(prometheus.CounterOpts{Name: "vz_monitoring_operator_deployment_delete_error_counter", Help: "Tracks how many times the delete functionality failed"}, []string{"deployment_index"}),
 			labelFunction: &deploymentLabelFunction,
 		},
 	}
