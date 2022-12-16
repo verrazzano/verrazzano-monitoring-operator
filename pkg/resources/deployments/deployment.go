@@ -182,11 +182,17 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		// dashboard volume
 		volumes := []corev1.Volume{
 			{
-				Name: "dashboards-volume",
+				Name: "dashboards-provider-volume",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{Name: vmo.Spec.Grafana.DashboardsConfigMap},
 					},
+				},
+			},
+			{
+				Name: "dashboards-volume",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			},
 			{
@@ -200,10 +206,13 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		}
 		volumeMounts := []corev1.VolumeMount{
 			{
-				Name:      "dashboards-volume",
+				Name:      "dashboards-provider-volume",
 				MountPath: "/etc/grafana/provisioning/dashboards",
 			},
-
+			{
+				Name:      "dashboards-volume",
+				MountPath: "/etc/grafana/provisioning/dashboardjson",
+			},
 			{
 				Name:      "datasources-volume",
 				MountPath: "/etc/grafana/provisioning/datasources",
@@ -211,6 +220,25 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		}
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, volumes...)
+
+		// Setup the sidecar for the dashboard creator
+		for i, sidecar := range config.Grafana.Sidecars {
+			if sidecar.Disabled {
+				continue
+			}
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, resources.CreateSidecarContainer(sidecar))
+			deployment.Spec.Template.Spec.Containers[i+1].Env = append(deployment.Spec.Template.Spec.Containers[i+1].Env, []corev1.EnvVar{
+				// These values are also used in the Grafana Helm chart in Verrazzano
+				// This label allows us to select the correct dashboard ConfigMaps to be deployed in Grafana
+				{Name: "LABEL", Value: "grafana_dashboard"},
+				{Name: "LABEL_VALUE", Value: "1"},
+				{Name: "FOLDER", Value: "/etc/grafana/provisioning/dashboardjson"},
+			}...)
+			deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts, corev1.VolumeMount{
+				Name:      "dashboards-volume",
+				MountPath: "/etc/grafana/provisioning/dashboardjson",
+			})
+		}
 
 		// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
 		// initially owned by root/root.  Previous versions of the Grafana image were run as "root", and chown'd the mounted

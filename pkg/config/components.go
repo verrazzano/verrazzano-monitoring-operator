@@ -29,6 +29,16 @@ type ComponentDetails struct {
 	OidcProxy         *ComponentDetails
 	Optional          bool
 	Disabled          bool
+	Sidecars          []ComponentSidecar
+}
+
+// ComponentSidecar struct to capture details for sidecars for Component deployments
+type ComponentSidecar struct {
+	Name            string
+	EnvName         string
+	Disabled        bool
+	Image           string
+	ImagePullPolicy corev1.PullPolicy
 }
 
 // AllComponentDetails is array of all ComponentDetails
@@ -48,6 +58,13 @@ var Grafana = ComponentDetails{
 	ReadinessHTTPPath: "/api/health",
 	Privileged:        false,
 	OidcProxy:         &OidcProxy,
+	Sidecars: []ComponentSidecar{
+		{
+			Name:            "k8s-sidecar",
+			EnvName:         "K8S_SIDECAR_IMAGE",
+			ImagePullPolicy: constants.DefaultImagePullPolicy,
+		},
+	},
 }
 
 // Prometheus is the default Prometheus configuration
@@ -234,6 +251,18 @@ func InitComponentDetails() error {
 				// if no image is provided for an optional component then disable it
 				zap.S().Infof("The environment variable %s translated to an empty string for optional component %s.  Marking component disabled.", component.EnvName, component.Name)
 				component.Disabled = true
+			}
+		}
+		for i, sidecar := range component.Sidecars {
+			if len(component.EnvName) == 0 {
+				zap.S().Infof("The environment variable is missing for sidecar %s. Marking sidecar disabled.", sidecar.Name)
+				component.Sidecars[i].Disabled = true
+				continue
+			}
+			component.Sidecars[i].Image = os.Getenv(sidecar.EnvName)
+			if len(component.Sidecars[i].Image) == 0 {
+				zap.S().Infof("The environment variable %s translated to an empty string for sidecar %s. Marking sidecar disabled.", component.Sidecars[i].EnvName, sidecar.Name)
+				component.Sidecars[i].Disabled = true
 			}
 		}
 		if !oidcAuthEnabled {
