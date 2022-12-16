@@ -121,3 +121,36 @@ func TestCreateDefaultIndexPatterns(t *testing.T) {
 		})
 	}
 }
+
+// TestDefaultIndexPattern test defaultIndexPattern function to check whether given string is default index pattern or not
+// GIVEN a string
+// WHEN defaultIndexPattern is called
+// THEN true is returned if given string is a default index pattern, else false is returned.
+func TestDefaultIndexPattern(t *testing.T) {
+	type args struct {
+		indexPattern string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			"TestDefaultIndexPattern when given string is default index pattern",
+			args{constants.VZSystemIndexPattern},
+			true,
+		},
+		{
+			"TestDefaultIndexPattern when given string is default index pattern",
+			args{"pattern1"},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isDefaultIndexPattern(tt.args.indexPattern); got != tt.want {
+				t.Errorf("isDefaultIndexPattern() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

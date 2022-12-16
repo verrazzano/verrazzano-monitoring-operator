@@ -26,10 +26,9 @@ func (od *OSDashboardsClient) CreateDefaultIndexPatterns(log vzlog.VerrazzanoLog
 	if err != nil {
 		return err
 	}
-	var savedObjectPayload []SavedObjectType
+	var savedObjectPayloads []SavedObjectType
 	for _, indexPattern := range defaultIndexPatterns {
-		isPatternExist, ok := existingIndexPatterns[indexPattern]
-		if isPatternExist && ok {
+		if existingIndexPatterns[indexPattern] {
 			continue
 		}
 		savedObject := SavedObjectType{
@@ -38,10 +37,11 @@ func (od *OSDashboardsClient) CreateDefaultIndexPatterns(log vzlog.VerrazzanoLog
 				Title: indexPattern,
 			},
 		}
-		savedObjectPayload = append(savedObjectPayload, savedObject)
+		savedObjectPayloads = append(savedObjectPayloads, savedObject)
 	}
-	if len(savedObjectPayload) > 0 {
-		err = od.creatIndexPatterns(log, savedObjectPayload, openSearchDashboardsEndpoint)
+	if len(savedObjectPayloads) > 0 {
+		log.Infof("Creating default index patterns")
+		err = od.creatIndexPatterns(log, savedObjectPayloads, openSearchDashboardsEndpoint)
 		if err != nil {
 			return err
 		}
@@ -55,18 +55,17 @@ func (od *OSDashboardsClient) creatIndexPatterns(log vzlog.VerrazzanoLogger, sav
 	if err != nil {
 		return err
 	}
-	log.Infof("Creating default index patterns")
 	indexPatternURL := fmt.Sprintf("%s/api/saved_objects/_bulk_create", openSearchDashboardsEndpoint)
 	req, err := http.NewRequest("POST", indexPatternURL, strings.NewReader(string(savedObjectBytes)))
 	if err != nil {
-		log.Errorf("failed to create bulk request for default index patterns %s", err.Error())
+		log.Errorf("failed to create index patterns using bulk API %s", err.Error())
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("osd-xsrf", "true")
 	resp, err := od.DoHTTP(req)
 	if err != nil {
-		log.Errorf("failed to create bulk index patterns %s", err.Error())
+		log.Errorf("failed to create index patterns using bulk API %s", err.Error())
 		return fmt.Errorf("failed to post index patterns in OpenSearch dashboards: %v", err)
 	}
 	defer resp.Body.Close()
@@ -78,18 +77,25 @@ func (od *OSDashboardsClient) creatIndexPatterns(log vzlog.VerrazzanoLogger, sav
 
 // getDefaultIndexPatterns fetches the existing defaultIndexPatterns.
 func (od *OSDashboardsClient) getDefaultIndexPatterns(openSearchDashboardsEndpoint string, perPage int, searchQuery string) (map[string]bool, error) {
-	defaultIndexPattern := map[string]bool{}
+	defaultIndexPatternMap := map[string]bool{}
 	savedObjects, err := od.getPatterns(openSearchDashboardsEndpoint, perPage, searchQuery)
 	if err != nil {
-		return defaultIndexPattern, err
+		return defaultIndexPatternMap, err
 	}
 	for _, savedObject := range savedObjects {
-		if savedObject.Title == constants.VZSystemIndexPattern {
-			defaultIndexPattern[constants.VZSystemIndexPattern] = true
-		}
-		if savedObject.Title == constants.VZAppIndexPattern {
-			defaultIndexPattern[constants.VZAppIndexPattern] = true
+		if isDefaultIndexPattern(savedObject.Title) {
+			defaultIndexPatternMap[savedObject.Title] = true
 		}
 	}
-	return defaultIndexPattern, nil
+	return defaultIndexPatternMap, nil
+}
+
+// isDefaultIndexPattern checks whether given index pattern is default index pattern or not
+func isDefaultIndexPattern(indexPattern string) bool {
+	for _, defaultIndexPattern := range defaultIndexPatterns {
+		if defaultIndexPattern == indexPattern {
+			return true
+		}
+	}
+	return false
 }
