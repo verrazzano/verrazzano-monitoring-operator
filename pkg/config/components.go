@@ -254,14 +254,16 @@ func InitComponentDetails() error {
 			}
 		}
 		for i, sidecar := range component.Sidecars {
-			if len(component.EnvName) > 0 {
-				component.Sidecars[i].Image = os.Getenv(sidecar.EnvName)
-				if len(component.Sidecars[i].Image) == 0 {
-					zap.S().Infof("The environment variable %s translated to an empty string for sidecar %s.  Marking sidecar disabled.", component.Sidecars[i].EnvName, sidecar.Name)
-					component.Sidecars[i].Disabled = true
-				}
+			if len(component.EnvName) == 0 {
+				zap.S().Infof("The environment variable is missing for sidecar %s. Marking sidecar disabled.", sidecar.Name)
+				component.Sidecars[i].Disabled = true
+				continue
 			}
-
+			component.Sidecars[i].Image = os.Getenv(sidecar.EnvName)
+			if len(component.Sidecars[i].Image) == 0 {
+				zap.S().Infof("The environment variable %s translated to an empty string for sidecar %s. Marking sidecar disabled.", component.Sidecars[i].EnvName, sidecar.Name)
+				component.Sidecars[i].Disabled = true
+			}
 		}
 		if !oidcAuthEnabled {
 			component.OidcProxy = nil
