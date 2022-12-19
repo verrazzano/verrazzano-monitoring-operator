@@ -205,3 +205,12 @@ const ComponentOpenSearchValue = "opensearch"
 
 // NodeGroupLabel for specifying a node's group
 const NodeGroupLabel = "node-group"
+
+// VZSystemIndexPattern for Verrazzano System default index pattern
+const VZSystemIndexPattern = "verrazzano-system"
+
+// VZAppIndexPattern for Verrazzano app default index pattern
+const VZAppIndexPattern = "verrazzano-application*"
+
+// IndexPattern for index pattern type of Saved Object.
+const IndexPattern = "index-pattern"

@@ -5,13 +5,15 @@ package dashboards
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
-	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
 const fakeGetPatternOutput = `{
@@ -195,7 +197,7 @@ func TestGetPatterns(t *testing.T) {
 			Body:       io.NopCloser(strings.NewReader(fakeGetPatternOutput)),
 		}, nil
 	}
-	savedObjects, err := od.getPatterns(openSearchDashboardsEP, 100)
+	savedObjects, err := od.getPatterns(openSearchDashboardsEP, 100, "")
 	a.NoError(err, "Failed to get patterns from OpenSearch Dashboards")
 	a.Equal(2, len(savedObjects))
 	a.Contains(savedObjects, SavedObject{
