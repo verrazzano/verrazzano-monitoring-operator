@@ -66,12 +66,12 @@ func (od *OSDashboardsClient) creatIndexPatterns(log vzlog.VerrazzanoLogger, sav
 	req.Header.Add("osd-xsrf", "true")
 	resp, err := od.DoHTTP(req)
 	if err != nil {
-		log.Errorf("failed to create index patterns %v using bulk API %s", savedObjectList, err.Error())
+		log.Errorf("failed to create index patterns %s using bulk API %s", string(savedObjectBytes), err.Error())
 		return fmt.Errorf("failed to post index patterns in OpenSearch dashboards: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("post status code %d when creating index patterns", resp.StatusCode)
+		return fmt.Errorf("post status code %d when creating index patterns: %s", resp.StatusCode, string(savedObjectBytes))
 	}
 	return nil
 }
