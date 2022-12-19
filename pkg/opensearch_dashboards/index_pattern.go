@@ -15,6 +15,7 @@ import (
 
 var defaultIndexPatterns = [...]string{constants.VZSystemIndexPattern, constants.VZAppIndexPattern}
 
+// SavedObjectType specifies the OpenSearch SavedObject including index-patterns.
 type SavedObjectType struct {
 	Type       string `json:"type"`
 	Attributes `json:"attributes"`
@@ -58,14 +59,14 @@ func (od *OSDashboardsClient) creatIndexPatterns(log vzlog.VerrazzanoLogger, sav
 	indexPatternURL := fmt.Sprintf("%s/api/saved_objects/_bulk_create", openSearchDashboardsEndpoint)
 	req, err := http.NewRequest("POST", indexPatternURL, strings.NewReader(string(savedObjectBytes)))
 	if err != nil {
-		log.Errorf("failed to create index patterns using bulk API %s", err.Error())
+		log.Errorf("failed to create request for index patterns using bulk API %s", err.Error())
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("osd-xsrf", "true")
 	resp, err := od.DoHTTP(req)
 	if err != nil {
-		log.Errorf("failed to create index patterns using bulk API %s", err.Error())
+		log.Errorf("failed to create index patterns %v using bulk API %s", savedObjectList, err.Error())
 		return fmt.Errorf("failed to post index patterns in OpenSearch dashboards: %v", err)
 	}
 	defer resp.Body.Close()
