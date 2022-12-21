@@ -43,7 +43,7 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 	}
 	for _, savedObject := range savedObjects {
 		updatedPattern := constructUpdatedPattern(savedObject.Title)
-		if updatedPattern == "" || (savedObject.Title == updatedPattern) {
+		if updatedPattern == "" || isExistingIndexPattern(savedObjects, updatedPattern) {
 			continue
 		}
 		// Invoke update index pattern API
@@ -165,6 +165,16 @@ func isSystemIndexMatch(pattern string) bool {
 	for _, namespace := range config.SystemNamespaces() {
 		systemIndex, _ := regexp.MatchString(pattern, "verrazzano-namespace-"+namespace)
 		if systemIndex {
+			return true
+		}
+	}
+	return false
+}
+
+// isExistingIndexPattern to check whether the given pattern already exists in the existingPatterns or not
+func isExistingIndexPattern(existingIndexPatterns []SavedObject, pattern string) bool {
+	for _, existingPattern := range existingIndexPatterns {
+		if existingPattern.Title == pattern {
 			return true
 		}
 	}

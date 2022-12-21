@@ -273,3 +273,51 @@ func TestIsSystemIndexMatch(t *testing.T) {
 		})
 	}
 }
+
+// TestIsExistingIndexPattern tests isExistingIndexPattern function
+// GIVEN list of existing index patterns
+// WHEN isExistingIndexPattern is called with a pattern
+// THEN true is returned if pattern exists in the existing patterns else false is returned.
+func TestIsExistingIndexPattern(t *testing.T) {
+	type args struct {
+		existingPatterns []SavedObject
+		pattern          string
+	}
+	existingPatterns := []SavedObject{
+		{
+			ID: "ID1",
+			Attributes: Attributes{
+				Title: "test1",
+			},
+		},
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			"TestIsExistingIndexPattern when given index pattern exists",
+			args{
+				existingPatterns: existingPatterns,
+				pattern:          "test1",
+			},
+			true,
+		},
+		{
+			"TestIsExistingIndexPattern when given index pattern doesn't exist",
+			args{
+				existingPatterns: existingPatterns,
+				pattern:          "test2",
+			},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isExistingIndexPattern(tt.args.existingPatterns, tt.args.pattern); got != tt.want {
+				t.Errorf("isExistingIndexPattern() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
