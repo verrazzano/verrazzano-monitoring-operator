@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -274,16 +275,15 @@ func TestIsSystemIndexMatch(t *testing.T) {
 	}
 }
 
-// TestIsExistingIndexPattern tests isExistingIndexPattern function
-// GIVEN list of existing index patterns
-// WHEN isExistingIndexPattern is called with a pattern
-// THEN true is returned if pattern exists in the existing patterns else false is returned.
-func TestIsExistingIndexPattern(t *testing.T) {
+// TestGetSavedObjectMap tests getSavedObjectMap function
+// GIVEN list of savedObjects
+// WHEN getSavedObjectMap is called
+// THEN Map is returned having SavedObject.Title as key and SavedObject as value.
+func TestGetSavedObjectMap(t *testing.T) {
 	type args struct {
-		existingPatterns []SavedObject
-		pattern          string
+		savedObjects []SavedObject
 	}
-	existingPatterns := []SavedObject{
+	savedObjectList := []SavedObject{
 		{
 			ID: "ID1",
 			Attributes: Attributes{
@@ -294,29 +294,27 @@ func TestIsExistingIndexPattern(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want bool
+		want map[string]*SavedObject
 	}{
 		{
-			"TestIsExistingIndexPattern when given index pattern exists",
+			"TestGetSavedObjectMap when empty list is passed",
 			args{
-				existingPatterns: existingPatterns,
-				pattern:          "test1",
+				savedObjects: []SavedObject{},
 			},
-			true,
+			map[string]*SavedObject{},
 		},
 		{
-			"TestIsExistingIndexPattern when given index pattern doesn't exist",
+			"TestGetSavedObjectMap when saved object is passed in the list",
 			args{
-				existingPatterns: existingPatterns,
-				pattern:          "test2",
+				savedObjects: savedObjectList,
 			},
-			false,
+			map[string]*SavedObject{savedObjectList[0].Title: &savedObjectList[0]},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isExistingIndexPattern(tt.args.existingPatterns, tt.args.pattern); got != tt.want {
-				t.Errorf("isExistingIndexPattern() = %v, want %v", got, tt.want)
+			if got := getSavedObjectMap(tt.args.savedObjects); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getSavedObjectMap() = %v, want %v", got, tt.want)
 			}
 		})
 	}

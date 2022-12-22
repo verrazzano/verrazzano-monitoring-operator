@@ -41,9 +41,10 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 	if err != nil {
 		return err
 	}
+	existingSavedObjectMap :=  getSavedObjectMap(savedObjects)
 	for _, savedObject := range savedObjects {
 		updatedPattern := constructUpdatedPattern(savedObject.Title)
-		if updatedPattern == "" || isExistingIndexPattern(savedObjects, updatedPattern) {
+		if updatedPattern == "" || nil != existingSavedObjectMap[updatedPattern]{
 			continue
 		}
 		// Invoke update index pattern API
@@ -53,6 +54,15 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 		}
 	}
 	return nil
+}
+
+// getSavedObjectMap converts list of SavedObject into Map having SavedObject.Title as key and SavedObject as value.
+func getSavedObjectMap(savedObjects []SavedObject) map[string] *SavedObject {
+	savedObjectMap := map[string]*SavedObject{}
+	for i, savedObject := range savedObjects {
+		savedObjectMap[savedObject.Title] = &savedObjects[i]
+	}
+	return savedObjectMap
 }
 
 func (od *OSDashboardsClient) getPatterns(dashboardsEndPoint string, perPage int, searchQuery string) ([]SavedObject, error) {
@@ -165,16 +175,6 @@ func isSystemIndexMatch(pattern string) bool {
 	for _, namespace := range config.SystemNamespaces() {
 		systemIndex, _ := regexp.MatchString(pattern, "verrazzano-namespace-"+namespace)
 		if systemIndex {
-			return true
-		}
-	}
-	return false
-}
-
-// isExistingIndexPattern to check whether the given pattern already exists in the existingPatterns or not
-func isExistingIndexPattern(existingIndexPatterns []SavedObject, pattern string) bool {
-	for _, existingPattern := range existingIndexPatterns {
-		if existingPattern.Title == pattern {
 			return true
 		}
 	}
