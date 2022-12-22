@@ -41,10 +41,10 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 	if err != nil {
 		return err
 	}
-	existingSavedObjectMap :=  getSavedObjectMap(savedObjects)
+	existingSavedObjectMap := getSavedObjectMap(savedObjects)
 	for _, savedObject := range savedObjects {
 		updatedPattern := constructUpdatedPattern(savedObject.Title)
-		if updatedPattern == "" || nil != existingSavedObjectMap[updatedPattern]{
+		if updatedPattern == "" || nil != existingSavedObjectMap[updatedPattern] {
 			continue
 		}
 		// Invoke update index pattern API
@@ -57,7 +57,7 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 }
 
 // getSavedObjectMap converts list of SavedObject into Map having SavedObject.Title as key and SavedObject as value.
-func getSavedObjectMap(savedObjects []SavedObject) map[string] *SavedObject {
+func getSavedObjectMap(savedObjects []SavedObject) map[string]*SavedObject {
 	savedObjectMap := map[string]*SavedObject{}
 	for i, savedObject := range savedObjects {
 		savedObjectMap[savedObject.Title] = &savedObjects[i]
