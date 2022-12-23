@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -270,6 +271,51 @@ func TestIsSystemIndexMatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.pattern, func(t *testing.T) {
 			assert.Equal(t, tt.isMatch, isSystemIndexMatch(tt.pattern))
+		})
+	}
+}
+
+// TestGetSavedObjectMap tests getSavedObjectMap function
+// GIVEN list of savedObjects
+// WHEN getSavedObjectMap is called
+// THEN Map is returned having SavedObject.Title as key and SavedObject as value.
+func TestGetSavedObjectMap(t *testing.T) {
+	type args struct {
+		savedObjects []SavedObject
+	}
+	savedObjectList := []SavedObject{
+		{
+			ID: "ID1",
+			Attributes: Attributes{
+				Title: "test1",
+			},
+		},
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]*SavedObject
+	}{
+		{
+			"TestGetSavedObjectMap when empty list is passed",
+			args{
+				savedObjects: []SavedObject{},
+			},
+			map[string]*SavedObject{},
+		},
+		{
+			"TestGetSavedObjectMap when saved object is passed in the list",
+			args{
+				savedObjects: savedObjectList,
+			},
+			map[string]*SavedObject{savedObjectList[0].Title: &savedObjectList[0]},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getSavedObjectMap(tt.args.savedObjects); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getSavedObjectMap() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
