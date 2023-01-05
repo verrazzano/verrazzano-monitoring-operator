@@ -305,6 +305,23 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
+		// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
+		// initially owned by root/root. The current OSD image creates a group
+		// uid=1000(opensearch-dashboards) gid=1000(opensearch-dashboards) groups=1000(opensearch-dashboards)
+		// with permissons -rw-rw-r--
+		podSecurityContext := corev1.PodSecurityContext{
+			FSGroup:        resources.New64Val(1000),
+			RunAsNonRoot:   resources.NewBool(false),
+			SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+			RunAsGroup:     resources.New64Val(1000),
+		}
+		securityContext := corev1.SecurityContext{
+			Privileged: resources.NewBool(false),
+			//ReadOnlyRootFilesystem:   resources.NewBool(true),
+			AllowPrivilegeEscalation: resources.NewBool(false),
+		}
+		deployment.Spec.Template.Spec.SecurityContext = &podSecurityContext
+		deployment.Spec.Template.Spec.Containers[1].SecurityContext = &securityContext
 		// add the required istio annotations to allow inter-es component communication
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
