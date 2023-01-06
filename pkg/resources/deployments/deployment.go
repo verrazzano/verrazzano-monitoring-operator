@@ -310,14 +310,14 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		// uid=1000(opensearch-dashboards) gid=1000(opensearch-dashboards) groups=1000(opensearch-dashboards)
 		// with permissons -rw-rw-r--
 		podSecurityContext := corev1.PodSecurityContext{
+			RunAsUser:      resources.New64Val(1000),
 			FSGroup:        resources.New64Val(1000),
 			RunAsNonRoot:   resources.NewBool(false),
 			SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 			RunAsGroup:     resources.New64Val(1000),
 		}
 		securityContext := corev1.SecurityContext{
-			Privileged: resources.NewBool(false),
-			//ReadOnlyRootFilesystem:   resources.NewBool(true),
+			Privileged:               resources.NewBool(false),
 			AllowPrivilegeEscalation: resources.NewBool(false),
 		}
 		deployment.Spec.Template.Spec.Containers[0].SecurityContext = &securityContext
