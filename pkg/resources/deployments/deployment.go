@@ -320,8 +320,8 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			//ReadOnlyRootFilesystem:   resources.NewBool(true),
 			AllowPrivilegeEscalation: resources.NewBool(false),
 		}
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = &securityContext
 		deployment.Spec.Template.Spec.SecurityContext = &podSecurityContext
-		deployment.Spec.Template.Spec.Containers[1].SecurityContext = &securityContext
 		// add the required istio annotations to allow inter-es component communication
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
