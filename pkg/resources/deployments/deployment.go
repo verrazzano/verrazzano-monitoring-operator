@@ -319,6 +319,9 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		securityContext := corev1.SecurityContext{
 			Privileged:               resources.NewBool(false),
 			AllowPrivilegeEscalation: resources.NewBool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
 		}
 		deployment.Spec.Template.Spec.Containers[0].SecurityContext = &securityContext
 		deployment.Spec.Template.Spec.SecurityContext = &podSecurityContext
