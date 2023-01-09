@@ -42,7 +42,7 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 		return err
 	}
 	existingSavedObjectMap := getSavedObjectMap(savedObjects)
-	for _, savedObject := range savedObjects {
+	for i, savedObject := range savedObjects {
 		updatedPattern := constructUpdatedPattern(savedObject.Title)
 		if updatedPattern == "" || savedObject.Title == updatedPattern {
 			continue
@@ -61,7 +61,7 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 			return fmt.Errorf("failed to updated index pattern %s: %v", savedObject.Title, err)
 		}
 		savedObject.Title = updatedPattern
-		existingSavedObjectMap[updatedPattern] = &savedObject
+		existingSavedObjectMap[updatedPattern] = &savedObjects[i]
 	}
 	return nil
 }
