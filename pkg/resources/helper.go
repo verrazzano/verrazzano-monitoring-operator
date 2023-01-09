@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
@@ -397,6 +397,12 @@ func NewVal(value int32) *int32 {
 
 // New64Val return a pointer to an int64 given an int64 value
 func New64Val(value int64) *int64 {
+	var val = value
+	return &val
+}
+
+// NewBool return a pointer to a bool variable given bool value
+func NewBool(value bool) *bool {
 	var val = value
 	return &val
 }

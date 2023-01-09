@@ -214,3 +214,6 @@ const VZAppIndexPattern = "verrazzano-application*"
 
 // IndexPattern for index pattern type of Saved Object.
 const IndexPattern = "index-pattern"
+
+// PodUser used in security context
+const PodUser = 1000

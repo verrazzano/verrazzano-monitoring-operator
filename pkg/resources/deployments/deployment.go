@@ -305,6 +305,12 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
 
+		// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
+		// initially owned by root/root. The current OSD image creates a group
+		// uid=1000(opensearch-dashboards) gid=1000(opensearch-dashboards) groups=1000(opensearch-dashboards)
+		// with permissons -rw-rw-r--
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = getSecurityContext()
+		deployment.Spec.Template.Spec.SecurityContext = getPodSecurityContext(constants.PodUser)
 		// add the required istio annotations to allow inter-es component communication
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
@@ -403,4 +409,27 @@ func getAvailabilityDomainForPvcIndex(vmoStorage *vmcontrollerv1.Storage, pvcToA
 		return ad
 	}
 	return ""
+}
+
+// Helper function which returns object of security context
+func getSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		Privileged:               resources.NewBool(false),
+		AllowPrivilegeEscalation: resources.NewBool(false),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+}
+
+// Helper function which returns object of pod security context
+// take PodUser as argument to configure user.
+func getPodSecurityContext(PodUser int64) *corev1.PodSecurityContext {
+	return &corev1.PodSecurityContext{
+		RunAsUser:      &PodUser,
+		FSGroup:        &PodUser,
+		RunAsNonRoot:   resources.NewBool(false),
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+		RunAsGroup:     &PodUser,
+	}
 }
