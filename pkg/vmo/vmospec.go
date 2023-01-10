@@ -70,9 +70,9 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 
 	// Default roles for VMO components
-	initNode(&vmo.Spec.Elasticsearch.MasterNode, vmcontrollerv1.MasterRole)
-	initNode(&vmo.Spec.Elasticsearch.IngestNode, vmcontrollerv1.IngestRole)
-	initNode(&vmo.Spec.Elasticsearch.DataNode, vmcontrollerv1.DataRole)
+	initNode(&vmo.Spec.Opensearch.MasterNode, vmcontrollerv1.MasterRole)
+	initNode(&vmo.Spec.Opensearch.IngestNode, vmcontrollerv1.IngestRole)
+	initNode(&vmo.Spec.Opensearch.DataNode, vmcontrollerv1.DataRole)
 
 	// Setup default storage elements
 	for _, component := range config.StorageEnableComponents {

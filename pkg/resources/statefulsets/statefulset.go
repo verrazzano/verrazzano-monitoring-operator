@@ -27,7 +27,7 @@ func New(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	var statefulSets []*appsv1.StatefulSet
 
 	// OpenSearch MasterNodes
-	if vmo.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Opensearch.Enabled {
 		statefulSets = append(statefulSets, createOpenSearchStatefulSets(log, vmo, storageClass, initialMasterNodes)...)
 	}
 	return statefulSets, nil
