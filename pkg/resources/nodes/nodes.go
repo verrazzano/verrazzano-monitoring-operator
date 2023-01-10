@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package nodes
@@ -33,17 +33,17 @@ var (
 
 // MasterNodes returns the list of master role containing nodes in the VMI spec. These nodes will be created as statefulsets.
 func MasterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.MasterNode}, filterNodes(vmo, masterNodeMatcher)...)
+	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Opensearch.MasterNode}, filterNodes(vmo, masterNodeMatcher)...)
 }
 
 // DataNodes returns the list of data nodes (that are not masters) in the VMI spec.
 func DataNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.DataNode}, filterNodes(vmo, dataNodeMatcher)...)
+	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Opensearch.DataNode}, filterNodes(vmo, dataNodeMatcher)...)
 }
 
 // IngestNodes returns the list of ingest nodes in the VMI spec. These nodes will have no other role but ingest.
 func IngestNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Elasticsearch.IngestNode}, filterNodes(vmo, ingestNodeMatcher)...)
+	return append([]vmcontrollerv1.ElasticsearchNode{vmo.Spec.Opensearch.IngestNode}, filterNodes(vmo, ingestNodeMatcher)...)
 }
 
 // GetRolesString turns a nodes role list into a role string
@@ -111,12 +111,12 @@ func InitialMasterNodes(vmoName string, masterNodes []vmcontrollerv1.Elasticsear
 
 // AllNodes returns a list of all nodes that need to be created
 func AllNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []vmcontrollerv1.ElasticsearchNode {
-	return append(vmo.Spec.Elasticsearch.Nodes, vmo.Spec.Elasticsearch.MasterNode, vmo.Spec.Elasticsearch.DataNode, vmo.Spec.Elasticsearch.IngestNode)
+	return append(vmo.Spec.Opensearch.Nodes, vmo.Spec.Opensearch.MasterNode, vmo.Spec.Opensearch.DataNode, vmo.Spec.Opensearch.IngestNode)
 }
 
 func filterNodes(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, matcher func(node vmcontrollerv1.ElasticsearchNode) bool) []vmcontrollerv1.ElasticsearchNode {
 	var nodes []vmcontrollerv1.ElasticsearchNode
-	for _, node := range vmo.Spec.Elasticsearch.Nodes {
+	for _, node := range vmo.Spec.Opensearch.Nodes {
 		if matcher(node) {
 			nodes = append(nodes, node)
 		}

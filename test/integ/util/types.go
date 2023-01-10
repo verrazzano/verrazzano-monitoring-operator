@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package util
@@ -92,7 +92,7 @@ func NewVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInst
 				Enabled:  true,
 				Replicas: 1,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
 					// Hack for tests
@@ -131,7 +131,7 @@ func NewGrafanaOnlyVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMon
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: false,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: false,
 			},
 		},

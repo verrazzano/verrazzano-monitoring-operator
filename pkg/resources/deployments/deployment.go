@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package deployments
@@ -40,7 +40,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	var deployments []*appsv1.Deployment
 	var err error
 
-	if vmo.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Opensearch.Enabled {
 		basic := ElasticsearchBasic{}
 		ingestDeployments := basic.createElasticsearchIngestDeploymentElements(vmo)
 		dataDeployments := basic.createElasticsearchDataDeploymentElements(vmo, pvcToAdMap)

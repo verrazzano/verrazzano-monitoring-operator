@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch
@@ -290,7 +290,7 @@ func createReindexPayload(source, dest, retentionSeconds string) *ReindexPayload
 }
 
 func getRetentionAgeInSeconds(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, indexName string) (string, error) {
-	for _, policy := range vmi.Spec.Elasticsearch.Policies {
+	for _, policy := range vmi.Spec.Opensearch.Policies {
 		regexpString := resources.ConvertToRegexp(policy.IndexPattern)
 		matched, _ := regexp.MatchString(regexpString, indexName)
 		if matched {

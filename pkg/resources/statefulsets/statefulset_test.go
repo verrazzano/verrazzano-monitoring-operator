@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package statefulsets
@@ -52,7 +52,7 @@ func TestVMOEmptyStatefulSetSize(t *testing.T) {
 func TestVMODisabledSpecs(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: false,
 			},
 		},
@@ -104,7 +104,7 @@ func runTestVMO(t *testing.T, isDevProfileTest bool) {
 			Name: "system",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
 					Name:     "es-master",
@@ -365,7 +365,7 @@ func TestCreateMultiMasterWithStorage(t *testing.T) {
 			Name: "os",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Nodes: []vmcontrollerv1.ElasticsearchNode{
 					{

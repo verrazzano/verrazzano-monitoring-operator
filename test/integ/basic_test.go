@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package integ
@@ -123,7 +123,7 @@ func TestBasic2VMOWithDataVolumes(t *testing.T) {
 
 	// Create VMO
 	vmo := testutil.NewVMO(f.RunID+"-vmo-data", secretName)
-	vmo.Spec.Elasticsearch.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
+	vmo.Spec.Opensearch.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.Grafana.Storage = vmcontrollerv1.Storage{Size: "50Gi"}
 	vmo.Spec.API.Replicas = 2
 	if f.Ingress {
@@ -416,10 +416,10 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.API.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name:              vmo.Spec.Kibana.Replicas,
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Elasticsearch.IngestNode.Replicas,
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchMaster.Name: vmo.Spec.Elasticsearch.MasterNode.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Opensearch.IngestNode.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchMaster.Name: vmo.Spec.Opensearch.MasterNode.Replicas,
 	}
-	for i := 0; i < int(vmo.Spec.Elasticsearch.DataNode.Replicas); i++ {
+	for i := 0; i < int(vmo.Spec.Opensearch.DataNode.Replicas); i++ {
 		deploymentNamesToReplicas[constants.VMOServiceNamePrefix+vmo.Name+"-"+config.ElasticsearchData.Name+"-"+strconv.Itoa(i)] = 1
 	}
 
@@ -847,7 +847,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	var err error
 	var headers = map[string]string{}
 
-	if !vmo.Spec.Elasticsearch.Enabled {
+	if !vmo.Spec.Opensearch.Enabled {
 		return
 	}
 
@@ -872,7 +872,7 @@ func verifyElasticsearch(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	fmt.Println("  ==> Service endpoint is available")
 
 	// Verify expected cluster size
-	expectedClusterSize := vmo.Spec.Elasticsearch.MasterNode.Replicas + vmo.Spec.Elasticsearch.IngestNode.Replicas + vmo.Spec.Elasticsearch.DataNode.Replicas
+	expectedClusterSize := vmo.Spec.Opensearch.MasterNode.Replicas + vmo.Spec.Opensearch.IngestNode.Replicas + vmo.Spec.Opensearch.DataNode.Replicas
 	fmt.Printf("  ==> Verifying Elasticsearch cluster size is as expected (%d)\n", expectedClusterSize)
 	err = waitForKeyWithValueResponse(host, f.ExternalIP, esPort, "/_cluster/stats", "successful", strconv.Itoa(int(expectedClusterSize)))
 	if err != nil {

@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package pvcs
@@ -18,7 +18,7 @@ import (
 func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, storageClassName string) ([]*corev1.PersistentVolumeClaim, error) {
 	var pvcList []*corev1.PersistentVolumeClaim
 
-	if vmo.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Opensearch.Enabled {
 		for _, dataNode := range nodes.DataNodes(vmo) {
 			if dataNode.Storage != nil && dataNode.Storage.Size != "" {
 				pvcs, err := createPvcElements(vmo, dataNode.Storage, config.ElasticsearchData, storageClassName)

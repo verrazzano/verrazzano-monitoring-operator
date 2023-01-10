@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package services
@@ -22,7 +22,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, useNodeRoleSelectors 
 		service := createServiceElement(vmo, config.Grafana)
 		services = append(services, service)
 	}
-	if vmo.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Opensearch.Enabled {
 		services = append(services, createOpenSearchServiceElements(vmo, useNodeRoleSelectors)...)
 	}
 	if vmo.Spec.Kibana.Enabled {
