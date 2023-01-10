@@ -559,7 +559,7 @@ func (in *VerrazzanoMonitoringInstanceSpec) DeepCopyInto(out *VerrazzanoMonitori
 	in.Opensearch.DeepCopyInto(&out.Opensearch)
 	in.Kibana.DeepCopyInto(&out.Kibana)
 	out.API = in.API
-	if in.NatGatewayIPs != nil {g
+	if in.NatGatewayIPs != nil {
 		in, out := &in.NatGatewayIPs, &out.NatGatewayIPs
 		*out = make([]string, len(*in))
 		copy(*out, *in)
