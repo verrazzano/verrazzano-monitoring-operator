@@ -64,7 +64,7 @@ type (
 		AlertManager AlertManager `json:"alertmanager"`
 
 		// Elasticsearch details
-		Opensearch Opensearch `json:"elasticsearch"`
+		Opensearch Opensearch `json:"opensearch"`
 
 		// Kibana details
 		Kibana Kibana `json:"kibana"`

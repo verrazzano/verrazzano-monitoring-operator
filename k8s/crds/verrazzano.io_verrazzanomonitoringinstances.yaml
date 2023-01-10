@@ -99,7 +99,133 @@ spec:
                 type: boolean
               contactemail:
                 type: string
-              elasticsearch:
+              grafana:
+                description: Grafana details
+                properties:
+                  dashboardsConfigMap:
+                    type: string
+                  database:
+                    description: Database details
+                    properties:
+                      host:
+                        type: string
+                      name:
+                        type: string
+                      passwordSecret:
+                        type: string
+                    type: object
+                  datasourcesConfigMap:
+                    type: string
+                  enabled:
+                    type: boolean
+                  replicas:
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources details
+                    properties:
+                      limitCPU:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      limitMemory:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      maxSizeDisk:
+                        description: These fields are not used anywhere
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      minSizeDisk:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      requestCPU:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      requestMemory:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                    type: object
+                  storage:
+                    description: Storage details
+                    properties:
+                      availabilityDomain:
+                        type: string
+                      pvcNames:
+                        items:
+                          type: string
+                        type: array
+                      size:
+                        type: string
+                    type: object
+                required:
+                - enabled
+                type: object
+              ingressTargetDNSName:
+                description: Will use this as the target in ingress annotations, use
+                  this when using OCI LB and external-dns so that we point to the
+                  svc CNAME created
+                type: string
+              kibana:
+                description: Kibana details
+                properties:
+                  enabled:
+                    type: boolean
+                  plugins:
+                    description: OpenSearchDashboardsPlugins is an alias of OpenSearchPlugins
+                      as both have the same properties. Enable to add 3rd Party /
+                      Custom plugins not offered in the default OpenSearch-Dashboards
+                      image
+                    properties:
+                      enabled:
+                        description: To enable or disable the non-bundled plugins
+                          installation.
+                        type: boolean
+                      installList:
+                        description: InstallList could be the list of plugin names,
+                          URLs to the plugin zip file or Maven coordinates.
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - enabled
+                    type: object
+                  replicas:
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources details
+                    properties:
+                      limitCPU:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      limitMemory:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      maxSizeDisk:
+                        description: These fields are not used anywhere
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      minSizeDisk:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      requestCPU:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      requestMemory:
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                    type: object
+                required:
+                - enabled
+                type: object
+              lock:
+                description: If lock, controller will not sync/process the VerrazzanoMonitoringInstance
+                  env
+                type: boolean
+              natGatewayIPs:
+                items:
+                  type: string
+                type: array
+              opensearch:
                 description: Elasticsearch details
                 properties:
                   dataNode:
@@ -386,132 +512,6 @@ spec:
                 required:
                 - enabled
                 type: object
-              grafana:
-                description: Grafana details
-                properties:
-                  dashboardsConfigMap:
-                    type: string
-                  database:
-                    description: Database details
-                    properties:
-                      host:
-                        type: string
-                      name:
-                        type: string
-                      passwordSecret:
-                        type: string
-                    type: object
-                  datasourcesConfigMap:
-                    type: string
-                  enabled:
-                    type: boolean
-                  replicas:
-                    format: int32
-                    type: integer
-                  resources:
-                    description: Resources details
-                    properties:
-                      limitCPU:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      limitMemory:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      maxSizeDisk:
-                        description: These fields are not used anywhere
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      minSizeDisk:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      requestCPU:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      requestMemory:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                    type: object
-                  storage:
-                    description: Storage details
-                    properties:
-                      availabilityDomain:
-                        type: string
-                      pvcNames:
-                        items:
-                          type: string
-                        type: array
-                      size:
-                        type: string
-                    type: object
-                required:
-                - enabled
-                type: object
-              ingressTargetDNSName:
-                description: Will use this as the target in ingress annotations, use
-                  this when using OCI LB and external-dns so that we point to the
-                  svc CNAME created
-                type: string
-              kibana:
-                description: Kibana details
-                properties:
-                  enabled:
-                    type: boolean
-                  plugins:
-                    description: OpenSearchDashboardsPlugins is an alias of OpenSearchPlugins
-                      as both have the same properties. Enable to add 3rd Party /
-                      Custom plugins not offered in the default OpenSearch-Dashboards
-                      image
-                    properties:
-                      enabled:
-                        description: To enable or disable the non-bundled plugins
-                          installation.
-                        type: boolean
-                      installList:
-                        description: InstallList could be the list of plugin names,
-                          URLs to the plugin zip file or Maven coordinates.
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - enabled
-                    type: object
-                  replicas:
-                    format: int32
-                    type: integer
-                  resources:
-                    description: Resources details
-                    properties:
-                      limitCPU:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      limitMemory:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      maxSizeDisk:
-                        description: These fields are not used anywhere
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      minSizeDisk:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      requestCPU:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                      requestMemory:
-                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                        type: string
-                    type: object
-                required:
-                - enabled
-                type: object
-              lock:
-                description: If lock, controller will not sync/process the VerrazzanoMonitoringInstance
-                  env
-                type: boolean
-              natGatewayIPs:
-                items:
-                  type: string
-                type: array
               prometheus:
                 description: Prometheus details
                 properties:
@@ -595,11 +595,11 @@ spec:
             - alertmanager
             - autoSecret
             - cascadingDelete
-            - elasticsearch
             - grafana
             - ingressTargetDNSName
             - kibana
             - lock
+            - opensearch
             - prometheus
             - secretsName
             - serviceType

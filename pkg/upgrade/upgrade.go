@@ -73,7 +73,7 @@ func (m *Monitor) run(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.Verrazzano
 	m.ch = ch
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
-		if !vmi.Spec.Elasticsearch.Enabled {
+		if !vmi.Spec.Opensearch.Enabled {
 			ch <- nil
 			return
 		}
