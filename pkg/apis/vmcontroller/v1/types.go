@@ -64,7 +64,7 @@ type (
 		AlertManager AlertManager `json:"alertmanager"`
 
 		// Elasticsearch details
-		Elasticsearch Elasticsearch `json:"elasticsearch"`
+		Opensearch Opensearch `json:"elasticsearch"`
 
 		// Kibana details
 		Kibana Kibana `json:"kibana"`
@@ -125,7 +125,7 @@ type (
 	}
 
 	// Elasticsearch details
-	Elasticsearch struct {
+	Opensearch struct {
 		Enabled    bool                    `json:"enabled" yaml:"enabled"`
 		Storage    Storage                 `json:"storage,omitempty"`
 		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
