@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package services
@@ -24,7 +24,7 @@ func TestOpenSearchServices1(t *testing.T) {
 			Name: "myVMO",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 5},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 4},
 				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 3},
@@ -78,7 +78,7 @@ func createDevProfileOS() *vmcontrollerv1.VerrazzanoMonitoringInstance {
 			Name: "myDevVMO",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{Size: ""},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{

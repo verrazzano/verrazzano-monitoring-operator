@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Oracle and/or its affiliates.
+// Copyright (c) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch
@@ -228,7 +228,7 @@ func TestReindexAndDeleteIndices(t *testing.T) {
 		},
 	}
 	vmi := createISMVMI("1d", true)
-	vmi.Spec.Elasticsearch.Policies = []vmcontrollerv1.IndexManagementPolicy{
+	vmi.Spec.Opensearch.Policies = []vmcontrollerv1.IndexManagementPolicy{
 		*createTestPolicy("1d", "1d", "verrazzano-*", "1d", 1),
 	}
 	for _, tt := range tests {

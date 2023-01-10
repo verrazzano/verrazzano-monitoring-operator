@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package resources
@@ -162,7 +162,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 			"TestGetOpenSearchPluginList when plugins are provided in VMI CRD",
 			&vmov1.VerrazzanoMonitoringInstance{
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmov1.Elasticsearch{
+					Opensearch: vmov1.Opensearch{
 						Enabled: true,
 						Plugins: vmov1.OpenSearchPlugins{
 							InstallList: testPlugins,
@@ -177,7 +177,7 @@ func TestGetOpenSearchPluginList(t *testing.T) {
 			"TestGetOpenSearchPluginList when plugins are not provided in VMI CRD",
 			&vmov1.VerrazzanoMonitoringInstance{
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmov1.Elasticsearch{
+					Opensearch: vmov1.Opensearch{
 						Enabled: true,
 						Plugins: vmov1.OpenSearchPlugins{
 							Enabled: false,
