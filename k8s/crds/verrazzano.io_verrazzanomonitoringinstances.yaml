@@ -226,7 +226,7 @@ spec:
                   type: string
                 type: array
               opensearch:
-                description: Opensearch details
+                description: Elasticsearch details
                 properties:
                   dataNode:
                     description: ElasticsearchNode Type details

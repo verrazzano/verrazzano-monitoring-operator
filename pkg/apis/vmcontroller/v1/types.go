@@ -63,7 +63,7 @@ type (
 		// Prometheus details
 		AlertManager AlertManager `json:"alertmanager"`
 
-		// Opensearch details
+		// Elasticsearch details
 		Opensearch Opensearch `json:"opensearch"`
 
 		// Kibana details
@@ -124,7 +124,7 @@ type (
 		Replicas          int32     `json:"replicas,omitempty"`
 	}
 
-	// Opensearch details
+	// Elasticsearch details
 	Opensearch struct {
 		Enabled    bool                    `json:"enabled" yaml:"enabled"`
 		Storage    Storage                 `json:"storage,omitempty"`
