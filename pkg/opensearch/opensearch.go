@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch
@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/labels"
+	appslistersv1 "k8s.io/client-go/listers/apps/v1"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
-	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/labels"
-	appslistersv1 "k8s.io/client-go/listers/apps/v1"
 )
 
 type (
@@ -92,6 +93,29 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 		}
 
 		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Elasticsearch.Policies)
+	}()
+
+	return ch
+}
+
+// SyncDefaultISMPolicy set up the default ISM Policies.
+// The returned channel should be read for exactly one response, which tells whether default ISM policies are synced.
+func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
+	ch := make(chan error)
+	go func() {
+		if !vmi.Spec.Elasticsearch.Enabled || vmi.Spec.Elasticsearch.DisableDefaultPolicy {
+			ch <- nil
+			return
+		}
+
+		if !o.IsOpenSearchReady(vmi) {
+			ch <- nil
+			return
+		}
+
+		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
+		_, err := o.createOrUpdateDefaultISMPolicy(openSearchEndpoint)
+		ch <- err
 	}()
 
 	return ch

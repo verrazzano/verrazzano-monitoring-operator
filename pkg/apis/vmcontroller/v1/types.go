@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package v1
@@ -134,6 +134,7 @@ type (
 		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
 		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
 		Plugins    OpenSearchPlugins       `json:"plugins,omitempty"`
+		DisableDefaultPolicy bool           `json:"disableDefaultPolicy,omitempty"`
 	}
 
 	// ElasticsearchNode Type details

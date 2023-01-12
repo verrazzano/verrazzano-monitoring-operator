@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023 Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch
@@ -7,10 +7,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
+
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
 type (
@@ -64,6 +66,12 @@ const (
 	defaultRolloverIndexAge = "1d"
 	// Descriptor to identify policies as being managed by the VMI
 	vmiManagedPolicy = "__vmi-managed__"
+
+	systemDefaultPolicyFileName = "vz-system-default-ISM-policy.json"
+	appDefaultPolicyFileName    = "vz-application-default-ISM-policy.json"
+	defaultPolicyPath           = "k8s/manifests/opensearch/"
+	systemDefaultPolicy         = "vz-system"
+	applicationDefaultPolicy    = "vz-application"
 )
 
 // createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
@@ -74,7 +82,7 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 	if err != nil {
 		return err
 	}
-	updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, &policy, existingPolicy)
+	updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
 	if err != nil {
 		return err
 	}
@@ -101,7 +109,7 @@ func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 
 // putUpdatedPolicy updates a policy in place, if the update is required. If no update was necessary, the returned
 // ISMPolicy will be nil.
-func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
+func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policyName string, policy *ISMPolicy, existingPolicy *ISMPolicy) (*ISMPolicy, error) {
 	if !policyNeedsUpdate(policy, existingPolicy) {
 		return nil, nil
 	}
@@ -118,16 +126,16 @@ func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrol
 	case http.StatusOK: // The policy exists and must be updated in place if it has changed
 		url = fmt.Sprintf("%s/_plugins/_ism/policies/%s?if_seq_no=%d&if_primary_term=%d",
 			opensearchEndpoint,
-			policy.PolicyName,
+			policyName,
 			*existingPolicy.SequenceNumber,
 			*existingPolicy.PrimaryTerm,
 		)
 		statusCode = http.StatusOK
 	case http.StatusNotFound: // The policy doesn't exist and must be updated
-		url = fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.PolicyName)
+		url = fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policyName)
 		statusCode = http.StatusCreated
 	default:
-		return nil, fmt.Errorf("invalid status when fetching ISM Policy %s: %d", policy.PolicyName, existingPolicy.Status)
+		return nil, fmt.Errorf("invalid status when fetching ISM Policy %s: %d", policyName, existingPolicy.Status)
 	}
 	req, err := http.NewRequest("PUT", url, bytes.NewReader(payload))
 	if err != nil {
@@ -139,7 +147,7 @@ func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policy *vmcontrol
 		return nil, err
 	}
 	if resp.StatusCode != statusCode {
-		return nil, fmt.Errorf("got status code %d when updating policy %s, expected %d", resp.StatusCode, policy.PolicyName, statusCode)
+		return nil, fmt.Errorf("got status code %d when updating policy %s, expected %d", resp.StatusCode, policyName, statusCode)
 	}
 	updatedISMPolicy := &ISMPolicy{}
 	err = json.NewDecoder(resp.Body).Decode(updatedISMPolicy)
@@ -235,14 +243,46 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) error {
 	return nil
 }
 
+// putISMPolicyFromFile creates or updates the ISM policy from the given json file.
+// If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
+func (o *OSClient) putISMPolicyFromFile(openSearchEndpoint string, policyFilePath string, policyFileName string, policyName string) (*ISMPolicy, error) {
+	policy, err := getISMPolicyFromFile(policyFilePath, policyFileName, policyName)
+	if err != nil {
+		return nil, err
+	}
+	existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
+	existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+	if err != nil {
+		return nil, err
+	}
+	return o.putUpdatedPolicy(openSearchEndpoint, *policy.ID, policy, existingPolicy)
+}
+
+// createOrUpdateDefaultISMPolicy creates the default ISM policies if not exist, else the policies will be updated.
+func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, error) {
+	var defaultPolicies []*ISMPolicy
+	sysDefaultPolicy, err := o.putISMPolicyFromFile(openSearchEndpoint, defaultPolicyPath, systemDefaultPolicyFileName, systemDefaultPolicy)
+	if err != nil {
+		return defaultPolicies, err
+	}
+	defaultPolicies = append(defaultPolicies, sysDefaultPolicy)
+	appDefaultPolicy, err := o.putISMPolicyFromFile(openSearchEndpoint, defaultPolicyPath, appDefaultPolicyFileName, applicationDefaultPolicy)
+	if err != nil {
+		return defaultPolicies, err
+	}
+	defaultPolicies = append(defaultPolicies, appDefaultPolicy)
+
+	return defaultPolicies, nil
+}
+
 func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) bool {
 	return policy.Policy.Description == vmiManagedPolicy &&
 		!expectedPolicyMap[*policy.ID]
 }
 
 // policyNeedsUpdate returns true if the policy document has changed
-func policyNeedsUpdate(policy *vmcontrollerv1.IndexManagementPolicy, existingPolicy *ISMPolicy) bool {
-	newPolicyDocument := toISMPolicy(policy).Policy
+func policyNeedsUpdate(policy *ISMPolicy, existingPolicy *ISMPolicy) bool {
+	newPolicyDocument := policy.Policy
 	oldPolicyDocument := existingPolicy.Policy
 
 	return newPolicyDocument.DefaultState != oldPolicyDocument.DefaultState ||
@@ -266,8 +306,8 @@ func createRolloverAction(rollover *vmcontrollerv1.RolloverPolicy) map[string]in
 	return rolloverAction
 }
 
-func serializeIndexManagementPolicy(policy *vmcontrollerv1.IndexManagementPolicy) ([]byte, error) {
-	return json.Marshal(toISMPolicy(policy))
+func serializeIndexManagementPolicy(policy *ISMPolicy) ([]byte, error) {
+	return json.Marshal(policy)
 }
 
 func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
@@ -318,4 +358,21 @@ func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
 			},
 		},
 	}
+}
+
+// getISMPolicyFromFile reads the given json file and return the ISMPolicy object after unmarshalling.
+func getISMPolicyFromFile(policyFilePath, policyFileName, policyName string) (*ISMPolicy, error) {
+	policyBytes, err := os.ReadFile(policyFilePath + policyFileName)
+	if err != nil {
+		return nil, err
+	}
+	var inLinePolicy InlinePolicy
+	err = json.Unmarshal(policyBytes, &inLinePolicy)
+	if err != nil {
+		return nil, err
+	}
+	var policy ISMPolicy
+	policy.Policy = inLinePolicy
+	policy.ID = &policyName
+	return &policy, nil
 }
