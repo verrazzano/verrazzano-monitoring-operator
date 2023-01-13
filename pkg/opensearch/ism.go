@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"reflect"
 	"strings"
+
+	"github.com/verrazzano/pkg/diff"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
@@ -43,8 +44,8 @@ type (
 
 	PolicyState struct {
 		Name        string                   `json:"name"`
-		Actions     []map[string]interface{} `json:"actions"`
-		Transitions []PolicyTransition       `json:"transitions"`
+		Actions     []map[string]interface{} `json:"actions,omitempty"`
+		Transitions []PolicyTransition       `json:"transitions,omitempty"`
 	}
 
 	PolicyTransition struct {
@@ -74,6 +75,10 @@ const (
 	applicationDefaultPolicy    = "vz-application"
 )
 
+var (
+	defaultISMPoliciesMap = map[string]string{systemDefaultPolicy: systemDefaultPolicyFileName, applicationDefaultPolicy: appDefaultPolicyFileName}
+)
+
 // createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
 // If the policy already exsts and its spec matches the VMO policy spec, no update will be issued
 func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) error {
@@ -100,10 +105,13 @@ func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	}
 	defer resp.Body.Close()
 	existingPolicy := &ISMPolicy{}
+	existingPolicy.Status = &resp.StatusCode
+	if resp.StatusCode != http.StatusOK {
+		return existingPolicy, nil
+	}
 	if err := json.NewDecoder(resp.Body).Decode(existingPolicy); err != nil {
 		return nil, err
 	}
-	existingPolicy.Status = &resp.StatusCode
 	return existingPolicy, nil
 }
 
@@ -113,7 +121,6 @@ func (o *OSClient) putUpdatedPolicy(opensearchEndpoint string, policyName string
 	if !policyNeedsUpdate(policy, existingPolicy) {
 		return nil, nil
 	}
-
 	payload, err := serializeIndexManagementPolicy(policy)
 	if err != nil {
 		return nil, err
@@ -197,7 +204,7 @@ func (o *OSClient) cleanupPolicies(opensearchEndpoint string, policies []vmcontr
 	// has a policy entry for it
 	for _, policy := range policyList.Policies {
 		if isEligibleForDeletion(policy, expectedPolicyMap) {
-			if err := o.deletePolicy(opensearchEndpoint, *policy.ID); err != nil {
+			if _, err := o.deletePolicy(opensearchEndpoint, *policy.ID); err != nil {
 				return err
 			}
 		}
@@ -226,27 +233,27 @@ func (o *OSClient) getAllPolicies(opensearchEndpoint string) (*PolicyList, error
 	return policies, nil
 }
 
-func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) error {
+func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Response, error) {
 	url := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policyName)
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	resp, err := o.DoHTTP(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("got status code %d when deleting policy %s", resp.StatusCode, policyName)
+		return resp, fmt.Errorf("got status code %d when deleting policy %s", resp.StatusCode, policyName)
 	}
-	return nil
+	return resp, nil
 }
 
-// putISMPolicyFromFile creates or updates the ISM policy from the given json file.
+// updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
-func (o *OSClient) putISMPolicyFromFile(openSearchEndpoint string, policyFilePath string, policyFileName string, policyName string) (*ISMPolicy, error) {
-	policy, err := getISMPolicyFromFile(policyFilePath, policyFileName, policyName)
+func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFilePath string, policyFileName string, policyName string) (*ISMPolicy, error) {
+	policy, err := getISMPolicyFromFile(policyFilePath, policyFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -255,23 +262,19 @@ func (o *OSClient) putISMPolicyFromFile(openSearchEndpoint string, policyFilePat
 	if err != nil {
 		return nil, err
 	}
-	return o.putUpdatedPolicy(openSearchEndpoint, *policy.ID, policy, existingPolicy)
+	return o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
 }
 
 // createOrUpdateDefaultISMPolicy creates the default ISM policies if not exist, else the policies will be updated.
 func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, error) {
 	var defaultPolicies []*ISMPolicy
-	sysDefaultPolicy, err := o.putISMPolicyFromFile(openSearchEndpoint, defaultPolicyPath, systemDefaultPolicyFileName, systemDefaultPolicy)
-	if err != nil {
-		return defaultPolicies, err
+	for policyName, policyFile := range defaultISMPoliciesMap {
+		createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, defaultPolicyPath, policyFile, policyName)
+		if err != nil {
+			return defaultPolicies, err
+		}
+		defaultPolicies = append(defaultPolicies, createdPolicy)
 	}
-	defaultPolicies = append(defaultPolicies, sysDefaultPolicy)
-	appDefaultPolicy, err := o.putISMPolicyFromFile(openSearchEndpoint, defaultPolicyPath, appDefaultPolicyFileName, applicationDefaultPolicy)
-	if err != nil {
-		return defaultPolicies, err
-	}
-	defaultPolicies = append(defaultPolicies, appDefaultPolicy)
-
 	return defaultPolicies, nil
 }
 
@@ -284,10 +287,10 @@ func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) 
 func policyNeedsUpdate(policy *ISMPolicy, existingPolicy *ISMPolicy) bool {
 	newPolicyDocument := policy.Policy
 	oldPolicyDocument := existingPolicy.Policy
-
 	return newPolicyDocument.DefaultState != oldPolicyDocument.DefaultState ||
-		!reflect.DeepEqual(newPolicyDocument.States, oldPolicyDocument.States) ||
-		!reflect.DeepEqual(newPolicyDocument.ISMTemplate, oldPolicyDocument.ISMTemplate)
+		newPolicyDocument.Description != oldPolicyDocument.Description ||
+		diff.Diff(newPolicyDocument.States, oldPolicyDocument.States) != "" ||
+		diff.Diff(newPolicyDocument.ISMTemplate, oldPolicyDocument.ISMTemplate) != ""
 }
 
 func createRolloverAction(rollover *vmcontrollerv1.RolloverPolicy) map[string]interface{} {
@@ -361,18 +364,15 @@ func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
 }
 
 // getISMPolicyFromFile reads the given json file and return the ISMPolicy object after unmarshalling.
-func getISMPolicyFromFile(policyFilePath, policyFileName, policyName string) (*ISMPolicy, error) {
+func getISMPolicyFromFile(policyFilePath, policyFileName string) (*ISMPolicy, error) {
 	policyBytes, err := os.ReadFile(policyFilePath + policyFileName)
 	if err != nil {
 		return nil, err
 	}
-	var inLinePolicy InlinePolicy
-	err = json.Unmarshal(policyBytes, &inLinePolicy)
+	var policy ISMPolicy
+	err = json.Unmarshal(policyBytes, &policy)
 	if err != nil {
 		return nil, err
 	}
-	var policy ISMPolicy
-	policy.Policy = inLinePolicy
-	policy.ID = &policyName
 	return &policy, nil
 }

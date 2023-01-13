@@ -560,6 +560,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	specDiffs := diff.Diff(originalVMO, vmo)
 	if specDiffs != "" {
+		deleteISMChannel := c.osClient.DeleteDefaultISMPolicy(vmo)
 		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
 		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
 		c.log.Oncef("Updating VMO")
@@ -571,6 +572,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 		_, err = c.vmoclientset.VerrazzanoV1().VerrazzanoMonitoringInstances(vmo.Namespace).Update(context.TODO(), vmo, metav1.UpdateOptions{})
 		if err != nil {
 			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
+			errorObserved = true
+		}
+		deleteISMPolicyError := <-deleteISMChannel
+		if deleteISMPolicyError != nil {
+			c.log.ErrorfThrottled("Failed to delete the default ISM policies: %v", deleteISMPolicyError)
 			errorObserved = true
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
@@ -98,6 +99,36 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 	return ch
 }
 
+// DeleteDefaultISMPolicy deletes the default ISM policy if they exists
+func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
+	ch := make(chan error)
+	go func() {
+		// if Elasticsearch.DisableDefaultPolicy is set to false, skip the deletion.
+		if !vmi.Spec.Elasticsearch.Enabled || !vmi.Spec.Elasticsearch.DisableDefaultPolicy {
+			ch <- nil
+			return
+		}
+		// check OpenSearch status every 10 seconds for 5 minutes if OpenSearch is not ready.
+		for i := 0; i < 30; i++ {
+			if !o.IsOpenSearchReady(vmi) {
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			break
+		}
+		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
+		for policyName, _ := range defaultISMPoliciesMap {
+			resp, err := o.deletePolicy(openSearchEndpoint, policyName)
+			// If policy doesn't exist, ignore the error, otherwise pass the error to channel.
+			if (err != nil && resp == nil) || (err != nil && resp != nil && resp.StatusCode != http.StatusNotFound) {
+				ch <- err
+			}
+		}
+		ch <- nil
+	}()
+	return ch
+}
+
 // SyncDefaultISMPolicy set up the default ISM Policies.
 // The returned channel should be read for exactly one response, which tells whether default ISM policies are synced.
 func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
@@ -112,7 +143,6 @@ func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			ch <- nil
 			return
 		}
-
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 		_, err := o.createOrUpdateDefaultISMPolicy(openSearchEndpoint)
 		ch <- err
