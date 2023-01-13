@@ -114,7 +114,7 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 		}
 
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		for policyName, _ := range defaultISMPoliciesMap {
+		for policyName := range defaultISMPoliciesMap {
 			resp, err := o.deletePolicy(openSearchEndpoint, policyName)
 			// If policy doesn't exist, ignore the error, otherwise pass the error to channel.
 			if (err != nil && resp == nil) || (err != nil && resp != nil && resp.StatusCode != http.StatusNotFound) {
