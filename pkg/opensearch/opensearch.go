@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
@@ -108,14 +107,12 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 			ch <- nil
 			return
 		}
-		// check OpenSearch status every 10 seconds for 5 minutes if OpenSearch is not ready.
-		for i := 0; i < 30; i++ {
-			if !o.IsOpenSearchReady(vmi) {
-				time.Sleep(10 * time.Second)
-				continue
-			}
-			break
+
+		if !o.IsOpenSearchReady(vmi) {
+			ch <- nil
+			return
 		}
+
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 		for policyName, _ := range defaultISMPoliciesMap {
 			resp, err := o.deletePolicy(openSearchEndpoint, policyName)

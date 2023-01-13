@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	testPolicyNotFound = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
-	testSystemPolicy   = `
+	testPolicyRelativePath = "../../" + defaultPolicyPath
+	testPolicyNotFound     = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
+	testSystemPolicy       = `
 {
     "_id" : "verrazzano-system",
     "_seq_no" : 0,
@@ -472,7 +473,7 @@ func TestGetISMPolicyFromFile(t *testing.T) {
 		policyFileName string
 	}
 	validArgs := args{
-		policyFilePath: "../../" + defaultPolicyPath,
+		policyFilePath: testPolicyRelativePath,
 		policyFileName: systemDefaultPolicyFileName,
 	}
 	invalidArgs := args{
@@ -517,7 +518,7 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 		DoHTTP            func(request *http.Request) (*http.Response, error)
 		statefulSetLister v1.StatefulSetLister
 	}
-	policy, err := getISMPolicyFromFile("../../"+defaultPolicyPath, systemDefaultPolicyFileName)
+	policy, err := getISMPolicyFromFile(testPolicyRelativePath, systemDefaultPolicyFileName)
 	if err != nil {
 		t.Errorf("Error while creating test policy")
 	}
@@ -569,7 +570,7 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 			field1,
 			args{
 				"localhost:9090",
-				"../../" + defaultPolicyPath,
+				testPolicyRelativePath,
 				systemDefaultPolicyFileName,
 				systemDefaultPolicy,
 			},
@@ -581,7 +582,7 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 			fieldWithError,
 			args{
 				"localhost:9090",
-				"../../" + defaultPolicyPath,
+				testPolicyRelativePath,
 				systemDefaultPolicyFileName,
 				systemDefaultPolicy,
 			},
