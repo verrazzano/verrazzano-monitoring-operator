@@ -66,6 +66,9 @@ type (
 		// Elasticsearch details
 		Elasticsearch Elasticsearch `json:"elasticsearch"`
 
+		// Opensearch details
+		Opensearch Opensearch `json:"elasticsearch"`
+
 		// Kibana details
 		Kibana Kibana `json:"kibana"`
 
@@ -135,6 +138,18 @@ type (
 		Nodes                []ElasticsearchNode     `json:"nodes,omitempty"`
 		Plugins              OpenSearchPlugins       `json:"plugins,omitempty"`
 		DisableDefaultPolicy bool                    `json:"disableDefaultPolicy,omitempty"`
+	}
+
+	// Opensearch details
+	Opensearch struct {
+		Enabled    bool                    `json:"enabled" yaml:"enabled"`
+		Storage    Storage                 `json:"storage,omitempty"`
+		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
+		Plugins    OpenSearchPlugins       `json:"plugins,omitempty"`
 	}
 
 	// ElasticsearchNode Type details

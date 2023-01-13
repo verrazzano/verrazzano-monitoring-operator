@@ -100,7 +100,7 @@ spec:
               contactemail:
                 type: string
               elasticsearch:
-                description: Elasticsearch details
+                description: Opensearch details
                 properties:
                   dataNode:
                     description: ElasticsearchNode Type details
