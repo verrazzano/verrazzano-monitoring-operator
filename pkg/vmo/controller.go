@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -475,6 +475,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	 **********************/
 	ismChannel := c.osClient.ConfigureISM(vmo)
 
+	/*********************
+	 * Synchronise Default ISM Policies
+	 **********************/
+	defaultISMChannel := c.osClient.SyncDefaultISMPolicy(vmo)
+
 	/********************************************
 	 * Migrate old indices if any to data streams
 	*********************************************/
@@ -555,6 +560,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	specDiffs := diff.Diff(originalVMO, vmo)
 	if specDiffs != "" {
+		deleteISMChannel := c.osClient.DeleteDefaultISMPolicy(vmo)
 		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
 		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
 		c.log.Oncef("Updating VMO")
@@ -568,6 +574,11 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 			c.log.Errorf("Failed to update status for VMI %s: %v", vmo.Name, err)
 			errorObserved = true
 		}
+		deleteISMPolicyError := <-deleteISMChannel
+		if deleteISMPolicyError != nil {
+			c.log.ErrorfThrottled("Failed to delete the default ISM policies: %v", deleteISMPolicyError)
+			errorObserved = true
+		}
 	}
 
 	autoExpandIndexErr := <-autoExpandIndexChannel
@@ -579,6 +590,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	ismErr := <-ismChannel
 	if ismErr != nil {
 		c.log.ErrorfThrottled("Failed to configure ISM Policies: %v", ismErr)
+		errorObserved = true
+	}
+
+	defaultISMErr := <-defaultISMChannel
+	if defaultISMErr != nil {
+		c.log.ErrorfThrottled("Failed to create or update default ISM Policies: %v", defaultISMErr)
 		errorObserved = true
 	}
 	/*********************
