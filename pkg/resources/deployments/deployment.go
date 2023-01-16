@@ -428,7 +428,7 @@ func getPodSecurityContext(PodUser int64) *corev1.PodSecurityContext {
 	return &corev1.PodSecurityContext{
 		RunAsUser:      &PodUser,
 		FSGroup:        &PodUser,
-		RunAsNonRoot:   resources.NewBool(false),
+		RunAsNonRoot:   resources.NewBool(true),
 		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 		RunAsGroup:     &PodUser,
 	}
