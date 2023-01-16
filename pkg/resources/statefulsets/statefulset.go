@@ -59,9 +59,16 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 	statefulSet.Spec.Replicas = resources.NewVal(node.Replicas)
 	statefulSet.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.ElasticsearchMaster.Name)
 
+	podSecurityContext := &corev1.PodSecurityContext{
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+	}
+	statefulSet.Spec.Template.Spec.SecurityContext = podSecurityContext
+
 	var elasticsearchUID int64 = 1000
 	esMasterContainer := &statefulSet.Spec.Template.Spec.Containers[0]
 	esMasterContainer.SecurityContext.RunAsUser = &elasticsearchUID
+	esMasterContainer.SecurityContext.AllowPrivilegeEscalation = resources.NewBool(false)
+	esMasterContainer.SecurityContext.Capabilities = &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}}
 	esMasterContainer.Ports[0].Name = "transport"
 	esMasterContainer.Ports = append(esMasterContainer.Ports, corev1.ContainerPort{Name: "http", ContainerPort: int32(constants.OSHTTPPort), Protocol: "TCP"})
 

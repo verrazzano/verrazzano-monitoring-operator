@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch
@@ -10,17 +10,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/client-go/listers/apps/v1"
+
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
 const (
-	testPolicyNotFound = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
-	testSystemPolicy   = `
+	testPolicyRelativePath = "../../" + defaultPolicyPath
+	testPolicyNotFound     = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
+	testSystemPolicy       = `
 {
     "_id" : "verrazzano-system",
     "_seq_no" : 0,
@@ -260,7 +264,7 @@ func TestPutUpdatedPolicy_PolicyExists(t *testing.T) {
 				IndexPattern: "verrazzano-system",
 				MinIndexAge:  &tt.age,
 			}
-			updatedPolicy, err := o.putUpdatedPolicy("http://localhost:9200", newPolicy, existingPolicy)
+			updatedPolicy, err := o.putUpdatedPolicy("http://localhost:9200", newPolicy.PolicyName, toISMPolicy(newPolicy), existingPolicy)
 			if tt.hasError {
 				assert.Error(t, err)
 			} else {
@@ -339,7 +343,7 @@ func TestPolicyNeedsUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			needsUpdate := policyNeedsUpdate(tt.p1, tt.p2)
+			needsUpdate := policyNeedsUpdate(toISMPolicy(tt.p1), tt.p2)
 			assert.Equal(t, tt.needsUpdate, needsUpdate)
 		})
 	}
@@ -458,4 +462,149 @@ func TestConfigureIndexManagementPluginOpenSearchNotReady(t *testing.T) {
 			Enabled: true,
 		},
 	}}))
+}
+
+// TestGetISMPolicyFromFile tests getISMPolicyFromFile to check ISM policy object is created or not from a given json file.
+// WHEN I call getISMPolicyFromFile with policyFilePath, policyFileName
+// THEN the ISM policy object is created if given json file contains the policy. .
+func TestGetISMPolicyFromFile(t *testing.T) {
+	type args struct {
+		policyFilePath string
+		policyFileName string
+	}
+	validArgs := args{
+		policyFilePath: testPolicyRelativePath,
+		policyFileName: systemDefaultPolicyFileName,
+	}
+	invalidArgs := args{
+		policyFilePath: "dummyPath",
+		policyFileName: systemDefaultPolicyFileName,
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"TestGetISMPolicyFromFile when file path is valid",
+			validArgs,
+			false,
+		},
+		{
+			"TestGetISMPolicyFromFile when file path is invalid",
+			invalidArgs,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := getISMPolicyFromFile(tt.args.policyFilePath, tt.args.policyFileName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getISMPolicyFromFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+// TestUpdateISMPolicyFromFile tests updateISMPolicyFromFile to check default policies are getting created or not.
+// GIVEN a default VMI instance with OS client.
+// WHEN I call updateISMPolicyFromFile with policyFilePath, policyFileName and policyName
+// THEN the default ISM policies are created.
+func TestUpdateISMPolicyFromFile(t *testing.T) {
+	type fields struct {
+		httpClient        *http.Client
+		DoHTTP            func(request *http.Request) (*http.Response, error)
+		statefulSetLister v1.StatefulSetLister
+	}
+	policy, err := getISMPolicyFromFile(testPolicyRelativePath, systemDefaultPolicyFileName)
+	if err != nil {
+		t.Errorf("Error while creating test policy")
+	}
+	existingPolicyJSON, err := json.Marshal(policy)
+	assert.NoError(t, err)
+	field1 := fields{
+		nil,
+		func(request *http.Request) (*http.Response, error) {
+			switch request.Method {
+			case "GET":
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, nil
+			default:
+				return &http.Response{
+					StatusCode: http.StatusCreated,
+					Body:       io.NopCloser(bytes.NewReader(existingPolicyJSON)),
+				}, nil
+			}
+		},
+		statefulSetLister,
+	}
+	fieldWithError := fields{
+		nil,
+		func(request *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusNotFound,
+				Body:       io.NopCloser(strings.NewReader("")),
+			}, fmt.Errorf("internal server error")
+		},
+		statefulSetLister,
+	}
+	type args struct {
+		openSearchEndpoint string
+		policyFilePath     string
+		policyFileName     string
+		policyName         string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *ISMPolicy
+		wantErr bool
+	}{
+		{
+			"TestUpdateISMPolicyFromFile",
+			field1,
+			args{
+				"localhost:9090",
+				testPolicyRelativePath,
+				systemDefaultPolicyFileName,
+				systemDefaultPolicy,
+			},
+			policy,
+			false,
+		},
+		{
+			"TestUpdateISMPolicyFromFile",
+			fieldWithError,
+			args{
+				"localhost:9090",
+				testPolicyRelativePath,
+				systemDefaultPolicyFileName,
+				systemDefaultPolicy,
+			},
+			nil,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := &OSClient{
+				httpClient:        tt.fields.httpClient,
+				DoHTTP:            tt.fields.DoHTTP,
+				statefulSetLister: tt.fields.statefulSetLister,
+			}
+			got, err := o.updateISMPolicyFromFile(tt.args.openSearchEndpoint, tt.args.policyFilePath, tt.args.policyFileName, tt.args.policyName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("updateISMPolicyFromFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("updateISMPolicyFromFile() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

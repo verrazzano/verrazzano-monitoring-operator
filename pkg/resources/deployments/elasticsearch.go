@@ -84,6 +84,14 @@ func (es ElasticsearchBasic) createCommonDeployment(vmo *vmcontrollerv1.Verrazza
 
 	var elasticsearchUID int64 = 1000
 	esContainer.SecurityContext.RunAsUser = &elasticsearchUID
+	esContainer.SecurityContext.AllowPrivilegeEscalation = resources.NewBool(false)
+	esContainer.SecurityContext.Capabilities = &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}}
+
+	podSecurityContext := &corev1.PodSecurityContext{
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+	}
+	deploymentElement.Spec.Template.Spec.SecurityContext = podSecurityContext
+
 	return deploymentElement
 }
 
