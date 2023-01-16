@@ -1,4 +1,4 @@
-// Copyright (C) 2023, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package dashboards
@@ -48,7 +48,7 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 			continue
 		}
 		if nil != existingSavedObjectMap[updatedPattern] {
-			log.Info("deleting index pattern %s", savedObject.Title)
+			log.Info("deleting index pattern ", savedObject.Title)
 			err = od.deleteIndexPattern(log, dashboardsEndPoint, savedObject.ID, savedObject.Title)
 			if err != nil {
 				return fmt.Errorf("failed to delete index pattern %s: %v", savedObject.Title, err)
