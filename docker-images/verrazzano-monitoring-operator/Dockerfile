@@ -1,4 +1,4 @@
-# Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+# Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 FROM ghcr.io/oracle/oraclelinux:7-slim AS build_base
 
@@ -32,8 +32,8 @@ RUN yum update -y \
     && yum clean all \
     && rm -rf /var/cache/yum
 COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
-COPY --from=build_base /usr/bin/verrazzano-monitoring-operator/k8s/manifests/opensearch/vz-application-default-ISM-policy.json /usr/local/bin/k8s/manifests/opensearch/vz-application-default-ISM-policy.json
-COPY --from=build_base /usr/bin/verrazzano-monitoring-operator/k8s/manifests/opensearch/vz-system-default-ISM-policy.json /usr/local/bin/k8s/manifests/opensearch/vz-system-default-ISM-policy.json
+COPY --from=build_base /root/go/src/github.com/verrazzano/verrazzano-monitoring-operator/k8s/manifests/opensearch/vz-application-default-ISM-policy.json /usr/local/bin/k8s/manifests/opensearch/vz-application-default-ISM-policy.json
+COPY --from=build_base /root/go/src/github.com/verrazzano/verrazzano-monitoring-operator/k8s/manifests/opensearch/vz-system-default-ISM-policy.json /usr/local/bin/k8s/manifests/opensearch/vz-system-default-ISM-policy.json
 WORKDIR /usr/local/bin/
 RUN groupadd -r verrazzano-monitoring-operator && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
 RUN chown 1000:verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator && chmod 500 /usr/local/bin/verrazzano-monitoring-operator  \
