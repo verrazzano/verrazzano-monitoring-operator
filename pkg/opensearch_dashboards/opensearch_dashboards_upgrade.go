@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package dashboards
@@ -42,9 +42,17 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 		return err
 	}
 	existingSavedObjectMap := getSavedObjectMap(savedObjects)
-	for _, savedObject := range savedObjects {
+	for i, savedObject := range savedObjects {
 		updatedPattern := constructUpdatedPattern(savedObject.Title)
-		if updatedPattern == "" || nil != existingSavedObjectMap[updatedPattern] {
+		if updatedPattern == "" || savedObject.Title == updatedPattern {
+			continue
+		}
+		if nil != existingSavedObjectMap[updatedPattern] {
+			log.Info("deleting index pattern ", savedObject.Title)
+			err = od.deleteIndexPattern(log, dashboardsEndPoint, savedObject.ID, savedObject.Title)
+			if err != nil {
+				return fmt.Errorf("failed to delete index pattern %s: %v", savedObject.Title, err)
+			}
 			continue
 		}
 		// Invoke update index pattern API
@@ -52,6 +60,8 @@ func (od *OSDashboardsClient) updatePatternsInternal(log vzlog.VerrazzanoLogger,
 		if err != nil {
 			return fmt.Errorf("failed to updated index pattern %s: %v", savedObject.Title, err)
 		}
+		savedObject.Title = updatedPattern
+		existingSavedObjectMap[updatedPattern] = &savedObjects[i]
 	}
 	return nil
 }
@@ -124,6 +134,28 @@ func (od *OSDashboardsClient) executeUpdate(log vzlog.VerrazzanoLogger, dashboar
 
 	responseBody, _ := ioutil.ReadAll(resp.Body)
 	log.Debugf("Response from OpenSearch Dashboards update index API: %s", responseBody)
+	return nil
+}
+
+// deleteIndexPattern deletes the index pattern with given index pattern ID.
+func (od *OSDashboardsClient) deleteIndexPattern(log vzlog.VerrazzanoLogger, dashboardsEndPoint string,
+	id string, indexPattern string) error {
+	log.Infof("Deleting index pattern %s in OpenSearch Dashboards", indexPattern)
+	updatedPatternURL := fmt.Sprintf("%s/api/saved_objects/index-pattern/%s", dashboardsEndPoint, id)
+	log.Debugf("Executing delete saved object API %s", updatedPatternURL)
+	req, err := http.NewRequest("DELETE", updatedPatternURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("osd-xsrf", "true")
+	resp, err := od.DoHTTP(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete index patterns from OpenSearch dashboards: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when deleting index patterns", resp.StatusCode)
+	}
 	return nil
 }
 
