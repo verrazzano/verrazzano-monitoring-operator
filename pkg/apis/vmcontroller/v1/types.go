@@ -67,7 +67,7 @@ type (
 		Elasticsearch Elasticsearch `json:"elasticsearch"`
 
 		// Opensearch details
-		Opensearch Opensearch `json:"elasticsearch"`
+		Opensearch Opensearch `json:"opensearch"`
 
 		// Kibana details
 		Kibana Kibana `json:"kibana"`
