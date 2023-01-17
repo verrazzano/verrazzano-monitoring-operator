@@ -569,6 +569,8 @@ spec:
                     required:
                     - javaOpts
                     type: object
+                  disableDefaultPolicy:
+                    type: boolean
                   enabled:
                     type: boolean
                   ingestNode:
