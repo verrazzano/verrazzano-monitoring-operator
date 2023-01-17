@@ -193,7 +193,8 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			// image to run as UID 1000, and have sufficient permissions to write to the mounted volume.
 			elasticsearchGid := int64(1000)
 			dataDeployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
-				FSGroup: &elasticsearchGid,
+				FSGroup:        &elasticsearchGid,
+				SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 			}
 
 			dataDeployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
