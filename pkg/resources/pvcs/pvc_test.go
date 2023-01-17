@@ -21,7 +21,7 @@ func TestVMONoStorageVolumes(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -45,7 +45,7 @@ func TestVMOWithStorageVolumes1(t *testing.T) {
 				},
 			},
 			// An empty size element is interpreted as no storage
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
 					Size:               "",
@@ -64,7 +64,7 @@ func TestVMOWithStorageVolumes1(t *testing.T) {
 func TestVMOWithStorageVolumes2(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				DataNode: vmcontrollerv1.ElasticsearchNode{
 					Storage: &vmcontrollerv1.Storage{
@@ -86,7 +86,7 @@ func TestVMOWithStorageVolumes2(t *testing.T) {
 func TestVMOWithStorageVolumes3(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Nodes: []vmcontrollerv1.ElasticsearchNode{
 					{
@@ -132,7 +132,7 @@ func TestVMODevModeWithStorageVolumes(t *testing.T) {
 					PvcNames:           []string{"grafana-pvc"},
 				},
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
 					Size: "",
@@ -169,7 +169,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 				},
 			},
 			// An empty size element is interpreted as no storage
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				Storage: vmcontrollerv1.Storage{
 					Size:               "50Gi",

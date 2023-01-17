@@ -22,7 +22,7 @@ var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Namespace: constants.VerrazzanoSystemNamespace,
 	},
 	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-		Elasticsearch: vmcontrollerv1.Elasticsearch{
+		Opensearch: vmcontrollerv1.Opensearch{
 			DataNode: vmcontrollerv1.ElasticsearchNode{
 				Replicas: 3,
 			},
@@ -180,7 +180,7 @@ func TestPVCNeedsResize(t *testing.T) {
 func TestUpdateVMOStorageForPVC(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				DataNode: vmcontrollerv1.ElasticsearchNode{
 					Storage: &vmcontrollerv1.Storage{
 						PvcNames: []string{
@@ -209,7 +209,7 @@ func TestSetPerNodeStorage(t *testing.T) {
 	}
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				DataNode: vmcontrollerv1.ElasticsearchNode{
 					Replicas: 1,
 				},

@@ -120,7 +120,7 @@ var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Namespace: constants.VerrazzanoSystemNamespace,
 	},
 	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-		Elasticsearch: vmcontrollerv1.Elasticsearch{
+		Opensearch: vmcontrollerv1.Opensearch{
 			DataNode: vmcontrollerv1.ElasticsearchNode{
 				Replicas: 3,
 			},
@@ -213,7 +213,7 @@ func TestIsOpenSearchResizable(t *testing.T) {
 			Namespace: constants.VerrazzanoSystemNamespace,
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				DataNode: vmcontrollerv1.ElasticsearchNode{
 					Replicas: 1,
 				},
@@ -378,7 +378,7 @@ func TestSetAutoExpandIndicesNoErrorWhenOSNotReady(t *testing.T) {
 		},
 	})})
 	assert.NoError(t, <-o.SetAutoExpandIndices(&vmcontrollerv1.VerrazzanoMonitoringInstance{Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-		Elasticsearch: vmcontrollerv1.Elasticsearch{
+		Opensearch: vmcontrollerv1.Opensearch{
 			Enabled: true,
 			MasterNode: vmcontrollerv1.ElasticsearchNode{
 				Replicas: 1,

@@ -41,7 +41,7 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
@@ -70,7 +70,7 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
