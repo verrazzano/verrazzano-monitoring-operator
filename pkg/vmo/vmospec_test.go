@@ -51,6 +51,67 @@ func TestInitNode(t *testing.T) {
 	}
 }
 
+func TestInitializeVMOSpec(t *testing.T) {
+	{
+		var tests = []struct {
+			name            string
+			givenVmiSpec    *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+			expectedVmiSpec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+		}{
+			{
+				"enabled elastic search field gets converted to opensearch",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Elasticsearch: vmcontrollerv1.Elasticsearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "1G",
+						},
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Opensearch: vmcontrollerv1.Opensearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "1G",
+						},
+					},
+				},
+			},
+			{
+				"both elastic search and opensearch are enabled",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Elasticsearch: vmcontrollerv1.Elasticsearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "1G",
+						},
+					},
+					Opensearch: vmcontrollerv1.Opensearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "2G",
+						},
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Opensearch: vmcontrollerv1.Opensearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "2G",
+						},
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			handleOpensearchConversion(tt.givenVmiSpec)
+			assert.EqualValues(t, tt.expectedVmiSpec.Opensearch.Storage.Size, tt.givenVmiSpec.Opensearch.Storage.Size)
+			assert.EqualValues(t, "", tt.givenVmiSpec.Elasticsearch.Storage.Size)
+		}
+	}
+}
+
 func TestInitStorageElement(t *testing.T) {
 	var tests = []struct {
 		name     string
