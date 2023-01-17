@@ -142,14 +142,15 @@ type (
 
 	// Opensearch details
 	Opensearch struct {
-		Enabled    bool                    `json:"enabled" yaml:"enabled"`
-		Storage    Storage                 `json:"storage,omitempty"`
-		IngestNode ElasticsearchNode       `json:"ingestNode,omitempty"`
-		MasterNode ElasticsearchNode       `json:"masterNode,omitempty"`
-		DataNode   ElasticsearchNode       `json:"dataNode,omitempty"`
-		Policies   []IndexManagementPolicy `json:"policies,omitempty"`
-		Nodes      []ElasticsearchNode     `json:"nodes,omitempty"`
-		Plugins    OpenSearchPlugins       `json:"plugins,omitempty"`
+		Enabled              bool                    `json:"enabled" yaml:"enabled"`
+		Storage              Storage                 `json:"storage,omitempty"`
+		IngestNode           ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode           ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode             ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies             []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes                []ElasticsearchNode     `json:"nodes,omitempty"`
+		Plugins              OpenSearchPlugins       `json:"plugins,omitempty"`
+		DisableDefaultPolicy bool                    `json:"disableDefaultPolicy,omitempty"`
 	}
 
 	// ElasticsearchNode Type details
