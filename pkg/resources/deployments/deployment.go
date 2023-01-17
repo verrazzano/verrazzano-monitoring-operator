@@ -40,7 +40,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	var deployments []*appsv1.Deployment
 	var err error
 
-	if vmo.Spec.Elasticsearch.Enabled {
+	if vmo.Spec.Opensearch.Enabled {
 		basic := ElasticsearchBasic{}
 		ingestDeployments := basic.createElasticsearchIngestDeploymentElements(vmo)
 		dataDeployments := basic.createElasticsearchDataDeploymentElements(vmo, pvcToAdMap)
