@@ -100,7 +100,7 @@ spec:
               contactemail:
                 type: string
               elasticsearch:
-                description: Elasticsearch details
+                description: 'Deprecated: Elasticsearch has been replaced by Opensearch'
                 properties:
                   dataNode:
                     description: ElasticsearchNode Type details
