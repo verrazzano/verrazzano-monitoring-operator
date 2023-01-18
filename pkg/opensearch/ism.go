@@ -252,7 +252,7 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 
 // updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
-func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFilePath string, policyFileName string, policyName string) (*ISMPolicy, error) {
+func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, error) {
 	policy, err := getISMPolicyFromFile(policyFileName)
 	if err != nil {
 		return nil, err
@@ -269,7 +269,7 @@ func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFile
 func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, error) {
 	var defaultPolicies []*ISMPolicy
 	for policyName, policyFile := range defaultISMPoliciesMap {
-		createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, defaultPolicyPath, policyFile, policyName)
+		createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyFile, policyName)
 		if err != nil {
 			return defaultPolicies, err
 		}
@@ -366,7 +366,7 @@ func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
 // getISMPolicyFromFile reads the given json file and return the ISMPolicy object after unmarshalling.
 func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
 	ismPolicyFs := verrazzanomonitoringoperator.GetEmbeddedISMPolicy()
-	policyBytes, err := ismPolicyFs.ReadFile(policyFileName)
+	policyBytes, err := ismPolicyFs.ReadFile(defaultPolicyPath + policyFileName)
 	if err != nil {
 		return nil, err
 	}
