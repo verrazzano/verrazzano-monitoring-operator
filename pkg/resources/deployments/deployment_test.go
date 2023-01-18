@@ -107,7 +107,7 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
@@ -131,7 +131,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			Kibana: vmcontrollerv1.Kibana{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
@@ -184,7 +184,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 					RequestMemory: "63M",
 				},
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{
 					Name:     config.ElasticsearchIngest.Name,

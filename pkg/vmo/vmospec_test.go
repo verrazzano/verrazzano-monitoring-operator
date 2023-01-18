@@ -107,7 +107,7 @@ func TestInitializeVMOSpec(t *testing.T) {
 		for _, tt := range tests {
 			handleOpensearchConversion(tt.givenVmiSpec)
 			assert.EqualValues(t, tt.expectedVmiSpec.Opensearch.Storage.Size, tt.givenVmiSpec.Opensearch.Storage.Size)
-			assert.EqualValues(t, "", tt.givenVmiSpec.Elasticsearch.Storage.Size)
+			assert.EqualValues(t, vmcontrollerv1.Elasticsearch{}, tt.givenVmiSpec.Elasticsearch)
 		}
 	}
 }

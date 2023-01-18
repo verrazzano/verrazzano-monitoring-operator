@@ -63,7 +63,7 @@ type (
 		// Prometheus details
 		AlertManager AlertManager `json:"alertmanager"`
 
-		// Elasticsearch details
+		// Deprecated: Elasticsearch has been replaced by Opensearch
 		Elasticsearch Elasticsearch `json:"elasticsearch"`
 
 		// Opensearch details
@@ -127,7 +127,7 @@ type (
 		Replicas          int32     `json:"replicas,omitempty"`
 	}
 
-	// Elasticsearch details
+	// Deprecated: Elasticsearch type has been replaced by Opensearch
 	Elasticsearch struct {
 		Enabled              bool                    `json:"enabled" yaml:"enabled"`
 		Storage              Storage                 `json:"storage,omitempty"`
