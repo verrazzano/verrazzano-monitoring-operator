@@ -8,11 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/verrazzano/pkg/diff"
 
+	verrazzanomonitoringoperator "github.com/verrazzano/verrazzano-monitoring-operator"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
@@ -253,7 +253,7 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 // updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
 func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFilePath string, policyFileName string, policyName string) (*ISMPolicy, error) {
-	policy, err := getISMPolicyFromFile(policyFilePath, policyFileName)
+	policy, err := getISMPolicyFromFile(policyFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -364,8 +364,9 @@ func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
 }
 
 // getISMPolicyFromFile reads the given json file and return the ISMPolicy object after unmarshalling.
-func getISMPolicyFromFile(policyFilePath, policyFileName string) (*ISMPolicy, error) {
-	policyBytes, err := os.ReadFile(policyFilePath + policyFileName)
+func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
+	ismPolicyFs := verrazzanomonitoringoperator.GetEmbeddedISMPolicy()
+	policyBytes, err := ismPolicyFs.ReadFile(policyFileName)
 	if err != nil {
 		return nil, err
 	}
