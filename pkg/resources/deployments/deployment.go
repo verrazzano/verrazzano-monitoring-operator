@@ -54,11 +54,30 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	if vmo.Spec.Grafana.Enabled {
 		expected.GrafanaDeployments++
 		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
+		deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+			SeccompProfile: &corev1.SeccompProfile{
+				Type: "RuntimeDefault",
+			},
+		}
+
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
 		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Grafana.Name)
 
 		deployment.Spec.Strategy.Type = "Recreate"
+
+		// Init grafana container security context.   472 is grafana UID and GID
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+			Privileged:               resources.NewBool(false),
+			RunAsUser:                resources.New64Val(472),
+			RunAsGroup:               resources.New64Val(472),
+			RunAsNonRoot:             resources.NewBool(true),
+			AllowPrivilegeEscalation: resources.NewBool(false),
+		}
+
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "GF_PATHS_PROVISIONING", Value: "/etc/grafana/provisioning"},
 			{Name: "GF_SERVER_ENABLE_GZIP", Value: "true"},
@@ -227,6 +246,19 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				continue
 			}
 			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, resources.CreateSidecarContainer(sidecar))
+
+			// Init container sidecar (k8s-sidecar) with nobody UID/GID
+			deployment.Spec.Template.Spec.Containers[i+1].SecurityContext = &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{"ALL"},
+				},
+				Privileged:               resources.NewBool(false),
+				RunAsUser:                resources.New64Val(65534),
+				RunAsGroup:               resources.New64Val(65534),
+				RunAsNonRoot:             resources.NewBool(true),
+				AllowPrivilegeEscalation: resources.NewBool(false),
+			}
+
 			deployment.Spec.Template.Spec.Containers[i+1].Env = append(deployment.Spec.Template.Spec.Containers[i+1].Env, []corev1.EnvVar{
 				// These values are also used in the Grafana Helm chart in Verrazzano
 				// This label allows us to select the correct dashboard ConfigMaps to be deployed in Grafana
