@@ -365,8 +365,8 @@ func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
 
 // getISMPolicyFromFile reads the given json file and return the ISMPolicy object after unmarshalling.
 func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
-	ismPolicyFs := verrazzanomonitoringoperator.GetEmbeddedISMPolicy()
-	policyBytes, err := ismPolicyFs.ReadFile(defaultPolicyPath + policyFileName)
+	ismPolicyFS := verrazzanomonitoringoperator.GetEmbeddedISMPolicy()
+	policyBytes, err := ismPolicyFS.ReadFile(defaultPolicyPath + policyFileName)
 	if err != nil {
 		return nil, err
 	}
