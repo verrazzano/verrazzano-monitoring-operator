@@ -54,11 +54,6 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 	if vmo.Spec.Grafana.Enabled {
 		expected.GrafanaDeployments++
 		deployment := createDeploymentElement(vmo, &vmo.Spec.Grafana.Storage, &vmo.Spec.Grafana.Resources, config.Grafana, config.Grafana.Name)
-		deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
-			SeccompProfile: &corev1.SeccompProfile{
-				Type: "RuntimeDefault",
-			},
-		}
 
 		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = config.Grafana.ImagePullPolicy
 		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Grafana.Replicas)
@@ -281,6 +276,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 		grafanaGid := int64(472)
 		deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
 			FSGroup: &grafanaGid,
+			SeccompProfile: &corev1.SeccompProfile{
+				Type: "RuntimeDefault",
+			},
 		}
 		deployments = append(deployments, deployment)
 	}
