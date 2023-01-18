@@ -12,7 +12,7 @@ import (
 
 	"github.com/verrazzano/pkg/diff"
 
-	verrazzanomonitoringoperator "github.com/verrazzano/verrazzano-monitoring-operator"
+	"github.com/verrazzano/verrazzano-monitoring-operator"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 )
 
