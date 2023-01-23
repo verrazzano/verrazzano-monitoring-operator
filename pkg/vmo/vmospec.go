@@ -71,6 +71,15 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 
 	//Elastic search to open search CR conversion
 	handleOpensearchConversion(&vmo.Spec)
+	// if both elasticsearch and opensearch fields are filled out in CR
+	if vmo.Spec.Elasticsearch.Enabled && vmo.Spec.Opensearch.Enabled {
+		//remove elastic search data
+		vmo.Spec.Elasticsearch = vmcontrollerv1.Elasticsearch{}
+	} else if vmo.Spec.Elasticsearch.Enabled { // if just elastic search is filled out in CR
+		//copy elastic search data to opensearch field and then remove old elastic search data
+		vmo.Spec.Opensearch = vmcontrollerv1.Opensearch(vmo.Spec.Elasticsearch)
+		vmo.Spec.Elasticsearch = vmcontrollerv1.Elasticsearch{}
+	}
 
 	// Default roles for VMO components
 	initNode(&vmo.Spec.Opensearch.MasterNode, vmcontrollerv1.MasterRole)
