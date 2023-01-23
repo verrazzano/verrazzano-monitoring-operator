@@ -103,7 +103,7 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 	ch := make(chan error)
 	go func() {
 		// if Elasticsearch.DisableDefaultPolicy is set to false, skip the deletion.
-		if !vmi.Spec.Elasticsearch.Enabled || !vmi.Spec.Elasticsearch.DisableDefaultPolicy {
+		if !vmi.Spec.Opensearch.Enabled || !vmi.Spec.Opensearch.DisableDefaultPolicy {
 			ch <- nil
 			return
 		}
