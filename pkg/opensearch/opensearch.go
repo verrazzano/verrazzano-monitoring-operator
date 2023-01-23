@@ -131,7 +131,7 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)
 	go func() {
-		if !vmi.Spec.Elasticsearch.Enabled || vmi.Spec.Elasticsearch.DisableDefaultPolicy {
+		if !vmi.Spec.Opensearch.Enabled || vmi.Spec.Opensearch.DisableDefaultPolicy {
 			ch <- nil
 			return
 		}
