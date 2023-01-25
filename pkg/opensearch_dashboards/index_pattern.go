@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package dashboards
@@ -35,7 +35,8 @@ func (od *OSDashboardsClient) CreateDefaultIndexPatterns(log vzlog.VerrazzanoLog
 		savedObject := SavedObjectType{
 			Type: constants.IndexPattern,
 			Attributes: Attributes{
-				Title: indexPattern,
+				Title:         indexPattern,
+				TimeFieldName: constants.TimeStamp,
 			},
 		}
 		savedObjectPayloads = append(savedObjectPayloads, savedObject)
