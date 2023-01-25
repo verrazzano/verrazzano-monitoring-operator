@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -217,3 +217,6 @@ const IndexPattern = "index-pattern"
 
 // PodUser used in security context
 const PodUser = 1000
+
+// TimeStamp used to add timestamp as TimeFieldName in the index pattern
+const TimeStamp = "@timestamp"
