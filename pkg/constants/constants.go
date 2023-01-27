@@ -208,3 +208,6 @@ const IndexPattern = "index-pattern"
 
 // PodUser used in security context
 const PodUser = 1000
+
+// TimeStamp used to add timestamp as TimeFieldName in the index pattern
+const TimeStamp = "@timestamp"

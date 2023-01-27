@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	testPolicyRelativePath = "../../" + defaultPolicyPath
-	testPolicyNotFound     = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
-	testSystemPolicy       = `
+	testPolicyNotFound = `{"error":{"root_cause":[{"type":"status_exception","reason":"Policy not found"}],"type":"status_exception","reason":"Policy not found"},"status":404}`
+	testSystemPolicy   = `
 {
     "_id" : "verrazzano-system",
     "_seq_no" : 0,
@@ -469,16 +468,13 @@ func TestConfigureIndexManagementPluginOpenSearchNotReady(t *testing.T) {
 // THEN the ISM policy object is created if given json file contains the policy. .
 func TestGetISMPolicyFromFile(t *testing.T) {
 	type args struct {
-		policyFilePath string
 		policyFileName string
 	}
 	validArgs := args{
-		policyFilePath: testPolicyRelativePath,
 		policyFileName: systemDefaultPolicyFileName,
 	}
 	invalidArgs := args{
-		policyFilePath: "dummyPath",
-		policyFileName: systemDefaultPolicyFileName,
+		policyFileName: "invalidFile",
 	}
 
 	tests := []struct {
@@ -487,19 +483,19 @@ func TestGetISMPolicyFromFile(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"TestGetISMPolicyFromFile when file path is valid",
+			"TestGetISMPolicyFromFile when file is valid",
 			validArgs,
 			false,
 		},
 		{
-			"TestGetISMPolicyFromFile when file path is invalid",
+			"TestGetISMPolicyFromFile when file doesn't exist",
 			invalidArgs,
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := getISMPolicyFromFile(tt.args.policyFilePath, tt.args.policyFileName)
+			_, err := getISMPolicyFromFile(tt.args.policyFileName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getISMPolicyFromFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -518,7 +514,7 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 		DoHTTP            func(request *http.Request) (*http.Response, error)
 		statefulSetLister v1.StatefulSetLister
 	}
-	policy, err := getISMPolicyFromFile(testPolicyRelativePath, systemDefaultPolicyFileName)
+	policy, err := getISMPolicyFromFile(systemDefaultPolicyFileName)
 	if err != nil {
 		t.Errorf("Error while creating test policy")
 	}
@@ -554,7 +550,6 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 	}
 	type args struct {
 		openSearchEndpoint string
-		policyFilePath     string
 		policyFileName     string
 		policyName         string
 	}
@@ -570,7 +565,6 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 			field1,
 			args{
 				"localhost:9090",
-				testPolicyRelativePath,
 				systemDefaultPolicyFileName,
 				systemDefaultPolicy,
 			},
@@ -582,7 +576,6 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 			fieldWithError,
 			args{
 				"localhost:9090",
-				testPolicyRelativePath,
 				systemDefaultPolicyFileName,
 				systemDefaultPolicy,
 			},
@@ -597,7 +590,7 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 				DoHTTP:            tt.fields.DoHTTP,
 				statefulSetLister: tt.fields.statefulSetLister,
 			}
-			got, err := o.updateISMPolicyFromFile(tt.args.openSearchEndpoint, tt.args.policyFilePath, tt.args.policyFileName, tt.args.policyName)
+			got, err := o.updateISMPolicyFromFile(tt.args.openSearchEndpoint, tt.args.policyFileName, tt.args.policyName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("updateISMPolicyFromFile() error = %v, wantErr %v", err, tt.wantErr)
 				return

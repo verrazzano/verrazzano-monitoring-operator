@@ -378,6 +378,7 @@ func GetElasticsearchMasterInitContainer() *corev1.Container {
 	elasticsearchInitContainer.Command =
 		[]string{"sh", "-c", "chown -R 1000:1000 /usr/share/opensearch/data; sysctl -w vm.max_map_count=262144"}
 	elasticsearchInitContainer.Ports = nil
+	elasticsearchInitContainer.SecurityContext = getInitContainerSecurityContext()
 	return &elasticsearchInitContainer
 }
 
@@ -386,6 +387,7 @@ func GetElasticsearchInitContainer() *corev1.Container {
 	elasticsearchInitContainer := CreateContainerElement(nil, nil, config.ElasticsearchInit)
 	elasticsearchInitContainer.Args = []string{"sysctl", "-w", "vm.max_map_count=262144"}
 	elasticsearchInitContainer.Ports = nil
+	elasticsearchInitContainer.SecurityContext = getInitContainerSecurityContext()
 	return &elasticsearchInitContainer
 }
 
@@ -591,4 +593,15 @@ func GetOSPluginsInstallTmpl(plugins []string, osPluginInstallCmd string) string
 		pluginsInstallTmpl += fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(osPluginInstallCmd, plugin))
 	}
 	return pluginsInstallTmpl
+}
+
+// getInitContainerSecurityContext returns the security context for os init containers
+func getInitContainerSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		Privileged:               NewBool(true),
+		AllowPrivilegeEscalation: NewBool(true),
+		RunAsUser:                New64Val(0),
+		RunAsGroup:               New64Val(0),
+		RunAsNonRoot:             NewBool(false),
+	}
 }
