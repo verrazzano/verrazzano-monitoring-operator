@@ -31,7 +31,8 @@ type (
 	}
 
 	Attributes struct {
-		Title string `json:"title"`
+		Title         string `json:"title"`
+		TimeFieldName string `json:"timeFieldName,omitempty"`
 	}
 )
 
