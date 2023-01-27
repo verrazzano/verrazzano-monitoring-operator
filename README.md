@@ -4,10 +4,8 @@
 
 The verrazzano-monitoring-operator (or VMO) is a Kubernetes operator to control the deployment and management of "Verrazzano
 Monitoring Instances" (or VMIs).  A VMI is a collection of telemetry components like Grafana,
-Kibana, and Elasticsearch.
+OpenSearch, and OpenSearch Dashboards.
 
 ## [Verrazzano Integration](docs/verrazzano-integration.md)
-
-## [Usage](docs/usage.md)
 
 ## [Development](docs/development.md)

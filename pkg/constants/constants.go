@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -142,15 +142,6 @@ const NginxClientMaxBodySize = "6M"
 
 // NginxProxyReadTimeoutForKibana value used for ingress annotation
 const NginxProxyReadTimeoutForKibana = "210s"
-
-// DefaultElasticsearchDataReplicas default replicas for ESData
-const DefaultElasticsearchDataReplicas = 1
-
-// DefaultElasticsearchMasterReplicas default replicas for ESMaster
-const DefaultElasticsearchMasterReplicas = 1
-
-// DefaultElasticsearchIngestReplicas default replicas for ESIngest
-const DefaultElasticsearchIngestReplicas = 1
 
 // Storage-related constants
 

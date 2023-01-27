@@ -53,8 +53,6 @@ export KUBECONFIG=<your_kubeconfig>
 make go-run
 ```
 
-From here you can manually deploy VMIs to your cluster (as in the [Usage doc](usage.md)), or run integration tests.
-
 ### Running the operator as an in-cluster pod
 
 The official way to run a Kubernetes operator is to run it as a pod within Kubernetes itself.  To build this
