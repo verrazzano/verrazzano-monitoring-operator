@@ -179,10 +179,10 @@ http () {
     curl -v -XGET -s -k ` + basicAuthParams + ` --fail http://127.0.0.1:9200${path}
 }
 if [ -f "${START_FILE}" ]; then
-    echo 'Elasticsearch is already running, lets check the node is healthy'
+    echo 'OpenSearch is already running, lets check the node is healthy'
     http "` + config.ElasticsearchMaster.ReadinessHTTPPath + `"
 else
-    echo 'Waiting for elasticsearch cluster to become cluster to be ready'
+    echo 'Waiting for OpenSearch cluster to become cluster to be ready'
     if http "` + config.ElasticsearchMaster.ReadinessHTTPPath + `" ; then
         touch ${START_FILE}
     else` + readinessProbeCondition + `
