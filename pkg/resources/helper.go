@@ -40,7 +40,7 @@ const (
     %s
 	/usr/local/bin/opensearch-dashboards-docker`
 	containerCmdTmpl = `#!/usr/bin/env bash -e
-	# Updating elastic search keystore with keys
+	# Updating opensearch keystore with keys
 	# required for the repository-s3 plugin
 	if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
 		echo "Updating object store access key..."

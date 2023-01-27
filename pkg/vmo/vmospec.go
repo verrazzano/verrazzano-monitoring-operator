@@ -69,7 +69,7 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		vmo.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
 
-	//Elastic search to open search CR conversion
+	// Elasticsearch to opensearch CR conversion
 	handleOpensearchConversion(&vmo.Spec)
 
 	// Default roles for VMO components

@@ -59,7 +59,7 @@ func TestInitializeVMOSpec(t *testing.T) {
 			expectedVmiSpec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
 		}{
 			{
-				"enabled elastic search field gets converted to opensearch",
+				"enabled elasticsearch field gets converted to opensearch",
 				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 					Elasticsearch: vmcontrollerv1.Elasticsearch{
 						Enabled: true,
@@ -78,7 +78,7 @@ func TestInitializeVMOSpec(t *testing.T) {
 				},
 			},
 			{
-				"both elastic search and opensearch are enabled",
+				"both elasticsearch and opensearch are enabled",
 				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 					Elasticsearch: vmcontrollerv1.Elasticsearch{
 						Enabled: true,

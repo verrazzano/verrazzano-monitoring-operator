@@ -34,7 +34,6 @@ pipeline {
         DOCKER_NAMESPACE = 'verrazzano'
         HELM_CHART_NAME = 'verrazzano-monitoring-operator'
         VMI_NAMESAPCE_PREFIX = 'vmi'
-        ELASTICSEARCH_VERSION = '7.2.0'
         INGRESS_NODE_PORT = sh(script: "shuf -i 30000-32767 -n 1" , returnStdout: true)
         KUBECONFIG = '~/.kube/config'
         NETRC_FILE = credentials('netrc')
