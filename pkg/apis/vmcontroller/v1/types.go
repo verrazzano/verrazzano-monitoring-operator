@@ -64,13 +64,15 @@ type (
 		AlertManager AlertManager `json:"alertmanager"`
 
 		// Deprecated: Elasticsearch has been replaced by OpenSearch
-		Elasticsearch Elasticsearch `json:"elasticsearch"`
+		// +optional
+		Elasticsearch Elasticsearch `json:"elasticsearch,omitempty"`
 
 		// OpenSearch details
 		Opensearch Opensearch `json:"opensearch"`
 
 		// Deprecated: Kibana has been replaced by OpenSearch Dashboards
-		Kibana Kibana `json:"kibana"`
+		// +optional
+		Kibana Kibana `json:"kibana,omitempty"`
 
 		// OpenSearch Dashboards details
 		OpensearchDashboards OpensearchDashboards `json:"opensearchDashboards"`
