@@ -99,7 +99,7 @@ var AlertManager = ComponentDetails{
 // Kibana is the default Kibana configuration
 var Kibana = ComponentDetails{
 	Name:              "kibana",
-	EnvName:           "KIBANA_IMAGE",
+	EnvName:           "OPENSEARCH_DASHBOARDS_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
 	LivenessHTTPPath:  "/api/status",
@@ -111,7 +111,7 @@ var Kibana = ComponentDetails{
 // OpenSearchDashboards is the default OpenSearchDashboards configuration
 var OpenSearchDashboards = ComponentDetails{
 	Name:              "osd",
-	EnvName:           "KIBANA_IMAGE",
+	EnvName:           "OPENSEARCH_DASHBOARDS_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
 	LivenessHTTPPath:  "/api/status",
@@ -124,7 +124,7 @@ var OpenSearchDashboards = ComponentDetails{
 var OpenSearchDashboardsRedirect = ComponentDetails{
 	Name:              "osd-redirect",
 	EndpointName:      "kibana",
-	EnvName:           "KIBANA_IMAGE",
+	EnvName:           "OPENSEARCH_DASHBOARDS_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
 	LivenessHTTPPath:  "/api/status",
