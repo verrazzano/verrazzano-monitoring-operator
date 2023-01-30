@@ -609,7 +609,11 @@ func (in *VerrazzanoMonitoringInstanceSpec) DeepCopyInto(out *VerrazzanoMonitori
 	in.Grafana.DeepCopyInto(&out.Grafana)
 	in.Prometheus.DeepCopyInto(&out.Prometheus)
 	out.AlertManager = in.AlertManager
-	in.Elasticsearch.DeepCopyInto(&out.Elasticsearch)
+	if in.Elasticsearch != nil {
+		in, out := &in.Elasticsearch, &out.Elasticsearch
+		*out = new(Elasticsearch)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Opensearch.DeepCopyInto(&out.Opensearch)
 	if in.Kibana != nil {
 		in, out := &in.Kibana, &out.Kibana

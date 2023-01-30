@@ -65,7 +65,7 @@ type (
 
 		// Deprecated: Elasticsearch has been replaced by OpenSearch
 		// +optional
-		Elasticsearch Elasticsearch `json:"elasticsearch,omitempty"`
+		Elasticsearch *Elasticsearch `json:"elasticsearch,omitempty"`
 
 		// OpenSearch details
 		Opensearch Opensearch `json:"opensearch"`

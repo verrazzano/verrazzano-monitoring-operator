@@ -118,7 +118,7 @@ func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpe
 		// if both Kibana and OpensearchDashboards fields are filled out in CR
 		if spec.OpensearchDashboards.Enabled {
 			// remove old Kibana data
-			spec.Kibana = &vmcontrollerv1.Kibana{}
+			spec.Kibana = nil
 			return
 		}
 		// copy Kibana fields to OpensearchDashboards fields and then remove old Kibana data
@@ -126,22 +126,29 @@ func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpe
 		spec.OpensearchDashboards.Replicas = spec.Kibana.Replicas
 		spec.OpensearchDashboards.Plugins = spec.Kibana.Plugins
 		spec.OpensearchDashboards.Resources = spec.Kibana.Resources
-		spec.Kibana = &vmcontrollerv1.Kibana{}
+		spec.Kibana = nil
 	}
 }
 
 func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
-	// if both Elasticsearch and Opensearch fields are filled out in CR
-	if spec.Elasticsearch.Enabled && spec.Opensearch.Enabled {
-		//remove Elasticsearch data
-		spec.Elasticsearch = vmcontrollerv1.Elasticsearch{}
-		return
-	}
-	// if just Elasticsearch is filled out in CR
-	if spec.Elasticsearch.Enabled {
-		//copy Elasticsearch data to Opensearch field and then remove old Elasticsearch data
-		spec.Opensearch = vmcontrollerv1.Opensearch(spec.Elasticsearch)
-		spec.Elasticsearch = vmcontrollerv1.Elasticsearch{}
+	if spec.Elasticsearch != nil && spec.Elasticsearch.Enabled {
+		// if both Elasticsearch and Opensearch fields are filled out in CR
+		if spec.Opensearch.Enabled {
+			//remove Elasticsearch data
+			spec.Elasticsearch = nil
+			return
+		}
+		//copy Elasticsearch fields to Opensearch fields and then remove old Elasticsearch data
+		spec.Opensearch.Enabled = spec.Elasticsearch.Enabled
+		spec.Opensearch.Storage = spec.Elasticsearch.Storage
+		spec.Opensearch.IngestNode = spec.Elasticsearch.IngestNode
+		spec.Opensearch.MasterNode = spec.Elasticsearch.MasterNode
+		spec.Opensearch.DataNode = spec.Elasticsearch.DataNode
+		spec.Opensearch.Policies = spec.Elasticsearch.Policies
+		spec.Opensearch.Nodes = spec.Elasticsearch.Nodes
+		spec.Opensearch.Plugins = spec.Elasticsearch.Plugins
+		spec.Opensearch.DisableDefaultPolicy = spec.Elasticsearch.DisableDefaultPolicy
+		spec.Elasticsearch = nil
 	}
 }
 

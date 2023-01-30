@@ -61,7 +61,7 @@ func TestInitializeVMOSpec(t *testing.T) {
 			{
 				"enabled elasticsearch field gets converted to opensearch",
 				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmcontrollerv1.Elasticsearch{
+					Elasticsearch: &vmcontrollerv1.Elasticsearch{
 						Enabled: true,
 						Storage: vmcontrollerv1.Storage{
 							Size: "1G",
@@ -80,7 +80,7 @@ func TestInitializeVMOSpec(t *testing.T) {
 			{
 				"both elasticsearch and opensearch are enabled",
 				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmcontrollerv1.Elasticsearch{
+					Elasticsearch: &vmcontrollerv1.Elasticsearch{
 						Enabled: true,
 						Storage: vmcontrollerv1.Storage{
 							Size: "1G",
@@ -107,7 +107,7 @@ func TestInitializeVMOSpec(t *testing.T) {
 		for _, tt := range tests {
 			handleOpensearchConversion(tt.givenVmiSpec)
 			assert.EqualValues(t, tt.expectedVmiSpec.Opensearch.Storage.Size, tt.givenVmiSpec.Opensearch.Storage.Size)
-			assert.EqualValues(t, vmcontrollerv1.Elasticsearch{}, tt.givenVmiSpec.Elasticsearch)
+			assert.Nil(t, tt.givenVmiSpec.Elasticsearch)
 		}
 	}
 }
