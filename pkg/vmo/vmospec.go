@@ -122,10 +122,7 @@ func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpe
 			return
 		}
 		// copy Kibana fields to OpensearchDashboards fields and then remove old Kibana data
-		spec.OpensearchDashboards.Enabled = spec.Kibana.Enabled
-		spec.OpensearchDashboards.Replicas = spec.Kibana.Replicas
-		spec.OpensearchDashboards.Plugins = spec.Kibana.Plugins
-		spec.OpensearchDashboards.Resources = spec.Kibana.Resources
+		spec.OpensearchDashboards = vmcontrollerv1.OpensearchDashboards(*spec.Kibana)
 		spec.Kibana = nil
 	}
 }
@@ -139,15 +136,7 @@ func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanc
 			return
 		}
 		//copy Elasticsearch fields to Opensearch fields and then remove old Elasticsearch data
-		spec.Opensearch.Enabled = spec.Elasticsearch.Enabled
-		spec.Opensearch.Storage = spec.Elasticsearch.Storage
-		spec.Opensearch.IngestNode = spec.Elasticsearch.IngestNode
-		spec.Opensearch.MasterNode = spec.Elasticsearch.MasterNode
-		spec.Opensearch.DataNode = spec.Elasticsearch.DataNode
-		spec.Opensearch.Policies = spec.Elasticsearch.Policies
-		spec.Opensearch.Nodes = spec.Elasticsearch.Nodes
-		spec.Opensearch.Plugins = spec.Elasticsearch.Plugins
-		spec.Opensearch.DisableDefaultPolicy = spec.Elasticsearch.DisableDefaultPolicy
+		spec.Opensearch = vmcontrollerv1.Opensearch(*spec.Elasticsearch)
 		spec.Elasticsearch = nil
 	}
 }
