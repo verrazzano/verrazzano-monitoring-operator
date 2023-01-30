@@ -117,14 +117,17 @@ func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpe
 	// if both Kibana and OpensearchDashboards fields are filled out in CR
 	if spec.Kibana.Enabled && spec.OpensearchDashboards.Enabled {
 		// remove Kibana data
-		spec.Kibana = vmcontrollerv1.Kibana{}
+		spec.Kibana = &vmcontrollerv1.Kibana{}
 		return
 	}
 	// if just Kibana is filled out in CR
 	if spec.Kibana.Enabled {
 		// copy Kibana data to OpensearchDashboards field and then remove old Kibana data
-		spec.OpensearchDashboards = vmcontrollerv1.OpensearchDashboards(spec.Kibana)
-		spec.Kibana = vmcontrollerv1.Kibana{}
+		spec.OpensearchDashboards.Enabled = spec.Kibana.Enabled
+		spec.OpensearchDashboards.Replicas = spec.OpensearchDashboards.Replicas
+		spec.OpensearchDashboards.Plugins = spec.Kibana.Plugins
+		spec.OpensearchDashboards.Resources = spec.Kibana.Resources
+		spec.Kibana = &vmcontrollerv1.Kibana{}
 	}
 }
 func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {

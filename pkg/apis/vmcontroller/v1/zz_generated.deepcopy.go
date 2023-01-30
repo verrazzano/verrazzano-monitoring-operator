@@ -611,7 +611,11 @@ func (in *VerrazzanoMonitoringInstanceSpec) DeepCopyInto(out *VerrazzanoMonitori
 	out.AlertManager = in.AlertManager
 	in.Elasticsearch.DeepCopyInto(&out.Elasticsearch)
 	in.Opensearch.DeepCopyInto(&out.Opensearch)
-	in.Kibana.DeepCopyInto(&out.Kibana)
+	if in.Kibana != nil {
+		in, out := &in.Kibana, &out.Kibana
+		*out = new(Kibana)
+		(*in).DeepCopyInto(*out)
+	}
 	in.OpensearchDashboards.DeepCopyInto(&out.OpensearchDashboards)
 	out.API = in.API
 	if in.NatGatewayIPs != nil {

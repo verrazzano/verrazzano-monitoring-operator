@@ -72,7 +72,7 @@ type (
 
 		// Deprecated: Kibana has been replaced by OpenSearch Dashboards
 		// +optional
-		Kibana Kibana `json:"kibana,omitempty"`
+		Kibana *Kibana `json:"kibana,omitempty"`
 
 		// OpenSearch Dashboards details
 		OpensearchDashboards OpensearchDashboards `json:"opensearchDashboards"`
