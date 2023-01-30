@@ -114,14 +114,13 @@ func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRo
 }
 
 func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
-	// if both Kibana and OpensearchDashboards fields are filled out in CR
-	if spec.Kibana.Enabled && spec.OpensearchDashboards.Enabled {
-		// remove Kibana data
-		spec.Kibana = &vmcontrollerv1.Kibana{}
-		return
-	}
-	// if just Kibana is filled out in CR
-	if spec.Kibana.Enabled {
+	if spec.Kibana != nil && spec.Kibana.Enabled {
+		// if both Kibana and OpensearchDashboards fields are filled out in CR
+		if spec.OpensearchDashboards.Enabled {
+			// remove old Kibana data
+			spec.Kibana = &vmcontrollerv1.Kibana{}
+			return
+		}
 		// copy Kibana fields to OpensearchDashboards fields and then remove old Kibana data
 		spec.OpensearchDashboards.Enabled = spec.Kibana.Enabled
 		spec.OpensearchDashboards.Replicas = spec.Kibana.Replicas
@@ -130,6 +129,7 @@ func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpe
 		spec.Kibana = &vmcontrollerv1.Kibana{}
 	}
 }
+
 func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
 	// if both Elasticsearch and Opensearch fields are filled out in CR
 	if spec.Elasticsearch.Enabled && spec.Opensearch.Enabled {
