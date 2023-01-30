@@ -51,7 +51,7 @@ func TestInitNode(t *testing.T) {
 	}
 }
 
-func TestInitializeVMOSpec(t *testing.T) {
+func TestInitializeVMOSpecOpensearch(t *testing.T) {
 	{
 		var tests = []struct {
 			name            string
@@ -108,6 +108,57 @@ func TestInitializeVMOSpec(t *testing.T) {
 			handleOpensearchConversion(tt.givenVmiSpec)
 			assert.EqualValues(t, tt.expectedVmiSpec.Opensearch.Storage.Size, tt.givenVmiSpec.Opensearch.Storage.Size)
 			assert.Nil(t, tt.givenVmiSpec.Elasticsearch)
+		}
+	}
+}
+
+func TestInitializeVMOSpecOpensearchDashboards(t *testing.T) {
+	{
+		var tests = []struct {
+			name            string
+			givenVmiSpec    *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+			expectedVmiSpec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+		}{
+			{
+				"enabled kibana field gets converted to opensearch dashboards",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Kibana: &vmcontrollerv1.Kibana{
+						Enabled:  true,
+						Replicas: 2,
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
+						Enabled:  true,
+						Replicas: 2,
+					},
+				},
+			},
+			{
+				"both kibana and opensearch dashboards are enabled",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Kibana: &vmcontrollerv1.Kibana{
+						Enabled:  true,
+						Replicas: 2,
+					},
+					OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
+						Enabled:  true,
+						Replicas: 4,
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
+						Enabled:  true,
+						Replicas: 4,
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			handleOpensearchDashboardsConversion(tt.givenVmiSpec)
+			assert.EqualValues(t, tt.expectedVmiSpec.OpensearchDashboards.Replicas, tt.givenVmiSpec.OpensearchDashboards.Replicas)
+			assert.Nil(t, tt.givenVmiSpec.Kibana)
 		}
 	}
 }

@@ -65,7 +65,7 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	}
 
 	// Kibana to OpenSearch Dashboards CR conversion
-	handleKibanaConversion(&vmo.Spec)
+	handleOpensearchDashboardsConversion(&vmo.Spec)
 
 	// Number of replicas for each component
 	if vmo.Spec.OpensearchDashboards.Replicas == 0 {
@@ -113,7 +113,7 @@ func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRo
 	}
 }
 
-func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
+func handleOpensearchDashboardsConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
 	if spec.Kibana != nil && spec.Kibana.Enabled {
 		// if both Kibana and OpensearchDashboards fields are filled out in CR
 		if spec.OpensearchDashboards.Enabled {
