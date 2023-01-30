@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package dashboards
@@ -30,7 +30,7 @@ func NewOSDashboardsClient() *OSDashboardsClient {
 
 // UpdatePatterns updates the index patterns configured for old indices if any to match the corresponding data streams.
 func (od *OSDashboardsClient) UpdatePatterns(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	if !vmi.Spec.Kibana.Enabled {
+	if !vmi.Spec.OpensearchDashboards.Enabled {
 		log.Debugf("OpenSearch Dashboards is not configured to run. Skipping the post upgrade step for OpenSearch Dashboards")
 		return nil
 	}

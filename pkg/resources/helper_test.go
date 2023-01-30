@@ -212,7 +212,7 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 			"TestGetOSDashboardPluginList when plugins are provided in VMI CRD",
 			&vmov1.VerrazzanoMonitoringInstance{
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-					Kibana: vmov1.Kibana{
+					OpensearchDashboards: vmov1.OpensearchDashboards{
 						Enabled: true,
 						Plugins: vmov1.OpenSearchDashboardsPlugins{
 							InstallList: testPlugins,
@@ -227,7 +227,7 @@ func TestGetOSDashboardPluginList(t *testing.T) {
 			"TestGetOSDashboardPluginList when plugins are not provided in VMI CRD",
 			&vmov1.VerrazzanoMonitoringInstance{
 				Spec: vmov1.VerrazzanoMonitoringInstanceSpec{
-					Kibana: vmov1.Kibana{
+					OpensearchDashboards: vmov1.OpensearchDashboards{
 						Enabled: true,
 						Plugins: vmov1.OpenSearchDashboardsPlugins{
 							Enabled: false,

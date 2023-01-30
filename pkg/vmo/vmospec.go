@@ -64,12 +64,15 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		vmo.Spec.Grafana.DatasourcesConfigMap = resources.GetMetaName(vmo.Name, constants.DatasourceConfig)
 	}
 
+	// Kibana to OpenSearch Dashboards CR conversion
+	handleKibanaConversion(&vmo.Spec)
+
 	// Number of replicas for each component
-	if vmo.Spec.Kibana.Replicas == 0 {
-		vmo.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
+	if vmo.Spec.OpensearchDashboards.Replicas == 0 {
+		vmo.Spec.OpensearchDashboards.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
 
-	// Elasticsearch to opensearch CR conversion
+	// Elasticsearch to OpenSearch CR conversion
 	handleOpensearchConversion(&vmo.Spec)
 
 	// Default roles for VMO components
@@ -110,16 +113,30 @@ func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRo
 	}
 }
 
+func handleKibanaConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
+	// if both Kibana and OpensearchDashboards fields are filled out in CR
+	if spec.Kibana.Enabled && spec.OpensearchDashboards.Enabled {
+		// remove Kibana data
+		spec.Kibana = vmcontrollerv1.Kibana{}
+		return
+	}
+	// if just Kibana is filled out in CR
+	if spec.Kibana.Enabled {
+		// copy Kibana data to OpensearchDashboards field and then remove old Kibana data
+		spec.OpensearchDashboards = vmcontrollerv1.OpensearchDashboards(spec.Kibana)
+		spec.Kibana = vmcontrollerv1.Kibana{}
+	}
+}
 func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
-	// if both elasticsearch and opensearch fields are filled out in CR
+	// if both Elasticsearch and Opensearch fields are filled out in CR
 	if spec.Elasticsearch.Enabled && spec.Opensearch.Enabled {
-		//remove elastic search data
+		//remove Elasticsearch data
 		spec.Elasticsearch = vmcontrollerv1.Elasticsearch{}
 		return
 	}
-	// if just elastic search is filled out in CR
+	// if just Elasticsearch is filled out in CR
 	if spec.Elasticsearch.Enabled {
-		//copy elastic search data to opensearch field and then remove old elastic search data
+		//copy Elasticsearch data to Opensearch field and then remove old Elasticsearch data
 		spec.Opensearch = vmcontrollerv1.Opensearch(spec.Elasticsearch)
 		spec.Elasticsearch = vmcontrollerv1.Elasticsearch{}
 	}

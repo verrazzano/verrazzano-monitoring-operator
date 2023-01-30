@@ -25,7 +25,7 @@ func TestVMONoIngress(t *testing.T) {
 			Prometheus: vmcontrollerv1.Prometheus{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
 			Opensearch: vmcontrollerv1.Opensearch{
@@ -90,7 +90,7 @@ func TestToCreateNewIngressesWithRedirects(t *testing.T) {
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			SecretName: "secret",
 			URI:        "example.com",
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
 			Opensearch: vmcontrollerv1.Opensearch{
@@ -194,7 +194,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			AlertManager: vmcontrollerv1.AlertManager{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
 			Opensearch: vmcontrollerv1.Opensearch{

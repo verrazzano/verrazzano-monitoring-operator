@@ -19,7 +19,7 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
 			Opensearch: vmcontrollerv1.Opensearch{

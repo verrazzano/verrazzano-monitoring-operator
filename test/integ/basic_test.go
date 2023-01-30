@@ -415,7 +415,7 @@ func verifyVMODeployment(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	var deploymentNamesToReplicas = map[string]int32{
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.API.Name:                 vmo.Spec.API.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Grafana.Name:             1,
-		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name:              vmo.Spec.Kibana.Replicas,
+		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.Kibana.Name:              vmo.Spec.OpensearchDashboards.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchIngest.Name: vmo.Spec.Opensearch.IngestNode.Replicas,
 		constants.VMOServiceNamePrefix + vmo.Name + "-" + config.ElasticsearchMaster.Name: vmo.Spec.Opensearch.MasterNode.Replicas,
 	}
@@ -1029,7 +1029,7 @@ func verifyKibana(t *testing.T, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance
 	var kbPort, esPort int32
 	var headers = map[string]string{}
 
-	if !vmo.Spec.Kibana.Enabled {
+	if !vmo.Spec.OpensearchDashboards.Enabled {
 		return
 	}
 

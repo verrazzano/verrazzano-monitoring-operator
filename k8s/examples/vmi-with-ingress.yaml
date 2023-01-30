@@ -18,5 +18,5 @@ spec:
       enabled: true
     opensearch:
       enabled: true
-    kibana:
+    opensearchDashboards:
       enabled: true

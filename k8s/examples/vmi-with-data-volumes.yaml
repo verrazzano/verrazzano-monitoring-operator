@@ -23,5 +23,5 @@ spec:
       enabled: true
       storage:
         size: "50Gi"
-    kibana:
+    opensearchDashboards:
       enabled: true

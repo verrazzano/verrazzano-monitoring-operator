@@ -147,7 +147,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			ingresses = append(ingresses, ingress)
 		}
 	}
-	if vmo.Spec.Kibana.Enabled {
+	if vmo.Spec.OpensearchDashboards.Enabled {
 		if config.Kibana.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
 			ingresses = append(ingresses, ingress)

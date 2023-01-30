@@ -312,14 +312,14 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 
 func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) *appsv1.Deployment {
 	var deployment *appsv1.Deployment
-	if vmo.Spec.Kibana.Enabled {
+	if vmo.Spec.OpensearchDashboards.Enabled {
 		opensearchURL := fmt.Sprintf("http://%s%s-%s:%d/", constants.VMOServiceNamePrefix, vmo.Name, config.OpensearchIngest.Name, config.OpensearchIngest.Port)
 
-		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.Kibana.Resources, config.OpenSearchDashboards, config.OpenSearchDashboards.Name)
+		deployment = createDeploymentElement(vmo, nil, &vmo.Spec.OpensearchDashboards.Resources, config.OpenSearchDashboards, config.OpenSearchDashboards.Name)
 		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 			Type: appsv1.RecreateDeploymentStrategyType,
 		}
-		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.Kibana.Replicas)
+		deployment.Spec.Replicas = resources.NewVal(vmo.Spec.OpensearchDashboards.Replicas)
 		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.OpenSearchDashboards.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "OPENSEARCH_HOSTS", Value: opensearchURL},

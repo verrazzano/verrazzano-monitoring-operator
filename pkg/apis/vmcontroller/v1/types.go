@@ -63,14 +63,17 @@ type (
 		// Prometheus details
 		AlertManager AlertManager `json:"alertmanager"`
 
-		// Deprecated: Elasticsearch has been replaced by Opensearch
+		// Deprecated: Elasticsearch has been replaced by OpenSearch
 		Elasticsearch Elasticsearch `json:"elasticsearch"`
 
-		// Opensearch details
+		// OpenSearch details
 		Opensearch Opensearch `json:"opensearch"`
 
-		// Kibana details
+		// Deprecated: Kibana has been replaced by OpenSearch Dashboards
 		Kibana Kibana `json:"kibana"`
+
+		// OpenSearch Dashboards details
+		OpensearchDashboards OpensearchDashboards `json:"opensearchDashboards"`
 
 		// API details
 		API API `json:"api,omitempty"`
@@ -187,8 +190,17 @@ type (
 		// Minimum count of documents in an index before it is rolled over
 		MinDocCount *int `json:"minDocCount,omitempty"`
 	}
-	// Kibana details
+
+	// Deprecated: Kibana type has been replaced by OpensearchDashboards
 	Kibana struct {
+		Enabled   bool                        `json:"enabled" yaml:"enabled"`
+		Resources Resources                   `json:"resources,omitempty"`
+		Replicas  int32                       `json:"replicas,omitempty"`
+		Plugins   OpenSearchDashboardsPlugins `json:"plugins,omitempty"`
+	}
+
+	// OpenSearch Dashboards details
+	OpensearchDashboards struct {
 		Enabled   bool                        `json:"enabled" yaml:"enabled"`
 		Resources Resources                   `json:"resources,omitempty"`
 		Replicas  int32                       `json:"replicas,omitempty"`
