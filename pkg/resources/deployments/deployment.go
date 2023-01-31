@@ -260,6 +260,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				{Name: "LABEL", Value: "grafana_dashboard"},
 				{Name: "LABEL_VALUE", Value: "1"},
 				{Name: "FOLDER", Value: "/etc/grafana/provisioning/dashboardjson"},
+				{Name: "NAMESPACE", Value: "ALL"},
 			}...)
 			deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[i+1].VolumeMounts, corev1.VolumeMount{
 				Name:      "dashboards-volume",
