@@ -121,24 +121,28 @@ func handleOpensearchDashboardsConversion(spec *vmcontrollerv1.VerrazzanoMonitor
 			spec.Kibana = nil
 			return
 		}
-		// copy Kibana fields to OpensearchDashboards fields and then remove old Kibana data
+		// copy Kibana fields to OpensearchDashboards field
 		spec.OpensearchDashboards = vmcontrollerv1.OpensearchDashboards(*spec.Kibana)
-		spec.Kibana = nil
 	}
+
+	// remove old Kibana data
+	spec.Kibana = nil
 }
 
 func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
 	if spec.Elasticsearch != nil && spec.Elasticsearch.Enabled {
 		// if both Elasticsearch and Opensearch fields are filled out in CR
 		if spec.Opensearch.Enabled {
-			//remove Elasticsearch data
+			// remove Elasticsearch data
 			spec.Elasticsearch = nil
 			return
 		}
-		//copy Elasticsearch fields to Opensearch fields and then remove old Elasticsearch data
+		// copy Elasticsearch fields to Opensearch fields
 		spec.Opensearch = vmcontrollerv1.Opensearch(*spec.Elasticsearch)
-		spec.Elasticsearch = nil
 	}
+
+	// remove old Elasticsearch data
+	spec.Elasticsearch = nil
 }
 
 func initStorageElement(storageElement *vmcontrollerv1.Storage, replicas int, pvcName string) {
