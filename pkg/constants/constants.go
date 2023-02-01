@@ -143,15 +143,6 @@ const NginxClientMaxBodySize = "6M"
 // NginxProxyReadTimeoutForKibana value used for ingress annotation
 const NginxProxyReadTimeoutForKibana = "210s"
 
-// DefaultElasticsearchDataReplicas default replicas for ESData
-const DefaultElasticsearchDataReplicas = 1
-
-// DefaultElasticsearchMasterReplicas default replicas for ESMaster
-const DefaultElasticsearchMasterReplicas = 1
-
-// DefaultElasticsearchIngestReplicas default replicas for ESIngest
-const DefaultElasticsearchIngestReplicas = 1
-
 // Storage-related constants
 
 // OciFlexVolumeProvisioner flex volume provisioner for OCI

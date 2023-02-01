@@ -25,10 +25,10 @@ func TestVMONoIngress(t *testing.T) {
 			Prometheus: vmcontrollerv1.Prometheus{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -52,7 +52,7 @@ func TestVMOWithIngresses(t *testing.T) {
 			Prometheus: vmcontrollerv1.Prometheus{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -90,10 +90,10 @@ func TestToCreateNewIngressesWithRedirects(t *testing.T) {
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 			SecretName: "secret",
 			URI:        "example.com",
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},
@@ -194,10 +194,10 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			AlertManager: vmcontrollerv1.AlertManager{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 			},
 		},

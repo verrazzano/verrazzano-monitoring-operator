@@ -40,7 +40,7 @@ const (
     %s
 	/usr/local/bin/opensearch-dashboards-docker`
 	containerCmdTmpl = `#!/usr/bin/env bash -e
-	# Updating elastic search keystore with keys
+	# Updating opensearch keystore with keys
 	# required for the repository-s3 plugin
 	if [ "${OBJECT_STORE_ACCESS_KEY_ID:-}" ]; then
 		echo "Updating object store access key..."
@@ -244,7 +244,7 @@ func GetStorageElementForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInsta
 	case config.Grafana.Name:
 		return &vmo.Spec.Grafana.Storage
 	case config.ElasticsearchData.Name:
-		return vmo.Spec.Elasticsearch.DataNode.Storage
+		return vmo.Spec.Opensearch.DataNode.Storage
 	}
 	return nil
 }
@@ -255,7 +255,7 @@ func GetReplicasForComponent(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, c
 	case config.Grafana.Name:
 		return int32(1)
 	case config.ElasticsearchData.Name:
-		return vmo.Spec.Elasticsearch.DataNode.Replicas
+		return vmo.Spec.Opensearch.DataNode.Replicas
 	}
 	return 0
 }
@@ -566,10 +566,10 @@ func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
 // GIVEN VMI CRD
 // RETURN the list of provided os plugins. If there is no plugins in VMI CRD, empty list is returned.
 func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
-	if vmo.Spec.Elasticsearch.Enabled &&
-		vmo.Spec.Elasticsearch.Plugins.Enabled &&
-		len(vmo.Spec.Elasticsearch.Plugins.InstallList) > 0 {
-		return vmo.Spec.Elasticsearch.Plugins.InstallList
+	if vmo.Spec.Opensearch.Enabled &&
+		vmo.Spec.Opensearch.Plugins.Enabled &&
+		len(vmo.Spec.Opensearch.Plugins.InstallList) > 0 {
+		return vmo.Spec.Opensearch.Plugins.InstallList
 	}
 	return []string{}
 }
@@ -578,10 +578,10 @@ func GetOpenSearchPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) [
 // GIVEN VMI CRD
 // RETURN the list of provided OSD plugins. If there is no plugin in VMI CRD, an empty list is returned.
 func GetOSDashboardPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) []string {
-	if vmo.Spec.Kibana.Enabled &&
-		vmo.Spec.Kibana.Plugins.Enabled &&
-		len(vmo.Spec.Kibana.Plugins.InstallList) > 0 {
-		return vmo.Spec.Kibana.Plugins.InstallList
+	if vmo.Spec.OpensearchDashboards.Enabled &&
+		vmo.Spec.OpensearchDashboards.Plugins.Enabled &&
+		len(vmo.Spec.OpensearchDashboards.Plugins.InstallList) > 0 {
+		return vmo.Spec.OpensearchDashboards.Plugins.InstallList
 	}
 	return []string{}
 }

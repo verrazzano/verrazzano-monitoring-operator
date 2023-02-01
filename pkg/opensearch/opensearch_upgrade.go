@@ -291,7 +291,7 @@ func createReindexPayload(source, dest, retentionSeconds string) *ReindexPayload
 }
 
 func getRetentionAgeInSeconds(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance, indexName string) (string, error) {
-	for _, policy := range vmi.Spec.Elasticsearch.Policies {
+	for _, policy := range vmi.Spec.Opensearch.Policies {
 		regexpString := resources.ConvertToRegexp(policy.IndexPattern)
 		matched, _ := regexp.MatchString(regexpString, indexName)
 		if matched {

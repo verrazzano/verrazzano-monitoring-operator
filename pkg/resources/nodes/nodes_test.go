@@ -26,7 +26,7 @@ var testMasterNodes = []vmcontrollerv1.ElasticsearchNode{
 
 var testMultiNodeVMI = vmcontrollerv1.VerrazzanoMonitoringInstance{
 	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-		Elasticsearch: vmcontrollerv1.Elasticsearch{
+		Opensearch: vmcontrollerv1.Opensearch{
 			Nodes: []vmcontrollerv1.ElasticsearchNode{
 				{
 					Roles: []vmcontrollerv1.NodeRole{
@@ -143,7 +143,7 @@ func TestIsSingleNodeCluster(t *testing.T) {
 			"Single master VMO is single node",
 			&vmcontrollerv1.VerrazzanoMonitoringInstance{
 				Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmcontrollerv1.Elasticsearch{
+					Opensearch: vmcontrollerv1.Opensearch{
 						MasterNode: vmcontrollerv1.ElasticsearchNode{
 							Roles: []vmcontrollerv1.NodeRole{
 								vmcontrollerv1.MasterRole,
@@ -159,7 +159,7 @@ func TestIsSingleNodeCluster(t *testing.T) {
 			"Multi master VMO is not single node",
 			&vmcontrollerv1.VerrazzanoMonitoringInstance{
 				Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-					Elasticsearch: vmcontrollerv1.Elasticsearch{
+					Opensearch: vmcontrollerv1.Opensearch{
 						MasterNode: vmcontrollerv1.ElasticsearchNode{
 							Roles: []vmcontrollerv1.NodeRole{
 								vmcontrollerv1.MasterRole,

@@ -51,6 +51,118 @@ func TestInitNode(t *testing.T) {
 	}
 }
 
+func TestInitializeVMOSpecOpensearch(t *testing.T) {
+	{
+		var tests = []struct {
+			name            string
+			givenVmiSpec    *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+			expectedVmiSpec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+		}{
+			{
+				"enabled elasticsearch field gets converted to opensearch",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Elasticsearch: &vmcontrollerv1.Elasticsearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "1G",
+						},
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Opensearch: vmcontrollerv1.Opensearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "1G",
+						},
+					},
+				},
+			},
+			{
+				"both elasticsearch and opensearch are enabled",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Elasticsearch: &vmcontrollerv1.Elasticsearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "1G",
+						},
+					},
+					Opensearch: vmcontrollerv1.Opensearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "2G",
+						},
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Opensearch: vmcontrollerv1.Opensearch{
+						Enabled: true,
+						Storage: vmcontrollerv1.Storage{
+							Size: "2G",
+						},
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			handleOpensearchConversion(tt.givenVmiSpec)
+			assert.EqualValues(t, tt.expectedVmiSpec.Opensearch.Storage.Size, tt.givenVmiSpec.Opensearch.Storage.Size)
+			assert.Nil(t, tt.givenVmiSpec.Elasticsearch)
+		}
+	}
+}
+
+func TestInitializeVMOSpecOpensearchDashboards(t *testing.T) {
+	{
+		var tests = []struct {
+			name            string
+			givenVmiSpec    *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+			expectedVmiSpec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec
+		}{
+			{
+				"enabled kibana field gets converted to opensearch dashboards",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Kibana: &vmcontrollerv1.Kibana{
+						Enabled:  true,
+						Replicas: 2,
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
+						Enabled:  true,
+						Replicas: 2,
+					},
+				},
+			},
+			{
+				"both kibana and opensearch dashboards are enabled",
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					Kibana: &vmcontrollerv1.Kibana{
+						Enabled:  true,
+						Replicas: 2,
+					},
+					OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
+						Enabled:  true,
+						Replicas: 4,
+					},
+				},
+				&vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+					OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
+						Enabled:  true,
+						Replicas: 4,
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			handleOpensearchDashboardsConversion(tt.givenVmiSpec)
+			assert.EqualValues(t, tt.expectedVmiSpec.OpensearchDashboards.Replicas, tt.givenVmiSpec.OpensearchDashboards.Replicas)
+			assert.Nil(t, tt.givenVmiSpec.Kibana)
+		}
+	}
+}
+
 func TestInitStorageElement(t *testing.T) {
 	var tests = []struct {
 		name     string

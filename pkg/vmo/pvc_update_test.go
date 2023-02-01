@@ -22,7 +22,7 @@ var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Namespace: constants.VerrazzanoSystemNamespace,
 	},
 	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-		Elasticsearch: vmcontrollerv1.Elasticsearch{
+		Opensearch: vmcontrollerv1.Opensearch{
 			DataNode: vmcontrollerv1.ElasticsearchNode{
 				Replicas: 3,
 			},
@@ -180,7 +180,7 @@ func TestPVCNeedsResize(t *testing.T) {
 func TestUpdateVMOStorageForPVC(t *testing.T) {
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				DataNode: vmcontrollerv1.ElasticsearchNode{
 					Storage: &vmcontrollerv1.Storage{
 						PvcNames: []string{
@@ -194,7 +194,7 @@ func TestUpdateVMOStorageForPVC(t *testing.T) {
 	}
 
 	updateVMOStorageForPVC(vmo, "oldpvc", "newpvc")
-	assert.Equal(t, "newpvc", vmo.Spec.Elasticsearch.DataNode.Storage.PvcNames[1])
+	assert.Equal(t, "newpvc", vmo.Spec.Opensearch.DataNode.Storage.PvcNames[1])
 }
 
 func TestIsOpenSearchPVC(t *testing.T) {
@@ -209,7 +209,7 @@ func TestSetPerNodeStorage(t *testing.T) {
 	}
 	vmo := &vmcontrollerv1.VerrazzanoMonitoringInstance{
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				DataNode: vmcontrollerv1.ElasticsearchNode{
 					Replicas: 1,
 				},
@@ -225,11 +225,11 @@ func TestSetPerNodeStorage(t *testing.T) {
 	}
 
 	setPerNodeStorage(vmo)
-	dataNode := vmo.Spec.Elasticsearch.DataNode
+	dataNode := vmo.Spec.Opensearch.DataNode
 	assert.NotNil(t, dataNode.Storage)
 	assert.Equal(t, dataNode.Storage.Size, "1Gi")
 	assert.ElementsMatch(t, pvcNames, dataNode.Storage.PvcNames)
-	masterNode := vmo.Spec.Elasticsearch.MasterNode
+	masterNode := vmo.Spec.Opensearch.MasterNode
 	assert.NotNil(t, masterNode.Storage)
 	assert.Equal(t, masterNode.Storage.Size, "1Gi")
 }

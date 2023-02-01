@@ -88,11 +88,11 @@ func NewVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMonitoringInst
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled:  true,
 				Replicas: 1,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
 					// Hack for tests
@@ -128,10 +128,10 @@ func NewGrafanaOnlyVMO(genName, secretName string) *vmcontrollerv1.VerrazzanoMon
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: false,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: false,
 			},
 		},

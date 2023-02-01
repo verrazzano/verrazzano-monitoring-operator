@@ -63,11 +63,19 @@ type (
 		// Prometheus details
 		AlertManager AlertManager `json:"alertmanager"`
 
-		// Elasticsearch details
-		Elasticsearch Elasticsearch `json:"elasticsearch"`
+		// Deprecated: Elasticsearch has been replaced by OpenSearch
+		// +optional
+		Elasticsearch *Elasticsearch `json:"elasticsearch,omitempty"`
 
-		// Kibana details
-		Kibana Kibana `json:"kibana"`
+		// OpenSearch details
+		Opensearch Opensearch `json:"opensearch"`
+
+		// Deprecated: Kibana has been replaced by OpenSearch Dashboards
+		// +optional
+		Kibana *Kibana `json:"kibana,omitempty"`
+
+		// OpenSearch Dashboards details
+		OpensearchDashboards OpensearchDashboards `json:"opensearchDashboards"`
 
 		// API details
 		API API `json:"api,omitempty"`
@@ -124,8 +132,21 @@ type (
 		Replicas          int32     `json:"replicas,omitempty"`
 	}
 
-	// Elasticsearch details
+	// Deprecated: Elasticsearch type has been replaced by Opensearch
 	Elasticsearch struct {
+		Enabled              bool                    `json:"enabled" yaml:"enabled"`
+		Storage              Storage                 `json:"storage,omitempty"`
+		IngestNode           ElasticsearchNode       `json:"ingestNode,omitempty"`
+		MasterNode           ElasticsearchNode       `json:"masterNode,omitempty"`
+		DataNode             ElasticsearchNode       `json:"dataNode,omitempty"`
+		Policies             []IndexManagementPolicy `json:"policies,omitempty"`
+		Nodes                []ElasticsearchNode     `json:"nodes,omitempty"`
+		Plugins              OpenSearchPlugins       `json:"plugins,omitempty"`
+		DisableDefaultPolicy bool                    `json:"disableDefaultPolicy,omitempty"`
+	}
+
+	// Opensearch details
+	Opensearch struct {
 		Enabled              bool                    `json:"enabled" yaml:"enabled"`
 		Storage              Storage                 `json:"storage,omitempty"`
 		IngestNode           ElasticsearchNode       `json:"ingestNode,omitempty"`
@@ -171,8 +192,17 @@ type (
 		// Minimum count of documents in an index before it is rolled over
 		MinDocCount *int `json:"minDocCount,omitempty"`
 	}
-	// Kibana details
+
+	// Deprecated: Kibana type has been replaced by OpensearchDashboards
 	Kibana struct {
+		Enabled   bool                        `json:"enabled" yaml:"enabled"`
+		Resources Resources                   `json:"resources,omitempty"`
+		Replicas  int32                       `json:"replicas,omitempty"`
+		Plugins   OpenSearchDashboardsPlugins `json:"plugins,omitempty"`
+	}
+
+	// OpenSearch Dashboards details
+	OpensearchDashboards struct {
 		Enabled   bool                        `json:"enabled" yaml:"enabled"`
 		Resources Resources                   `json:"resources,omitempty"`
 		Replicas  int32                       `json:"replicas,omitempty"`

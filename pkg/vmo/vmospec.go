@@ -11,6 +11,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"reflect"
 )
 
 // InitializeVMOSpec initializes any uninitialized elements of the VMO spec.
@@ -64,15 +65,21 @@ func InitializeVMOSpec(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 		vmo.Spec.Grafana.DatasourcesConfigMap = resources.GetMetaName(vmo.Name, constants.DatasourceConfig)
 	}
 
+	// Kibana to OpenSearch Dashboards CR conversion
+	handleOpensearchDashboardsConversion(&vmo.Spec)
+
 	// Number of replicas for each component
-	if vmo.Spec.Kibana.Replicas == 0 {
-		vmo.Spec.Kibana.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
+	if vmo.Spec.OpensearchDashboards.Replicas == 0 {
+		vmo.Spec.OpensearchDashboards.Replicas = int32(*controller.operatorConfig.DefaultSimpleComponentReplicas)
 	}
 
+	// Elasticsearch to OpenSearch CR conversion
+	handleOpensearchConversion(&vmo.Spec)
+
 	// Default roles for VMO components
-	initNode(&vmo.Spec.Elasticsearch.MasterNode, vmcontrollerv1.MasterRole)
-	initNode(&vmo.Spec.Elasticsearch.IngestNode, vmcontrollerv1.IngestRole)
-	initNode(&vmo.Spec.Elasticsearch.DataNode, vmcontrollerv1.DataRole)
+	initNode(&vmo.Spec.Opensearch.MasterNode, vmcontrollerv1.MasterRole)
+	initNode(&vmo.Spec.Opensearch.IngestNode, vmcontrollerv1.IngestRole)
+	initNode(&vmo.Spec.Opensearch.DataNode, vmcontrollerv1.DataRole)
 
 	// Setup default storage elements
 	for _, component := range config.StorageEnableComponents {
@@ -105,6 +112,42 @@ func initNode(node *vmcontrollerv1.ElasticsearchNode, role vmcontrollerv1.NodeRo
 			role,
 		}
 	}
+}
+
+func handleOpensearchDashboardsConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
+	if spec.Kibana != nil && spec.Kibana.Enabled {
+		// if both Kibana and OpensearchDashboards fields are filled out in CR
+		if spec.OpensearchDashboards.Enabled {
+			// remove old Kibana data
+			spec.Kibana = nil
+			return
+		}
+		// copy Kibana fields to OpensearchDashboards fields only if empty
+		if reflect.ValueOf(spec.OpensearchDashboards).IsZero() {
+			spec.OpensearchDashboards = vmcontrollerv1.OpensearchDashboards(*spec.Kibana)
+		}
+	}
+
+	// remove old Kibana data
+	spec.Kibana = nil
+}
+
+func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanceSpec) {
+	if spec.Elasticsearch != nil && spec.Elasticsearch.Enabled {
+		// if both Elasticsearch and Opensearch fields are filled out in CR
+		if spec.Opensearch.Enabled {
+			// remove Elasticsearch data
+			spec.Elasticsearch = nil
+			return
+		}
+		// copy Elasticsearch fields to Opensearch fields only if empty
+		if reflect.ValueOf(spec.Opensearch).IsZero() {
+			spec.Opensearch = vmcontrollerv1.Opensearch(*spec.Elasticsearch)
+		}
+	}
+
+	// remove old Elasticsearch data
+	spec.Elasticsearch = nil
 }
 
 func initStorageElement(storageElement *vmcontrollerv1.Storage, replicas int, pvcName string) {

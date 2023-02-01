@@ -48,7 +48,7 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		return pvcToAdMap, err
 	}
 
-	elasticsearchAdCounter := NewAdPvcCounter(schedulableADs)
+	opensearchAdCounter := NewAdPvcCounter(schedulableADs)
 
 	if len(expectedPVCs) > 0 && storageClassInfo.Name == "" {
 		return nil, fmt.Errorf("cannot create PVCs when the cluster has no storage class")
@@ -81,7 +81,7 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 				zone := getZoneFromExistingPvc(storageClassInfo, existingPvc)
 				pvcToAdMap[pvcName] = zone
 				if isOpenSearchPVC(existingPvc) {
-					elasticsearchAdCounter.Inc(zone)
+					opensearchAdCounter.Inc(zone)
 				}
 			} else {
 				pvcToAdMap[pvcName] = ""
@@ -91,8 +91,8 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 			var newAd string
 			if storageClassInfo.PvcAcceptsZone {
 				if isOpenSearchPVC(expectedPVC) {
-					newAd = elasticsearchAdCounter.GetLeastUsedAd()
-					elasticsearchAdCounter.Inc(newAd)
+					newAd = opensearchAdCounter.GetLeastUsedAd()
+					opensearchAdCounter.Inc(newAd)
 				} else {
 					newAd = chooseRandomElementFromSlice(schedulableADs)
 				}

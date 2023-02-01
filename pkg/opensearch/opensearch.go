@@ -49,7 +49,7 @@ func NewOSClient(statefulSetLister appslistersv1.StatefulSetLister) *OSClient {
 // - 'green' health
 // - all expected nodes are present in the cluster status
 func (o *OSClient) IsDataResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	if vmo.Spec.Elasticsearch.DataNode.Replicas < MinDataNodesForResize {
+	if vmo.Spec.Opensearch.DataNode.Replicas < MinDataNodesForResize {
 		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
 	}
 	return o.opensearchHealth(vmo, true, true)
@@ -74,7 +74,7 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 	ch := make(chan error)
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
-		if !vmi.Spec.Elasticsearch.Enabled {
+		if !vmi.Spec.Opensearch.Enabled {
 			ch <- nil
 			return
 		}
@@ -85,14 +85,14 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 		}
 
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		for _, policy := range vmi.Spec.Elasticsearch.Policies {
+		for _, policy := range vmi.Spec.Opensearch.Policies {
 			if err := o.createISMPolicy(opensearchEndpoint, policy); err != nil {
 				ch <- err
 				return
 			}
 		}
 
-		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Elasticsearch.Policies)
+		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Opensearch.Policies)
 	}()
 
 	return ch
@@ -103,7 +103,7 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 	ch := make(chan error)
 	go func() {
 		// if Elasticsearch.DisableDefaultPolicy is set to false, skip the deletion.
-		if !vmi.Spec.Elasticsearch.Enabled || !vmi.Spec.Elasticsearch.DisableDefaultPolicy {
+		if !vmi.Spec.Opensearch.Enabled || !vmi.Spec.Opensearch.DisableDefaultPolicy {
 			ch <- nil
 			return
 		}
@@ -131,7 +131,7 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)
 	go func() {
-		if !vmi.Spec.Elasticsearch.Enabled || vmi.Spec.Elasticsearch.DisableDefaultPolicy {
+		if !vmi.Spec.Opensearch.Enabled || vmi.Spec.Opensearch.DisableDefaultPolicy {
 			ch <- nil
 			return
 		}
@@ -154,7 +154,7 @@ func (o *OSClient) SetAutoExpandIndices(vmi *vmcontrollerv1.VerrazzanoMonitoring
 
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
-		if !vmi.Spec.Elasticsearch.Enabled {
+		if !vmi.Spec.Opensearch.Enabled {
 			ch <- nil
 			return
 		}

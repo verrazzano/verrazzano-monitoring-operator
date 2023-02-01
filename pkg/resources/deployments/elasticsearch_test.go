@@ -74,7 +74,7 @@ func TestElasticsearchDefaultDeployments1(t *testing.T) {
 			Name: "myVMO",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 				DataNode:   vmcontrollerv1.ElasticsearchNode{Replicas: 1},
@@ -97,7 +97,7 @@ func TestElasticsearchDefaultDeployments2(t *testing.T) {
 			Name: "myVMO",
 		},
 		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				IngestNode: vmcontrollerv1.ElasticsearchNode{
 					Replicas: 5,
 					Roles:    []vmcontrollerv1.NodeRole{vmcontrollerv1.IngestRole},

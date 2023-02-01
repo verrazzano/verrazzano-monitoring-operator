@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package deployments
@@ -38,10 +38,10 @@ func TestVMOFullDeploymentSize(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
@@ -67,10 +67,10 @@ func TestVMODevProfileFullDeploymentSize(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{
@@ -104,10 +104,10 @@ func TestVMODevProfileInvalidESTopology(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 0},
@@ -128,10 +128,10 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 			Grafana: vmcontrollerv1.Grafana{
 				Enabled: true,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled:    true,
 				MasterNode: vmcontrollerv1.ElasticsearchNode{Replicas: 1},
 			},
@@ -175,7 +175,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 					RequestMemory: "60Mi",
 				},
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled: true,
 				Resources: vmcontrollerv1.Resources{
 					LimitCPU:      "0.53",
@@ -184,7 +184,7 @@ func TestVMOWithResourceConstraints(t *testing.T) {
 					RequestMemory: "63M",
 				},
 			},
-			Elasticsearch: vmcontrollerv1.Elasticsearch{
+			Opensearch: vmcontrollerv1.Opensearch{
 				Enabled: true,
 				IngestNode: vmcontrollerv1.ElasticsearchNode{
 					Name:     config.ElasticsearchIngest.Name,
@@ -249,7 +249,7 @@ func TestVMOWithReplicas(t *testing.T) {
 			API: vmcontrollerv1.API{
 				Replicas: 2,
 			},
-			Kibana: vmcontrollerv1.Kibana{
+			OpensearchDashboards: vmcontrollerv1.OpensearchDashboards{
 				Enabled:  true,
 				Replicas: 4,
 			},
@@ -266,7 +266,7 @@ func TestVMOWithReplicas(t *testing.T) {
 		if deployment.Name == resources.GetMetaName(vmo.Name, config.API.Name) {
 			assert.Equal(t, *resources.NewVal(2), *deployment.Spec.Replicas, "Api replicas")
 		} else if deployment.Name == resources.GetMetaName(vmo.Name, config.OpenSearchDashboards.Name) {
-			assert.Equal(t, *resources.NewVal(4), *deployment.Spec.Replicas, "Kibana replicas")
+			assert.Equal(t, *resources.NewVal(4), *deployment.Spec.Replicas, "OSD replicas")
 		}
 	}
 }

@@ -96,17 +96,10 @@ var AlertManager = ComponentDetails{
 	Privileged:        false,
 }
 
-// ESWait is the InitContainer config; will wait for ES to reach stable healthy state
-var ESWait = ComponentDetails{
-	Name:            "wait-for-es",
-	EnvName:         "ELASTICSEARCH_WAIT_IMAGE",
-	ImagePullPolicy: constants.DefaultImagePullPolicy,
-}
-
 // Kibana is the default Kibana configuration
 var Kibana = ComponentDetails{
 	Name:              "kibana",
-	EnvName:           "KIBANA_IMAGE",
+	EnvName:           "OPENSEARCH_DASHBOARDS_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
 	LivenessHTTPPath:  "/api/status",
@@ -118,7 +111,7 @@ var Kibana = ComponentDetails{
 // OpenSearchDashboards is the default OpenSearchDashboards configuration
 var OpenSearchDashboards = ComponentDetails{
 	Name:              "osd",
-	EnvName:           "KIBANA_IMAGE",
+	EnvName:           "OPENSEARCH_DASHBOARDS_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
 	LivenessHTTPPath:  "/api/status",
@@ -131,7 +124,7 @@ var OpenSearchDashboards = ComponentDetails{
 var OpenSearchDashboardsRedirect = ComponentDetails{
 	Name:              "osd-redirect",
 	EndpointName:      "kibana",
-	EnvName:           "KIBANA_IMAGE",
+	EnvName:           "OPENSEARCH_DASHBOARDS_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              5601,
 	LivenessHTTPPath:  "/api/status",
@@ -152,7 +145,7 @@ var OidcProxy = ComponentDetails{
 var ElasticsearchIngest = ComponentDetails{
 	Name:              "es-ingest",
 	EndpointName:      "elasticsearch",
-	EnvName:           "ELASTICSEARCH_IMAGE",
+	EnvName:           "OPENSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
 	LivenessHTTPPath:  "/_cluster/health",
@@ -165,7 +158,7 @@ var ElasticsearchIngest = ComponentDetails{
 var OpensearchIngest = ComponentDetails{
 	Name:              "os-ingest",
 	EndpointName:      "opensearch",
-	EnvName:           "ELASTICSEARCH_IMAGE",
+	EnvName:           "OPENSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
 	LivenessHTTPPath:  "/_cluster/health",
@@ -178,7 +171,7 @@ var OpensearchIngest = ComponentDetails{
 var OpensearchIngestRedirect = ComponentDetails{
 	Name:              "os-redirect",
 	EndpointName:      "elasticsearch",
-	EnvName:           "ELASTICSEARCH_IMAGE",
+	EnvName:           "OPENSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
 	LivenessHTTPPath:  "/_cluster/health",
@@ -190,7 +183,7 @@ var OpensearchIngestRedirect = ComponentDetails{
 // ElasticsearchMaster is the default Elasticsearch MasterNodes configuration
 var ElasticsearchMaster = ComponentDetails{
 	Name:            "es-master",
-	EnvName:         "ELASTICSEARCH_IMAGE",
+	EnvName:         "OPENSEARCH_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	Port:            constants.OSTransportPort,
 	Privileged:      false,
@@ -199,7 +192,7 @@ var ElasticsearchMaster = ComponentDetails{
 // ElasticsearchData is the default Elasticsearch DataNodes configuration
 var ElasticsearchData = ComponentDetails{
 	Name:              "es-data",
-	EnvName:           "ELASTICSEARCH_IMAGE",
+	EnvName:           "OPENSEARCH_IMAGE",
 	ImagePullPolicy:   constants.DefaultImagePullPolicy,
 	Port:              constants.OSHTTPPort,
 	DataDir:           "/usr/share/opensearch/data",
@@ -211,7 +204,7 @@ var ElasticsearchData = ComponentDetails{
 // ElasticsearchInit contains Elasticsearch init container info
 var ElasticsearchInit = ComponentDetails{
 	Name:            "elasticsearch-init",
-	EnvName:         "ELASTICSEARCH_INIT_IMAGE",
+	EnvName:         "OPENSEARCH_INIT_IMAGE",
 	ImagePullPolicy: constants.DefaultImagePullPolicy,
 	Privileged:      true,
 }
@@ -229,14 +222,14 @@ var API = ComponentDetails{
 }
 
 const (
-	eswaitTargetVersionEnv = "ELASTICSEARCH_WAIT_TARGET_VERSION"
+	eswaitTargetVersionEnv = "OPENSEARCH_WAIT_TARGET_VERSION"
 	oidcAuthEnabled        = "OIDC_AUTH_ENABLED"
 )
 
-// ESWaitTargetVersion contains value for environment variable ELASTICSEARCH_WAIT_TARGET_VERSION
+// ESWaitTargetVersion contains value for environment variable OPENSEARCH_WAIT_TARGET_VERSION
 var ESWaitTargetVersion string
 
-// InitComponentDetails initialize all components and check ELASTICSEARCH_WAIT_TARGET_VERSION
+// InitComponentDetails initialize all components and check OPENSEARCH_WAIT_TARGET_VERSION
 func InitComponentDetails() error {
 	//oidcAuthEnabled defaults to true
 	oidcAuthEnabled := !strings.EqualFold("false", os.Getenv(oidcAuthEnabled))
