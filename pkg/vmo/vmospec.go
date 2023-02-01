@@ -11,6 +11,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"reflect"
 )
 
 // InitializeVMOSpec initializes any uninitialized elements of the VMO spec.
@@ -121,8 +122,10 @@ func handleOpensearchDashboardsConversion(spec *vmcontrollerv1.VerrazzanoMonitor
 			spec.Kibana = nil
 			return
 		}
-		// copy Kibana fields to OpensearchDashboards field
-		spec.OpensearchDashboards = vmcontrollerv1.OpensearchDashboards(*spec.Kibana)
+		// copy Kibana fields to OpensearchDashboards fields only if empty
+		if reflect.ValueOf(spec.OpensearchDashboards).IsZero() {
+			spec.OpensearchDashboards = vmcontrollerv1.OpensearchDashboards(*spec.Kibana)
+		}
 	}
 
 	// remove old Kibana data
@@ -137,8 +140,10 @@ func handleOpensearchConversion(spec *vmcontrollerv1.VerrazzanoMonitoringInstanc
 			spec.Elasticsearch = nil
 			return
 		}
-		// copy Elasticsearch fields to Opensearch fields
-		spec.Opensearch = vmcontrollerv1.Opensearch(*spec.Elasticsearch)
+		// copy Elasticsearch fields to Opensearch fields only if empty
+		if reflect.ValueOf(spec.Opensearch).IsZero() {
+			spec.Opensearch = vmcontrollerv1.Opensearch(*spec.Elasticsearch)
+		}
 	}
 
 	// remove old Elasticsearch data
