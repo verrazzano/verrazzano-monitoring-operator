@@ -13,7 +13,7 @@ if [[ -n $(git status --porcelain) ]]; then
   git status
   git diff
   echo "****************************************************************************************************************"
-  echo "* ERROR: The result of a 'make generate', 'make manifests' or 'make copyright-check' resulted in files being   *"
+  echo "* ERROR: The result of a 'make generate' or 'make manifests' resulted in files being   *"
   echo "*        modified. These changes need to be included in your PR.                                               *"
   echo "****************************************************************************************************************"
   exit 1

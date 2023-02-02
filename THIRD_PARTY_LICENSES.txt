@@ -34,6 +34,43 @@ Copyright 2019 The Kubernetes Authors.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/PuerkitoBio/purell
+
+== License Type
+=== BSD-3-Clause-fb8b3949
+Copyright (c) 2012, Martin Angers
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+* Neither the name of the author nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+== Copyright
+Copyright (c) 2012, Martin Angers
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/PuerkitoBio/urlesc
+
+== License Type
+SPDX:BSD-3-Clause--modified-by-Google
+
+== Copyright
+Copyright (c) 2012 The Go Authors. All rights reserved.
+Copyright 2009 The Go Authors. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/beorn7/perks
 
 == License Type
@@ -83,6 +120,22 @@ Copyright (c) 2012-2016 Dave Collins <dave@davec.name>
 Copyright (c) 2013 Dave Collins <dave@davec.name>
 Copyright (c) 2013-2016 Dave Collins <dave@davec.name>
 Copyright (c) 2015-2016 Dave Collins <dave@davec.name>
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/emicklei/go-restful/v3
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2012,2013 Ernest Micklei
+Copyright 2013 Ernest Micklei. All rights reserved.
+Copyright 2014 Ernest Micklei. All rights reserved.
+Copyright 2015 Ernest Micklei. All rights reserved.
+Copyright 2018 Ernest Micklei. All rights reserved.
+Copyright 2021 Ernest Micklei. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -170,6 +223,39 @@ Copyright 2021 The logr Authors.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/go-openapi/jsonpointer
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2013 sigu-399 ( https://github.com/sigu-399 )
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/go-openapi/jsonreference
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2013 sigu-399 ( https://github.com/sigu-399 )
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/go-openapi/swag
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2015 go-swagger maintainers
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/go-resty/resty/v2
 
 == License Type
@@ -244,6 +330,22 @@ Copyright 2020 The Go Authors. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/google/gnostic
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2017 Google LLC. All Rights Reserved.
+Copyright 2017-2020, Google LLC.
+Copyright 2018 Google LLC. All Rights Reserved.
+Copyright 2019 Google LLC. All Rights Reserved.
+Copyright 2020 Google LLC. All Rights Reserved.
+Copyright 2020 Google LLC. All Rights Reserved.\n" +
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/google/go-cmp
 
 == License Type
@@ -255,7 +357,6 @@ Copyright 2017, The Go Authors. All rights reserved.
 Copyright 2018, The Go Authors. All rights reserved.
 Copyright 2019, The Go Authors. All rights reserved.
 Copyright 2020, The Go Authors. All rights reserved.
-Copyright 2021, The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -285,22 +386,6 @@ Copyright 2018 Google Inc.  All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/googleapis/gnostic
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2017 Google LLC. All Rights Reserved.
-Copyright 2017-2020, Google LLC.
-Copyright 2018 Google LLC. All Rights Reserved.
-Copyright 2019 Google LLC. All Rights Reserved.
-Copyright 2020 Google LLC. All Rights Reserved.
-Copyright 2020 Google LLC. All Rights Reserved.\n" +
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/hashicorp/hcl
 
 == License Type
@@ -323,6 +408,17 @@ Copyright (c) 2013 Dario Castañé. All rights reserved.
 Copyright 2009 The Go Authors. All rights reserved.
 Copyright 2013 Dario Castañé. All rights reserved.
 Copyright 2014 Dario Castañé. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/josharian/intern
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2019 Josh Bleecher Snyder
 
 --------------------------------- (separator) ----------------------------------
 
@@ -374,6 +470,18 @@ Copyright (c) 2013-2020, Frank Schroeder
 Copyright 2011 The Go Authors. All rights reserved.
 Copyright 2013-2014 Frank Schroeder. All rights reserved.
 Copyright 2018 Frank Schroeder. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/mailru/easyjson
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright (c) 2016 Mail.Ru Group
 
 --------------------------------- (separator) ----------------------------------
 
@@ -446,6 +554,50 @@ SPDX:Apache-2.0
 
 == Copyright
 (no copyright notices found)
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/munnerz/goautoneg
+
+== License Type
+=== BSD-3-Clause-0c241922
+Copyright (c) 2011, Open Knowledge Foundation Ltd.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+
+    Neither the name of the Open Knowledge Foundation Ltd. nor the
+    names of its contributors may be used to endorse or promote
+    products derived from this software without specific prior written
+    permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+== Copyright
+Copyright (c) 2011, Open Knowledge Foundation Ltd.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1060,6 +1212,7 @@ Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2019 The Go Authors. All rights reserved.
 Copyright 2020 The Go Authors. All rights reserved.
 Copyright 2021 The Go Authors. All rights reserved.
+Copyright 2022 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -1133,6 +1286,7 @@ Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2019 The Go Authors. All rights reserved.
 Copyright 2020 The Go Authors. All rights reserved.
 Copyright 2021 The Go Authors. All rights reserved.
+Copyright 2022 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -1489,6 +1643,7 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
+Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1506,6 +1661,8 @@ Copyright 2019 The Kubernetes Authors.
 Copyright 2020 Google LLC
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
+Copyright 2022 Google LLC
+Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1527,6 +1684,7 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
+Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1546,6 +1704,7 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
+Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1564,6 +1723,7 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
+Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1575,7 +1735,12 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2013 Google Inc. All Rights Reserved.
+Copyright 2014 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
+Copyright 2020 Intel Coporation.
 Copyright 2020 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
+Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1595,6 +1760,7 @@ Copyright 2018 The Kubernetes Authors.
 Copyright 2019 The Kubernetes Authors.
 Copyright 2020 The Kubernetes Authors.
 Copyright 2021 The Kubernetes Authors.
+Copyright 2022 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1895,6 +2061,7 @@ Copyright 2013 The Go Authors. All rights reserved.
 Copyright 2016 The Go Authors. All rights reserved.
 Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2019 The Go Authors. All rights reserved.
+Copyright 2021 The Go Authors. All rights reserved.
 Copyright 2021 The Kubernetes Authors.
 
 --------------------------------- (separator) ----------------------------------
@@ -2551,5 +2718,5 @@ The above copyright notice and either this complete permission notice or at a mi
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 === ATTRIBUTION-HELPER-GENERATED:
-=== Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-102-gd9a1a0a1 GitCommit:d9a1a0a141aea4c18363434b6aef258211712951 GitTreeState:clean BuildDate:2023-01-17T20:52:06Z GoVersion:go1.19.2 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  06f4d6bca380474d66ebd1766066fea7
+=== Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-102-gd9a1a0a1 GitCommit:d9a1a0a141aea4c18363434b6aef258211712951 GitTreeState:clean BuildDate:2023-01-31T22:26:00Z GoVersion:go1.19.5 Compiler:gc Platform:darwin/amd64}
+=== License file based on go.mod with md5 sum:  413a32e0a653d955b0e8a62c16937701
