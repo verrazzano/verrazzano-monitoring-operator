@@ -22,19 +22,20 @@ COPY . .
 RUN go build \
     -ldflags '-extldflags "-static"' \
     -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
-    -o /usr/bin/verrazzano-monitoring-operator ./cmd/verrazzano-monitoring-ctrl
+    -o /usr/bin/verrazzano-monitoring-operator ./cmd/verrazzano-monitoring-ctrl \
+    && chmod 500 /usr/bin/verrazzano-monitoring-operator
 
 
 FROM ghcr.io/oracle/oraclelinux:7-slim AS final
 
 RUN yum update -y \
-    && yum install -y openssl \
     && yum clean all \
     && rm -rf /var/cache/yum
-COPY --from=build_base /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
-WORKDIR /usr/local/bin/
-RUN groupadd -r verrazzano-monitoring-operator && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
-RUN chown 1000:verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator && chmod 500 /usr/local/bin/verrazzano-monitoring-operator
+
+RUN groupadd -r verrazzano-monitoring-operator \
+    && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
+
+COPY --from=build_base --chown=verrazzano-monitoring-operator:verrazzano-monitoring-operator /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
 USER 1000
 
 ENTRYPOINT ["/usr/local/bin/verrazzano-monitoring-operator"]
