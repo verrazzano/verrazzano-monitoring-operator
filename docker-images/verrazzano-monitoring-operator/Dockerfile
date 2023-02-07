@@ -20,8 +20,7 @@ ENV GOPATH /root/go
 ENV CGO_ENABLED 0
 COPY . .
 RUN go build \
-    -ldflags '-extldflags "-static"' \
-    -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
+    -ldflags "-s -w -extldflags -static -X 'main.buildVersion=$BUILDVERSION' -X 'main.buildDate=$BUILDDATE'" \
     -o /usr/bin/verrazzano-monitoring-operator ./cmd/verrazzano-monitoring-ctrl \
     && chmod 500 /usr/bin/verrazzano-monitoring-operator
 

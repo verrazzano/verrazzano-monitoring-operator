@@ -1,4 +1,4 @@
-# Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+# Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 OPERATOR_NAME:=verrazzano-monitoring-operator
 ESWAIT_NAME:=verrazzano-monitoring-instance-eswait
@@ -64,8 +64,8 @@ CRD_FILE:=./k8s/crds/verrazzano.io_verrazzanomonitoringinstances.yaml
 .PHONY: all
 all: build
 
-BUILDVERSION=`git describe --tags`
-BUILDDATE=`date +%FT%T%z`
+BUILDVERSION=$(shell grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)
+BUILDDATE=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
 
 .PHONY: manifests
 manifests: controller-gen
