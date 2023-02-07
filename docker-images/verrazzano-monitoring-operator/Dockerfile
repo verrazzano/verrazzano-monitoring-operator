@@ -29,9 +29,8 @@ FROM ghcr.io/oracle/oraclelinux:7-slim AS final
 
 RUN yum update -y \
     && yum clean all \
-    && rm -rf /var/cache/yum
-
-RUN groupadd -r verrazzano-monitoring-operator \
+    && rm -rf /var/cache/yum \
+    && groupadd -r verrazzano-monitoring-operator \
     && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
 
 COPY --from=build_base --chown=verrazzano-monitoring-operator:verrazzano-monitoring-operator /usr/bin/verrazzano-monitoring-operator /usr/local/bin/verrazzano-monitoring-operator
