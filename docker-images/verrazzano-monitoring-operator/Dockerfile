@@ -25,11 +25,10 @@ RUN go build \
     && chmod 500 /usr/bin/verrazzano-monitoring-operator
 
 
-FROM ghcr.io/oracle/oraclelinux:7-slim AS final
+FROM ghcr.io/oracle/oraclelinux:8-slim AS final
 
-RUN yum update -y \
-    && yum clean all \
-    && rm -rf /var/cache/yum \
+RUN microdnf update -y \
+    && microdnf clean all \
     && groupadd -r verrazzano-monitoring-operator \
     && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
 
