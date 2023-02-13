@@ -137,6 +137,17 @@ build: k8s-dist
 	docker build --pull --no-cache \
 		--build-arg BUILDVERSION=${BUILDVERSION} \
 		--build-arg BUILDDATE=${BUILDDATE} \
+		--build-arg EXTLDFLAGS="-s -w" \
+		-t ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} \
+		-f ${DOCKERFILE_OPERATOR} \
+		.
+
+.PHONY: build-debug
+build-debug: k8s-dist
+	docker build --pull --no-cache \
+		--build-arg BUILDVERSION=${BUILDVERSION} \
+		--build-arg BUILDDATE=${BUILDDATE} \
+		--build-arg EXTLDFLAGS="" \
 		-t ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} \
 		-f ${DOCKERFILE_OPERATOR} \
 		.
@@ -149,9 +160,14 @@ buildhook:
            -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
            -o /usr/bin/verrazzano-backup-hook ./verrazzano-backup-hook
 
+.PHONY: push-debug
+push-debug: build-debug push-common
 
 .PHONY: push
-push: build
+push: build push-common
+
+.PHONY: push-common
+push-common:
 	docker tag ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
 	docker push ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
 

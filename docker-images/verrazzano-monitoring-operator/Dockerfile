@@ -13,6 +13,7 @@ RUN yum update -y \
 
 ARG BUILDVERSION
 ARG BUILDDATE
+ARG EXTLDFLAGS
 
 # Need to use specific WORKDIR to match verrazzano-monitoring-operator's source packages
 WORKDIR /root/go/src/github.com/verrazzano/verrazzano-monitoring-operator
@@ -20,7 +21,7 @@ ENV GOPATH /root/go
 ENV CGO_ENABLED 0
 COPY . .
 RUN go build \
-    -ldflags "-s -w -extldflags -static -X 'main.buildVersion=$BUILDVERSION' -X 'main.buildDate=$BUILDDATE'" \
+    -ldflags "$EXTLDFLAGS -extldflags -static -X 'main.buildVersion=$BUILDVERSION' -X 'main.buildDate=$BUILDDATE'" \
     -o /usr/bin/verrazzano-monitoring-operator ./cmd/verrazzano-monitoring-ctrl \
     && chmod 500 /usr/bin/verrazzano-monitoring-operator
 
@@ -29,6 +30,7 @@ FROM ghcr.io/oracle/oraclelinux:8-slim AS final
 
 RUN microdnf update -y \
     && microdnf clean all \
+    && rm -rf /var/cache/yum \
     && groupadd -r verrazzano-monitoring-operator \
     && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
 
