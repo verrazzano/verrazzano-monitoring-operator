@@ -42,8 +42,6 @@ endif
 
 DOCKER_NAMESPACE ?= verrazzano
 DOCKER_REPO ?= ghcr.io
-DIST_DIR:=dist
-BIN_DIR:=${DIST_DIR}/bin
 BIN_NAME:=${OPERATOR_NAME}
 K8S_EXTERNAL_IP:=localhost
 K8S_NAMESPACE:=verrazzano-system
@@ -112,28 +110,8 @@ go-vendor:
 # Docker-related tasks and functions
 #
 
-.PHONY: docker-clean
-docker-clean:
-	rm -rf ${DIST_DIR}
-
-.PHONY: k8s-dist
-k8s-dist: docker-clean
-	echo ${DOCKER_IMAGE_TAG} ${JENKINS_URL} ${CI_COMMIT_TAG} ${CI_COMMIT_SHA}
-	echo ${DOCKER_IMAGE_NAME_OPERATOR}
-	mkdir -p ${DIST_DIR}
-	cp -r docker-images/verrazzano-monitoring-operator/* ${DIST_DIR}
-	cp -r k8s/manifests/verrazzano-monitoring-operator.yaml $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-
-	# Fill in Docker image and tag that's being tested
-	sed -i.bak "s|${DOCKER_REPO}/${DOCKER_NAMESPACE}/verrazzano-monitoring-operator:latest|${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:$(DOCKER_IMAGE_TAG)|g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-	sed -i.bak "s/latest/$(DOCKER_IMAGE_TAG)/g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-	sed -i.bak "s/default/${K8S_NAMESPACE}/g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-
-	rm -rf $(DIST_DIR)/verrazzano-monitoring-operator*.bak
-	mkdir -p ${BIN_DIR}
-
 .PHONY: build
-build: k8s-dist
+build:
 	docker build --pull --no-cache \
 		--build-arg BUILDVERSION=${BUILDVERSION} \
 		--build-arg BUILDDATE=${BUILDDATE} \
@@ -143,7 +121,7 @@ build: k8s-dist
 		.
 
 .PHONY: build-debug
-build-debug: k8s-dist
+build-debug:
 	docker build --pull --no-cache \
 		--build-arg BUILDVERSION=${BUILDVERSION} \
 		--build-arg BUILDDATE=${BUILDDATE} \

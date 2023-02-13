@@ -30,7 +30,7 @@ FROM ghcr.io/oracle/oraclelinux:8-slim AS final
 
 RUN microdnf update -y \
     && microdnf clean all \
-    && rm -rf /var/cache/yum \
+    && rm -rf /var/cache/yum /var/lib/rpm/__db.* \
     && groupadd -r verrazzano-monitoring-operator \
     && useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
 
