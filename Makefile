@@ -1,4 +1,4 @@
-# Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+# Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 OPERATOR_NAME:=verrazzano-monitoring-operator
 ESWAIT_NAME:=verrazzano-monitoring-instance-eswait
@@ -42,8 +42,6 @@ endif
 
 DOCKER_NAMESPACE ?= verrazzano
 DOCKER_REPO ?= ghcr.io
-DIST_DIR:=dist
-BIN_DIR:=${DIST_DIR}/bin
 BIN_NAME:=${OPERATOR_NAME}
 K8S_EXTERNAL_IP:=localhost
 K8S_NAMESPACE:=verrazzano-system
@@ -64,8 +62,8 @@ CRD_FILE:=./k8s/crds/verrazzano.io_verrazzanomonitoringinstances.yaml
 .PHONY: all
 all: build
 
-BUILDVERSION=`git describe --tags`
-BUILDDATE=`date +%FT%T%z`
+BUILDVERSION=$(shell grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)
+BUILDDATE=$(shell date +"%Y-%m-%dT%H:%M:%SZ")
 
 .PHONY: manifests
 manifests: controller-gen
@@ -112,31 +110,22 @@ go-vendor:
 # Docker-related tasks and functions
 #
 
-.PHONY: docker-clean
-docker-clean:
-	rm -rf ${DIST_DIR}
-
-.PHONY: k8s-dist
-k8s-dist: docker-clean
-	echo ${DOCKER_IMAGE_TAG} ${JENKINS_URL} ${CI_COMMIT_TAG} ${CI_COMMIT_SHA}
-	echo ${DOCKER_IMAGE_NAME_OPERATOR}
-	mkdir -p ${DIST_DIR}
-	cp -r docker-images/verrazzano-monitoring-operator/* ${DIST_DIR}
-	cp -r k8s/manifests/verrazzano-monitoring-operator.yaml $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-
-	# Fill in Docker image and tag that's being tested
-	sed -i.bak "s|${DOCKER_REPO}/${DOCKER_NAMESPACE}/verrazzano-monitoring-operator:latest|${DOCKER_REPO}/${DOCKER_NAMESPACE}/${DOCKER_IMAGE_NAME_OPERATOR}:$(DOCKER_IMAGE_TAG)|g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-	sed -i.bak "s/latest/$(DOCKER_IMAGE_TAG)/g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-	sed -i.bak "s/default/${K8S_NAMESPACE}/g" $(DIST_DIR)/verrazzano-monitoring-operator.yaml
-
-	rm -rf $(DIST_DIR)/verrazzano-monitoring-operator*.bak
-	mkdir -p ${BIN_DIR}
-
 .PHONY: build
-build: k8s-dist
+build:
 	docker build --pull --no-cache \
 		--build-arg BUILDVERSION=${BUILDVERSION} \
 		--build-arg BUILDDATE=${BUILDDATE} \
+		--build-arg EXTLDFLAGS="-s -w" \
+		-t ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} \
+		-f ${DOCKERFILE_OPERATOR} \
+		.
+
+.PHONY: build-debug
+build-debug:
+	docker build --pull --no-cache \
+		--build-arg BUILDVERSION=${BUILDVERSION} \
+		--build-arg BUILDDATE=${BUILDDATE} \
+		--build-arg EXTLDFLAGS="" \
 		-t ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} \
 		-f ${DOCKERFILE_OPERATOR} \
 		.
@@ -149,9 +138,14 @@ buildhook:
            -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
            -o /usr/bin/verrazzano-backup-hook ./verrazzano-backup-hook
 
+.PHONY: push-debug
+push-debug: build-debug push-common
 
 .PHONY: push
-push: build
+push: build push-common
+
+.PHONY: push-common
+push-common:
 	docker tag ${DOCKER_IMAGE_NAME_OPERATOR}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
 	docker push ${DOCKER_IMAGE_FULLNAME_OPERATOR}:${DOCKER_IMAGE_TAG}
 
