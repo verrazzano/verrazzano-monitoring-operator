@@ -87,13 +87,27 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 	if err != nil {
 		return err
 	}
-	updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
+	//updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
+	//if err != nil {
+	//	return err
+	//}
+	//return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+
+	//My...Code//
+	status, err := o.checkISMPolicyExists(opensearchEndpoint, *existingPolicy)
 	if err != nil {
 		return err
 	}
-	return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+	if !status {
+		updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
+		if err != nil {
+			return err
+		}
+		return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+	}
+	//return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+	return nil
 }
-
 func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	req, err := http.NewRequest("GET", policyURL, nil)
 	if err != nil {
@@ -269,6 +283,7 @@ func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFile
 func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, error) {
 	var defaultPolicies []*ISMPolicy
 	for policyName, policyFile := range defaultISMPoliciesMap {
+		// new code....
 		createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyFile, policyName)
 		if err != nil {
 			return defaultPolicies, err
@@ -376,4 +391,45 @@ func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
 		return nil, err
 	}
 	return &policy, nil
+}
+
+func (o *OSClient) checkISMPolicyExists(opensearchEndpoint string, searchPolicy ISMPolicy) (bool, error) {
+	//var defaultPolicies []*ISMPolicy
+	policyList, err := o.getAllPolicies(opensearchEndpoint)
+	if err != nil {
+		return false, err
+	}
+	//for policyName, policyFile := range defaultISMPoliciesMap {
+	//	createdPolicy, err := o.updateISMPolicyFromFile(opensearchEndpoint, policyFile, policyName)
+	//	if err != nil {
+	//		return false, err
+	//	}
+	//	defaultPolicies = append(defaultPolicies, createdPolicy)
+	//}
+	//for _, policy := range policyList.Policies {
+	//	for _, defaultPolicy := range defaultPolicies {
+	//		if policy.Policy.ISMTemplate[0].Priority == defaultPolicy.Policy.ISMTemplate[0].Priority && isPolicyExistsAlready(policy.Policy.ISMTemplate[0].IndexPatterns, defaultPolicy.Policy.ISMTemplate[0].IndexPatterns) {
+	//			return true, nil
+	//		}
+	//	}
+	//}
+	for _, policy := range policyList.Policies {
+		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func isItemAlreadyExists(allListPolicy []string, subListPolicy []string) bool {
+	matched := false
+	for _, al := range allListPolicy {
+		for _, sl := range subListPolicy {
+			if al == sl {
+				matched = true
+				break
+			}
+		}
+	}
+	return matched
 }
