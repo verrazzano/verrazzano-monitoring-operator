@@ -36,7 +36,7 @@ const (
 	set -euo pipefail
     %s
 	/usr/local/bin/docker-entrypoint.sh
-    set +euo pipefail`
+    `
 	OpenSearchDashboardCmdTmpl = `#!/usr/bin/env bash -e
     %s
 	/usr/local/bin/opensearch-dashboards-docker`
@@ -69,6 +69,7 @@ const (
      %s
     `
 	OSIngestPluginsInstallTmpl = `
+     set +euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
     `
