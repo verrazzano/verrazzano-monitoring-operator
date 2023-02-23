@@ -35,7 +35,8 @@ const (
 	OpenSearchIngestCmdTmpl = `#!/usr/bin/env bash -e
 	set -euo pipefail
     %s
-	/usr/local/bin/docker-entrypoint.sh`
+	/usr/local/bin/docker-entrypoint.sh
+    set +euo pipefail`
 	OpenSearchDashboardCmdTmpl = `#!/usr/bin/env bash -e
     %s
 	/usr/local/bin/opensearch-dashboards-docker`
@@ -62,8 +63,20 @@ const (
 	echo "Commenting out java heap settings in jvm.options..."
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
 	`
-	OSPluginsInstallTmpl = `
+	OSMasterPluginsInstallTmpl = `
      set -euo pipefail
+     # Install OS plugins that are not bundled with OS
+     %s
+    `
+	OSIngestPluginsInstallTmpl = `
+     # Install OS plugins that are not bundled with OS
+     %s
+    `
+	OSDataPluginsInstallTmpl = `
+     # Install OS plugins that are not bundled with OS
+     %s
+    `
+	OSDashboardPluginsInstallTmpl = `
      # Install OS plugins that are not bundled with OS
      %s
     `
@@ -538,8 +551,8 @@ func ConvertToRegexp(pattern string) string {
 // command to comment java heap settings in config/jvm/options if input javaOpts is non-empty
 // OS plugins installation commands if OpenSearch plugins are provided
 // and contains java min/max heap settings
-func CreateOpenSearchContainerCMD(javaOpts string, plugins []string) string {
-	pluginsInstallTmpl := GetOSPluginsInstallTmpl(plugins, OSPluginsInstallCmd)
+func CreateOpenSearchContainerCMD(javaOpts string, plugins []string, OSPluginsInstallTmpl string) string {
+	pluginsInstallTmpl := GetOSPluginsInstallTmpl(plugins, OSPluginsInstallCmd, OSPluginsInstallTmpl)
 	if javaOpts != "" {
 		jvmOptsPair := strings.Split(javaOpts, " ")
 		minHeapMemory := ""
@@ -587,8 +600,9 @@ func GetOSDashboardPluginList(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) 
 }
 
 // GetOSPluginsInstallTmpl returns the OSPluginsInstallTmpl by updating it with the given plugins and plugins installation cmd.
-func GetOSPluginsInstallTmpl(plugins []string, osPluginInstallCmd string) string {
+func GetOSPluginsInstallTmpl(plugins []string, osPluginInstallCmd string, OSPluginsInstallTmpl string) string {
 	var pluginsInstallTmpl string
+
 	for _, plugin := range plugins {
 		pluginsInstallTmpl += fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(osPluginInstallCmd, plugin))
 	}
