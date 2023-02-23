@@ -63,7 +63,7 @@ const (
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
 	`
 	OSPluginsInstallTmpl = `
-     set -euo pipefail
+     #set -euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
     `
