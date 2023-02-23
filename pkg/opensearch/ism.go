@@ -99,6 +99,7 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 		return err
 	}
 	if !status {
+		fmt.Println("policy deosn't exists, creating now")
 		updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
 		if err != nil {
 			return err
@@ -395,6 +396,7 @@ func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
 
 func (o *OSClient) checkISMPolicyExists(opensearchEndpoint string, searchPolicy ISMPolicy) (bool, error) {
 	//var defaultPolicies []*ISMPolicy
+	fmt.Println("inside....checkISMPolicyExists")
 	policyList, err := o.getAllPolicies(opensearchEndpoint)
 	if err != nil {
 		return false, err
@@ -415,6 +417,7 @@ func (o *OSClient) checkISMPolicyExists(opensearchEndpoint string, searchPolicy 
 	//}
 	for _, policy := range policyList.Policies {
 		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
+			fmt.Println("policy already exists.....")
 			return true, nil
 		}
 	}
