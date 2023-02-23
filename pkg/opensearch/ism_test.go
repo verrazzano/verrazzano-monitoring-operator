@@ -605,5 +605,5 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 func TestIsPolicyExists(t *testing.T) {
 	allPolicy := []string{"verrazzano-system", "verrazzano-application*", "system-logs"}
 	defaultPolicy := []string{"verrazzano-system"}
-	fmt.Println(isPolicyExistsAlready(allPolicy, defaultPolicy))
+	fmt.Println(isItemAlreadyExists(allPolicy, defaultPolicy))
 }
