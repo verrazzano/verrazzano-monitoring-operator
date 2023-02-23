@@ -1,4 +1,4 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vmo
@@ -51,7 +51,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 		return plan.ExistingCluster, err
 	}
 	for _, sts := range latestList {
-		if err := updateOwnerForPVCs(controller, sts, vmo.Name, vmo.Namespace); err != nil {
+		if err := updateOwnerForPVCs(controller, sts, vmo); err != nil {
 			return plan.ExistingCluster, err
 		}
 	}
@@ -152,24 +152,21 @@ func scaleDownStatefulSet(c *Controller, expectedList []*appsv1.StatefulSet, sta
 // to the STS resource, the PVC will automatically get deleted when the STS is deleted.
 // Because PVC is dynamic, when it is deleted, the bound PV will also get deleted.
 // NOTE: This cannot be done automatically using the STS VolumeClaimTemplate.
-func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmoName string, vmoNamespace string) error {
+func updateOwnerForPVCs(controller *Controller, statefulSet *appsv1.StatefulSet, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	pvcNames := statefulsets.GetPVCNames(statefulSet)
 	for _, pvcName := range pvcNames {
-		pvc, err := controller.pvcLister.PersistentVolumeClaims(vmoNamespace).Get(pvcName)
+		pvc, err := controller.pvcLister.PersistentVolumeClaims(vmo.Namespace).Get(pvcName)
 		if err != nil {
 			return err
 		}
-		if len(pvc.OwnerReferences) != 0 {
-			continue
-		}
 		pvc.OwnerReferences = []metav1.OwnerReference{{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
-			Name:       statefulSet.Name,
-			UID:        statefulSet.UID,
+			APIVersion: "verrazzano.io/v1",
+			Kind:       "VerrazzanoMonitoringInstance",
+			Name:       vmo.Name,
+			UID:        vmo.UID,
 		}}
-		controller.log.Debugf("Setting StatefulSet owner reference for PVC %s", pvc.Name)
-		_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmoNamespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
+		controller.log.Debugf("Setting VMI owner reference for PVC %s", pvc.Name)
+		_, err = controller.kubeclientset.CoreV1().PersistentVolumeClaims(vmo.Namespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 		if err != nil {
 			controller.log.Errorf("Failed to update the owner reference in PVC %s: %v", pvc.Name, err)
 			return err
