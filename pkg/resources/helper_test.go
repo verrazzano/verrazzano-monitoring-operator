@@ -118,30 +118,34 @@ func TestCreateOpenSearchContainerCMD(t *testing.T) {
 	containerCmdWithoutJavaOpts := fmt.Sprintf(containerCmdTmpl, "", "")
 	containerCmdWithJavaOpts := fmt.Sprintf(containerCmdTmpl, jvmOptsDisableCmd, "")
 	var tests = []struct {
-		description    string
-		javaOpts       string
-		expectedResult string
+		description          string
+		javaOpts             string
+		expectedResult       string
+		OSPluginsInstallTmpl string
 	}{
 		{
 			"testCreateOpenSearchContainerCMD with empty jvmOpts",
 			"",
 			containerCmdWithoutJavaOpts,
+			OSMasterPluginsInstallTmpl,
 		},
 		{
 			"testCreateOpenSearchContainerCMD with jvmOpts not containing jvm memory settings",
 			"-Xsomething",
 			containerCmdWithoutJavaOpts,
+			OpenSearchIngestCmdTmpl,
 		},
 		{
 			"testCreateOpenSearchContainerCMD with jvmOpts containing jvm memory settings",
 			"-Xms1g -Xmx2g",
 			containerCmdWithJavaOpts,
+			OpenSearchIngestCmdTmpl,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			r := CreateOpenSearchContainerCMD(tt.javaOpts, []string{})
+			r := CreateOpenSearchContainerCMD(tt.javaOpts, []string{}, tt.OSPluginsInstallTmpl)
 			assert.Equal(t, tt.expectedResult, r)
 		})
 	}
@@ -261,7 +265,7 @@ func TestGetOSPluginsInstallTmpl(t *testing.T) {
 		{
 			"TestGetOSPluginsInstallTmpl when list of plugins is provided",
 			[]string{plugin},
-			fmt.Sprintf(OSPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin)),
+			fmt.Sprintf(OSMasterPluginsInstallTmpl, fmt.Sprintf(OSPluginsInstallCmd, plugin)),
 		},
 		{
 			"TestGetOSPluginsInstallTmpl when no plugin is provided",
@@ -271,7 +275,7 @@ func TestGetOSPluginsInstallTmpl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetOSPluginsInstallTmpl(tt.plugins, OSPluginsInstallCmd); got != tt.want {
+			if got := GetOSPluginsInstallTmpl(tt.plugins, OSPluginsInstallCmd, OSMasterPluginsInstallTmpl); got != tt.want {
 				t.Errorf("GetOSPluginsInstallTmpl() = %v, want %v", got, tt.want)
 			}
 		})
