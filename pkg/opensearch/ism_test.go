@@ -590,7 +590,12 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 				DoHTTP:            tt.fields.DoHTTP,
 				statefulSetLister: tt.fields.statefulSetLister,
 			}
-			got, err := o.updateISMPolicyFromFile(tt.args.openSearchEndpoint, tt.args.policyFileName, tt.args.policyName)
+			got, _, err := o.updateISMPolicyFromFile(tt.args.openSearchEndpoint, tt.args.policyFileName, tt.args.policyName)
+			//if status {
+			//	t.Log("ISM policy updated")
+			//} else {
+			//	t.Log("ISM policy didn't created or updated.")
+			//}
 			if (err != nil) != tt.wantErr {
 				t.Errorf("updateISMPolicyFromFile() error = %v, wantErr %v", err, tt.wantErr)
 				return

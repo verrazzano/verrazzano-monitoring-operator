@@ -418,6 +418,10 @@ func (o *OSClient) checkISMPolicyExists(opensearchEndpoint string, searchPolicy 
 	//var defaultPolicies []*ISMPolicy
 	fmt.Println("inside....checkISMPolicyExists")
 	policyList, err := o.getAllPolicies(opensearchEndpoint)
+	//Case when no polices exists in system
+	if policyList == nil {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
