@@ -132,7 +132,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		ingestDeployment.Spec.Template.Spec.Containers[0].Command = []string{
 			"sh",
 			"-c",
-			fmt.Sprintf(resources.OpenSearchIngestCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOpenSearchPluginList(vmo), resources.OSPluginsInstallCmd)),
+			fmt.Sprintf(resources.OpenSearchIngestCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOpenSearchPluginList(vmo), resources.OSPluginsInstallCmd, resources.OSIngestPluginsInstallTmpl)),
 		}
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
@@ -236,7 +236,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			dataDeployment.Spec.Template.Spec.Containers[0].Command = []string{
 				"sh",
 				"-c",
-				resources.CreateOpenSearchContainerCMD(javaOpts, resources.GetOpenSearchPluginList(vmo)),
+				resources.CreateOpenSearchContainerCMD(javaOpts, resources.GetOpenSearchPluginList(vmo), resources.OSDataPluginsInstallTmpl),
 			}
 
 			// add the required istio annotations to allow inter-es component communication

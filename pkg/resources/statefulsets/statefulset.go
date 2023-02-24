@@ -85,7 +85,7 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 	esMasterContainer.Command = []string{
 		"sh",
 		"-c",
-		resources.CreateOpenSearchContainerCMD(javaOpts, resources.GetOpenSearchPluginList(vmo)),
+		resources.CreateOpenSearchContainerCMD(javaOpts, resources.GetOpenSearchPluginList(vmo), resources.OSMasterPluginsInstallTmpl),
 	}
 	var envVars = []corev1.EnvVar{
 		{
