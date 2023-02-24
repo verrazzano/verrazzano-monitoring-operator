@@ -99,7 +99,7 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 		return err
 	}
 	if !status {
-		fmt.Println("policy deosn't exists, creating now")
+		fmt.Println("policy doesn't exists, creating now")
 		updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
 		if err != nil {
 			return err
@@ -267,31 +267,51 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 
 // updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
-func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, error) {
+func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, bool, error) {
+	//policy, err := getISMPolicyFromFile(policyFileName)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
+	//existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
+	//
 	policy, err := getISMPolicyFromFile(policyFileName)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
-	existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+	status, err := o.checkISMPolicyExists(openSearchEndpoint, *policy)
 	if err != nil {
-		return nil, err
+		return nil, true, err
 	}
-	return o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
+	if !status {
+		existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
+		existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+		if err != nil {
+			return nil, false, err
+		}
+		fmt.Println("creating policy..........")
+		policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
+		fmt.Println("error came or not..", err)
+	}
+	return policy, true, err
 }
 
 // createOrUpdateDefaultISMPolicy creates the default ISM policies if not exist, else the policies will be updated.
-func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, error) {
+func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, bool, error) {
 	var defaultPolicies []*ISMPolicy
 	for policyName, policyFile := range defaultISMPoliciesMap {
 		// new code....
-		createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyFile, policyName)
+		createdPolicy, status, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyFile, policyName)
 		if err != nil {
-			return defaultPolicies, err
+			return defaultPolicies, status, err
 		}
 		defaultPolicies = append(defaultPolicies, createdPolicy)
 	}
-	return defaultPolicies, nil
+	return defaultPolicies, true, nil
 }
 
 func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) bool {
