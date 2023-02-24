@@ -351,7 +351,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		deployment.Spec.Template.Spec.Containers[0].Command = []string{
 			"sh",
 			"-c",
-			fmt.Sprintf(resources.OpenSearchDashboardCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOSDashboardPluginList(vmo), resources.OSDashboardPluginsInstallCmd)),
+			fmt.Sprintf(resources.OpenSearchDashboardCmdTmpl, resources.GetOSPluginsInstallTmpl(resources.GetOSDashboardPluginList(vmo), resources.OSDashboardPluginsInstallCmd, resources.OSDashboardPluginsInstallTmpl)),
 		}
 	}
 
