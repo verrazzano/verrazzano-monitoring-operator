@@ -614,7 +614,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	err = c.osDashboardsClient.CreateDefaultIndexPatterns(c.log, resources.GetOpenSearchDashboardsHTTPEndpoint(vmo))
 	if err != nil {
-		c.delayedLog.ErrorfThrottled("Failed to add default index patterns : %v", err)
+		c.log.ErrorfThrottled("Failed to add default index patterns : %v", err)
 		errorObserved = true
 	}
 
