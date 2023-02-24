@@ -148,8 +148,11 @@ func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoring
 			return
 		}
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		_, _, err := o.createOrUpdateDefaultISMPolicy(openSearchEndpoint)
-		//if
+		_, ismStatus, err := o.createOrUpdateDefaultISMPolicy(openSearchEndpoint)
+
+		if ismStatus {
+			vmi.Spec.Opensearch.DisableDefaultPolicy = false
+		}
 		ch <- err
 	}()
 
