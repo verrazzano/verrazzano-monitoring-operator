@@ -96,7 +96,7 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 			}
 		}
 		if ismStatus {
-			vmi.Spec.Opensearch.DisableDefaultPolicy = false
+			vmi.Spec.Opensearch.DisableDefaultPolicy = true
 		}
 
 		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Opensearch.Policies)
@@ -151,7 +151,7 @@ func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoring
 		_, ismStatus, err := o.createOrUpdateDefaultISMPolicy(openSearchEndpoint)
 
 		if ismStatus {
-			vmi.Spec.Opensearch.DisableDefaultPolicy = false
+			vmi.Spec.Opensearch.DisableDefaultPolicy = true
 		}
 		ch <- err
 	}()
