@@ -42,7 +42,7 @@ func (od *OSDashboardsClient) CreateDefaultIndexPatterns(log vzlog.VerrazzanoLog
 		savedObjectPayloads = append(savedObjectPayloads, savedObject)
 	}
 	if len(savedObjectPayloads) > 0 {
-		log.Infof("Creating default index patterns")
+		log.Progressf("Creating default index patterns")
 		err = od.creatIndexPatterns(log, savedObjectPayloads, openSearchDashboardsEndpoint)
 		if err != nil {
 			return err

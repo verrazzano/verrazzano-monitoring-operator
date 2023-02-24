@@ -423,6 +423,7 @@ func (c *Controller) syncHandler(key string) error {
 	if err != nil {
 		zap.S().Errorf("Failed to create controller logger for VMO controller", err)
 	}
+	log.SetFrequency(120)
 	c.log = log
 
 	log.Progressf("Reconciling vmi resource %v, generation %v", types.NamespacedName{Namespace: vmo.Namespace, Name: vmo.Name}, vmo.Generation)

@@ -74,7 +74,7 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 	ch := make(chan error)
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
-		if !vmi.Spec.Opensearch.Enabled {
+		if !vmi.Spec.Opensearch.Enabled || len(vmi.Spec.Opensearch.Policies) < 1 {
 			ch <- nil
 			return
 		}
