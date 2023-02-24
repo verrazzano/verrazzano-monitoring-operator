@@ -72,8 +72,11 @@ func (o *OSClient) IsGreen(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) err
 // The returned channel should be read for exactly one response, which tells whether ISM configuration succeeded.
 func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)
+	var ismStatus = false
+	var err error
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
+		//ismStatus:=false
 		if !vmi.Spec.Opensearch.Enabled {
 			ch <- nil
 			return
@@ -86,12 +89,15 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 		for _, policy := range vmi.Spec.Opensearch.Policies {
-			if err := o.createISMPolicy(opensearchEndpoint, policy); err != nil {
+			ismStatus, err = o.createISMPolicy(opensearchEndpoint, policy)
+			if err != nil {
 				ch <- err
 				return
 			}
 		}
-		//	vmi.Spec.Opensearch.DisableDefaultPolicy
+		if ismStatus {
+			vmi.Spec.Opensearch.DisableDefaultPolicy = false
+		}
 
 		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Opensearch.Policies)
 	}()

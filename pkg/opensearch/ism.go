@@ -81,11 +81,11 @@ var (
 
 // createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
 // If the policy already exsts and its spec matches the VMO policy spec, no update will be issued
-func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) error {
+func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) (bool, error) {
 	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.PolicyName)
 	existingPolicy, err := o.getPolicyByName(policyURL)
 	if err != nil {
-		return err
+		return false, err
 	}
 	//updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
 	//if err != nil {
@@ -96,18 +96,21 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 	//My...Code//
 	status, err := o.checkISMPolicyExists(opensearchEndpoint, *existingPolicy)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !status {
 		fmt.Println("policy doesn't exists, creating now")
 		updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
 		if err != nil {
-			return err
+			return false, err
 		}
-		return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+		err = o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+		if err != nil {
+			return false, err
+		}
 	}
 	//return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
-	return nil
+	return true, nil
 }
 func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	req, err := http.NewRequest("GET", policyURL, nil)
