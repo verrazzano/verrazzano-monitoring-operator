@@ -7,13 +7,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
-
 	"github.com/verrazzano/pkg/diff"
-
 	"github.com/verrazzano/verrazzano-monitoring-operator"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"go.uber.org/zap"
+	"net/http"
+	"strings"
 )
 
 type (
@@ -87,19 +86,12 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 	if err != nil {
 		return false, err
 	}
-	//updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
-	//if err != nil {
-	//	return err
-	//}
-	//return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
-
-	//My...Code//
 	status, err := o.checkISMPolicyExists(opensearchEndpoint, *existingPolicy)
 	if err != nil {
 		return false, err
 	}
 	if !status {
-		fmt.Println("policy doesn't exists, creating now")
+		zap.S().Debugf("Default ISM policy %v doesn't exists, creating now", policy.PolicyName)
 		updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
 		if err != nil {
 			return false, err
@@ -109,7 +101,6 @@ func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrolle
 			return false, err
 		}
 	}
-	//return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
 	return true, nil
 }
 func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
@@ -271,17 +262,6 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 // updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
 func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, bool, error) {
-	//policy, err := getISMPolicyFromFile(policyFileName)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
-	//existingPolicy, err := o.getPolicyByName(existingPolicyURL)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
-	//
 	policy, err := getISMPolicyFromFile(policyFileName)
 	if err != nil {
 		return nil, false, err
@@ -296,9 +276,12 @@ func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFile
 		if err != nil {
 			return nil, false, err
 		}
-		fmt.Println("creating policy..........")
+		zap.S().Debugf("creating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
 		policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
-		fmt.Println("error came or not..", err)
+		if err != nil {
+			return nil, false, err
+		}
+		zap.S().Debugf("ISM policy for index pattern %s created successfully", policy.Policy.ISMTemplate[0].IndexPatterns)
 	}
 	return policy, true, err
 }
@@ -307,7 +290,6 @@ func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFile
 func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, bool, error) {
 	var defaultPolicies []*ISMPolicy
 	for policyName, policyFile := range defaultISMPoliciesMap {
-		// new code....
 		createdPolicy, status, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyFile, policyName)
 		if err != nil {
 			return defaultPolicies, status, err
@@ -418,8 +400,7 @@ func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
 }
 
 func (o *OSClient) checkISMPolicyExists(opensearchEndpoint string, searchPolicy ISMPolicy) (bool, error) {
-	//var defaultPolicies []*ISMPolicy
-	fmt.Println("inside....checkISMPolicyExists.... for policy", searchPolicy.Policy.ISMTemplate[0].Priority, searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+	zap.S().Debugf("checking if ISM policy for index pattern %v exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 	policyList, err := o.getAllPolicies(opensearchEndpoint)
 	//Case when no polices exists in system
 	if policyList == nil {
@@ -428,33 +409,21 @@ func (o *OSClient) checkISMPolicyExists(opensearchEndpoint string, searchPolicy 
 	if err != nil {
 		return false, err
 	}
-	//for policyName, policyFile := range defaultISMPoliciesMap {
-	//	createdPolicy, err := o.updateISMPolicyFromFile(opensearchEndpoint, policyFile, policyName)
-	//	if err != nil {
-	//		return false, err
-	//	}
-	//	defaultPolicies = append(defaultPolicies, createdPolicy)
-	//}
-	//for _, policy := range policyList.Policies {
-	//	for _, defaultPolicy := range defaultPolicies {
-	//		if policy.Policy.ISMTemplate[0].Priority == defaultPolicy.Policy.ISMTemplate[0].Priority && isPolicyExistsAlready(policy.Policy.ISMTemplate[0].IndexPatterns, defaultPolicy.Policy.ISMTemplate[0].IndexPatterns) {
-	//			return true, nil
-	//		}
-	//	}
-	//}
 	for _, policy := range policyList.Policies {
 		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
-			fmt.Println("policy already exists.....", searchPolicy.Policy.ISMTemplate[0].Priority, searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+			zap.S().Debugf("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 			return true, nil
 		}
 	}
+	zap.S().Debugf("ISM policy for index pattern %v doesn't exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 	return false, nil
 }
 
-func isItemAlreadyExists(allListPolicy []string, subListPolicy []string) bool {
+func isItemAlreadyExists(allListPolicyPatterns []string, subListPolicyPattern []string) bool {
 	matched := false
-	for _, al := range allListPolicy {
-		for _, sl := range subListPolicy {
+	zap.S().Debugf("searching for index pattern %s in all ISM policies %s", subListPolicyPattern, allListPolicyPatterns)
+	for _, al := range allListPolicyPatterns {
+		for _, sl := range subListPolicyPattern {
 			if al == sl {
 				matched = true
 				break
