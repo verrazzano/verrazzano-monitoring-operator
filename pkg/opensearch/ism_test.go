@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 	"io"
 	"net/http"
 	"reflect"
@@ -121,7 +122,7 @@ func createISMVMI(age string, enabled bool) *vmcontrollerv1.VerrazzanoMonitoring
 // THEN the ISM configuration does nothing because it is disabled
 func TestConfigureIndexManagementPluginISMDisabled(t *testing.T) {
 	o := NewOSClient(statefulSetLister)
-	assert.NoError(t, <-o.ConfigureISM(&vmcontrollerv1.VerrazzanoMonitoringInstance{}))
+	assert.NoError(t, <-o.ConfigureISM(vzlog.DefaultLogger(), &vmcontrollerv1.VerrazzanoMonitoringInstance{}))
 }
 
 // TestConfigureIndexManagementPluginHappyPath Tests configuration of the ISM plugin
@@ -157,7 +158,7 @@ func TestConfigureIndexManagementPluginHappyPath(t *testing.T) {
 		}
 	}
 	vmi := createISMVMI("1d", true)
-	ch := o.ConfigureISM(vmi)
+	ch := o.ConfigureISM(vzlog.DefaultLogger(), vmi)
 	assert.NoError(t, <-ch)
 }
 
@@ -456,7 +457,7 @@ func TestIsEligibleForDeletion(t *testing.T) {
 // THEN the ISM configuration does nothing because OpenSearch is not ready
 func TestConfigureIndexManagementPluginOpenSearchNotReady(t *testing.T) {
 	o := NewOSClient(statefulSetLister)
-	assert.NoError(t, <-o.ConfigureISM(&vmcontrollerv1.VerrazzanoMonitoringInstance{Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+	assert.NoError(t, <-o.ConfigureISM(vzlog.DefaultLogger(), &vmcontrollerv1.VerrazzanoMonitoringInstance{Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 		Opensearch: vmcontrollerv1.Opensearch{
 			Enabled: true,
 		},
@@ -590,7 +591,7 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 				DoHTTP:            tt.fields.DoHTTP,
 				statefulSetLister: tt.fields.statefulSetLister,
 			}
-			got, _, err := o.updateISMPolicyFromFile(tt.args.openSearchEndpoint, tt.args.policyFileName, tt.args.policyName)
+			got, _, err := o.updateISMPolicyFromFile(vzlog.DefaultLogger(), tt.args.openSearchEndpoint, tt.args.policyFileName, tt.args.policyName)
 			//if status {
 			//	t.Log("ISM policy updated")
 			//} else {
@@ -610,5 +611,5 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 func TestIsPolicyExists(t *testing.T) {
 	allPolicy := []string{"verrazzano-system", "verrazzano-application*", "system-logs"}
 	defaultPolicy := []string{"verrazzano-system"}
-	fmt.Println(isItemAlreadyExists(allPolicy, defaultPolicy))
+	fmt.Println(isItemAlreadyExists(vzlog.DefaultLogger(), allPolicy, defaultPolicy))
 }
