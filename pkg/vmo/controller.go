@@ -473,12 +473,12 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	 * Configure ISM
 	 **********************/
-	ismChannel := c.osClient.ConfigureISM(vmo)
+	ismChannel := c.osClient.ConfigureISM(c.log, vmo)
 
 	/*********************
 	 * Synchronise Default ISM Policies
 	 **********************/
-	defaultISMChannel := c.osClient.SyncDefaultISMPolicy(vmo)
+	defaultISMChannel := c.osClient.SyncDefaultISMPolicy(c.log, vmo)
 
 	/********************************************
 	 * Migrate old indices if any to data streams
