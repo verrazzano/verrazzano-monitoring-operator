@@ -115,9 +115,9 @@ type Controller struct {
 	// VerrazzanoLogger is used to log
 	log vzlog.VerrazzanoLogger
 
-	// delayedLog is used to log messages at a higher frequency
+	// lowFrequencyLog is used to log messages at a lower frequency
 	// to reduce error noise in the logs
-	delayedLog vzlog.VerrazzanoLogger
+	lowFrequencyLog vzlog.VerrazzanoLogger
 
 	// OpenSearch Client
 	osClient *opensearch.OSClient
@@ -260,7 +260,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		latestConfigMap:       operatorConfigMap,
 		clusterInfo:           ClusterInfo{},
 		log:                   vzlog.DefaultLogger(),
-		delayedLog:            vzlog.DefaultLogger(),
+		lowFrequencyLog:       vzlog.DefaultLogger(),
 		osClient:              osClient,
 		osDashboardsClient:    osDashboardsClient,
 		indexUpgradeMonitor:   &upgrade.Monitor{},
@@ -418,8 +418,8 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	c.log = getLogger(vmo)
-	c.delayedLog = getLogger(vmo)
-	c.delayedLog.SetFrequency(120)
+	c.lowFrequencyLog = getLogger(vmo)
+	c.lowFrequencyLog.SetFrequency(120)
 
 	c.log.Progressf("Reconciling vmi resource %v, generation %v", types.NamespacedName{Namespace: vmo.Namespace, Name: vmo.Name}, vmo.Generation)
 	return c.syncHandlerStandardMode(vmo)
@@ -496,7 +496,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	*********************************************/
 	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
 	if err != nil {
-		c.delayedLog.ErrorfThrottled("Failed to migrate old indices to data stream: %v", err)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to migrate old indices to data stream: %v", err)
 		errorObserved = true
 	}
 
@@ -594,19 +594,19 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	autoExpandIndexErr := <-autoExpandIndexChannel
 	if autoExpandIndexErr != nil {
-		c.delayedLog.ErrorfThrottled("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
 		errorObserved = true
 	}
 
 	ismErr := <-ismChannel
 	if ismErr != nil {
-		c.delayedLog.ErrorfThrottled("Failed to configure ISM Policies: %v", ismErr)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to configure ISM Policies: %v", ismErr)
 		errorObserved = true
 	}
 
 	defaultISMErr := <-defaultISMChannel
 	if defaultISMErr != nil {
-		c.delayedLog.ErrorfThrottled("Failed to create or update default ISM Policies: %v", defaultISMErr)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to create or update default ISM Policies: %v", defaultISMErr)
 		errorObserved = true
 	}
 	/*********************
