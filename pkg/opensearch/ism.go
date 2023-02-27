@@ -276,7 +276,7 @@ func (o *OSClient) updateISMPolicyFromFile(log vzlog.VerrazzanoLogger, openSearc
 		if err != nil {
 			return nil, false, err
 		}
-		log.Infof("creating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
+		log.Debugf("creating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
 		policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
 		if err != nil {
 			return nil, false, err
