@@ -270,18 +270,19 @@ func (o *OSClient) updateISMPolicyFromFile(log vzlog.VerrazzanoLogger, openSearc
 	if err != nil {
 		return nil, true, err
 	}
-	if !exists {
-		existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
-		existingPolicy, err := o.getPolicyByName(existingPolicyURL)
-		if err != nil {
-			return nil, false, err
-		}
-		log.Debugf("updating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
-		policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
-		if err != nil {
-			return nil, false, err
-		}
+	fmt.Println("ess", exists)
+	//if !exists {
+	existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
+	existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+	if err != nil {
+		return nil, false, err
 	}
+	log.Debugf("updating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
+	policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
+	if err != nil {
+		return nil, false, err
+	}
+	//}
 	return policy, true, err
 }
 
