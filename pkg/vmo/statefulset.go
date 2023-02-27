@@ -5,6 +5,7 @@ package vmo
 
 import (
 	"context"
+
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
@@ -80,7 +81,7 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 }
 
 func logReturnError(log vzlog.VerrazzanoLogger, sts *appsv1.StatefulSet, err error) error {
-	return log.ErrorfNewErr("Failed to update StatefulSets %s:%s: %v", sts.Namespace, sts.Name, err)
+	return log.ErrorfThrottledNewErr("Failed to update StatefulSets %s:%s: %v", sts.Namespace, sts.Name, err)
 }
 
 // getInitialMasterNodes returns the initial master nodes string if the cluster is not already bootstrapped

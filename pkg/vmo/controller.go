@@ -115,6 +115,10 @@ type Controller struct {
 	// VerrazzanoLogger is used to log
 	log vzlog.VerrazzanoLogger
 
+	// lowFrequencyLog is used to log messages at a lower frequency
+	// to reduce error noise in the logs
+	lowFrequencyLog vzlog.VerrazzanoLogger
+
 	// OpenSearch Client
 	osClient *opensearch.OSClient
 
@@ -256,6 +260,7 @@ func NewController(namespace string, configmapName string, buildVersion string, 
 		latestConfigMap:       operatorConfigMap,
 		clusterInfo:           ClusterInfo{},
 		log:                   vzlog.DefaultLogger(),
+		lowFrequencyLog:       vzlog.DefaultLogger(),
 		osClient:              osClient,
 		osDashboardsClient:    osDashboardsClient,
 		indexUpgradeMonitor:   &upgrade.Monitor{},
@@ -412,7 +417,16 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// Get the resource logger needed to log message using 'progress' and 'once' methods
+	c.log = getLogger(vmo)
+	c.lowFrequencyLog = getLogger(vmo)
+	c.lowFrequencyLog.SetFrequency(120)
+
+	c.log.Progressf("Reconciling vmi resource %v, generation %v", types.NamespacedName{Namespace: vmo.Namespace, Name: vmo.Name}, vmo.Generation)
+	return c.syncHandlerStandardMode(vmo)
+}
+
+// getLogger returns the resource logger needed to log message using 'progress' and 'once' methods
+func getLogger(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) vzlog.VerrazzanoLogger {
 	log, err := vzlog.EnsureResourceLogger(&vzlog.ResourceConfig{
 		Name:           vmo.Name,
 		Namespace:      vmo.Namespace,
@@ -423,10 +437,7 @@ func (c *Controller) syncHandler(key string) error {
 	if err != nil {
 		zap.S().Errorf("Failed to create controller logger for VMO controller", err)
 	}
-	c.log = log
-
-	log.Progressf("Reconciling vmi resource %v, generation %v", types.NamespacedName{Namespace: vmo.Namespace, Name: vmo.Name}, vmo.Generation)
-	return c.syncHandlerStandardMode(vmo)
+	return log
 }
 
 // In Standard Mode, we compare the actual state with the desired, and attempt to
@@ -485,7 +496,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	*********************************************/
 	err = c.indexUpgradeMonitor.MigrateOldIndices(c.log, vmo, c.osClient, c.osDashboardsClient)
 	if err != nil {
-		c.log.ErrorfThrottled("Failed to migrate old indices to data stream: %v", err)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to migrate old indices to data stream: %v", err)
 		errorObserved = true
 	}
 
@@ -583,19 +594,19 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 
 	autoExpandIndexErr := <-autoExpandIndexChannel
 	if autoExpandIndexErr != nil {
-		c.log.ErrorfThrottled("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to update auto expand settings for indices: %v", autoExpandIndexErr)
 		errorObserved = true
 	}
 
 	ismErr := <-ismChannel
 	if ismErr != nil {
-		c.log.ErrorfThrottled("Failed to configure ISM Policies: %v", ismErr)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to configure ISM Policies: %v", ismErr)
 		errorObserved = true
 	}
 
 	defaultISMErr := <-defaultISMChannel
 	if defaultISMErr != nil {
-		c.log.ErrorfThrottled("Failed to create or update default ISM Policies: %v", defaultISMErr)
+		c.lowFrequencyLog.ErrorfThrottled("Failed to create or update default ISM Policies: %v", defaultISMErr)
 		errorObserved = true
 	}
 	/*********************
