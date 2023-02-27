@@ -142,7 +142,7 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 // SyncDefaultISMPolicy set up the default ISM Policies.
 // The returned channel should be read for exactly one response, which tells whether default ISM policies are synced.
 func (o *OSClient) SyncDefaultISMPolicy(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
-	log.Info("Inside SyncDefaultISMPolicy")
+	log.Debugf("Inside SyncDefaultISMPolicy")
 	ch := make(chan error)
 	go func() {
 		if !vmi.Spec.Opensearch.Enabled || vmi.Spec.Opensearch.DisableDefaultPolicy {
