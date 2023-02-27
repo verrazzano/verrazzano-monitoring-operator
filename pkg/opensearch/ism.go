@@ -411,7 +411,7 @@ func (o *OSClient) checkCustomISMPolicyExists(log vzlog.VerrazzanoLogger, opense
 	for _, policy := range policyList.Policies {
 		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(log, policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
 			if policy.ID == searchPolicy.ID {
-				log.Infof("VZ created default ISM policy for index pattern %v already exists", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+				log.Debugf("VZ created default ISM policy for index pattern %v already exists", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 				return false, nil
 			}
 			log.Debugf("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
