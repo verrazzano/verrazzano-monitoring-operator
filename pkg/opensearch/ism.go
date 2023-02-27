@@ -91,7 +91,7 @@ func (o *OSClient) createISMPolicy(log vzlog.VerrazzanoLogger, opensearchEndpoin
 		return false, err
 	}
 	if !status {
-		log.Infof("Default ISM policy %v doesn't exists, creating now", policy.PolicyName)
+		log.Debugf("Default ISM policy %v doesn't exists, creating now", policy.PolicyName)
 		updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
 		if err != nil {
 			return false, err
@@ -281,7 +281,6 @@ func (o *OSClient) updateISMPolicyFromFile(log vzlog.VerrazzanoLogger, openSearc
 		if err != nil {
 			return nil, false, err
 		}
-		//log.Infof("ISM policy for index pattern %s created successfully", policy.Policy.ISMTemplate[0].IndexPatterns)
 	}
 	return policy, true, err
 }
@@ -400,7 +399,7 @@ func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
 }
 
 func (o *OSClient) checkISMPolicyExists(log vzlog.VerrazzanoLogger, opensearchEndpoint string, searchPolicy ISMPolicy) (bool, error) {
-	log.Infof("checking if ISM policy for index pattern %v exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+	log.Debugf("checking if ISM policy for index pattern %v exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 	policyList, err := o.getAllPolicies(opensearchEndpoint)
 	//Case when no polices exists in system
 	if policyList == nil {
@@ -411,17 +410,16 @@ func (o *OSClient) checkISMPolicyExists(log vzlog.VerrazzanoLogger, opensearchEn
 	}
 	for _, policy := range policyList.Policies {
 		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(log, policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
-			log.Infof("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+			log.Debugf("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 			return true, nil
 		}
 	}
-	log.Infof("ISM policy for index pattern %v doesn't exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 	return false, nil
 }
 
 func isItemAlreadyExists(log vzlog.VerrazzanoLogger, allListPolicyPatterns []string, subListPolicyPattern []string) bool {
 	matched := false
-	log.Infof("searching for index pattern %s in all ISM policies %s", subListPolicyPattern, allListPolicyPatterns)
+	log.Debugf("searching for index pattern %s in all ISM policies %s", subListPolicyPattern, allListPolicyPatterns)
 	for _, al := range allListPolicyPatterns {
 		for _, sl := range subListPolicyPattern {
 			if al == sl {

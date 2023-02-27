@@ -145,23 +145,22 @@ func (o *OSClient) SyncDefaultISMPolicy(log vzlog.VerrazzanoLogger, vmi *vmcontr
 	log.Info("Inside SyncDefaultISMPolicy")
 	ch := make(chan error)
 	go func() {
-		log.Infof("Inside go func SyncDefaultISMPolicy")
 		if !vmi.Spec.Opensearch.Enabled || vmi.Spec.Opensearch.DisableDefaultPolicy {
-			log.Infof("Inside go func SyncDefaultISMPolicy")
+			log.Debugf("inside SyncDefaultISMPolicy,DisableDefaultPolicy status %v", vmi.Spec.Opensearch.DisableDefaultPolicy)
 			ch <- nil
 			return
 		}
 
 		if !o.IsOpenSearchReady(vmi) {
+			log.Debug("inside SyncDefaultISMPolicy,IsOpenSearchReady status false")
 			ch <- nil
 			return
 		}
 
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		log.Infof("current status %v", vmi.Spec.Opensearch.DisableDefaultPolicy)
+		log.Debugf("current status %v", vmi.Spec.Opensearch.DisableDefaultPolicy)
 		_, ismStatus, err := o.createOrUpdateDefaultISMPolicy(log, openSearchEndpoint)
-		log.Infof("after calling createOrUpdateDefaultISMPolicy %v %v", vmi.Spec.Opensearch.DisableDefaultPolicy, ismStatus)
-		//vmi.Spec.Opensearch.DisableDefaultPolicy = true
+		log.Debugf("createOrUpdateDefaultISMPolicy called DisableDefaultPolicy:status %v,ismStatus:%v", vmi.Spec.Opensearch.DisableDefaultPolicy, ismStatus)
 		ch <- err
 	}()
 
