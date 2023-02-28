@@ -271,18 +271,18 @@ func (o *OSClient) updateISMPolicyFromFile(log vzlog.VerrazzanoLogger, openSearc
 		return nil, true, err
 	}
 	fmt.Println("ess", exists)
-	//if !exists {
-	existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
-	existingPolicy, err := o.getPolicyByName(existingPolicyURL)
-	if err != nil {
-		return nil, false, err
+	if !exists {
+		existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
+		existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+		if err != nil {
+			return nil, false, err
+		}
+		log.Debugf("updating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
+		policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
+		if err != nil {
+			return nil, false, err
+		}
 	}
-	log.Debugf("updating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
-	policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
-	if err != nil {
-		return nil, false, err
-	}
-	//}
 	return policy, true, err
 }
 
@@ -413,12 +413,12 @@ func (o *OSClient) checkCustomISMPolicyExists(log vzlog.VerrazzanoLogger, opense
 	for _, policy := range policyList.Policies {
 		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(log, policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
 			log.Infof("checking.... policy.ID %v and searchPolicy.ID%v ", policy.ID, searchPolicy.ID)
-			if policy.ID == searchPolicy.ID {
+			if searchPolicy.ID != nil && policy.ID == searchPolicy.ID {
 				log.Infof("VZ created default ISM policy for index pattern %v already exists", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
-				return false, nil
+				return true, nil
 			}
 			log.Debugf("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
-			return true, nil
+			return false, nil
 		}
 	}
 	return false, nil
