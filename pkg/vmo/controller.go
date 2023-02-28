@@ -612,7 +612,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	/*********************
 	* Add default index patterns
 	**********************/
-	if vmo.Spec.OpensearchDashboards.Enabled != false {
+	if vmo.Spec.OpensearchDashboards.Enabled {
 		err = c.osDashboardsClient.CreateDefaultIndexPatterns(c.log, resources.GetOpenSearchDashboardsHTTPEndpoint(vmo))
 		if err != nil {
 			c.log.ErrorfThrottled("Failed to add default index patterns : %v", err)
