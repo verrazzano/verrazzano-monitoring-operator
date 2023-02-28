@@ -16,7 +16,8 @@ var PodExecResult = func(url *url.URL) (string, string, error) { return "", "", 
 
 // NewPodExecutor should be used instead of remotecommand.NewSPDYExecutor in unit tests
 func NewPodExecutor(config *rest.Config, method string, url *url.URL) (remotecommand.Executor, error) {
-	return &dummyExecutor{method: method, url: url}, nil
+	executor := dummyExecutor{method: method, url: url}
+	return &executor, nil
 }
 
 // dummyExecutor is for unit testing
@@ -25,8 +26,8 @@ type dummyExecutor struct {
 	url    *url.URL
 }
 
-func (e *dummyExecutor) StreamWithContext(ctx context.Context, options remotecommand.StreamOptions) error {
-	stdout, stderr, err := PodExecResult(e.url)
+func (f *dummyExecutor) StreamWithContext(ctx context.Context, options remotecommand.StreamOptions) error {
+	stdout, stderr, err := PodExecResult(f.url)
 	if options.Stdout != nil {
 		buf := new(bytes.Buffer)
 		buf.WriteString(stdout)
@@ -45,6 +46,6 @@ func (e *dummyExecutor) StreamWithContext(ctx context.Context, options remotecom
 }
 
 // Stream on a dummyExecutor sets stdout to PodExecResult
-func (e *dummyExecutor) Stream(options remotecommand.StreamOptions) error {
-	return e.StreamWithContext(context.Background(), options)
+func (f *dummyExecutor) Stream(options remotecommand.StreamOptions) error {
+	return f.StreamWithContext(context.Background(), options)
 }
