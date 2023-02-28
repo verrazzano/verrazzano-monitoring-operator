@@ -86,6 +86,7 @@ func (o *OSClient) createISMPolicy(log vzlog.VerrazzanoLogger, opensearchEndpoin
 	if err != nil {
 		return false, err
 	}
+	fmt.Println("policy status", existingPolicy.ID, existingPolicy.Status)
 	exists, err := o.checkCustomISMPolicyExists(log, opensearchEndpoint, *existingPolicy)
 	if err != nil {
 		return false, err
@@ -264,6 +265,9 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 func (o *OSClient) updateISMPolicyFromFile(log vzlog.VerrazzanoLogger, openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, bool, error) {
 	policy, err := getISMPolicyFromFile(policyFileName)
 	policy.ID = &policyName
+	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policy.ID)
+	existingPolicy, err := o.getPolicyByName(policyURL)
+	fmt.Println("checking status for system poloicy...", policy, existingPolicy.Status)
 	if err != nil {
 		return nil, false, err
 	}
@@ -413,11 +417,11 @@ func (o *OSClient) checkCustomISMPolicyExists(log vzlog.VerrazzanoLogger, opense
 	}
 	for _, policy := range policyList.Policies {
 		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(log, policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
-			log.Infof("checking.... policy.ID %v and searchPolicy.ID%v ", policy.ID, searchPolicy.ID)
-			if searchPolicy.ID != nil && policy.ID == searchPolicy.ID {
-				log.Infof("VZ created default ISM policy for index pattern %v already exists", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
-				return false, nil
-			}
+			//log.Infof("checking.... policy.ID %v and searchPolicy.ID%v ", policy.ID, searchPolicy.ID)
+			//if searchPolicy.ID != nil && policy.ID == searchPolicy.ID {
+			//	log.Infof("VZ created default ISM policy for index pattern %v already exists", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+			//	return false, nil
+			//}
 			log.Debugf("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
 			return true, nil
 		}
