@@ -254,11 +254,6 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 // updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
 func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyName string, policy *ISMPolicy) (*ISMPolicy, error) {
-
-	//policy, err := getISMPolicyFromFile(policyFileName)
-	//if err != nil {
-	//	return nil, err
-	//}
 	existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
 	existingPolicy, err := o.getPolicyByName(existingPolicyURL)
 	if err != nil {
@@ -274,12 +269,15 @@ func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, op
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("os system has %v policies", len(allPolicyList.Policies))
 	for policyName, policyFile := range defaultISMPoliciesMap {
 		policy, err := getISMPolicyFromFile(policyFile)
 		if err != nil {
 			return nil, err
 		}
+		log.Infof("checking if custom policy exists for %s from file %s", policyName, policyFile)
 		if !o.isCustomPolicyExists(log, policy, policyName, allPolicyList.Policies) {
+			log.Infof("creating default policy for policy %s", policyName)
 			createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyName, policy)
 			if err != nil {
 				return defaultPolicies, err
@@ -393,6 +391,7 @@ func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
 func (o *OSClient) isCustomPolicyExists(log vzlog.VerrazzanoLogger, searchPolicy *ISMPolicy, searchPolicyName string, policyList []ISMPolicy) bool {
 	for _, policy := range policyList {
 		if *policy.ID != searchPolicyName && policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(log, policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
+			log.Debugf("custom policy exists for policy %s", searchPolicyName)
 			return true
 		}
 	}
