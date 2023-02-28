@@ -263,6 +263,7 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
 func (o *OSClient) updateISMPolicyFromFile(log vzlog.VerrazzanoLogger, openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, bool, error) {
 	policy, err := getISMPolicyFromFile(policyFileName)
+	policy.ID = &policyName
 	if err != nil {
 		return nil, false, err
 	}
@@ -415,15 +416,17 @@ func (o *OSClient) checkCustomISMPolicyExists(log vzlog.VerrazzanoLogger, opense
 			log.Infof("checking.... policy.ID %v and searchPolicy.ID%v ", policy.ID, searchPolicy.ID)
 			if searchPolicy.ID != nil && policy.ID == searchPolicy.ID {
 				log.Infof("VZ created default ISM policy for index pattern %v already exists", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
-				return true, nil
+				return false, nil
 			}
 			log.Debugf("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
-			return false, nil
+			return true, nil
 		}
 	}
 	return false, nil
 }
+func checkSystemPolicyExists(log vzlog.VerrazzanoLogger, opensearchEndpoint string, searchPolicy ISMPolicy) {
 
+}
 func isItemAlreadyExists(log vzlog.VerrazzanoLogger, allListPolicyPatterns []string, subListPolicyPattern []string) bool {
 	matched := false
 	log.Debugf("searching for index pattern %s in all ISM policies %s", subListPolicyPattern, allListPolicyPatterns)
