@@ -5,6 +5,7 @@ package vmo
 
 import (
 	"context"
+	"fmt"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
@@ -63,6 +64,9 @@ func CreateStatefulSets(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMo
 	}
 
 	for _, sts := range plan.Delete {
+		controller.log.Infof(fmt.Sprintf("VMI Custom resource: %v", vmo))
+		controller.log.Infof(fmt.Sprintf("expected Sts list: %v", expectedList))
+		controller.log.Infof(fmt.Sprintf("Sts being deleted: %v", sts))
 		if err := scaleDownStatefulSet(controller, expectedList, sts, vmo); err != nil {
 			return plan.ExistingCluster, err
 		}
