@@ -253,7 +253,7 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 
 // updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
-func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyName string, policy *ISMPolicy) (*ISMPolicy, error) {
+func (o *OSClient) updateISMPolicy(openSearchEndpoint string, policyName string, policy *ISMPolicy) (*ISMPolicy, error) {
 	existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
 	existingPolicy, err := o.getPolicyByName(existingPolicyURL)
 	if err != nil {
@@ -278,7 +278,7 @@ func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, op
 		log.Debugf("checking if custom policy exists for %s from file %s", policyName, policyFile)
 		if !o.isCustomPolicyExists(log, policy, policyName, allPolicyList.Policies) {
 			log.Debugf("creating default policy for policy %s", policyName)
-			createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyName, policy)
+			createdPolicy, err := o.updateISMPolicy(openSearchEndpoint, policyName, policy)
 			if err != nil {
 				return defaultPolicies, err
 			}

@@ -594,7 +594,7 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 			if err != nil {
 				return
 			}
-			got, err := o.updateISMPolicyFromFile(tt.args.openSearchEndpoint, tt.args.policyFileName, policyObject)
+			got, err := o.updateISMPolicy(tt.args.openSearchEndpoint, tt.args.policyFileName, policyObject)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("updateISMPolicyFromFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
