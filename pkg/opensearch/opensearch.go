@@ -142,7 +142,7 @@ func (o *OSClient) SyncDefaultISMPolicy(log vzlog.VerrazzanoLogger, vmi *vmcontr
 			return
 		}
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		log.Info("calling createOrUpdateDefaultISMPolicy")
+		log.Debugf("calling createOrUpdateDefaultISMPolicy")
 		_, err := o.createOrUpdateDefaultISMPolicy(log, openSearchEndpoint)
 		ch <- err
 	}()

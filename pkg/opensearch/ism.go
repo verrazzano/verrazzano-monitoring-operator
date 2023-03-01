@@ -269,15 +269,15 @@ func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, op
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("os system has %v policies", len(allPolicyList.Policies))
+	log.Debugf("os system has %v policies", len(allPolicyList.Policies))
 	for policyName, policyFile := range defaultISMPoliciesMap {
 		policy, err := getISMPolicyFromFile(policyFile)
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("checking if custom policy exists for %s from file %s", policyName, policyFile)
+		log.Debugf("checking if custom policy exists for %s from file %s", policyName, policyFile)
 		if !o.isCustomPolicyExists(log, policy, policyName, allPolicyList.Policies) {
-			log.Infof("creating default policy for policy %s", policyName)
+			log.Debugf("creating default policy for policy %s", policyName)
 			createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyName, policy)
 			if err != nil {
 				return defaultPolicies, err
