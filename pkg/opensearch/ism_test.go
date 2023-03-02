@@ -591,6 +591,9 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 				statefulSetLister: tt.fields.statefulSetLister,
 			}
 			policyObject, err := getISMPolicyFromFile(tt.args.policyFileName)
+			if err != nil {
+				return
+			}
 			got, err := o.updateISMPolicy(tt.args.openSearchEndpoint, tt.args.policyFileName, policyObject)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("updateISMPolicyFromFile() error = %v, wantErr %v", err, tt.wantErr)
