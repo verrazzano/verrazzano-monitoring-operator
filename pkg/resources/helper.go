@@ -65,15 +65,21 @@ const (
 	`
 	OSMasterPluginsInstallTmpl = `
      set -euo pipefail
+     # wait for Sidecar proxy to be ready
+     until curl -sS --head localhost:15021/healthz/ready; do echo Waiting for Sidecar; sleep 3 ; done ;
      # Install OS plugins that are not bundled with OS
      %s
     `
 	OSIngestPluginsInstallTmpl = `
      set +euo pipefail
+     # wait for Sidecar proxy to be ready
+     countdown=10;until curl -sS --head localhost:15021/healthz/ready || [ $countdown -eq 0 ]; do echo Waiting for Sidecar; sleep 3 ; ((countdown--)) ; done ;
      # Install OS plugins that are not bundled with OS
      %s
     `
 	OSDataPluginsInstallTmpl = `
+     # wait for Sidecar proxy to be ready
+     countdown=10;until curl -sS --head localhost:15021/healthz/ready || [ $countdown -eq 0 ]; do echo Waiting for Sidecar; sleep 3 ; ((countdown--)) ; done ;
      # Install OS plugins that are not bundled with OS
      %s
     `
@@ -85,6 +91,8 @@ const (
     /usr/share/opensearch/bin/opensearch-plugin install -b %s
 	`
 	OSDashboardPluginsInstallCmd = `
+    # wait for Sidecar proxy to be ready
+    until curl -sS --head localhost:15021/healthz/ready; do echo Waiting for Sidecar; sleep 3 ; done ;
     /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin install %s
 	`
 )
