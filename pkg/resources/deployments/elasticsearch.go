@@ -136,6 +136,7 @@ func (es ElasticsearchBasic) createElasticsearchIngestDeploymentElements(vmo *vm
 		}
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 		ingestDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
+		ingestDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = fmt.Sprintf("{ 'holdApplicationUntilProxyStarts': %s }", constants.HoldAppUntilProxyStarts)
 		deployments = append(deployments, ingestDeployment)
 	}
 	return deployments
@@ -245,6 +246,7 @@ func (es ElasticsearchBasic) createElasticsearchDataDeploymentElements(vmo *vmco
 			}
 			dataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 			dataDeployment.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
+			dataDeployment.Spec.Template.Annotations["proxy.istio.io/config"] = fmt.Sprintf("{ 'holdApplicationUntilProxyStarts': %s }", constants.HoldAppUntilProxyStarts)
 			deployments = append(deployments, dataDeployment)
 		}
 	}
