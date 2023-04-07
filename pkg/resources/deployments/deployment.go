@@ -347,6 +347,7 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 			deployment.Spec.Template.Annotations = make(map[string]string)
 		}
 		deployment.Spec.Template.Annotations["traffic.sidecar.istio.io/includeOutboundPorts"] = fmt.Sprintf("%d", constants.OSHTTPPort)
+		deployment.Spec.Template.Annotations["proxy.istio.io/config"] = fmt.Sprintf("{ 'holdApplicationUntilProxyStarts': %s }", constants.HoldAppUntilProxyStarts)
 		// Adding command to install OS plugins at pod bootup
 		deployment.Spec.Template.Spec.Containers[0].Command = []string{
 			"sh",
