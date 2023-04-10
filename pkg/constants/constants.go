@@ -211,3 +211,6 @@ const PodUser = 1000
 
 // TimeStamp used to add timestamp as TimeFieldName in the index pattern
 const TimeStamp = "@timestamp"
+
+// HoldAppUntilProxyStarts used to hold the application until Istio sidecar proxy starts
+const HoldAppUntilProxyStarts = "true"
