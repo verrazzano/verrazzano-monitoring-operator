@@ -189,16 +189,29 @@ func TestUpdateVMOStorageForPVC(t *testing.T) {
 						},
 					},
 				},
+				Nodes: []vmcontrollerv1.ElasticsearchNode{
+					{
+						Roles: []vmcontrollerv1.NodeRole{
+							vmcontrollerv1.DataRole,
+						},
+						Storage: &vmcontrollerv1.Storage{PvcNames: []string{
+							"some other pvc",
+							"oldpvc",
+						}},
+					},
+				},
 			},
 		},
 	}
 
 	updateVMOStorageForPVC(vmo, "oldpvc", "newpvc")
 	assert.Equal(t, "newpvc", vmo.Spec.Elasticsearch.DataNode.Storage.PvcNames[1])
+	assert.Equal(t, "newpvc", vmo.Spec.Elasticsearch.Nodes[0].Storage.PvcNames[1])
 }
 
 func TestIsOpenSearchPVC(t *testing.T) {
 	assert.True(t, isOpenSearchPVC(makePVC("vmi-system-es-data-0", "1Gi")))
+	assert.True(t, isOpenSearchPVC(makePVC("vmi-system-es-data-1-03xqy", "1Gi")))
 	assert.False(t, isOpenSearchPVC(makePVC("vmi-system-grafana", "1Gi")))
 }
 

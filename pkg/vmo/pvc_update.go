@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-//resizePVC resizes a PVC to a new size
+// resizePVC resizes a PVC to a new size
 // if the underlying storage class does not support expansion, a new PVC will be created.
 func resizePVC(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingPVC, expectedPVC *corev1.PersistentVolumeClaim, storageClass *storagev1.StorageClass) (*string, error) {
 	if storageClass.AllowVolumeExpansion != nil && *storageClass.AllowVolumeExpansion {
@@ -55,7 +55,7 @@ func resizePVC(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringI
 	return &expectedPVC.Name, nil
 }
 
-//cleanupUnusedPVCs finds any unused PVCs and deletes them
+// cleanupUnusedPVCs finds any unused PVCs and deletes them
 func cleanupUnusedPVCs(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
 	selector := labels.SelectorFromSet(resources.GetMetaLabels(vmo))
 	deployments, err := controller.deploymentLister.Deployments(vmo.Namespace).List(selector)
@@ -78,7 +78,7 @@ func cleanupUnusedPVCs(controller *Controller, vmo *vmcontrollerv1.VerrazzanoMon
 	return nil
 }
 
-//getInUsePVCNames gets the names of PVCs that are currently used by VMO deployments
+// getInUsePVCNames gets the names of PVCs that are currently used by VMO deployments
 func getInUsePVCNames(deployments []*appsv1.Deployment, vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) map[string]bool {
 	inUsePVCNames := map[string]bool{}
 	for _, deployment := range deployments {
@@ -99,7 +99,7 @@ func getInUsePVCNames(deployments []*appsv1.Deployment, vmo *vmcontrollerv1.Verr
 	return inUsePVCNames
 }
 
-//getUnboundPVCs gets the VMO-managed PVCs which are not currently used by VMO deployments
+// getUnboundPVCs gets the VMO-managed PVCs which are not currently used by VMO deployments
 func getUnboundPVCs(pvcs []*corev1.PersistentVolumeClaim, inUsePVCNames map[string]bool) []*corev1.PersistentVolumeClaim {
 	var unboundPVCs []*corev1.PersistentVolumeClaim
 	for _, pvc := range pvcs {
@@ -110,12 +110,12 @@ func getUnboundPVCs(pvcs []*corev1.PersistentVolumeClaim, inUsePVCNames map[stri
 	return unboundPVCs
 }
 
-//isOpenSearchPVC checks if a PVC is an OpenSearch PVC
+// isOpenSearchPVC checks if a PVC is an OpenSearch PVC
 func isOpenSearchPVC(pvc *corev1.PersistentVolumeClaim) bool {
 	return strings.Contains(pvc.Name, "es-data")
 }
 
-//pvcNeedsResize a PVC only needs resize if it is greater than the existing PVC size
+// pvcNeedsResize a PVC only needs resize if it is greater than the existing PVC size
 func pvcNeedsResize(existingPVC, expectedPVC *corev1.PersistentVolumeClaim) bool {
 	existingStorage := existingPVC.Spec.Resources.Requests.Storage()
 	expectedStorage := expectedPVC.Spec.Resources.Requests.Storage()
@@ -123,7 +123,7 @@ func pvcNeedsResize(existingPVC, expectedPVC *corev1.PersistentVolumeClaim) bool
 	return compare > 0
 }
 
-//newPVCName adds a prefix if not present, otherwise it rewrites the existing prefix
+// newPVCName adds a prefix if not present, otherwise it rewrites the existing prefix
 func newPVCName(pvcName string, size int) (string, error) {
 	pvcNameSplit := strings.Split(pvcName, "-")
 	suffix, err := resources.GetNewRandomID(size)
@@ -140,7 +140,7 @@ func newPVCName(pvcName string, size int) (string, error) {
 	return strings.Join(pvcNameSplit, "-"), nil
 }
 
-//updateVMOStorageForPVC updates the VMO storage to replace an old PVC with a new PVC
+// updateVMOStorageForPVC updates the VMO storage to replace an old PVC with a new PVC
 func updateVMOStorageForPVC(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, oldPVCName, newPVCName string) {
 	updateStorage := func(storage *vmcontrollerv1.Storage) {
 		if storage != nil {
@@ -154,10 +154,12 @@ func updateVMOStorageForPVC(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ol
 
 	// Look for the PVC reference and update it
 	updateStorage(&vmo.Spec.Grafana.Storage)
-	updateStorage(vmo.Spec.Elasticsearch.DataNode.Storage)
+	for _, dataNode := range nodes.DataNodes(vmo) {
+		updateStorage(dataNode.Storage)
+	}
 }
 
-//setPerNodeStorage updates the VMO OpenSearch storage spec to reflect the current API
+// setPerNodeStorage updates the VMO OpenSearch storage spec to reflect the current API
 func setPerNodeStorage(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) {
 	updateFunc := func(storage *vmcontrollerv1.Storage, node *vmcontrollerv1.ElasticsearchNode) {
 		if node.Replicas > 0 && node.Storage == nil {
