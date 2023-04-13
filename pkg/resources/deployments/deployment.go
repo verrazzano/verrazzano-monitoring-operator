@@ -183,10 +183,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				keyFileKeyExists := vmo.Spec.Grafana.SMTP.KeyFileKey != ""
 
 				if certFileKeyExists || keyFileKeyExists {
-					secretVolumeName := "smtp-secrets"
-					secretVolumePath := "/etc/grafana/secrets"
+					volumeName := "smtp-secrets"
+					volumePath := "/etc/grafana/secrets"
 					deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-						Name: secretVolumeName,
+						Name: volumeName,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName: vmo.Spec.Grafana.SMTP.ExistingSecret,
@@ -194,16 +194,16 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 						},
 					})
 					deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-						Name:      secretVolumeName,
-						MountPath: secretVolumePath,
+						Name:      volumeName,
+						MountPath: volumePath,
 					})
 
 					if certFileKeyExists {
-						deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SMTP_CERT_FILE", Value: fmt.Sprintf("%s/%s", secretVolumePath, vmo.Spec.Grafana.SMTP.CertFileKey)})
+						deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SMTP_CERT_FILE", Value: fmt.Sprintf("%s/%s", volumePath, vmo.Spec.Grafana.SMTP.CertFileKey)})
 					}
 
 					if keyFileKeyExists {
-						deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SMTP_KEY_FILE", Value: fmt.Sprintf("%s/%s", secretVolumePath, vmo.Spec.Grafana.SMTP.KeyFileKey)})
+						deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SMTP_KEY_FILE", Value: fmt.Sprintf("%s/%s", volumePath, vmo.Spec.Grafana.SMTP.KeyFileKey)})
 					}
 				}
 
