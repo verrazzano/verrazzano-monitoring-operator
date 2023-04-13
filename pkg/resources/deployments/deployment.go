@@ -176,6 +176,84 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, kubeclientset kuberne
 				{Name: "GF_DATABASE_NAME", Value: vmo.Spec.Grafana.Database.Name},
 			}...)
 		}
+		if vmo.Spec.Grafana.SMTP != nil {
+
+			if vmo.Spec.Grafana.SMTP.ExistingSecret != "" {
+				certFileKeyExists := vmo.Spec.Grafana.SMTP.CertFileKey != ""
+				keyFileKeyExists := vmo.Spec.Grafana.SMTP.KeyFileKey != ""
+
+				if certFileKeyExists || keyFileKeyExists {
+					secretVolumeName := "smtp-secrets"
+					secretVolumePath := "/etc/grafana/secrets"
+					deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+						Name: secretVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: vmo.Spec.Grafana.SMTP.ExistingSecret,
+							},
+						},
+					})
+					deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+						Name:      secretVolumeName,
+						MountPath: secretVolumePath,
+					})
+
+					if certFileKeyExists {
+						deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SMTP_CERT_FILE", Value: fmt.Sprintf("%s/%s", secretVolumePath, vmo.Spec.Grafana.SMTP.CertFileKey)})
+					}
+
+					if keyFileKeyExists {
+						deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SMTP_KEY_FILE", Value: fmt.Sprintf("%s/%s", secretVolumePath, vmo.Spec.Grafana.SMTP.KeyFileKey)})
+					}
+				}
+
+				deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+					{
+						Name: "GF_SMTP_USER",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: vmo.Spec.Grafana.SMTP.ExistingSecret,
+								},
+								Key: vmo.Spec.Grafana.SMTP.UserKey,
+							},
+						},
+					},
+					{
+						Name: "GF_SMTP_PASSWORD",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: vmo.Spec.Grafana.SMTP.ExistingSecret,
+								},
+								Key: vmo.Spec.Grafana.SMTP.PasswordKey,
+							},
+						},
+					},
+				}...)
+			}
+
+			smtpEnabled := "false"
+			if vmo.Spec.Grafana.SMTP.Enabled != nil && *vmo.Spec.Grafana.SMTP.Enabled {
+				smtpEnabled = "true"
+			}
+
+			skipVerify := "false"
+			if vmo.Spec.Grafana.SMTP.SkipVerify != nil && *vmo.Spec.Grafana.SMTP.SkipVerify {
+				skipVerify = "true"
+			}
+
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{Name: "GF_SMTP_ENABLED", Value: smtpEnabled},
+				{Name: "GF_SMTP_HOST", Value: vmo.Spec.Grafana.SMTP.Host},
+				{Name: "GF_SMTP_SKIP_VERIFY", Value: skipVerify},
+				{Name: "GF_SMTP_FROM_ADDRESS", Value: vmo.Spec.Grafana.SMTP.FromAddress},
+				{Name: "GF_SMTP_FROM_NAME", Value: vmo.Spec.Grafana.SMTP.FromName},
+				{Name: "GF_SMTP_EHLO_IDENTITY", Value: vmo.Spec.Grafana.SMTP.EHLOIdentity},
+				{Name: "GF_SMTP_STARTTLS_POLICY", Value: string(vmo.Spec.Grafana.SMTP.StartTLSPolicy)},
+			}...)
+		}
+
 		if vmo.Spec.URI != "" {
 			externalDomainName := config.Grafana.Name + "." + vmo.Spec.URI
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "GF_SERVER_DOMAIN", Value: externalDomainName})

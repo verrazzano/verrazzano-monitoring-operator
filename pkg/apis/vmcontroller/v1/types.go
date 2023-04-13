@@ -18,6 +18,14 @@ const (
 	MasterRole NodeRole = "master"
 	DataRole   NodeRole = "data"
 	IngestRole NodeRole = "ingest"
+	// OpportunisticStartTLS means that SMTP transactions are encrypted if STARTTLS is supported by the SMTP server.
+	// Otherwise, messages are sent in the clear.
+	OpportunisticStartTLS StartTLSType = "OpportunisticStartTLS"
+	// MandatoryStartTLS means that SMTP transactions must be encrypted.
+	// SMTP transactions are aborted unless STARTTLS is supported by the SMTP server.
+	MandatoryStartTLS StartTLSType = "MandatoryStartTLS"
+	// NoStartTLS means encryption is disabled and messages are sent in the clear.
+	NoStartTLS StartTLSType = "NoStartTLS"
 )
 
 type (
@@ -106,6 +114,7 @@ type (
 		Resources            Resources `json:"resources,omitempty"`
 		Replicas             int32     `json:"replicas,omitempty"`
 		Database             *Database `json:"database,omitempty"`
+		SMTP                 *SMTPInfo `json:"smtp,omitempty"`
 	}
 
 	// Prometheus details
@@ -340,6 +349,50 @@ type (
 		metav1.TypeMeta `json:",inline"`
 		metav1.ListMeta `json:"metadata"`
 		Items           []VerrazzanoMonitoringInstance `json:"items"`
+	}
+
+	// StartTLSType is the type of protocol command used to inform the email server that the email client wants to upgrade from
+	// an insecure connection to a secure one using TLS or SSL.
+	StartTLSType string
+
+	// SMTPInfo specifies the SMTP connection information for the Grafana SMTP notifications.
+	SMTPInfo struct {
+		// If true, then the SMTP notifications will be enabled.
+		// +optional
+		Enabled *bool `json:"enabled,omitempty"`
+		// The address:port connection information for the SMTP server.
+		// +optional
+		Host string `json:"host,omitempty"`
+		// The name of an existing secret containing the SMTP credentials (username, password, certificate and key for accessing the SMTP server).
+		// +optional
+		ExistingSecret string `json:"existingSecret,omitempty"`
+		// The key in the existing SMTP secret containing the username.
+		// +optional
+		UserKey string `json:"userKey,omitempty"`
+		// The key in the existing SMTP secret containing the password.
+		// +optional
+		PasswordKey string `json:"passwordKey,omitempty"`
+		// The key in the existing SMTP secret containing the certificate.
+		// +optional
+		CertFileKey string `json:"certFileKey,omitempty"`
+		// The key in the existing SMTP secret containing the key for the certificate.
+		// +optional
+		KeyFileKey string `json:"keyFileKey,omitempty"`
+		// If true, do not Verify SSL for SMTP server.
+		// +optional
+		SkipVerify *bool `json:"skipVerify,omitempty"`
+		// Address used when sending out emails, default is admin@grafana.localhost.
+		// +optional
+		FromAddress string `json:"fromAddress,omitempty"`
+		// Name to be used when sending out emails, default is Grafana.
+		// +optional
+		FromName string `json:"fromName,omitempty"`
+		// Name to be used as client identity for EHLO(Extended HELO) in SMTP dialog, default is <instance_name>.
+		// +optional
+		EHLOIdentity string `json:"ehloIdentity,omitempty"`
+		// Either “OpportunisticStartTLS”, “MandatoryStartTLS”, “NoStartTLS”. Default is empty.
+		// +optional
+		StartTLSPolicy StartTLSType `json:"startTLSPolicy,omitempty"`
 	}
 )
 
