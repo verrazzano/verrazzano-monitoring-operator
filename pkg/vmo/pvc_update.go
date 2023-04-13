@@ -154,7 +154,9 @@ func updateVMOStorageForPVC(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, ol
 
 	// Look for the PVC reference and update it
 	updateStorage(&vmo.Spec.Grafana.Storage)
-	updateStorage(vmo.Spec.Opensearch.DataNode.Storage)
+	for _, dataNode := range nodes.DataNodes(vmo) {
+		updateStorage(dataNode.Storage)
+	}
 }
 
 // setPerNodeStorage updates the VMO OpenSearch storage spec to reflect the current API
