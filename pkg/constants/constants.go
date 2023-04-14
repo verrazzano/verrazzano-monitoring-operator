@@ -214,3 +214,9 @@ const TimeStamp = "@timestamp"
 
 // HoldAppUntilProxyStarts used to hold the application until Istio sidecar proxy starts
 const HoldAppUntilProxyStarts = "true"
+
+// GrafanaSMTPSecretVolumeName is the name of secret volume created for SMTP configurations in Grafana deployment.
+const GrafanaSMTPSecretVolumeName = "smtp-secrets"
+
+// GrafanaSMTPSecretVolumePath is the mount path of secret volume created for SMTP configurations in Grafana deployment.
+const GrafanaSMTPSecretVolumePath = "/etc/grafana/secrets"
