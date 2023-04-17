@@ -148,7 +148,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 		}
 	}
 	if vmo.Spec.OpensearchDashboards.Enabled {
-		if config.Kibana.OidcProxy != nil {
+		if config.OpenSearchDashboards.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpenSearchDashboards)
 			ingresses = append(ingresses, ingress)
 			redirectIngress := createRedirectIngressIfNecessary(vmo, existingIngresses, &config.Kibana, &config.OpenSearchDashboardsRedirect)
@@ -160,9 +160,9 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 		} else {
 			// Create Ingress Rule for Kibana Endpoint
 			ingRule := createIngressRuleElement(vmo, config.OpenSearchDashboards)
-			host := config.Kibana.Name + "." + vmo.Spec.URI
+			host := config.OpenSearchDashboards.Name + "." + vmo.Spec.URI
 			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.OpenSearchDashboards)
-			ingress, err := createIngressElement(vmo, host, config.Kibana, ingRule, healthLocations)
+			ingress, err := createIngressElement(vmo, host, config.OpenSearchDashboards, ingRule, healthLocations)
 			if err != nil {
 				return ingresses, err
 			}
@@ -176,7 +176,7 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 		}
 	}
 	if vmo.Spec.Opensearch.Enabled {
-		if config.ElasticsearchIngest.OidcProxy != nil {
+		if config.OpensearchIngest.OidcProxy != nil {
 			ingress := newOidcProxyIngress(vmo, &config.OpensearchIngest)
 			ingress.Annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = "65M"
 			ingresses = append(ingresses, ingress)
@@ -188,10 +188,10 @@ func New(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, existingIngresses map
 			}
 		} else {
 			var ingress *netv1.Ingress
-			ingRule := createIngressRuleElement(vmo, config.ElasticsearchIngest)
-			host := config.ElasticsearchIngest.EndpointName + "." + vmo.Spec.URI
-			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.ElasticsearchIngest)
-			ingress, err := createIngressElement(vmo, host, config.ElasticsearchIngest, ingRule, healthLocations)
+			ingRule := createIngressRuleElement(vmo, config.OpensearchIngest)
+			host := config.OpensearchIngest.EndpointName + "." + vmo.Spec.URI
+			healthLocations := noAuthOnHealthCheckSnippet(vmo, "", config.OpensearchIngest)
+			ingress, err := createIngressElement(vmo, host, config.OpensearchIngest, ingRule, healthLocations)
 			if err != nil {
 				return ingresses, err
 			}
