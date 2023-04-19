@@ -273,7 +273,7 @@ fi`,
 	}
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeInboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
 	statefulSet.Spec.Template.Annotations["traffic.sidecar.istio.io/excludeOutboundPorts"] = fmt.Sprintf("%d", constants.OSTransportPort)
-
+	statefulSet.Spec.Template.Annotations["proxy.istio.io/config"] = fmt.Sprintf("{ 'holdApplicationUntilProxyStarts': %s }", constants.HoldAppUntilProxyStarts)
 	// set Node Role labels for role based selectors
 	nodes.SetNodeRoleLabels(&node, statefulSet.Spec.Template.Labels)
 	return statefulSet

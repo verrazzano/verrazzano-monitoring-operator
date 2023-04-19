@@ -42,7 +42,9 @@ type ComponentSidecar struct {
 }
 
 // AllComponentDetails is array of all ComponentDetails
-var AllComponentDetails = []*ComponentDetails{&Grafana, &Kibana, &OpenSearchDashboards, &ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit, &API, &OidcProxy}
+var AllComponentDetails = []*ComponentDetails{&Grafana, &Kibana, &OpenSearchDashboards,
+	&ElasticsearchIngest, &ElasticsearchMaster, &ElasticsearchData, &ElasticsearchInit,
+	&OpensearchIngest, &API, &OidcProxy}
 
 // StorageEnableComponents is storage operation-related stuff
 var StorageEnableComponents = []*ComponentDetails{&Grafana}

@@ -50,7 +50,8 @@ func NewOSClient(statefulSetLister appslistersv1.StatefulSetLister) *OSClient {
 // - 'green' health
 // - all expected nodes are present in the cluster status
 func (o *OSClient) IsDataResizable(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) error {
-	if vmo.Spec.Opensearch.DataNode.Replicas < MinDataNodesForResize {
+	dataNodes := nodes.DataNodes(vmo)
+	if len(dataNodes) < MinDataNodesForResize {
 		return fmt.Errorf("cannot resize OpenSearch with less than %d data nodes. Scale up your cluster to at least %d data nodes", MinDataNodesForResize, MinDataNodesForResize)
 	}
 	return o.opensearchHealth(vmo, true, true)
