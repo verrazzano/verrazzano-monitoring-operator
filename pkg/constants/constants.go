@@ -219,4 +219,4 @@ const HoldAppUntilProxyStarts = "true"
 const GrafanaSMTPSecretVolumeName = "smtp-secrets"
 
 // GrafanaSMTPSecretVolumePath is the mount path of secret volume created for SMTP configurations in Grafana deployment.
-const GrafanaSMTPSecretVolumePath = "/etc/grafana/secrets"
+const GrafanaSMTPSecretVolumePath = "/etc/grafana/smtp-secrets"
