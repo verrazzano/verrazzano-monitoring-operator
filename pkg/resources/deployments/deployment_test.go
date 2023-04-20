@@ -366,8 +366,8 @@ func TestGrafanaSMTPConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{
 		"GF_SMTP_ENABLED":         fmt.Sprintf("%v", trueValue),
 		"GF_SMTP_HOST":            vmi.Spec.Grafana.SMTP.Host,
-		"GF_SMTP_CERT_FILE":       fmt.Sprintf("%s/%s", constants.GrafanaSMTPSecretVolumePath, vmi.Spec.Grafana.SMTP.CertFileKey),
-		"GF_SMTP_KEY_FILE":        fmt.Sprintf("%s/%s", constants.GrafanaSMTPSecretVolumePath, vmi.Spec.Grafana.SMTP.KeyFileKey),
+		"GF_SMTP_CERT_FILE":       fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.CertFileKey),
+		"GF_SMTP_KEY_FILE":        fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.KeyFileKey),
 		"GF_SMTP_SKIP_VERIFY":     fmt.Sprintf("%v", trueValue),
 		"GF_SMTP_FROM_ADDRESS":    vmi.Spec.Grafana.SMTP.FromAddress,
 		"GF_SMTP_FROM_NAME":       vmi.Spec.Grafana.SMTP.FromName,
@@ -396,7 +396,7 @@ func TestGrafanaSMTPConfig(t *testing.T) {
 
 			volumeFound := false
 			for _, volume := range deployment.Spec.Template.Spec.Volumes {
-				if volume.Name == constants.GrafanaSMTPSecretVolumeName {
+				if volume.Name == constants.GrafanaSMTPConfigVolumeName {
 					assert.Equal(t, vmi.Spec.Grafana.SMTP.ExistingSecret, volume.Secret.SecretName)
 					volumeFound = true
 				}
@@ -405,8 +405,8 @@ func TestGrafanaSMTPConfig(t *testing.T) {
 
 			volumeMountFound := false
 			for _, volumeMount := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
-				if volumeMount.Name == constants.GrafanaSMTPSecretVolumeName {
-					assert.Equal(t, constants.GrafanaSMTPSecretVolumePath, volumeMount.MountPath)
+				if volumeMount.Name == constants.GrafanaSMTPConfigVolumeName {
+					assert.Equal(t, constants.GrafanaSMTPConfigVolumePath, volumeMount.MountPath)
 					volumeMountFound = true
 				}
 			}
