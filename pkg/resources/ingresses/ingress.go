@@ -18,6 +18,8 @@ import (
 
 var defaultIngressClassName = "verrazzano-nginx"
 
+const verrazzanoClusterIssuerName = "verrazzano-cluster-issuer"
+
 func createIngressRuleElement(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, componentDetails config.ComponentDetails) netv1.IngressRule {
 	serviceName := resources.GetMetaName(vmo.Name, componentDetails.Name)
 	endpointName := componentDetails.EndpointName
@@ -89,6 +91,7 @@ func createIngressElementNoBasicAuth(vmo *vmcontrollerv1.VerrazzanoMonitoringIns
 	}
 
 	ingress.Annotations["cert-manager.io/common-name"] = hostName
+	ingress.Annotations["cert-manager.io/cluster-issuer"] = verrazzanoClusterIssuerName
 	return ingress, nil
 }
 
@@ -290,6 +293,7 @@ func newOidcProxyIngress(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, compo
 	ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/$2"
 	setNginxRoutingAnnotations(ingress)
 	ingress.Annotations["cert-manager.io/common-name"] = ingressHost
+	ingress.Annotations["cert-manager.io/cluster-issuer"] = verrazzanoClusterIssuerName
 	return ingress
 }
 
