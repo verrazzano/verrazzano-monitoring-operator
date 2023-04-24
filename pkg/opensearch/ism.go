@@ -7,13 +7,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
-
 	"github.com/verrazzano/pkg/diff"
-
 	"github.com/verrazzano/verrazzano-monitoring-operator"
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
+	"net/http"
+	"strings"
 )
 
 type (
@@ -80,20 +79,31 @@ var (
 )
 
 // createISMPolicy creates an ISM policy if it does not exist, else the policy will be updated.
-// If the policy already exsts and its spec matches the VMO policy spec, no update will be issued
-func (o *OSClient) createISMPolicy(opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) error {
+// If the policy already exists and its spec matches the VMO policy spec, no update will be issued
+func (o *OSClient) createISMPolicy(log vzlog.VerrazzanoLogger, opensearchEndpoint string, policy vmcontrollerv1.IndexManagementPolicy) (bool, error) {
 	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", opensearchEndpoint, policy.PolicyName)
 	existingPolicy, err := o.getPolicyByName(policyURL)
 	if err != nil {
-		return err
+		return false, err
 	}
-	updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
+	fmt.Println("policy status", existingPolicy.ID, existingPolicy.Status)
+	exists, err := o.checkCustomISMPolicyExists(log, opensearchEndpoint, *existingPolicy)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+	if !exists {
+		log.Debugf("Default ISM policy %v doesn't exists, creating now", policy.PolicyName)
+		updatedPolicy, err := o.putUpdatedPolicy(opensearchEndpoint, policy.PolicyName, toISMPolicy(&policy), existingPolicy)
+		if err != nil {
+			return false, err
+		}
+		err = o.addPolicyToExistingIndices(opensearchEndpoint, &policy, updatedPolicy)
+		if err != nil {
+			return false, err
+		}
+	}
+	return true, nil
 }
-
 func (o *OSClient) getPolicyByName(policyURL string) (*ISMPolicy, error) {
 	req, err := http.NewRequest("GET", policyURL, nil)
 	if err != nil {
@@ -252,30 +262,47 @@ func (o *OSClient) deletePolicy(opensearchEndpoint, policyName string) (*http.Re
 
 // updateISMPolicyFromFile creates or updates the ISM policy from the given json file.
 // If ISM policy doesn't exist, it will create new. Otherwise, it'll create one.
-func (o *OSClient) updateISMPolicyFromFile(openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, error) {
+func (o *OSClient) updateISMPolicyFromFile(log vzlog.VerrazzanoLogger, openSearchEndpoint string, policyFileName string, policyName string) (*ISMPolicy, bool, error) {
 	policy, err := getISMPolicyFromFile(policyFileName)
+	policy.ID = &policyName
+	policyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policy.ID)
+	existingPolicy, err := o.getPolicyByName(policyURL)
+	fmt.Println("checking status for system poloicy...", policy, existingPolicy.Status)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
-	existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+	exists, err := o.checkCustomISMPolicyExists(log, openSearchEndpoint, *policy)
 	if err != nil {
-		return nil, err
+		return nil, true, err
 	}
-	return o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
+	fmt.Println("ess", exists)
+	if !exists {
+		existingPolicyURL := fmt.Sprintf("%s/_plugins/_ism/policies/%s", openSearchEndpoint, policyName)
+		existingPolicy, err := o.getPolicyByName(existingPolicyURL)
+		if err != nil {
+			return nil, false, err
+		}
+		log.Debugf("updating ISM policy for index pattern %s", policy.Policy.ISMTemplate[0].IndexPatterns)
+		policy, err = o.putUpdatedPolicy(openSearchEndpoint, policyName, policy, existingPolicy)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+	return policy, true, err
 }
 
 // createOrUpdateDefaultISMPolicy creates the default ISM policies if not exist, else the policies will be updated.
-func (o *OSClient) createOrUpdateDefaultISMPolicy(openSearchEndpoint string) ([]*ISMPolicy, error) {
+func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, openSearchEndpoint string) ([]*ISMPolicy, bool, error) {
 	var defaultPolicies []*ISMPolicy
 	for policyName, policyFile := range defaultISMPoliciesMap {
-		createdPolicy, err := o.updateISMPolicyFromFile(openSearchEndpoint, policyFile, policyName)
+		createdPolicy, status, err := o.updateISMPolicyFromFile(log, openSearchEndpoint, policyFile, policyName)
 		if err != nil {
-			return defaultPolicies, err
+			return defaultPolicies, status, err
 		}
+		createdPolicy.ID = &policyName
 		defaultPolicies = append(defaultPolicies, createdPolicy)
 	}
-	return defaultPolicies, nil
+	return defaultPolicies, true, nil
 }
 
 func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) bool {
@@ -376,4 +403,44 @@ func getISMPolicyFromFile(policyFileName string) (*ISMPolicy, error) {
 		return nil, err
 	}
 	return &policy, nil
+}
+
+func (o *OSClient) checkCustomISMPolicyExists(log vzlog.VerrazzanoLogger, opensearchEndpoint string, searchPolicy ISMPolicy) (bool, error) {
+	log.Debugf("checking if ISM policy for index pattern %v exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+	policyList, err := o.getAllPolicies(opensearchEndpoint)
+	//Case when no polices exists in system
+	if policyList == nil {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	for _, policy := range policyList.Policies {
+		if policy.Policy.ISMTemplate[0].Priority == searchPolicy.Policy.ISMTemplate[0].Priority && isItemAlreadyExists(log, policy.Policy.ISMTemplate[0].IndexPatterns, searchPolicy.Policy.ISMTemplate[0].IndexPatterns) {
+			//log.Infof("checking.... policy.ID %v and searchPolicy.ID%v ", policy.ID, searchPolicy.ID)
+			//if searchPolicy.ID != nil && policy.ID == searchPolicy.ID {
+			//	log.Infof("VZ created default ISM policy for index pattern %v already exists", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+			//	return false, nil
+			//}
+			log.Debugf("ISM policy for index pattern %v already exists ", searchPolicy.Policy.ISMTemplate[0].IndexPatterns)
+			return true, nil
+		}
+	}
+	return false, nil
+}
+func checkSystemPolicyExists(log vzlog.VerrazzanoLogger, opensearchEndpoint string, searchPolicy ISMPolicy) {
+
+}
+func isItemAlreadyExists(log vzlog.VerrazzanoLogger, allListPolicyPatterns []string, subListPolicyPattern []string) bool {
+	matched := false
+	log.Debugf("searching for index pattern %s in all ISM policies %s", subListPolicyPattern, allListPolicyPatterns)
+	for _, al := range allListPolicyPatterns {
+		for _, sl := range subListPolicyPattern {
+			if al == sl {
+				matched = true
+				break
+			}
+		}
+	}
+	return matched
 }

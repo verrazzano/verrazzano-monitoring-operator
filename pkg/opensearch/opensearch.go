@@ -17,6 +17,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
 type (
@@ -71,8 +72,10 @@ func (o *OSClient) IsGreen(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance) err
 
 // ConfigureISM sets up the ISM Policies
 // The returned channel should be read for exactly one response, which tells whether ISM configuration succeeded.
-func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
+func (o *OSClient) ConfigureISM(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)
+	var ismStatus = false
+	var err error
 	// configuration is done asynchronously, as this does not need to be blocking
 	go func() {
 		if !vmi.Spec.Opensearch.Enabled {
@@ -87,12 +90,15 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 
 		opensearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
 		for _, policy := range vmi.Spec.Opensearch.Policies {
-			if err := o.createISMPolicy(opensearchEndpoint, policy); err != nil {
+			ismStatus, err = o.createISMPolicy(log, opensearchEndpoint, policy)
+			if ismStatus {
+				log.Debugf("create ISM policy status % for the policy", ismStatus, policy.PolicyName)
+			}
+			if err != nil {
 				ch <- err
 				return
 			}
 		}
-
 		ch <- o.cleanupPolicies(opensearchEndpoint, vmi.Spec.Opensearch.Policies)
 	}()
 
@@ -129,20 +135,26 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 
 // SyncDefaultISMPolicy set up the default ISM Policies.
 // The returned channel should be read for exactly one response, which tells whether default ISM policies are synced.
-func (o *OSClient) SyncDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
+func (o *OSClient) SyncDefaultISMPolicy(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
+	log.Debugf("Inside SyncDefaultISMPolicy")
 	ch := make(chan error)
 	go func() {
 		if !vmi.Spec.Opensearch.Enabled || vmi.Spec.Opensearch.DisableDefaultPolicy {
+			log.Debugf("inside SyncDefaultISMPolicy,DisableDefaultPolicy status %v", vmi.Spec.Opensearch.DisableDefaultPolicy)
 			ch <- nil
 			return
 		}
 
 		if !o.IsOpenSearchReady(vmi) {
+			log.Debug("inside SyncDefaultISMPolicy,IsOpenSearchReady status false")
 			ch <- nil
 			return
 		}
+
 		openSearchEndpoint := resources.GetOpenSearchHTTPEndpoint(vmi)
-		_, err := o.createOrUpdateDefaultISMPolicy(openSearchEndpoint)
+		log.Debugf("current status %v", vmi.Spec.Opensearch.DisableDefaultPolicy)
+		_, ismStatus, err := o.createOrUpdateDefaultISMPolicy(log, openSearchEndpoint)
+		log.Debugf("createOrUpdateDefaultISMPolicy called DisableDefaultPolicy:status %v,ismStatus:%v", vmi.Spec.Opensearch.DisableDefaultPolicy, ismStatus)
 		ch <- err
 	}()
 
