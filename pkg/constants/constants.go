@@ -214,3 +214,9 @@ const TimeStamp = "@timestamp"
 
 // HoldAppUntilProxyStarts used to hold the application until Istio sidecar proxy starts
 const HoldAppUntilProxyStarts = "true"
+
+// GrafanaSMTPConfigVolumeName is the name of volume created for SMTP configurations in Grafana deployment.
+const GrafanaSMTPConfigVolumeName = "smtp-config"
+
+// GrafanaSMTPConfigVolumePath is the mount path of volume created for SMTP configurations in Grafana deployment.
+const GrafanaSMTPConfigVolumePath = "/etc/grafana/smtp-config"

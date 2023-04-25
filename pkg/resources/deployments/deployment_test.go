@@ -4,6 +4,7 @@
 package deployments
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources/nodes"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -316,4 +318,100 @@ func getDeploymentByName(deploymentName string, deploymentList []*appsv1.Deploym
 		}
 	}
 	return nil, fmt.Errorf("deployment %s not found", deploymentName)
+}
+
+func TestGrafanaSMTPConfig(t *testing.T) {
+	trueValue := true
+	vmi := &vmcontrollerv1.VerrazzanoMonitoringInstance{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "system",
+		},
+		Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
+			Grafana: vmcontrollerv1.Grafana{
+				Enabled: true,
+				SMTP: &vmcontrollerv1.SMTPInfo{
+					Enabled:        &trueValue,
+					Host:           "testhost:25",
+					ExistingSecret: "smtp-secret",
+					UserKey:        "user",
+					PasswordKey:    "pass",
+					CertFileKey:    "certificate.crt",
+					KeyFileKey:     "key.file",
+					SkipVerify:     &trueValue,
+					FromAddress:    "test@test.com",
+					FromName:       "test",
+					EHLOIdentity:   "EHLO",
+					StartTLSPolicy: "OpportunisticStartTLS",
+				},
+			},
+		},
+	}
+	testEncoded := []byte(base64.StdEncoding.EncodeToString([]byte("test")))
+	secret := corev1.Secret{
+		ObjectMeta: v1.ObjectMeta{
+			Name: vmi.Spec.Grafana.SMTP.ExistingSecret,
+		},
+		Data: map[string][]byte{
+			vmi.Spec.Grafana.SMTP.UserKey:     testEncoded,
+			vmi.Spec.Grafana.SMTP.PasswordKey: testEncoded,
+			vmi.Spec.Grafana.SMTP.CertFileKey: testEncoded,
+			vmi.Spec.Grafana.SMTP.KeyFileKey:  testEncoded,
+		},
+	}
+	expected, err := New(vmi, fake.NewSimpleClientset(&secret), &config.OperatorConfig{}, map[string]string{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	expectedEnvVars := map[string]string{
+		"GF_SMTP_ENABLED":         fmt.Sprintf("%v", trueValue),
+		"GF_SMTP_HOST":            vmi.Spec.Grafana.SMTP.Host,
+		"GF_SMTP_CERT_FILE":       fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.CertFileKey),
+		"GF_SMTP_KEY_FILE":        fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.KeyFileKey),
+		"GF_SMTP_SKIP_VERIFY":     fmt.Sprintf("%v", trueValue),
+		"GF_SMTP_FROM_ADDRESS":    vmi.Spec.Grafana.SMTP.FromAddress,
+		"GF_SMTP_FROM_NAME":       vmi.Spec.Grafana.SMTP.FromName,
+		"GF_SMTP_EHLO_IDENTITY":   vmi.Spec.Grafana.SMTP.EHLOIdentity,
+		"GF_SMTP_STARTTLS_POLICY": string(vmi.Spec.Grafana.SMTP.StartTLSPolicy),
+	}
+	for _, deployment := range expected.Deployments {
+		if deployment.Name == resources.GetMetaName(vmi.Name, config.Grafana.Name) {
+			for _, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+				if value, ok := expectedEnvVars[env.Name]; ok {
+					assert.Equal(t, value, env.Value)
+					delete(expectedEnvVars, env.Name)
+				}
+
+				if env.Name == "GF_SMTP_USER" {
+					assert.NotNil(t, env.ValueFrom)
+					assert.Equal(t, vmi.Spec.Grafana.SMTP.UserKey, env.ValueFrom.SecretKeyRef.Key)
+				}
+
+				if env.Name == "GF_SMTP_PASSWORD" {
+					assert.NotNil(t, env.ValueFrom)
+					assert.Equal(t, vmi.Spec.Grafana.SMTP.PasswordKey, env.ValueFrom.SecretKeyRef.Key)
+				}
+			}
+			assert.Len(t, expectedEnvVars, 0, fmt.Sprintf("Could not find %v env variables set in Grafana deployment", expectedEnvVars))
+
+			volumeFound := false
+			for _, volume := range deployment.Spec.Template.Spec.Volumes {
+				if volume.Name == constants.GrafanaSMTPConfigVolumeName {
+					assert.Equal(t, vmi.Spec.Grafana.SMTP.ExistingSecret, volume.Secret.SecretName)
+					volumeFound = true
+				}
+			}
+			assert.True(t, volumeFound, "secret volume not created")
+
+			volumeMountFound := false
+			for _, volumeMount := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+				if volumeMount.Name == constants.GrafanaSMTPConfigVolumeName {
+					assert.Equal(t, constants.GrafanaSMTPConfigVolumePath, volumeMount.MountPath)
+					volumeMountFound = true
+				}
+			}
+			assert.True(t, volumeMountFound, "secret volume not mounted to container")
+
+		}
+	}
 }
