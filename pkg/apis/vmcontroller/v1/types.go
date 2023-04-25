@@ -340,7 +340,7 @@ type (
 		metav1.TypeMeta   `json:",inline"`
 		metav1.ObjectMeta `json:"metadata"`
 		Spec              VerrazzanoMonitoringInstanceSpec   `json:"spec"`
-		Status            VerrazzanoMonitoringInstanceStatus `json:"status"`
+		Status            VerrazzanoMonitoringInstanceStatus `json:"status,omitempty"`
 	}
 
 	// VerrazzanoMonitoringInstanceList Represents a collection of CRDs
