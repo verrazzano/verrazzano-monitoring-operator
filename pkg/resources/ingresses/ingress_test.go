@@ -1,19 +1,24 @@
-// Copyright (C) 2020, 2022, Oracle and/or its affiliates.
+// Copyright (C) 2020, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ingresses
 
 import (
 	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/config"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/resources"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
+)
 
-	"github.com/stretchr/testify/assert"
-	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+const (
+	issuerCheckFailedFormatString     = "Check Cluster issuer failed for ingress %s"
+	commonNameCheckFailedFormatString = "TLS cert CN check failed for ingress %s"
 )
 
 func TestVMONoIngress(t *testing.T) {
@@ -76,10 +81,12 @@ func TestVMOWithIngresses(t *testing.T) {
 	assert.Equal(t, "example.com auth", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-realm"], "Auth realm")
 	assert.Equal(t, "true", ingresses[0].Annotations["nginx.ingress.kubernetes.io/service-upstream"], "Service upstream")
 	assert.Equal(t, "${service_name}.${namespace}.svc.cluster.local", ingresses[0].Annotations["nginx.ingress.kubernetes.io/upstream-vhost"], "Upstream vhost")
-	assert.Equal(t, "api.example.com", ingresses[0].Annotations["cert-manager.io/common-name"], "TLS cert CN")
-	assert.Equal(t, "grafana.example.com", ingresses[1].Annotations["cert-manager.io/common-name"], "TLS cert CN")
-	assert.Equal(t, "opensearch.example.com", ingresses[2].Annotations["cert-manager.io/common-name"], "TLS cert CN")
+	assert.Equal(t, "api.example.com", ingresses[0].Annotations["cert-manager.io/common-name"], commonNameCheckFailedFormatString, ingresses[0].Name)
+	assert.Equal(t, "grafana.example.com", ingresses[1].Annotations["cert-manager.io/common-name"], commonNameCheckFailedFormatString, ingresses[1].Name)
+	assert.Equal(t, "opensearch.example.com", ingresses[2].Annotations["cert-manager.io/common-name"], commonNameCheckFailedFormatString, ingresses[2].Name)
 	assert.Equal(t, getIngressClassName(vmo), *ingresses[0].Spec.IngressClassName)
+
+	checkClusterIssuerAnnotation(t, ingresses)
 }
 
 // TestToCreateRedirectIngresses creates a new OS and OSD ingresses with Redirects
@@ -161,10 +168,12 @@ func TestToCreateNewIngressesWithRedirects(t *testing.T) {
 	assert.Equal(t, "example.com auth", ingresses[0].Annotations["nginx.ingress.kubernetes.io/auth-realm"], "Auth realm")
 	assert.Equal(t, "true", ingresses[0].Annotations["nginx.ingress.kubernetes.io/service-upstream"], "Service upstream")
 	assert.Equal(t, "${service_name}.${namespace}.svc.cluster.local", ingresses[0].Annotations["nginx.ingress.kubernetes.io/upstream-vhost"], "Upstream vhost")
-	assert.Equal(t, "api.example.com", ingresses[0].Annotations["cert-manager.io/common-name"], "TLS cert CN")
-	assert.Equal(t, "opensearch.example.com", ingresses[3].Annotations["cert-manager.io/common-name"], "TLS cert CN")
-	assert.Equal(t, "osd.example.com", ingresses[1].Annotations["cert-manager.io/common-name"], "TLS cert CN")
+	assert.Equal(t, "api.example.com", ingresses[0].Annotations["cert-manager.io/common-name"], commonNameCheckFailedFormatString, ingresses[0].Name)
+	assert.Equal(t, "opensearch.example.com", ingresses[3].Annotations["cert-manager.io/common-name"], commonNameCheckFailedFormatString, ingresses[3].Name)
+	assert.Equal(t, "osd.example.com", ingresses[1].Annotations["cert-manager.io/common-name"], commonNameCheckFailedFormatString, ingresses[1].Name)
 	assert.Equal(t, getIngressClassName(vmo), *ingresses[0].Spec.IngressClassName)
+
+	checkClusterIssuerAnnotation(t, ingresses)
 }
 
 func TestGetIngressClassName(t *testing.T) {
@@ -221,5 +230,13 @@ func TestVMOWithCascadingDelete(t *testing.T) {
 	assert.True(t, len(ingresses) > 0, "Non-zero length generated ingresses")
 	for _, ingress := range ingresses {
 		assert.Equal(t, 0, len(ingress.ObjectMeta.OwnerReferences), "OwnerReferences is set even with CascadingDelete false")
+	}
+
+	checkClusterIssuerAnnotation(t, ingresses)
+}
+
+func checkClusterIssuerAnnotation(t *testing.T, ingresses []*netv1.Ingress) {
+	for _, ing := range ingresses {
+		assert.Equal(t, verrazzanoClusterIssuerName, ing.Annotations["cert-manager.io/cluster-issuer"], issuerCheckFailedFormatString, ing.Name)
 	}
 }
