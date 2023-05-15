@@ -97,10 +97,10 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
           file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
-          build-args: |
-            BUILDVERSION=${{ env.DEV_VERSION }}
-            BUILDDATE=${{ env.TIME_STAMP }}
-            EXTLDFLAGS="-s -w"
+#          build-args: |
+#            BUILDVERSION=${{ env.DEV_VERSION }}
+#            BUILDDATE=${{ env.TIME_STAMP }}
+#            EXTLDFLAGS="-s -w"
 
         # Build and push Docker image as latest
       - name: Build and push latest
