@@ -117,9 +117,9 @@ jobs:
       - name: golangci-lint Check
         run: make golangci-lint
 
-      - name: Third Party License Check
-
-      - name: Copyright Compliance Check
+#      - name: Third Party License Check
+#
+#      - name: Copyright Compliance Check
 
       - name: Unit Tests
         run: |
