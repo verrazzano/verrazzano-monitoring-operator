@@ -73,4 +73,4 @@ jobs:
           DEV_VERSION=$(grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)
           TIME_STAMP=$(date +'%Y%m%d%H%M%S')
           SHORT_COMMIT_SHA=$(git rev-parse --short HEAD)
-          echo "DOCKER_IMAGE_TAG=v${DEV_VERSION}-${TIME_STAMP}-${SHORT_COMMIT_SHA}" >> "$GITHUB_ENV"
+          echo "DOCKER_IMAGE_TAG=v$DEV_VERSION-$TIME_STAMP-$SHORT_COMMIT_SHA" >> "$GITHUB_ENV"
