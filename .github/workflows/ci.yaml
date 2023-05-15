@@ -59,7 +59,7 @@ jobs:
       # Get short commit tag
       - name: Get short commit tag
         run: |
-          echo "DEV_VERSION=$(cat .verrazzanno-development-version)" >> "$GITHUB_ENV"
+          echo "DEV_VERSION=$(grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)" >> "$GITHUB_ENV"
           echo "TIME_STAMP=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
           echo "SHORT_COMMIT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
