@@ -17,7 +17,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CREATE_LATEST_TAG: 0 #debug this
+  CREATE_LATEST_TAG: false #debug this
   OPERATOR_NAME: verrazzano-monitoring-operator
   DOCKERFILE_OPERATOR: docker-images/verrazzano-monitoring-operator/Dockerfile
 
@@ -76,7 +76,7 @@ jobs:
       # Check if latest tag should be used
       - name: Get latest tag
         if: github.ref_name == 'master'
-        run: echo "CREATE_LATEST_TAG=1" >> "$GITHUB_ENV"
+        run: echo "CREATE_LATEST_TAG=true" >> "$GITHUB_ENV"
 
       - name: debug latest
         run: echo ${{ env.CREATE_LATEST_TAG }}
@@ -88,7 +88,7 @@ jobs:
 
       # Build and push Docker image
       - name: Build and push
-        if: ${{ !env.CREATE_LATEST_TAG }}
+        if: env.CREATE_LATEST_TAG != true
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -104,7 +104,7 @@ jobs:
 
         # Build and push Docker image as latest
       - name: Build and push latest
-        if: env.CREATE_LATEST_TAG
+        if: env.CREATE_LATEST_TAG == true
         uses: docker/build-push-action@v4
         with:
           context: .
