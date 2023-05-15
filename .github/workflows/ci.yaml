@@ -17,7 +17,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CREATE_LATEST_TAG: false #debug this
+  CREATE_LATEST_TAG: false
   OPERATOR_NAME: verrazzano-monitoring-operator
   DOCKERFILE_OPERATOR: docker-images/verrazzano-monitoring-operator/Dockerfile
 
@@ -107,7 +107,7 @@ jobs:
         if: env.CREATE_LATEST_TAG == true
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ${{ github.workspace }}
           pull: true
           no-cache: true
           push: true
