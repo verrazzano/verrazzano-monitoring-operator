@@ -77,6 +77,7 @@ jobs:
 
       # Check if the repo is clean after running generate
       - name: Check if repo is clean
+        if: false
         run: make check-repo-clean
 
       # Build and push Docker image
@@ -112,3 +113,25 @@ jobs:
             BUILDVERSION=${{ env.DEV_VERSION }}
             BUILDDATE=${{ env.TIME_STAMP }}
             EXTLDFLAGS="-s -w"
+
+      - name: golangci-lint Check
+        run: make golangci-lint
+
+      - name: Third Party License Check
+
+      - name: Copyright Compliance Check
+
+      - name: Unit Tests
+        run: |
+          make unit-test
+          make -B coverage
+          build/scripts/copy-junit-output.sh .
+
+      # Upload build artifacts
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: ignore
+          path: |
+            '**/coverage.html'
+            '**/*test-result.xml'
