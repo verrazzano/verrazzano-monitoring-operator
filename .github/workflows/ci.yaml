@@ -17,10 +17,13 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  CREATE_LATEST_TAG: false
+  OPERATOR_NAME: verrazzano-monitoring-operator
+  DOCKERFILE_OPERATOR: docker-images/verrazzano-monitoring-operator/Dockerfile
 
 jobs:
   build:
-    name: Build
+    name: Build and Check
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,6 +46,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Get VMO image name for developer branches
+      - name: Get image name (developer)
+        if: ${{ !github.ref_protected }}
+        run: echo "IMAGE_NAME=${{ github.repository }}-temp" >> "$GITHUB_ENV"
+
       # Extract metadata (tags, labels) for Docker
       - name: Extract Docker metadata
         id: meta
@@ -50,15 +58,57 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      # Get VMO image name for developer branches
-      - name: Get image name (developer)
-        if: ${{ !github.ref_protected }}
-        run: echo "IMAGE_NAME=${{ github.repository }}-temp" >> "$GITHUB_ENV"
+      # Generate image metadata
+      - name: Generate metadata
+        run: |
+          echo "DEV_VERSION=$(grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)" >> "$GITHUB_ENV"
+          echo "TIME_STAMP=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
 
       # Get VMO image tag
       - name: Get image tag
         run: |
-          DEV_VERSION=$(grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)
-          TIME_STAMP=$(date +'%Y%m%d%H%M%S')
           SHORT_COMMIT_SHA=$(git rev-parse --short HEAD)
-          echo "DOCKER_IMAGE_TAG=v$DEV_VERSION-$TIME_STAMP-$SHORT_COMMIT_SHA" >> "$GITHUB_ENV"
+          echo "DOCKER_IMAGE_TAG=v${{ env.DEV_VERSION }}-${{ env.TIME_STAMP }}-$SHORT_COMMIT_SHA" >> "$GITHUB_ENV"
+
+      # Check if latest tag should be used
+      - name: Get latest tag
+        if: github.ref_name == 'master'
+        run: echo "CREATE_LATEST_TAG=true" >> "$GITHUB_ENV"
+
+      # Check if the repo is clean after running generate
+      - Name: Check if repo is clean
+        run: make check-repo-clean
+
+      # Build and push Docker image
+      - name: Build and push
+        if: ${{ !env.CREATE_LATEST_TAG }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          pull: true
+          no-cache: true
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
+          file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
+          build-args: |
+            BUILDVERSION=${{ env.DEV_VERSION }}
+            BUILDDATE=${{ env.TIME_STAMP }}
+            EXTLDFLAGS="-s -w"
+
+        # Build and push Docker image as latest
+      - name: Build and push latest
+        if: env.CREATE_LATEST_TAG
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          pull: true
+          no-cache: true
+          push: true
+          tags: |
+            latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
+          file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
+          build-args: |
+            BUILDVERSION=${{ env.DEV_VERSION }}
+            BUILDDATE=${{ env.TIME_STAMP }}
+            EXTLDFLAGS="-s -w"
