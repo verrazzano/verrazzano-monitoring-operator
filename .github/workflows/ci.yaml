@@ -91,9 +91,9 @@ jobs:
         if: env.CREATE_LATEST_TAG != true
         uses: docker/build-push-action@v4
         with:
-          context: ${{ github.workspace }}
-          pull: true
-          no-cache: true
+          context: .
+#          pull: true
+#          no-cache: true
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
           file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
