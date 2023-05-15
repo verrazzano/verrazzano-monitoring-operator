@@ -76,7 +76,7 @@ jobs:
         run: echo "CREATE_LATEST_TAG=true" >> "$GITHUB_ENV"
 
       # Check if the repo is clean after running generate
-      - Name: Check if repo is clean
+      - name: Check if repo is clean
         run: make check-repo-clean
 
       # Build and push Docker image
