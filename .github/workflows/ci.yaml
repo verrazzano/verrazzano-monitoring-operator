@@ -16,4 +16,56 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  NAMESPACE: verrazzano
+#  NAMESPACE: verrazzano
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      # Checkout VMO repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
+
+      # Login against a Docker registry
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Get VMO image name for developer branches
+      - name: Get image name (developer)
+        if: ${{ !github.ref_protected }}
+        run: echo "IMAGE_NAME=${{ github.repository }}-temp" >> "$GITHUB_ENV"
+
+      # Get short commit tag
+      - name: Get short commit tag
+        run: |
+          echo "DEV_VERSION=$(cat .verrazzanno-development-version)" >> "$GITHUB_ENV"
+          echo "TIME_STAMP=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
+          echo "SHORT_COMMIT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      # Get VMO image tag
+      - name: Get image tag
+        run: echo "DOCKER_IMAGE_TAG=v${{ env.DEV_VERSION }}-${{ env.TIME_STAMP }}-${{ env.SHORT_COMMIT_SHA }}" >> "$GITHUB_ENV"
+
+      - name: debug tag
+        run: echo ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
