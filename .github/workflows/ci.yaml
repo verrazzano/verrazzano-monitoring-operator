@@ -46,6 +46,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Go environment
+        uses: actions/setup-go@v4
+
       # Get VMO image name for developer branches
       - name: Get image name (developer)
         if: ${{ !github.ref_protected }}
@@ -78,9 +81,6 @@ jobs:
         if: github.ref_name == 'master'
         run: echo "CREATE_LATEST_TAG=true" >> "$GITHUB_ENV"
 
-      - name: debug latest
-        run: echo ${{ env.CREATE_LATEST_TAG }}
-
       # Check if the repo is clean after running generate
       - name: Check if repo is clean
         if: false
@@ -92,9 +92,9 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-#          pull: true
-#          no-cache: true
+          pull: true
           push: true
+          no-cache: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
           file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
 #          build-args: |
@@ -107,18 +107,18 @@ jobs:
         if: env.CREATE_LATEST_TAG == true
         uses: docker/build-push-action@v4
         with:
-          context: ${{ github.workspace }}
+          context: .
           pull: true
-          no-cache: true
           push: true
+          no-cache: true
           tags: |
             latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
           file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
-          build-args: |
-            BUILDVERSION=${{ env.DEV_VERSION }}
-            BUILDDATE=${{ env.TIME_STAMP }}
-            EXTLDFLAGS="-s -w"
+#          build-args: |
+#            BUILDVERSION=${{ env.DEV_VERSION }}
+#            BUILDDATE=${{ env.TIME_STAMP }}
+#            EXTLDFLAGS="-s -w"
 
       - name: golangci-lint Check
         run: make golangci-lint
@@ -131,7 +131,7 @@ jobs:
         run: |
           make unit-test
           make -B coverage
-          build/scripts/copy-junit-output.sh .
+          ${{ github.workspace }}/build/scripts/copy-junit-output.sh .
 
       # Upload build artifacts
       - name: Upload build artifact
