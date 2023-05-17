@@ -81,7 +81,10 @@ jobs:
       # Check if the repo is clean after running generate
       - name: Check if repo is clean
         run: |
-          go get ./...
+          go get github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned
+          go get github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/clientset/versioned/scheme
+          go get github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/informers/externalversions
+          go get github.com/verrazzano/verrazzano-monitoring-operator/pkg/client/listers/vmcontroller/v1
           make controller-gen-install
           make check-repo-clean
 
