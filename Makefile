@@ -74,6 +74,10 @@ manifests: controller-gen
 generate:
 	./hack/update-codegen.sh
 
+.PHONY: controller-gen-install
+controller-gen-install:
+	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION}
+
 .PHONY: controller-gen
 controller-gen:
 ifeq (, $(shell which controller-gen))

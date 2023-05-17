@@ -73,9 +73,6 @@ jobs:
           SHORT_COMMIT_SHA=$(git rev-parse --short HEAD)
           echo "DOCKER_IMAGE_TAG=v${{ env.DEV_VERSION }}-${{ env.TIME_STAMP }}-$SHORT_COMMIT_SHA" >> "$GITHUB_ENV"
 
-      - name: debug latest
-        run: echo ${{ env.CREATE_LATEST_TAG }}
-
       # Check if latest tag should be used
       - name: Get latest tag
         if: github.ref_name == 'master'
@@ -83,8 +80,9 @@ jobs:
 
       # Check if the repo is clean after running generate
       - name: Check if repo is clean
-        if: false
-        run: make check-repo-clean
+        run: |
+          make controller-gen-install
+          make check-repo-clean
 
       # Build and push Docker image
       - name: Build and push
