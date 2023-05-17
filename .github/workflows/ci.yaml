@@ -81,7 +81,6 @@ jobs:
       # Check if the repo is clean after running generate
       - name: Check if repo is clean
         run: |
-          go mod vendor
           make controller-gen-install
           make check-repo-clean
 
