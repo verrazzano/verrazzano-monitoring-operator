@@ -17,7 +17,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CREATE_LATEST_TAG: false
+  CREATE_LATEST_TAG: 0
   OPERATOR_NAME: verrazzano-monitoring-operator
   DOCKERFILE_OPERATOR: docker-images/verrazzano-monitoring-operator/Dockerfile
 
@@ -64,6 +64,8 @@ jobs:
       # Generate image metadata
       - name: Generate metadata
         run: |
+          echo ${{ env.GOPATH }}
+          echo $GOPATH
           echo "DEV_VERSION=$(grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)" >> "$GITHUB_ENV"
           echo "TIME_STAMP=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
 
@@ -76,7 +78,7 @@ jobs:
       # Check if latest tag should be used
       - name: Get latest tag
         if: github.ref_name == 'master'
-        run: echo "CREATE_LATEST_TAG=true" >> "$GITHUB_ENV"
+        run: echo "CREATE_LATEST_TAG=1" >> "$GITHUB_ENV"
 
       # Check if the repo is clean after running generate
       - name: Check if repo is clean
@@ -87,7 +89,7 @@ jobs:
 
       # Build and push Docker image
       - name: Build and push
-        if: env.CREATE_LATEST_TAG != true
+        if: env.CREATE_LATEST_TAG == 0
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -103,7 +105,7 @@ jobs:
 
         # Build and push Docker image as latest
       - name: Build and push latest
-        if: env.CREATE_LATEST_TAG == true
+        if: env.CREATE_LATEST_TAG == 1
         uses: docker/build-push-action@v4
         with:
           context: .
