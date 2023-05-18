@@ -82,7 +82,7 @@ jobs:
       - name: Check if repo is clean
         run: |
           make controller-gen-install
-          go mod tid
+          go mod tidy
           make check-repo-clean
 
       # Build and push Docker image
