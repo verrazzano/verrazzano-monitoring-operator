@@ -21,6 +21,8 @@ env:
   OPERATOR_NAME: verrazzano-monitoring-operator
   DOCKERFILE_OPERATOR: docker-images/verrazzano-monitoring-operator/Dockerfile
 
+  GOPATH: /home/runner/go
+
 jobs:
   build:
     name: Build and Check
@@ -48,6 +50,13 @@ jobs:
 
       - name: Setup Go environment
         uses: actions/setup-go@v4
+        run: echo "GO_REPO_PATH=${{ env.GOPATH }/src/github.com/verrazzano" >> "$GITHUB_ENV"
+
+      - name: Setup continued
+        run: |
+          rm -rf ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator
+          mkdir -p ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator
+          tar cf - . | (cd ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator/ ; tar xf -)
 
       # Get VMO image name for developer branches
       - name: Get image name (developer)
@@ -64,7 +73,6 @@ jobs:
       # Generate image metadata
       - name: Generate metadata
         run: |
-          echo ${{ env.GOPATH }}
           echo $GOPATH
           echo "DEV_VERSION=$(grep verrazzano-development-version .verrazzano-development-version | cut -d= -f 2)" >> "$GITHUB_ENV"
           echo "TIME_STAMP=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
@@ -84,7 +92,6 @@ jobs:
       - name: Check if repo is clean
         run: |
           make controller-gen-install
-          go mod tidy
           make check-repo-clean
 
       # Build and push Docker image
@@ -92,12 +99,12 @@ jobs:
         if: env.CREATE_LATEST_TAG == 0
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator
           pull: true
           push: true
           no-cache: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
-          file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
+          file: ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
 #          build-args: |
 #            BUILDVERSION=${{ env.DEV_VERSION }}
 #            BUILDDATE=${{ env.TIME_STAMP }}
