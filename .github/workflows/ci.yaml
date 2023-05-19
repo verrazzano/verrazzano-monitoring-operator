@@ -52,7 +52,7 @@ jobs:
         uses: actions/setup-go@v4
 
       - name: Go repo path
-        run: echo "GO_REPO_PATH=${{ env.GOPATH }/src/github.com/verrazzano" >> "$GITHUB_ENV"
+        run: echo "GO_REPO_PATH=${{ env.GOPATH }}/src/github.com/verrazzano" >> "$GITHUB_ENV"
 
       - name: Setup continued
         run: |
