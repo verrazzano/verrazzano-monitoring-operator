@@ -117,21 +117,23 @@ jobs:
         if: env.CREATE_LATEST_TAG == 1
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator
           pull: true
           push: true
           no-cache: true
           tags: |
             latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
-          file: ${{ github.workspace }}/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
+          file: ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
 #          build-args: |
 #            BUILDVERSION=${{ env.DEV_VERSION }}
 #            BUILDDATE=${{ env.TIME_STAMP }}
 #            EXTLDFLAGS="-s -w"
 
       - name: golangci-lint Check
-        run: make golangci-lint
+        run: |
+          cd ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator
+          make golangci-lint
 
 #      - name: Third Party License Check
 #
@@ -139,9 +141,10 @@ jobs:
 
       - name: Unit Tests
         run: |
+          cd ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator
           make unit-test
           make -B coverage
-          ${{ github.workspace }}/build/scripts/copy-junit-output.sh .
+          build/scripts/copy-junit-output.sh coverage.html
 
       # Upload build artifacts
       - name: Upload build artifact
@@ -151,3 +154,7 @@ jobs:
           path: |
             '**/coverage.html'
             '**/*test-result.xml'
+
+      - name: Slack notification
+        if: contains('master release-** stshapir**', github.ref_name) && failure()
+        run: echo "got here"
