@@ -8,7 +8,7 @@
 # ---------------------------------------------------------------------------
 
 name: VMO Build
-run-name: GitHub Actions workflow to build the Verrazzano Monitoring Operator 🚀
+run-name: Build the Verrazzano Monitoring Operator by @${{ github.actor }} 🚀
 
 on:
   push:
