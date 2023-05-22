@@ -32,7 +32,5 @@ rm -rf $GENERATED_CLIENT_DIR
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   github.com/verrazzano/verrazzano-monitoring-operator/pkg/client github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis \
   vmcontroller:v1 \
-  --output-base "${GOPATH}/temp" \
+  --output-base "${GOPATH}/src" \
   --go-header-file ${SCRIPT_ROOT}/hack/custom-header.txt
-
-ls -R ${GOPATH}/temp
