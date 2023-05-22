@@ -156,5 +156,5 @@ jobs:
             '**/*test-result.xml'
 
       - name: Slack notification
-        if: contains('master release-** stshapir**', github.ref_name) && failure()
+        if: failure()
         run: echo "got here"
