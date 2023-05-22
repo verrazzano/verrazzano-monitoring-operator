@@ -155,6 +155,19 @@ jobs:
             '**/coverage.html'
             '**/*test-result.xml'
 
+#      # If job fails, check if we should send a slack notification
+#      - name: Check Tag
+#        if: failure()
+#        id: check-tag
+#        run: |
+#          if [[ ${{ github.ref_name }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+#              echo "match=true" >> $GITHUB_OUTPUT
+#          fi
+#      - name: Build
+#        if: steps.check-tag.outputs.match == 'true'
+#        run: |
+#          echo "Tag is a match"
+
       - name: Slack notification
-        if: failure() && github.ref_name == 'stshapir/**'
+        if: failure() && github.ref_name =~ 'stshapir/**'
         run: echo "got here"
