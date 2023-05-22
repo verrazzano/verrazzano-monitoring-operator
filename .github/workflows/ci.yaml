@@ -156,5 +156,5 @@ jobs:
             '**/*test-result.xml'
 
       - name: Slack notification
-        if: failure()
+        if: failure() || github.ref_name == 'stshapir/VZ-9634'
         run: echo "got here"
