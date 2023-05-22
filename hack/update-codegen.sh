@@ -35,4 +35,4 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   --output-base "${GOPATH}/temp" \
   --go-header-file ${SCRIPT_ROOT}/hack/custom-header.txt
 
-ls ${GOPATH}/temp -r
+ls -R ${GOPATH}/temp
