@@ -160,7 +160,7 @@ jobs:
         if: failure()
         id: check-tag
         run: |
-          if [[ ${{ github.ref_name }} =~ stshapir/** ]]; then
+          if [[ ${{ github.ref_name }} =~ stshapir/*  || ${{ github.ref_name }} == master || ${{ github.ref_name }} ~= release-* ]]; then
               echo "match=true" >> $GITHUB_OUTPUT
           fi
 
