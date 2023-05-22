@@ -107,10 +107,6 @@ jobs:
           no-cache: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
           file: ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
-#          build-args: |
-#            BUILDVERSION=${{ env.DEV_VERSION }}
-#            BUILDDATE=${{ env.TIME_STAMP }}
-#            EXTLDFLAGS="-s -w"
 
         # Build and push Docker image as latest
       - name: Build and push latest
@@ -125,10 +121,6 @@ jobs:
             latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}
           file: ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator/docker-images/${{ env.OPERATOR_NAME }}/Dockerfile
-#          build-args: |
-#            BUILDVERSION=${{ env.DEV_VERSION }}
-#            BUILDDATE=${{ env.TIME_STAMP }}
-#            EXTLDFLAGS="-s -w"
 
       - name: golangci-lint Check
         run: |
@@ -140,6 +132,7 @@ jobs:
 #      - name: Copyright Compliance Check
 
       - name: Unit Tests
+        if: failure()
         run: |
           cd ${{ env.GO_REPO_PATH }}/verrazzano-monitoring-operator
           make unit-test
@@ -148,6 +141,7 @@ jobs:
 
       # Upload build artifacts
       - name: Upload build artifact
+        if: failure()
         uses: actions/upload-artifact@v3
         with:
           if-no-files-found: ignore
@@ -155,7 +149,7 @@ jobs:
             '**/coverage.html'
             '**/*test-result.xml'
 
-      # If job fails, check if we should send a slack notification
+      # If job fails, check if we should send a Slack notification
       - name: Check Tag
         if: failure()
         id: check-tag
