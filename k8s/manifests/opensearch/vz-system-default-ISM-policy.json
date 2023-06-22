@@ -15,21 +15,18 @@
             },
             "rollover":{
               "min_primary_shard_size":"5gb",
-              "min_index_age":"30d"
+              "min_index_age":"21d"
             }
           }
         ],
         "transitions":[
           {
-            "state_name":"cold",
-            "conditions":{
-              "min_index_age":"30d"
-            }
+            "state_name":"warm"
           }
         ]
       },
       {
-        "name":"cold",
+        "name":"warm",
         "actions":[
           {
             "retry":{
@@ -37,8 +34,8 @@
               "backoff":"exponential",
               "delay":"10m"
             },
-            "close":{
-
+            "replica_count":{
+              "number_of_replicas": 0
             }
           }
         ],
@@ -46,7 +43,7 @@
           {
             "state_name":"delete",
             "conditions":{
-              "min_index_age":"35d"
+              "min_rollover_age":"14d"
             }
           }
         ]
