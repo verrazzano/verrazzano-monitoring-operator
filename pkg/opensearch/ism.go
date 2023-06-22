@@ -34,7 +34,7 @@ type (
 	}
 	Index struct {
 		Name string `json:"index_name,omitempty"`
-		Uuid string `json:"index_uuid,omitempty"`
+		UUID string `json:"index_uuid,omitempty"`
 	}
 	PolicyList struct {
 		Policies      []ISMPolicy `json:"policies"`
