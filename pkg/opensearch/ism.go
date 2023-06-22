@@ -300,13 +300,15 @@ func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, op
 			if err != nil {
 				return defaultPolicies, err
 			}
-			defaultPolicies = append(defaultPolicies, createdPolicy)
 			// When the default policy is created or updated
 			// Add default policy to the current write index of the data stream
-			err = o.addDefaultPolicyToDataStream(log, openSearchEndpoint, createdPolicy)
-			if err != nil {
-				return defaultPolicies, err
+			if createdPolicy != nil {
+				err = o.addDefaultPolicyToDataStream(log, openSearchEndpoint, createdPolicy)
+				if err != nil {
+					return defaultPolicies, err
+				}
 			}
+			defaultPolicies = append(defaultPolicies, createdPolicy)
 		}
 	}
 	return defaultPolicies, nil
