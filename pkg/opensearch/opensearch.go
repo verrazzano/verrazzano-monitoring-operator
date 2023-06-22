@@ -130,8 +130,14 @@ func (o *OSClient) DeleteDefaultISMPolicy(log vzlog.VerrazzanoLogger, vmi *vmcon
 				pattern = "verrazzano-application-*"
 			}
 			indices, err := o.getWriteIndexForDataStream(log, openSearchEndpoint, pattern)
+			if err != nil {
+				ch <- err
+			}
 			for _, index := range indices {
 				err = o.removePolicyForIndex(openSearchEndpoint, index)
+				if err != nil {
+					ch <- err
+				}
 			}
 		}
 		ch <- nil
