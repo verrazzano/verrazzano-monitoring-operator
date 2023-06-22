@@ -301,6 +301,8 @@ func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, op
 				return defaultPolicies, err
 			}
 			defaultPolicies = append(defaultPolicies, createdPolicy)
+			// When the default policy is created or updated
+			// Add default policy to the current write index of the data stream
 			err = o.addDefaultPolicyToDataStream(log, openSearchEndpoint, createdPolicy)
 			if err != nil {
 				return defaultPolicies, err
@@ -314,7 +316,7 @@ func (o *OSClient) addDefaultPolicyToDataStream(log vzlog.VerrazzanoLogger, open
 	indexPatterns := policy.Policy.ISMTemplate[0].IndexPatterns
 	for _, pattern := range indexPatterns {
 		// Get current write index for each data stream corresponding to the pattern
-		// Data streams will be multiple for application and only one for system
+		// Data streams and therefore write index will be multiple for application and only one for system
 		writeIndices, err := o.getWriteIndexForDataStream(log, openSearchEndpoint, pattern)
 		if err != nil {
 			return fmt.Errorf("failed to get the write index for %s: %v", pattern, err)
@@ -322,6 +324,7 @@ func (o *OSClient) addDefaultPolicyToDataStream(log vzlog.VerrazzanoLogger, open
 
 		for _, index := range writeIndices {
 			// Check if the index is currently being managed by our default policy
+			// If not then don't add the default policy
 			if !o.isManagedByDefaultPolicy(openSearchEndpoint, index, *policy.ID) {
 				continue
 			}
@@ -387,6 +390,9 @@ func (o *OSClient) addPolicyForIndex(openSearchEndpoint, index, policyID string)
 func (o *OSClient) removePolicyForIndex(openSearchEndpoint, index string) error {
 	url := fmt.Sprintf("%s/_plugins/_ism/remove/%s", openSearchEndpoint, index)
 	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
 	resp, err := o.DoHTTP(req)
 	if err != nil {
 		return err
