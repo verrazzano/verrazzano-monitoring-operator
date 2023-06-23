@@ -658,12 +658,12 @@ func TestGetWriteIndexForDataStreams(t *testing.T) {
 	openSearchEndpoint := "localhost:9090"
 	pattern := "verrazzano-system"
 	tests := []struct {
-		DoHttp             func(request *http.Request) (*http.Response, error)
+		DoHTTP             func(request *http.Request) (*http.Response, error)
 		expectErr          bool
 		expectedWriteIndex []string
 	}{
 		{
-			DoHttp: func(request *http.Request) (*http.Response, error) {
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(strings.NewReader(dataStreamResponse)),
@@ -673,7 +673,7 @@ func TestGetWriteIndexForDataStreams(t *testing.T) {
 			expectedWriteIndex: []string{".ds-verrazzano-system-000002"},
 		},
 		{
-			DoHttp: func(request *http.Request) (*http.Response, error) {
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusNotFound,
 					Body:       io.NopCloser(strings.NewReader("{reason: \"no such index [verrazzano-system]\"}")),
@@ -683,7 +683,7 @@ func TestGetWriteIndexForDataStreams(t *testing.T) {
 			expectedWriteIndex: nil,
 		},
 		{
-			DoHttp: func(request *http.Request) (*http.Response, error) {
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusNotFound,
 					Body:       io.NopCloser(strings.NewReader("")),
@@ -696,7 +696,7 @@ func TestGetWriteIndexForDataStreams(t *testing.T) {
 	for _, tt := range tests {
 		o := &OSClient{
 			httpClient:        nil,
-			DoHTTP:            tt.DoHttp,
+			DoHTTP:            tt.DoHTTP,
 			statefulSetLister: nil,
 		}
 		writeIndex, err := o.getWriteIndexForDataStream(log, openSearchEndpoint, pattern)
@@ -719,12 +719,12 @@ func TestIsManagedByDefaultPolicy(t *testing.T) {
 	defaultPolicyName := "vz-system"
 	otherPolicyName := "other-policy"
 	tests := []struct {
-		DoHttp         func(request *http.Request) (*http.Response, error)
+		DoHTTP         func(request *http.Request) (*http.Response, error)
 		expectErr      bool
 		expectedResult bool
 	}{
 		{
-			DoHttp: func(request *http.Request) (*http.Response, error) {
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(strings.NewReader(ismExplainResponse1)),
@@ -734,7 +734,7 @@ func TestIsManagedByDefaultPolicy(t *testing.T) {
 			expectedResult: true,
 		},
 		{
-			DoHttp: func(request *http.Request) (*http.Response, error) {
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(strings.NewReader(fmt.Sprintf(ismExplainResponse2, defaultPolicyName, defaultPolicyName, defaultPolicyName))),
@@ -744,7 +744,7 @@ func TestIsManagedByDefaultPolicy(t *testing.T) {
 			expectedResult: true,
 		},
 		{
-			DoHttp: func(request *http.Request) (*http.Response, error) {
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(strings.NewReader(fmt.Sprintf(ismExplainResponse2, otherPolicyName, otherPolicyName, otherPolicyName))),
@@ -757,7 +757,7 @@ func TestIsManagedByDefaultPolicy(t *testing.T) {
 	for _, tt := range tests {
 		o := &OSClient{
 			httpClient:        nil,
-			DoHTTP:            tt.DoHttp,
+			DoHTTP:            tt.DoHTTP,
 			statefulSetLister: nil,
 		}
 		ok, err := o.isManagedByDefaultPolicy(openSearchEndpoint, indexName, defaultPolicyName)
