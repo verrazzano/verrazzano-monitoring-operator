@@ -315,6 +315,7 @@ func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, op
 	return defaultPolicies, nil
 }
 
+// addDefaultPolicyToDataStream adds the default policy to the current write index of the data stream
 func (o *OSClient) addDefaultPolicyToDataStream(log vzlog.VerrazzanoLogger, openSearchEndpoint, policyName string, policy *ISMPolicy) error {
 	if len(policy.Policy.ISMTemplate) <= 0 {
 		return fmt.Errorf("no index template defined in policy %s", policyName)
@@ -352,6 +353,8 @@ func (o *OSClient) addDefaultPolicyToDataStream(log vzlog.VerrazzanoLogger, open
 	return nil
 }
 
+// isManagedByDefaultPolicy returns true if the policy is being managed by the default policy
+// or if it is not being managed by any policy at all
 func (o *OSClient) isManagedByDefaultPolicy(openSearchEndpoint, index, policyID string) (bool, error) {
 	url := fmt.Sprintf("%s/_plugins/_ism/explain/%s", openSearchEndpoint, index)
 	req, err := http.NewRequest("GET", url, nil)
@@ -382,6 +385,7 @@ func (o *OSClient) isManagedByDefaultPolicy(openSearchEndpoint, index, policyID 
 	return false, nil
 }
 
+// addPolicyForIndex attaches an ISM policy to an index
 func (o *OSClient) addPolicyForIndex(openSearchEndpoint, index, policyID string) error {
 	url := fmt.Sprintf("%s/_plugins/_ism/add/%s", openSearchEndpoint, index)
 	body := strings.NewReader(fmt.Sprintf(`{"policy_id": "%s"}`, policyID))
@@ -401,6 +405,7 @@ func (o *OSClient) addPolicyForIndex(openSearchEndpoint, index, policyID string)
 	return nil
 }
 
+// removePolicyForIndex removes the ISM policy attached to an index
 func (o *OSClient) removePolicyForIndex(openSearchEndpoint, index string) error {
 	url := fmt.Sprintf("%s/_plugins/_ism/remove/%s", openSearchEndpoint, index)
 	req, err := http.NewRequest("POST", url, nil)
@@ -418,6 +423,7 @@ func (o *OSClient) removePolicyForIndex(openSearchEndpoint, index string) error 
 	return nil
 }
 
+// getWriteIndexForDataStream returns the current write indices for a given data stream pattern
 func (o *OSClient) getWriteIndexForDataStream(log vzlog.VerrazzanoLogger, openSearchEndpoint, pattern string) ([]string, error) {
 	url := fmt.Sprintf("%s/_data_stream/%s", openSearchEndpoint, pattern)
 	req, err := http.NewRequest("GET", url, nil)
