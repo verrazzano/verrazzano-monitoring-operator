@@ -134,7 +134,7 @@ func (o *OSClient) DeleteDefaultISMPolicy(log vzlog.VerrazzanoLogger, vmi *vmcon
 				ch <- err
 			}
 			for _, index := range indices {
-				ok, err := o.isManagedByDefaultPolicy(openSearchEndpoint, index, policyName)
+				ok, err := o.shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, index, policyName)
 				if err != nil {
 					ch <- err
 				}

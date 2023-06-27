@@ -709,11 +709,11 @@ func TestGetWriteIndexForDataStreams(t *testing.T) {
 	}
 }
 
-// TestIsManagedByDefaultPolicy tests whether the index is being managed by the default policy or not
+// TestShouldAddOrRemoveDefaultPolicy tests whether we should add or remove policy from the index or not
 // GIVEN an index and policy name and OS client
-// WHEN I call isManagedByDefaultPolicy with an index and policy name
-// THEN a boolean is returned indicating whether the index is being managed by the default policy or not
-func TestIsManagedByDefaultPolicy(t *testing.T) {
+// WHEN I call shouldAddOrRemoveDefaultPolicy with an index and policy name
+// THEN a boolean is returned indicating whether we should add or remove policy from the index or not
+func TestShouldAddOrRemoveDefaultPolicy(t *testing.T) {
 	openSearchEndpoint := "localhost:9090"
 	indexName := ".ds-verrazzano-system-000001"
 	defaultPolicyName := "vz-system"
@@ -760,7 +760,7 @@ func TestIsManagedByDefaultPolicy(t *testing.T) {
 			DoHTTP:            tt.DoHTTP,
 			statefulSetLister: nil,
 		}
-		ok, err := o.isManagedByDefaultPolicy(openSearchEndpoint, indexName, defaultPolicyName)
+		ok, err := o.shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, indexName, defaultPolicyName)
 		if tt.expectErr {
 			assert.Error(t, err)
 		} else {

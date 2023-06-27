@@ -19,7 +19,7 @@ import (
 
 type (
 	DataStreams struct {
-		DataStream []DataStream `json:"data_streams,omitempty"`
+		DataStreams []DataStream `json:"data_streams,omitempty"`
 	}
 	DataStream struct {
 		Name           string    `json:"name,omitempty"`
@@ -331,9 +331,9 @@ func (o *OSClient) addDefaultPolicyToDataStream(log vzlog.VerrazzanoLogger, open
 		}
 
 		for _, index := range writeIndices {
-			// Check if the index is currently being managed by our default policy
-			// If not then don't add the default policy
-			ok, err := o.isManagedByDefaultPolicy(openSearchEndpoint, index, policyName)
+			// Check if the index is currently being managed by our default policy or no policy at all
+			// If yes then attach the default policy to the index
+			ok, err := o.shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, index, policyName)
 			if err != nil {
 				return err
 			}
@@ -353,9 +353,9 @@ func (o *OSClient) addDefaultPolicyToDataStream(log vzlog.VerrazzanoLogger, open
 	return nil
 }
 
-// isManagedByDefaultPolicy returns true if the policy is being managed by the default policy
+// shouldAddOrRemoveDefaultPolicy returns true if the policy is being managed by the default policy
 // or if it is not being managed by any policy at all
-func (o *OSClient) isManagedByDefaultPolicy(openSearchEndpoint, index, policyID string) (bool, error) {
+func (o *OSClient) shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, index, policyID string) (bool, error) {
 	url := fmt.Sprintf("%s/_plugins/_ism/explain/%s", openSearchEndpoint, index)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -451,7 +451,7 @@ func (o *OSClient) getWriteIndexForDataStream(log vzlog.VerrazzanoLogger, openSe
 	}
 
 	var writeIndex []string
-	for _, dataStream := range dataStreams.DataStream {
+	for _, dataStream := range dataStreams.DataStreams {
 		// Current write index for a data stream is the last index in the indices list
 		indices := dataStream.Indices
 		size := len(indices)
