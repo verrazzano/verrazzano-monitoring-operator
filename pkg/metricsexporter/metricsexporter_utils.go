@@ -1,4 +1,4 @@
-// Copyright (C) 2022, Oracle and/or its affiliates.
+// Copyright (C) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package metricsexporter
@@ -47,8 +47,8 @@ func RequiredInitialization() {
 
 // RegisterMetrics begins the registration process, Required Initialization must be called first. This function does not start the metrics server
 func RegisterMetrics() {
-	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()  // populate allMetrics array with all map values
-	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers() // begin the retry process
+	MetricsExp.internalMetricsDelegate.InitializeAllMetricsArray()      // populate allMetrics array with all map values
+	go MetricsExp.internalMetricsDelegate.RegisterMetricsHandlers(true) // begin the retry process
 }
 
 func StartMetricsServer() {
@@ -89,11 +89,15 @@ func (md *metricsDelegate) InitializeAllMetricsArray() {
 }
 
 // RegisterMetricsHandlers loops through the failedMetrics map until all metrics are registered successfully
-func (md *metricsDelegate) RegisterMetricsHandlers() {
+func (md *metricsDelegate) RegisterMetricsHandlers(forever bool) {
 	md.initializeFailedMetricsArray() // Get list of metrics to register initially
 	// loop until there is no error in registering
 	for err := md.registerMetricsHandlersHelper(); err != nil; err = md.registerMetricsHandlersHelper() {
 		zap.S().Errorf("Failed to register metrics for VMO %v \n", err)
+		// forever may be false for unit testing
+		if !forever {
+			break
+		}
 		time.Sleep(time.Second)
 	}
 }
