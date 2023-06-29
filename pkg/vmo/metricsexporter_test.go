@@ -33,8 +33,6 @@ import (
 
 type registerTest struct {
 	name               string
-	isConcurrent       bool
-	waitTime           time.Duration
 	allMetricsLength   int
 	failedMetricLength int
 	allMetrics         []prometheus.Collector
@@ -65,57 +63,46 @@ func TestRegistrationSystem(t *testing.T) {
 	testCases := []registerTest{
 		{
 			name:               "TestNoMetrics",
-			isConcurrent:       false,
 			allMetrics:         []prometheus.Collector{},
 			allMetricsLength:   0,
 			failedMetricLength: 0,
-			waitTime:           0 * time.Second,
 		},
 		{
-			name:         "TestOneValidMetric",
-			isConcurrent: false,
+			name: "TestOneValidMetric",
 			allMetrics: []prometheus.Collector{
 				prometheus.NewCounter(prometheus.CounterOpts{Name: "testOneValidMetric_A", Help: "This is the first valid metric"}),
 			},
 			allMetricsLength:   1,
 			failedMetricLength: 0,
-			waitTime:           0 * time.Second,
 		},
 		{
-			name:         "TestOneInvalidMetric",
-			isConcurrent: true,
+			name: "TestOneInvalidMetric",
 			allMetrics: []prometheus.Collector{
 				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"}),
 			},
 			allMetricsLength:   1,
 			failedMetricLength: 1,
-			waitTime:           1 * time.Second,
 		},
 		{
-			name:         "TestTwoValidMetrics",
-			isConcurrent: false,
+			name: "TestTwoValidMetrics",
 			allMetrics: []prometheus.Collector{
 				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_A", Help: "This is the first valid metric"}),
 				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestTwoValidMetrics_B", Help: "This is the second valid metric"}),
 			},
 			allMetricsLength:   2,
 			failedMetricLength: 0,
-			waitTime:           0 * time.Second,
 		},
 		{
-			name:         "TestTwoInvalidMetrics",
-			isConcurrent: true,
+			name: "TestTwoInvalidMetrics",
 			allMetrics: []prometheus.Collector{
 				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"}),
 				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"}),
 			},
 			allMetricsLength:   2,
 			failedMetricLength: 2,
-			waitTime:           1 * time.Second,
 		},
 		{
-			name:         "TestThreeValidMetrics",
-			isConcurrent: false,
+			name: "TestThreeValidMetrics",
 			allMetrics: []prometheus.Collector{
 				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_A", Help: "This is the first valid metric"}),
 				prometheus.NewCounter(prometheus.CounterOpts{Name: "TestThreeValidMetrics_B", Help: "This is the second valid metric"}),
@@ -123,11 +110,9 @@ func TestRegistrationSystem(t *testing.T) {
 			},
 			allMetricsLength:   3,
 			failedMetricLength: 0,
-			waitTime:           0 * time.Second,
 		},
 		{
-			name:         "TestThreeInvalidMetrics",
-			isConcurrent: true,
+			name: "TestThreeInvalidMetrics",
 			allMetrics: []prometheus.Collector{
 				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the first invalid metric"}),
 				prometheus.NewCounter(prometheus.CounterOpts{Help: "This is the second invalid metric"}),
@@ -135,7 +120,6 @@ func TestRegistrationSystem(t *testing.T) {
 			},
 			allMetricsLength:   3,
 			failedMetricLength: 3,
-			waitTime:           1 * time.Second,
 		},
 	}
 
@@ -144,14 +128,9 @@ func TestRegistrationSystem(t *testing.T) {
 			clearMetrics()
 			assert := assert.New(t)
 			*allMetrics = testCase.allMetrics
-			if !testCase.isConcurrent {
-				metricsexporter.TestDelegate.RegisterMetricsHandlers()
-			} else {
-				go metricsexporter.TestDelegate.RegisterMetricsHandlers()
-				time.Sleep(testCase.waitTime)
-			}
+			metricsexporter.TestDelegate.RegisterMetricsHandlers(false)
 			assert.Equal(testCase.allMetricsLength, len(*allMetrics), "allMetrics array length is not correct")
-			assert.Equal(testCase.failedMetricLength, len(delegate.GetFailedMetricsMap()), "failedMetrics map lenght is not correct")
+			assert.Equal(testCase.failedMetricLength, len(delegate.GetFailedMetricsMap()), "failedMetrics map length is not correct")
 		})
 	}
 }
