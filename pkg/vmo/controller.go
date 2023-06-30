@@ -571,7 +571,7 @@ func (c *Controller) syncHandlerStandardMode(vmo *vmcontrollerv1.VerrazzanoMonit
 	**********************/
 	specDiffs := diff.Diff(originalVMO, vmo)
 	if specDiffs != "" {
-		deleteISMChannel := c.osClient.DeleteDefaultISMPolicy(vmo)
+		deleteISMChannel := c.osClient.DeleteDefaultISMPolicy(c.log, vmo)
 		c.log.Debugf("Acquired lock in namespace: %s", vmo.Namespace)
 		c.log.Debugf("VMO %s : Spec differences %s", vmo.Name, specDiffs)
 		c.log.Oncef("Updating VMO")

@@ -18,6 +18,24 @@ import (
 )
 
 type (
+	DataStreams struct {
+		DataStreams []DataStream `json:"data_streams,omitempty"`
+	}
+	DataStream struct {
+		Name           string    `json:"name,omitempty"`
+		TimeStampField TimeStamp `json:"timestamp_field,omitempty"`
+		Indices        []Index   `json:"indices,omitempty"`
+		Generation     int       `json:"generation,omitempty"`
+		Status         string    `json:"status,omitempty"`
+		Template       string    `json:"template,omitempty"`
+	}
+	TimeStamp struct {
+		Name string `json:"name,omitempty"`
+	}
+	Index struct {
+		Name string `json:"index_name,omitempty"`
+		UUID string `json:"index_uuid,omitempty"`
+	}
 	PolicyList struct {
 		Policies      []ISMPolicy `json:"policies"`
 		TotalPolicies int         `json:"total_policies"`
@@ -50,12 +68,13 @@ type (
 	}
 
 	PolicyTransition struct {
-		StateName  string           `json:"state_name"`
-		Conditions PolicyConditions `json:"conditions"`
+		StateName  string            `json:"state_name"`
+		Conditions *PolicyConditions `json:"conditions,omitempty"`
 	}
 
 	PolicyConditions struct {
-		MinIndexAge string `json:"min_index_age"`
+		MinIndexAge    string `json:"min_index_age,omitempty"`
+		MinRolloverAge string `json:"min_rollover_age,omitempty"`
 	}
 )
 
@@ -282,10 +301,165 @@ func (o *OSClient) createOrUpdateDefaultISMPolicy(log vzlog.VerrazzanoLogger, op
 			if err != nil {
 				return defaultPolicies, err
 			}
+			// When the default policy is created or updated
+			// Add default policy to the current write index of the data stream
+			if createdPolicy != nil {
+				err = o.addDefaultPolicyToDataStream(log, openSearchEndpoint, policyName, policy)
+				if err != nil {
+					return defaultPolicies, err
+				}
+			}
 			defaultPolicies = append(defaultPolicies, createdPolicy)
 		}
 	}
 	return defaultPolicies, nil
+}
+
+// addDefaultPolicyToDataStream adds the default policy to the current write index of the data stream
+func (o *OSClient) addDefaultPolicyToDataStream(log vzlog.VerrazzanoLogger, openSearchEndpoint, policyName string, policy *ISMPolicy) error {
+	if len(policy.Policy.ISMTemplate) <= 0 {
+		return fmt.Errorf("no index template defined in policy %s", policyName)
+	}
+	indexPatterns := policy.Policy.ISMTemplate[0].IndexPatterns
+
+	for _, pattern := range indexPatterns {
+		// Get current write index for each data stream corresponding to the pattern
+		// Data streams and therefore write index will be multiple for application and only one for system
+		writeIndices, err := o.getWriteIndexForDataStream(log, openSearchEndpoint, pattern)
+		if err != nil {
+			return fmt.Errorf("failed to get the write index for %s: %v", pattern, err)
+		}
+
+		for _, index := range writeIndices {
+			// Check if the index is currently being managed by our default policy or no policy at all
+			// If yes then attach the default policy to the index
+			ok, err := o.shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, index, policyName)
+			if err != nil {
+				return err
+			}
+			if ok {
+				err = o.removePolicyForIndex(openSearchEndpoint, index)
+				if err != nil {
+					return fmt.Errorf("failed to remove policy for index %s", index)
+				}
+				err = o.addPolicyForIndex(openSearchEndpoint, index, policyName)
+				if err != nil {
+					return fmt.Errorf("failed to add default policy for index %s", index)
+				}
+				log.Debugf("Added default policy %s to index %s", policyName, index)
+			}
+		}
+	}
+	return nil
+}
+
+// shouldAddOrRemoveDefaultPolicy returns true if the policy is being managed by the default policy
+// or if it is not being managed by any policy at all
+func (o *OSClient) shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, index, policyID string) (bool, error) {
+	url := fmt.Sprintf("%s/_plugins/_ism/explain/%s", openSearchEndpoint, index)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return false, err
+	}
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("failed to get attached policy status for index %s", index)
+	}
+	defer resp.Body.Close()
+	var indexInfo map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&indexInfo)
+	if err != nil {
+		return false, err
+	}
+
+	if indexInfo[index] != nil {
+		policy := indexInfo[index].(map[string]interface{})["index.opendistro.index_state_management.policy_id"]
+		// If the index is not being managed by any policy or is being managed by our policy return true
+		if policy == nil || policy == policyID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// addPolicyForIndex attaches an ISM policy to an index
+func (o *OSClient) addPolicyForIndex(openSearchEndpoint, index, policyID string) error {
+	url := fmt.Sprintf("%s/_plugins/_ism/add/%s", openSearchEndpoint, index)
+	body := strings.NewReader(fmt.Sprintf(`{"policy_id": "%s"}`, policyID))
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Add(contentTypeHeader, applicationJSON)
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when adding policy for index %s", resp.StatusCode, index)
+	}
+	return nil
+}
+
+// removePolicyForIndex removes the ISM policy attached to an index
+func (o *OSClient) removePolicyForIndex(openSearchEndpoint, index string) error {
+	url := fmt.Sprintf("%s/_plugins/_ism/remove/%s", openSearchEndpoint, index)
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("got status code %d when removing policy from index %s", resp.StatusCode, index)
+	}
+	return nil
+}
+
+// getWriteIndexForDataStream returns the current write indices for a given data stream pattern
+func (o *OSClient) getWriteIndexForDataStream(log vzlog.VerrazzanoLogger, openSearchEndpoint, pattern string) ([]string, error) {
+	url := fmt.Sprintf("%s/_data_stream/%s", openSearchEndpoint, pattern)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := o.DoHTTP(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Do not return an error if the data stream doesn't exist yet
+	if resp.StatusCode == http.StatusNotFound {
+		log.Infof("Couldn't find data stream %s when creating default policy", pattern)
+		return nil, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got status code %d when fecthing data streams %s", resp.StatusCode, pattern)
+	}
+	dataStreams := &DataStreams{}
+	err = json.NewDecoder(resp.Body).Decode(dataStreams)
+	if err != nil {
+		return nil, err
+	}
+
+	var writeIndex []string
+	for _, dataStream := range dataStreams.DataStreams {
+		// Current write index for a data stream is the last index in the indices list
+		indices := dataStream.Indices
+		size := len(indices)
+		if size > 0 {
+			writeIndex = append(writeIndex, indices[size-1].Name)
+		}
+	}
+	return writeIndex, nil
 }
 
 func isEligibleForDeletion(policy ISMPolicy, expectedPolicyMap map[string]bool) bool {
@@ -353,7 +527,7 @@ func toISMPolicy(policy *vmcontrollerv1.IndexManagementPolicy) *ISMPolicy {
 					Transitions: []PolicyTransition{
 						{
 							StateName: "delete",
-							Conditions: PolicyConditions{
+							Conditions: &PolicyConditions{
 								MinIndexAge: minIndexAge,
 							},
 						},
