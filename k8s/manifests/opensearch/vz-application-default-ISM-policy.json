@@ -14,31 +14,8 @@
               "delay":"10m"
             },
             "rollover":{
-              "min_primary_shard_size":"1gb",
-              "min_index_age":"7d"
-            }
-          }
-        ],
-        "transitions":[
-          {
-            "state_name":"cold",
-            "conditions":{
-              "min_index_age":"7d"
-            }
-          }
-        ]
-      },
-      {
-        "name":"cold",
-        "actions":[
-          {
-            "retry":{
-              "count":3,
-              "backoff":"exponential",
-              "delay":"10m"
-            },
-            "close":{
-
+              "min_primary_shard_size":"5gb",
+              "min_index_age":"21d"
             }
           }
         ],
@@ -46,7 +23,7 @@
           {
             "state_name":"delete",
             "conditions":{
-              "min_index_age":"12d"
+              "min_rollover_age":"14d"
             }
           }
         ]

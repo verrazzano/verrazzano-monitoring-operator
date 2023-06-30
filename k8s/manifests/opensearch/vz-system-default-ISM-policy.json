@@ -15,30 +15,7 @@
             },
             "rollover":{
               "min_primary_shard_size":"5gb",
-              "min_index_age":"30d"
-            }
-          }
-        ],
-        "transitions":[
-          {
-            "state_name":"cold",
-            "conditions":{
-              "min_index_age":"30d"
-            }
-          }
-        ]
-      },
-      {
-        "name":"cold",
-        "actions":[
-          {
-            "retry":{
-              "count":3,
-              "backoff":"exponential",
-              "delay":"10m"
-            },
-            "close":{
-
+              "min_index_age":"21d"
             }
           }
         ],
@@ -46,7 +23,7 @@
           {
             "state_name":"delete",
             "conditions":{
-              "min_index_age":"35d"
+              "min_rollover_age":"14d"
             }
           }
         ]
