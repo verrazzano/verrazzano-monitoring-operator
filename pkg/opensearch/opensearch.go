@@ -101,7 +101,7 @@ func (o *OSClient) ConfigureISM(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance
 }
 
 // DeleteDefaultISMPolicy deletes the default ISM policy if they exists
-func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
+func (o *OSClient) DeleteDefaultISMPolicy(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance) chan error {
 	ch := make(chan error)
 	go func() {
 		// if Elasticsearch.DisableDefaultPolicy is set to false, skip the deletion.
@@ -121,6 +121,29 @@ func (o *OSClient) DeleteDefaultISMPolicy(vmi *vmcontrollerv1.VerrazzanoMonitori
 			// If policy doesn't exist, ignore the error, otherwise pass the error to channel.
 			if (err != nil && resp == nil) || (err != nil && resp != nil && resp.StatusCode != http.StatusNotFound) {
 				ch <- err
+			}
+			// Remove the policy from the current write indices of system and application data streams
+			var pattern string
+			if policyName == "vz-system" {
+				pattern = "verrazzano-system"
+			} else {
+				pattern = "verrazzano-application-*"
+			}
+			indices, err := o.getWriteIndexForDataStream(log, openSearchEndpoint, pattern)
+			if err != nil {
+				ch <- err
+			}
+			for _, index := range indices {
+				ok, err := o.shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, index, policyName)
+				if err != nil {
+					ch <- err
+				}
+				if ok {
+					err = o.removePolicyForIndex(openSearchEndpoint, index)
+					if err != nil {
+						ch <- err
+					}
+				}
 			}
 		}
 		ch <- nil

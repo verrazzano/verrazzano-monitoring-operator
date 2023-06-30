@@ -19,6 +19,7 @@ import (
 	v1 "k8s.io/client-go/listers/apps/v1"
 
 	vmcontrollerv1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
+	"github.com/verrazzano/verrazzano-monitoring-operator/pkg/util/logs/vzlog"
 )
 
 const (
@@ -76,6 +77,48 @@ const (
     }
 }
 `
+	dataStreamResponse = `{
+  "data_streams" : [
+    {
+      "name" : "verrazzano-system",
+      "timestamp_field" : {
+        "name" : "@timestamp"
+      },
+      "indices" : [
+        {
+          "index_name" : ".ds-verrazzano-system-000001",
+          "index_uuid" : "mcoToYr-TMKbcpHpuIhnCA"
+        },
+        {
+          "index_name" : ".ds-verrazzano-system-000002",
+          "index_uuid" : "N9CWCrVtTTWI7FgwqyrUVw"
+        }
+      ],
+      "generation" : 2,
+      "status" : "GREEN",
+      "template" : "verrazzano-data-stream"
+    }
+  ]
+}`
+	ismExplainResponse1 = `{
+  ".ds-verrazzano-system-000001" : {
+    "index.plugins.index_state_management.policy_id" : null,
+    "index.opendistro.index_state_management.policy_id" : null,
+    "enabled" : null
+  },
+  "total_managed_indices" : 0
+}`
+	ismExplainResponse2 = `{
+  ".ds-verrazzano-system-000001" : {
+    "index.plugins.index_state_management.policy_id" : "%s",
+    "index.opendistro.index_state_management.policy_id" : "%s",
+    "index" : ".ds-verrazzano-system-000001",
+    "index_uuid" : "ct0nKMwESQSaEV2eyIgAbA",
+    "policy_id" : "%s",
+    "enabled" : true
+  },
+  "total_managed_indices" : 1
+}`
 )
 
 var testPolicyList = fmt.Sprintf(`{
@@ -603,5 +646,126 @@ func TestUpdateISMPolicyFromFile(t *testing.T) {
 				t.Errorf("updateISMPolicyFromFile() got = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestGetWriteIndexForDataStreams tests whether the correct write index for a data stream is being returned or not
+// GIVEN a pattern and OS client
+// WHEN I call getWriteIndexForDataStream with pattern
+// THEN the correct write index should be returned
+func TestGetWriteIndexForDataStreams(t *testing.T) {
+	log := vzlog.DefaultLogger()
+	openSearchEndpoint := "localhost:9090"
+	pattern := "verrazzano-system"
+	tests := []struct {
+		DoHTTP             func(request *http.Request) (*http.Response, error)
+		expectErr          bool
+		expectedWriteIndex []string
+	}{
+		{
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(dataStreamResponse)),
+				}, nil
+			},
+			expectErr:          false,
+			expectedWriteIndex: []string{".ds-verrazzano-system-000002"},
+		},
+		{
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Body:       io.NopCloser(strings.NewReader("{reason: \"no such index [verrazzano-system]\"}")),
+				}, nil
+			},
+			expectErr:          false,
+			expectedWriteIndex: nil,
+		},
+		{
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, fmt.Errorf("no healthy upstream")
+			},
+			expectErr:          true,
+			expectedWriteIndex: nil,
+		},
+	}
+	for _, tt := range tests {
+		o := &OSClient{
+			httpClient:        nil,
+			DoHTTP:            tt.DoHTTP,
+			statefulSetLister: nil,
+		}
+		writeIndex, err := o.getWriteIndexForDataStream(log, openSearchEndpoint, pattern)
+		if tt.expectErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, writeIndex, tt.expectedWriteIndex)
+	}
+}
+
+// TestShouldAddOrRemoveDefaultPolicy tests whether we should add or remove policy from the index or not
+// GIVEN an index and policy name and OS client
+// WHEN I call shouldAddOrRemoveDefaultPolicy with an index and policy name
+// THEN a boolean is returned indicating whether we should add or remove policy from the index or not
+func TestShouldAddOrRemoveDefaultPolicy(t *testing.T) {
+	openSearchEndpoint := "localhost:9090"
+	indexName := ".ds-verrazzano-system-000001"
+	defaultPolicyName := "vz-system"
+	otherPolicyName := "other-policy"
+	tests := []struct {
+		DoHTTP         func(request *http.Request) (*http.Response, error)
+		expectErr      bool
+		expectedResult bool
+	}{
+		{
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(ismExplainResponse1)),
+				}, nil
+			},
+			expectErr:      false,
+			expectedResult: true,
+		},
+		{
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(fmt.Sprintf(ismExplainResponse2, defaultPolicyName, defaultPolicyName, defaultPolicyName))),
+				}, nil
+			},
+			expectErr:      false,
+			expectedResult: true,
+		},
+		{
+			DoHTTP: func(request *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(fmt.Sprintf(ismExplainResponse2, otherPolicyName, otherPolicyName, otherPolicyName))),
+				}, nil
+			},
+			expectErr:      false,
+			expectedResult: false,
+		},
+	}
+	for _, tt := range tests {
+		o := &OSClient{
+			httpClient:        nil,
+			DoHTTP:            tt.DoHTTP,
+			statefulSetLister: nil,
+		}
+		ok, err := o.shouldAddOrRemoveDefaultPolicy(openSearchEndpoint, indexName, defaultPolicyName)
+		if tt.expectErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, ok, tt.expectedResult)
 	}
 }
