@@ -63,29 +63,50 @@ const (
 	echo "Commenting out java heap settings in jvm.options..."
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
 	`
+	PluginInstallCheckWithExit = `
+     exit_status=$?
+     if [ $exit_status -ne 0 ]; then
+          if grep -q "plugin directory .* already exists;" /tmp/error.log; then
+               echo "Plugin already installed. Skipping installation."
+          else
+               cat /tmp/error.log
+               exit 1
+          fi
+     fi
+    `
+	PluginInstallCheck = `
+     exit_status=$?
+     if [ $exit_status -ne 0 ]; then
+          if grep -q "plugin directory .* already exists;" /tmp/error.log; then
+               echo "Plugin already installed. Skipping installation."
+          else
+               cat /tmp/error.log
+          fi
+     fi
+    `
 	OSMasterPluginsInstallTmpl = `
-     set -euo pipefail
+     set +euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + PluginInstallCheckWithExit
 	OSIngestPluginsInstallTmpl = `
      set +euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + PluginInstallCheck
 	OSDataPluginsInstallTmpl = `
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + PluginInstallCheck
 	OSDashboardPluginsInstallTmpl = `
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + PluginInstallCheck
 	OSPluginsInstallCmd = `
-    /usr/share/opensearch/bin/opensearch-plugin install -b %s
+    /usr/share/opensearch/bin/opensearch-plugin install -b %s 2>/tmp/error.log
 	`
 	OSDashboardPluginsInstallCmd = `
-    /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin install %s
+    /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin install %s 2>/tmp/error.log
 	`
 )
 
