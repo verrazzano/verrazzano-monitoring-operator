@@ -63,10 +63,10 @@ const (
 	echo "Commenting out java heap settings in jvm.options..."
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
 	`
-	PluginInstallCheckWithExit = `
+	PluginInstalledCheckWithExit = `
      exit_status=$?
      if [ $exit_status -ne 0 ]; then
-          if grep -q "plugin directory .* already exists;" /tmp/error.log; then
+          if grep -iq "plugin .* already exists" /tmp/error.log; then
                echo "Plugin already installed. Skipping installation."
           else
                cat /tmp/error.log
@@ -74,13 +74,25 @@ const (
           fi
      fi
     `
-	PluginInstallCheck = `
+	PluginInstalledCheck = `
      exit_status=$?
      if [ $exit_status -ne 0 ]; then
-          if grep -q "plugin directory .* already exists;" /tmp/error.log; then
+          if grep -iq "plugin .* already exists" /tmp/error.log; then
                echo "Plugin already installed. Skipping installation."
           else
                cat /tmp/error.log
+          fi
+     fi
+    `
+	DashboardsPluginInstalledCheck = `
+     exit_status=$?
+     if [ $exit_status -ne 0 ]; then
+          if grep -iq "plugin .* already exists" /tmp/error.log; then
+               echo "Plugin already installed. Skipping installation"
+               rm -rf /usr/share/opensearch-dashboards/plugins/.plugin.installing
+          else
+               cat /tmp/error.log
+               exit 1
           fi
      fi
     `
@@ -88,20 +100,20 @@ const (
      set +euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
-    ` + PluginInstallCheckWithExit
+    ` + PluginInstalledCheckWithExit
 	OSIngestPluginsInstallTmpl = `
      set +euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
-    ` + PluginInstallCheck
+    ` + PluginInstalledCheck
 	OSDataPluginsInstallTmpl = `
      # Install OS plugins that are not bundled with OS
      %s
-    ` + PluginInstallCheck
+    ` + PluginInstalledCheck
 	OSDashboardPluginsInstallTmpl = `
      # Install OS plugins that are not bundled with OS
      %s
-    ` + PluginInstallCheck
+    ` + DashboardsPluginInstalledCheck
 	OSPluginsInstallCmd = `
     /usr/share/opensearch/bin/opensearch-plugin install -b %s 2>/tmp/error.log
 	`
