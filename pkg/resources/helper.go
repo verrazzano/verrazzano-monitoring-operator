@@ -72,6 +72,7 @@ const (
                cat /tmp/error.log
                exit 1
           fi
+          rm -rf /tmp/error.log
      fi
     `
 	PluginInstalledCheck = `
@@ -82,6 +83,7 @@ const (
           else
                cat /tmp/error.log
           fi
+          rm -rf /tmp/error.log
      fi
     `
 	DashboardsPluginInstalledCheck = `
@@ -94,6 +96,7 @@ const (
                cat /tmp/error.log
                exit 1
           fi
+          rm -rf /tmp/error.log
      fi
     `
 	OSMasterPluginsInstallTmpl = `
