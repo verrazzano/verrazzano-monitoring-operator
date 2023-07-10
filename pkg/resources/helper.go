@@ -63,29 +63,65 @@ const (
 	echo "Commenting out java heap settings in jvm.options..."
 	sed -i -e '/^-Xms/s/^/#/g' -e '/^-Xmx/s/^/#/g' config/jvm.options
 	`
+	PluginInstalledCheckWithExit = `
+     exit_status=$?
+     if [ $exit_status -ne 0 ]; then
+          if grep -iq "plugin .* already exists" /tmp/error.log; then
+               echo "Plugin already installed. Skipping installation."
+          else
+               cat /tmp/error.log
+               exit 1
+          fi
+          rm -rf /tmp/error.log
+     fi
+    `
+	PluginInstalledCheck = `
+     exit_status=$?
+     if [ $exit_status -ne 0 ]; then
+          if grep -iq "plugin .* already exists" /tmp/error.log; then
+               echo "Plugin already installed. Skipping installation."
+          else
+               cat /tmp/error.log
+          fi
+          rm -rf /tmp/error.log
+     fi
+    `
+	DashboardsPluginInstalledCheck = `
+     exit_status=$?
+     if [ $exit_status -ne 0 ]; then
+          if grep -iq "plugin .* already exists" /tmp/error.log; then
+               echo "Plugin already installed. Skipping installation"
+               rm -rf /usr/share/opensearch-dashboards/plugins/.plugin.installing
+          else
+               cat /tmp/error.log
+               exit 1
+          fi
+          rm -rf /tmp/error.log
+     fi
+    `
 	OSMasterPluginsInstallTmpl = `
-     set -euo pipefail
+     set +euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + PluginInstalledCheckWithExit
 	OSIngestPluginsInstallTmpl = `
      set +euo pipefail
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + PluginInstalledCheck
 	OSDataPluginsInstallTmpl = `
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + PluginInstalledCheck
 	OSDashboardPluginsInstallTmpl = `
      # Install OS plugins that are not bundled with OS
      %s
-    `
+    ` + DashboardsPluginInstalledCheck
 	OSPluginsInstallCmd = `
-    /usr/share/opensearch/bin/opensearch-plugin install -b %s
+    /usr/share/opensearch/bin/opensearch-plugin install -b %s 2>/tmp/error.log
 	`
 	OSDashboardPluginsInstallCmd = `
-    /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin install %s
+    /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin install %s 2>/tmp/error.log
 	`
 )
 
