@@ -56,7 +56,7 @@ const (
 
     %s 
 	
-	/usr/local/bin/docker-entrypoint.sh`
+	./opensearch-dashboards-docker-entrypoint.sh`
 
 	jvmOptsDisableCmd = `
 	# Disable the jvm heap settings in jvm.options

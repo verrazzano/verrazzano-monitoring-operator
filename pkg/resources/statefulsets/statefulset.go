@@ -126,6 +126,10 @@ func createOpenSearchStatefulSet(log vzlog.VerrazzanoLogger, vmo *vmcontrollerv1
 				},
 			},
 		},
+		{
+			Name:  constants.DisableSecurityPluginOS,
+			Value: "true",
+		},
 	}
 	var readinessProbeCondition string
 	envVars = append(envVars,
