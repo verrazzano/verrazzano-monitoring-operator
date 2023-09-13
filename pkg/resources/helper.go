@@ -39,7 +39,7 @@ const (
     `
 	OpenSearchDashboardCmdTmpl = `#!/usr/bin/env bash -e
     %s
-	/usr/local/bin/opensearch-dashboards-docker`
+	./opensearch-dashboards-docker-entrypoint.sh`
 	containerCmdTmpl = `#!/usr/bin/env bash -e
 	# Updating opensearch keystore with keys
 	# required for the repository-s3 plugin
