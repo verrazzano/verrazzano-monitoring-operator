@@ -265,6 +265,10 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		deployment.Spec.Template.Spec.Affinity = resources.CreateZoneAntiAffinityElement(vmo.Name, config.Kibana.Name)
 		deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 			{Name: "OPENSEARCH_HOSTS", Value: elasticsearchURL},
+			{
+				Name:  constants.DisableSecurityPluginOSD,
+				Value: "true",
+			},
 		}
 
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds = 120
