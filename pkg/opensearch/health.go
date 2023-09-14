@@ -34,6 +34,12 @@ const (
 )
 
 func (o *OSClient) opensearchHealth(vmo *vmcontrollerv1.VerrazzanoMonitoringInstance, checkNodeCount bool, waitForVersion bool) error {
+	// If OpenSearch is not enabled in the VMI Spec
+	// Return no error meaning OS is healthy
+	// This is to allow uninstalling the OS cluster
+	if !vmo.Spec.Opensearch.Enabled {
+		return nil
+	}
 	// Verify that the cluster is Green
 	clusterHealth, err := o.getOpenSearchClusterHealth(vmo)
 	if err != nil {

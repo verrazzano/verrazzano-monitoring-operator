@@ -121,6 +121,7 @@ var testvmo = vmcontrollerv1.VerrazzanoMonitoringInstance{
 	},
 	Spec: vmcontrollerv1.VerrazzanoMonitoringInstanceSpec{
 		Opensearch: vmcontrollerv1.Opensearch{
+			Enabled: true,
 			DataNode: vmcontrollerv1.ElasticsearchNode{
 				Replicas: 3,
 			},
