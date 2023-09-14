@@ -137,7 +137,7 @@ func main() {
 	opensearchURL := constants.OpenSearchURL
 	isLegacyOS, err := k8s.IsLegacyOS()
 	if err != nil {
-		log.Errorf("Failed to determine if legacy OS is enabled")
+		log.Errorf("Failed to determine if legacy OS is enabled: %v", err)
 		os.Exit(1)
 	}
 

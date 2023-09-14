@@ -136,7 +136,7 @@ buildhook:
 	go build \
            -ldflags '-extldflags "-static"' \
            -ldflags "-X main.buildVersion=${BUILDVERSION} -X main.buildDate=${BUILDDATE}" \
-           -o /home/sakmahto/go/bin/verrazzano-backup-hook ./verrazzano-backup-hook
+           -o /usr/bin/verrazzano-backup-hook ./verrazzano-backup-hook
 
 .PHONY: push-debug
 push-debug: build-debug push-common
