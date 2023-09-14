@@ -16,6 +16,8 @@ import (
 	"go.uber.org/zap"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -234,7 +236,7 @@ func (k *K8sImpl) CheckDeployment(labelSelector, namespace string) (bool, error)
 	return false, nil
 }
 
-func (k *K8sImpl) ScaleSTS(namespace, stsName string, replicaCount int32) error {
+func (k *K8sImpl) ScaleSTS(stsName, namespace string) error {
 	scale, err := k.K8sInterface.AppsV1().StatefulSets(namespace).GetScale(context.TODO(), stsName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -242,6 +244,7 @@ func (k *K8sImpl) ScaleSTS(namespace, stsName string, replicaCount int32) error 
 	scaleDown := *scale
 	scaleDown.Spec.Replicas = 0
 
+	k.Log.Infof("Scaling down sts %s in namespace %s to zero replicas", stsName, namespace)
 	_, err = k.K8sInterface.AppsV1().StatefulSets(namespace).UpdateScale(context.TODO(), stsName, &scaleDown, metav1.UpdateOptions{})
 	if err != nil {
 		return err
@@ -560,6 +563,9 @@ func (k *K8sImpl) IsLegacyOS() (bool, error) {
 	}
 	vmiFetched, err := k.DynamicK8sInterface.Resource(gvr).Namespace(constants.VerrazzanoSystemNamespace).Get(context.Background(), "system", metav1.GetOptions{})
 	if err != nil {
+		if meta.IsNoMatchError(err) || errors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, err
 	}
 
