@@ -158,7 +158,7 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 	IngestLabel := make(map[string]string)
 	KibanaLabel := make(map[string]string)
 	IngestLabel["app"] = "system-es-ingest"
-	KibanaLabel["app"] = "system-kibana"
+	KibanaLabel["app"] = "system-osd"
 	IngestPod := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",
@@ -232,7 +232,7 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 func TestCheckDeployment(t *testing.T) {
 	t.Parallel()
 	KibanaLabel := make(map[string]string)
-	KibanaLabel["verrazzano-component"] = "kibana"
+	KibanaLabel["verrazzano-component"] = "osd"
 	PrimaryDeploy := apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",

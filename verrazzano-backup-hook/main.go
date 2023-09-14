@@ -136,6 +136,14 @@ func main() {
 	httpClient := http.DefaultClient
 	opensearchURL := constants.OpenSearchURL
 	isLegacyOS, err := k8s.IsLegacyOS()
+
+	// Log which OS we are backing up or restoring
+	if isLegacyOS {
+		log.Infof("VMO OpenSearch found. Backup and Restore will be done for VMO OpenSearch")
+	} else {
+		log.Infof("Opster OpenSearch found. Backup and Restore will be done for Opster OpenSearch")
+	}
+
 	if err != nil {
 		log.Errorf("Failed to determine if legacy OS is enabled: %v", err)
 		os.Exit(1)
@@ -156,7 +164,7 @@ func main() {
 
 		basicAuth = opensearch.NewBasicAuth(true, string(username), string(password))
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec //#nosec G402
 		}
 		httpClient = &http.Client{Transport: tr}
 		opensearchURL = constants.OpenSearchHTTPSURL
@@ -223,8 +231,16 @@ func main() {
 		}
 		if isLegacyOS {
 			err = k8s.ScaleDeployment(constants.IngestLabelSelector, constants.VerrazzanoSystemNamespace, constants.IngestDeploymentName, int32(0))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
+				os.Exit(1)
+			}
 		} else {
-			err = k8s.ScaleSTS(constants.NewIngestLabelSelector, constants.VerrazzanoLoggingNamespace, int32(0))
+			err = k8s.ScaleSTS(constants.NewIngestStatefulSetName, constants.VerrazzanoLoggingNamespace)
+			if err != nil {
+				log.Errorf("Unable to scale sts '%s' due to %v", constants.NewIngestLabelSelector, zap.Error(err))
+				os.Exit(1)
+			}
 		}
 
 		if err != nil {
@@ -241,7 +257,7 @@ func main() {
 		osdLabel := constants.OSDDeploymentLabelSelector
 		if isLegacyOS {
 			osdDeploymentName = constants.KibanaDeploymentName
-			osdLabel = constants.KibanaLabelSelector
+			osdLabel = constants.KibanaDeploymentLabelSelector
 		}
 		ok, err := k8s.CheckDeployment(osdLabel, namespace)
 		if err != nil {

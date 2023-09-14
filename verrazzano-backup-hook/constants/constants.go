@@ -88,10 +88,10 @@ const (
 	KibanaDeploymentName = "vmi-system-osd"
 
 	// KibanaLabelSelector Label selector for Kibana pod
-	KibanaLabelSelector = "app=system-kibana"
+	KibanaLabelSelector = "app=system-osd"
 
 	// KibanaDeploymentLabelSelector Kibana deployment label selector
-	KibanaDeploymentLabelSelector = "verrazzano-component=kibana"
+	KibanaDeploymentLabelSelector = "verrazzano-component=osd"
 
 	OSDDeploymentName = "opensearch-dashboards"
 
