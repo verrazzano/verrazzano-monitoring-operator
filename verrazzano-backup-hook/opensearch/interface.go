@@ -49,6 +49,12 @@ type Opensearch interface {
 
 	// Restore Toplevel method to start the restore operation
 	Restore() error
+
+	// BasicAuthRequired tells whether to use basic auth while performing http requests or not
+	BasicAuthRequired() bool
+
+	// GetCredential returns the username and password required for basic auth
+	GetCredential() (string, string)
 }
 
 // OpensearchImpl struct for Opensearch interface
@@ -58,15 +64,31 @@ type OpensearchImpl struct {
 	BaseURL    string
 	SecretData *types.ConnectionData
 	Log        *zap.SugaredLogger
+	BasicAuth  *BasicAuth
+}
+
+type BasicAuth struct {
+	required bool
+	username string
+	password string
+}
+
+func NewBasicAuth(required bool, username, password string) *BasicAuth {
+	return &BasicAuth{
+		required: required,
+		username: username,
+		password: password,
+	}
 }
 
 // New Opensearch Impl constructor
-func New(baseURL string, timeout string, client *http.Client, secretData *types.ConnectionData, log *zap.SugaredLogger) *OpensearchImpl {
+func New(baseURL string, timeout string, client *http.Client, secretData *types.ConnectionData, log *zap.SugaredLogger, basicAuth *BasicAuth) *OpensearchImpl {
 	return &OpensearchImpl{
 		Client:     client,
 		Timeout:    timeout,
 		BaseURL:    baseURL,
 		SecretData: secretData,
 		Log:        log,
+		BasicAuth:  basicAuth,
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	vmov1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	model "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	futil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities"
@@ -233,6 +234,21 @@ func (k *K8sImpl) CheckDeployment(labelSelector, namespace string) (bool, error)
 	return false, nil
 }
 
+func (k *K8sImpl) ScaleSTS(namespace, stsName string, replicaCount int32) error {
+	scale, err := k.K8sInterface.AppsV1().StatefulSets(namespace).GetScale(context.TODO(), stsName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	scaleDown := *scale
+	scaleDown.Spec.Replicas = 0
+
+	_, err = k.K8sInterface.AppsV1().StatefulSets(namespace).UpdateScale(context.TODO(), stsName, &scaleDown, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // IsPodReady checks whether pod is Ready
 func (k *K8sImpl) IsPodReady(pod *v1.Pod) (bool, error) {
 	for _, condition := range pod.Status.Conditions {
@@ -324,16 +340,34 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	timeout := futil.GetEnvWithDefault(constants.OpenSearchHealthCheckTimeoutKey, constants.OpenSearchHealthCheckTimeoutDefaultValue)
 
-	message := "Waiting for Verrazzano Monitoring Operator to come up"
+	message := "Waiting for OpenSearch Operator to come up"
 	_, err := futil.WaitRandom(message, timeout, k.Log)
 	if err != nil {
 		return err
 	}
 
 	var wg sync.WaitGroup
-	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", constants.IngestLabelSelector, constants.VerrazzanoSystemNamespace)
-	listOptions := metav1.ListOptions{LabelSelector: constants.IngestLabelSelector}
-	ingestPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
+
+	namespace := constants.VerrazzanoLoggingNamespace
+	ingestLabel := constants.NewIngestLabelSelector
+
+	osdLabel := constants.OSDDeploymentLabelSelector
+
+	ok, err := k.IsLegacyOS()
+
+	if err != nil {
+		return err
+	}
+
+	if ok {
+		namespace = constants.VerrazzanoSystemNamespace
+		ingestLabel = constants.IngestLabelSelector
+		osdLabel = constants.KibanaLabelSelector
+	}
+
+	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", ingestLabel, namespace)
+	listOptions := metav1.ListOptions{LabelSelector: ingestLabel}
+	ingestPods, err := k.K8sInterface.CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return err
 	}
@@ -341,12 +375,12 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	wg.Add(len(ingestPods.Items))
 	for _, pod := range ingestPods.Items {
 		k.Log.Debugf("Firing go routine to check on pod '%s'", pod.Name)
-		go k.CheckPodStatus(pod.Name, constants.VerrazzanoSystemNamespace, "up", timeout, &wg)
+		go k.CheckPodStatus(pod.Name, namespace, "up", timeout, &wg)
 	}
 
-	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", constants.KibanaLabelSelector, constants.VerrazzanoSystemNamespace)
-	listOptions = metav1.ListOptions{LabelSelector: constants.KibanaLabelSelector}
-	kibanaPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
+	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", osdLabel, namespace)
+	listOptions = metav1.ListOptions{LabelSelector: osdLabel}
+	kibanaPods, err := k.K8sInterface.CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return err
 	}
@@ -354,7 +388,7 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 	wg.Add(len(kibanaPods.Items))
 	for _, pod := range kibanaPods.Items {
 		k.Log.Debugf("Firing go routine to check on pod '%s'", pod.Name)
-		go k.CheckPodStatus(pod.Name, constants.VerrazzanoSystemNamespace, "up", timeout, &wg)
+		go k.CheckPodStatus(pod.Name, namespace, "up", timeout, &wg)
 	}
 
 	wg.Wait()
@@ -412,20 +446,46 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 	secretKeyCmd = append(secretKeyCmd, "/bin/sh", "-c", fmt.Sprintf("echo %s | %s", strconv.Quote(connData.Secret.ObjectSecretKey), constants.OpenSearchKeystoreSecretAccessKeyCmd))
 
 	// Updating keystore in other masters
-	listOptions := metav1.ListOptions{LabelSelector: constants.OpenSearchMasterLabel}
-	esMasterPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
+
+	ok, err := k.IsLegacyOS()
+
+	if err != nil {
+		return false, err
+	}
+
+	namespace := constants.VerrazzanoLoggingNamespace
+
+	masterLabel := constants.NewOpenSearchMasterLabel
+	masterPodContainerName := constants.OpenSearchPodContainerName
+
+	dataLabel := constants.NewOpenSearchDataLabel
+	dataPodContainerName := constants.OpenSearchPodContainerName
+
+	// If VMO based OS use original values
+	if ok {
+		namespace = constants.VerrazzanoSystemNamespace
+
+		masterLabel = constants.OpenSearchMasterLabel
+		masterPodContainerName = constants.OpenSearchMasterPodContainerName
+
+		dataLabel = constants.OpenSearchDataLabel
+		dataPodContainerName = constants.OpenSearchDataPodContainerName
+	}
+
+	listOptions := metav1.ListOptions{LabelSelector: masterLabel}
+	esMasterPods, err := k.K8sInterface.CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		k.Log.Errorf("Unable to fetch list of opensearch master pods")
 		return false, err
 	}
 	for _, pod := range esMasterPods.Items {
-		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, accessKeyCmd) //nolint:gosec //#gosec G601
+		err = k.ExecRetry(&pod, masterPodContainerName, timeout, accessKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
 		}
 
-		err = k.ExecRetry(&pod, constants.OpenSearchMasterPodContainerName, timeout, secretKeyCmd) //nolint:gosec //#gosec G601
+		err = k.ExecRetry(&pod, masterPodContainerName, timeout, secretKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
@@ -433,21 +493,21 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 	}
 
 	// Updating keystore in data nodes
-	listOptions = metav1.ListOptions{LabelSelector: constants.OpenSearchDataLabel}
-	esDataPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoSystemNamespace).List(context.TODO(), listOptions)
+	listOptions = metav1.ListOptions{LabelSelector: dataLabel}
+	esDataPods, err := k.K8sInterface.CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		k.Log.Errorf("Unable to fetch list of opensearch data pods")
 		return false, err
 	}
 
 	for _, pod := range esDataPods.Items {
-		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, accessKeyCmd) //nolint:gosec //#gosec G601
+		err = k.ExecRetry(&pod, dataPodContainerName, timeout, accessKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
 		}
 
-		err = k.ExecRetry(&pod, constants.OpenSearchDataPodContainerName, timeout, secretKeyCmd) //nolint:gosec //#gosec G601
+		err = k.ExecRetry(&pod, dataPodContainerName, timeout, secretKeyCmd) //nolint:gosec //#gosec G601
 		if err != nil {
 			k.Log.Errorf("Unable to exec into pod %s due to %v", pod.Name, err)
 			return false, err
@@ -489,4 +549,37 @@ func (k *K8sImpl) ExecRetry(pod *v1.Pod, container, timeout string, execCmd []st
 		}
 	}
 	return nil
+}
+
+func (k *K8sImpl) IsLegacyOS() (bool, error) {
+	k.Log.Infof("Fetching VMI in verrazzano-system")
+	gvr := schema.GroupVersionResource{
+		Group:    "verrazzano.io",
+		Version:  "v1",
+		Resource: "verrazzanomonitoringinstances",
+	}
+	vmiFetched, err := k.DynamicK8sInterface.Resource(gvr).Namespace(constants.VerrazzanoSystemNamespace).Get(context.Background(), "system", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	if vmiFetched == nil {
+		k.Log.Infof("No vmi found. Considering Legacy OS to be disabled")
+		return false, nil
+	}
+
+	var vmi vmov1.VerrazzanoMonitoringInstance
+	data, err := json.Marshal(vmiFetched)
+	if err != nil {
+		return false, err
+	}
+	err = json.Unmarshal(data, &vmi)
+	if err != nil {
+		return false, err
+	}
+
+	if vmi.Spec.Opensearch.Enabled {
+		return true, nil
+	}
+	return false, nil
 }
