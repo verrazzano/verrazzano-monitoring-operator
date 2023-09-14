@@ -48,6 +48,10 @@ func (o *OpensearchImpl) HTTPHelper(ctx context.Context, method, requestURL stri
 	}
 
 	request.Header.Add("Content-Type", constants.HTTPContentType)
+	if o.BasicAuthRequired() {
+		username, password := o.GetCredential()
+		request.SetBasicAuth(username, password)
+	}
 	response, err = o.Client.Do(request)
 	if err != nil {
 		o.Log.Errorf("HTTP '%s' failure while invoking url '%s' due to '%v'", method, requestURL, zap.Error(err))
@@ -478,4 +482,12 @@ func (o *OpensearchImpl) Restore() error {
 	}
 
 	return nil
+}
+
+func (o *OpensearchImpl) BasicAuthRequired() bool {
+	return o.BasicAuth.required
+}
+
+func (o *OpensearchImpl) GetCredential() (string, string) {
+	return o.BasicAuth.username, o.BasicAuth.password
 }
