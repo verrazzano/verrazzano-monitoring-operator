@@ -364,16 +364,15 @@ func TestGrafanaSMTPConfig(t *testing.T) {
 	}
 
 	expectedEnvVars := map[string]string{
-		"GF_SMTP_ENABLED":               fmt.Sprintf("%v", trueValue),
-		"GF_SMTP_HOST":                  vmi.Spec.Grafana.SMTP.Host,
-		"GF_SMTP_CERT_FILE":             fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.CertFileKey),
-		"GF_SMTP_KEY_FILE":              fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.KeyFileKey),
-		"GF_SMTP_SKIP_VERIFY":           fmt.Sprintf("%v", trueValue),
-		"GF_SMTP_FROM_ADDRESS":          vmi.Spec.Grafana.SMTP.FromAddress,
-		"GF_SMTP_FROM_NAME":             vmi.Spec.Grafana.SMTP.FromName,
-		"GF_SMTP_EHLO_IDENTITY":         vmi.Spec.Grafana.SMTP.EHLOIdentity,
-		"GF_SMTP_STARTTLS_POLICY":       string(vmi.Spec.Grafana.SMTP.StartTLSPolicy),
-		"GF_USERS_AUTO_ASSIGN_ORG_ROLE": "Viewer",
+		"GF_SMTP_ENABLED":         fmt.Sprintf("%v", trueValue),
+		"GF_SMTP_HOST":            vmi.Spec.Grafana.SMTP.Host,
+		"GF_SMTP_CERT_FILE":       fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.CertFileKey),
+		"GF_SMTP_KEY_FILE":        fmt.Sprintf("%s/%s", constants.GrafanaSMTPConfigVolumePath, vmi.Spec.Grafana.SMTP.KeyFileKey),
+		"GF_SMTP_SKIP_VERIFY":     fmt.Sprintf("%v", trueValue),
+		"GF_SMTP_FROM_ADDRESS":    vmi.Spec.Grafana.SMTP.FromAddress,
+		"GF_SMTP_FROM_NAME":       vmi.Spec.Grafana.SMTP.FromName,
+		"GF_SMTP_EHLO_IDENTITY":   vmi.Spec.Grafana.SMTP.EHLOIdentity,
+		"GF_SMTP_STARTTLS_POLICY": string(vmi.Spec.Grafana.SMTP.StartTLSPolicy),
 	}
 	for _, deployment := range expected.Deployments {
 		if deployment.Name == resources.GetMetaName(vmi.Name, config.Grafana.Name) {
@@ -392,7 +391,6 @@ func TestGrafanaSMTPConfig(t *testing.T) {
 					assert.NotNil(t, env.ValueFrom)
 					assert.Equal(t, vmi.Spec.Grafana.SMTP.PasswordKey, env.ValueFrom.SecretKeyRef.Key)
 				}
-
 			}
 			assert.Len(t, expectedEnvVars, 0, fmt.Sprintf("Could not find %v env variables set in Grafana deployment", expectedEnvVars))
 

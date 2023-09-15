@@ -69,12 +69,7 @@ func CreatePersistentVolumeClaims(controller *Controller, vmo *vmcontrollerv1.Ve
 		// If the PVC already exists, we check if it needs resizing
 		if existingPvc != nil {
 			if pvcNeedsResize(existingPvc, expectedPVC) {
-				// Fetch the storage class from the pvc
-				existingStorageClass, err := determineStorageClass(controller, existingPvc.Spec.StorageClassName)
-				if err != nil {
-					return nil, err
-				}
-				if newPVCName, err := resizePVC(controller, vmo, existingPvc, expectedPVC, existingStorageClass); err != nil {
+				if newPVCName, err := resizePVC(controller, vmo, existingPvc, expectedPVC, storageClass); err != nil {
 					return nil, err
 				} else if newPVCName != nil {
 					// we need to wait until the PVC is bound

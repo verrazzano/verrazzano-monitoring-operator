@@ -21,7 +21,7 @@ type Monitor struct {
 
 func (m *Monitor) MigrateOldIndices(log vzlog.VerrazzanoLogger, vmi *vmcontrollerv1.VerrazzanoMonitoringInstance,
 	o *opensearch.OSClient, od *dashboards.OSDashboardsClient) error {
-	if !vmi.Spec.Opensearch.Enabled || !o.IsOpenSearchReady(vmi) {
+	if !o.IsOpenSearchReady(vmi) {
 		return nil
 	}
 
