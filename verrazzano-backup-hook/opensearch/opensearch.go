@@ -484,10 +484,12 @@ func (o *OpensearchImpl) Restore() error {
 	return nil
 }
 
+// BasicAuthRequired - whether to use basic auth or not
 func (o *OpensearchImpl) BasicAuthRequired() bool {
 	return o.BasicAuth.required
 }
 
+// GetCredential - returns username and password required for basic auth
 func (o *OpensearchImpl) GetCredential() (string, string) {
 	return o.BasicAuth.username, o.BasicAuth.password
 }

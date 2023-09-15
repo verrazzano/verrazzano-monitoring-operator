@@ -236,13 +236,14 @@ func (k *K8sImpl) CheckDeployment(labelSelector, namespace string) (bool, error)
 	return false, nil
 }
 
-func (k *K8sImpl) ScaleSTS(stsName, namespace string) error {
+// ScaleSTS scales down the STS to zero replicas
+func (k *K8sImpl) ScaleSTS(stsName, namespace string, replicaCount int32) error {
 	scale, err := k.K8sInterface.AppsV1().StatefulSets(namespace).GetScale(context.TODO(), stsName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 	scaleDown := *scale
-	scaleDown.Spec.Replicas = 0
+	scaleDown.Spec.Replicas = replicaCount
 
 	k.Log.Infof("Scaling down sts %s in namespace %s to zero replicas", stsName, namespace)
 	_, err = k.K8sInterface.AppsV1().StatefulSets(namespace).UpdateScale(context.TODO(), stsName, &scaleDown, metav1.UpdateOptions{})
@@ -353,11 +354,9 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 
 	namespace := constants.VerrazzanoLoggingNamespace
 	ingestLabel := constants.NewIngestLabelSelector
-
 	osdLabel := constants.OSDDeploymentLabelSelector
 
 	ok, err := k.IsLegacyOS()
-
 	if err != nil {
 		return err
 	}
@@ -448,10 +447,7 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 	accessKeyCmd = append(accessKeyCmd, "/bin/sh", "-c", fmt.Sprintf("echo %s | %s", strconv.Quote(connData.Secret.ObjectAccessKey), constants.OpenSearchKeystoreAccessKeyCmd))
 	secretKeyCmd = append(secretKeyCmd, "/bin/sh", "-c", fmt.Sprintf("echo %s | %s", strconv.Quote(connData.Secret.ObjectSecretKey), constants.OpenSearchKeystoreSecretAccessKeyCmd))
 
-	// Updating keystore in other masters
-
 	ok, err := k.IsLegacyOS()
-
 	if err != nil {
 		return false, err
 	}
@@ -475,6 +471,7 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string)
 		dataPodContainerName = constants.OpenSearchDataPodContainerName
 	}
 
+	// Updating keystore in other masters
 	listOptions := metav1.ListOptions{LabelSelector: masterLabel}
 	esMasterPods, err := k.K8sInterface.CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 	if err != nil {
@@ -554,6 +551,7 @@ func (k *K8sImpl) ExecRetry(pod *v1.Pod, container, timeout string, execCmd []st
 	return nil
 }
 
+// IsLegacyOS returns true if VMO based OpenSearch is running, false otherwise
 func (k *K8sImpl) IsLegacyOS() (bool, error) {
 	k.Log.Infof("Fetching VMI in verrazzano-system")
 	gvr := schema.GroupVersionResource{

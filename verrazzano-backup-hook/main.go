@@ -137,16 +137,16 @@ func main() {
 	opensearchURL := constants.OpenSearchURL
 	isLegacyOS, err := k8s.IsLegacyOS()
 
+	if err != nil {
+		log.Errorf("Failed to determine if legacy OS is enabled: %v", err)
+		os.Exit(1)
+	}
+
 	// Log which OS we are backing up or restoring
 	if isLegacyOS {
 		log.Infof("VMO OpenSearch found. Backup and Restore will be done for VMO OpenSearch")
 	} else {
 		log.Infof("Opster OpenSearch found. Backup and Restore will be done for Opster OpenSearch")
-	}
-
-	if err != nil {
-		log.Errorf("Failed to determine if legacy OS is enabled: %v", err)
-		os.Exit(1)
 	}
 
 	basicAuth := opensearch.NewBasicAuth(false, "", "")
@@ -236,7 +236,7 @@ func main() {
 				os.Exit(1)
 			}
 		} else {
-			err = k8s.ScaleSTS(constants.NewIngestStatefulSetName, constants.VerrazzanoLoggingNamespace)
+			err = k8s.ScaleSTS(constants.NewIngestStatefulSetName, constants.VerrazzanoLoggingNamespace, int32(0))
 			if err != nil {
 				log.Errorf("Unable to scale sts '%s' due to %v", constants.NewIngestLabelSelector, zap.Error(err))
 				os.Exit(1)
