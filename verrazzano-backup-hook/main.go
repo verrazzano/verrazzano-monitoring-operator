@@ -138,15 +138,15 @@ func main() {
 	isLegacyOS, err := k8s.IsLegacyOS()
 
 	if err != nil {
-		log.Errorf("Failed to determine if legacy OS is enabled: %v", err)
+		log.Errorf("Failed to determine if Security Plugin is enabled: %v", err)
 		os.Exit(1)
 	}
 
 	// Log which OS we are backing up or restoring
 	if isLegacyOS {
-		log.Infof("VMO OpenSearch found. Backup and Restore will be done for VMO OpenSearch")
+		log.Infof("Security Plugin Disabled. Backup and Restore will be done for VMO OpenSearch")
 	} else {
-		log.Infof("Opster OpenSearch found. Backup and Restore will be done for Opster OpenSearch")
+		log.Infof("Security Plugin Enabled. Backup and Restore will be done for Opster OpenSearch")
 	}
 
 	basicAuth := opensearch.NewBasicAuth(false, "", "")

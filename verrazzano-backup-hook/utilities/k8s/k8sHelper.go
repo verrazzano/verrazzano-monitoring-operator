@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	vmov1 "github.com/verrazzano/verrazzano-monitoring-operator/pkg/apis/vmcontroller/v1"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	model "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	futil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities"
@@ -16,8 +15,6 @@ import (
 	"go.uber.org/zap"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -551,38 +548,17 @@ func (k *K8sImpl) ExecRetry(pod *v1.Pod, container, timeout string, execCmd []st
 	return nil
 }
 
-// IsLegacyOS returns true if VMO based OpenSearch is running, false otherwise
+// IsLegacyOS returns true if VMO based OpenSearch is running i.e. Security Plugin is disabled, false otherwise
 func (k *K8sImpl) IsLegacyOS() (bool, error) {
-	k.Log.Infof("Fetching VMI in verrazzano-system")
-	gvr := schema.GroupVersionResource{
-		Group:    "verrazzano.io",
-		Version:  "v1",
-		Resource: "verrazzanomonitoringinstances",
-	}
-	vmiFetched, err := k.DynamicK8sInterface.Resource(gvr).Namespace(constants.VerrazzanoSystemNamespace).Get(context.Background(), "system", metav1.GetOptions{})
-	if err != nil {
-		if meta.IsNoMatchError(err) || errors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
-	}
+	k.Log.Infof("Checking if Security Plugin is disabled or not")
 
-	if vmiFetched == nil {
-		k.Log.Infof("No vmi found. Considering Legacy OS to be disabled")
-		return false, nil
-	}
+	disableSecurityPlugin, err := strconv.ParseBool(futil.GetEnvWithDefault(constants.DisableSecurityPluginOS, "false"))
 
-	var vmi vmov1.VerrazzanoMonitoringInstance
-	data, err := json.Marshal(vmiFetched)
-	if err != nil {
-		return false, err
-	}
-	err = json.Unmarshal(data, &vmi)
 	if err != nil {
 		return false, err
 	}
 
-	if vmi.Spec.Opensearch.Enabled {
+	if disableSecurityPlugin {
 		return true, nil
 	}
 	return false, nil

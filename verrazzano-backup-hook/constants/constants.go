@@ -43,6 +43,9 @@ const (
 
 	// OpenSearchHealthCheckTimeoutDefaultValue Env value for key OpenSearchHealthCheckTimeoutKey for Opensearch health check
 	OpenSearchHealthCheckTimeoutDefaultValue = "10m"
+
+	// DisableSecurityPluginOS Env key to disable Security Plugin
+	DisableSecurityPluginOS = "DISABLE_SECURITY_PLUGIN"
 )
 
 const (
