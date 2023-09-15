@@ -67,12 +67,14 @@ type OpensearchImpl struct {
 	BasicAuth  *BasicAuth
 }
 
+// BasicAuth for BasicAuth interface
 type BasicAuth struct {
 	required bool
 	username string
 	password string
 }
 
+// NewBasicAuth returns a new BasicAuth struct
 func NewBasicAuth(required bool, username, password string) *BasicAuth {
 	return &BasicAuth{
 		required: required,
