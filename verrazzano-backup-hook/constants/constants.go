@@ -61,15 +61,13 @@ const (
 	// OpenSearchURL Opensearch url used internally
 	OpenSearchURL = "http://127.0.0.1:9200"
 
-	OpenSearchHTTPSURL = "https://127.0.0.1:9200"
-
 	// OpenSearchDataPodContainerName Opensearch data pod container name
 	OpenSearchDataPodContainerName = "es-data"
 
 	// OpenSearchMasterPodContainerName Opensearch master pod container name
 	OpenSearchMasterPodContainerName = "es-master"
 
-	OpenSearchPodContainerName = "opensearch"
+	OpenSearchClusterName = "opensearch"
 
 	// HTTPContentType content type in http request/response
 	HTTPContentType = "application/json"
@@ -82,11 +80,6 @@ const (
 
 	// IngestLabelSelector Opensearch ingest pod label selector
 	IngestLabelSelector = "app=system-es-ingest"
-
-	NewIngestStatefulSetName = "opensearch-es-ingest"
-
-	NewIngestLabelSelector = "opster.io/opensearch-nodepool=es-ingest"
-
 	// KibanaDeploymentName Kibana deployment name
 	KibanaDeploymentName = "vmi-system-osd"
 
@@ -95,10 +88,6 @@ const (
 
 	// KibanaDeploymentLabelSelector Kibana deployment label selector
 	KibanaDeploymentLabelSelector = "verrazzano-component=osd"
-
-	OSDDeploymentName = "opensearch-dashboards"
-
-	OSDDeploymentLabelSelector = "opensearch.cluster.dashboards=opensearch"
 
 	// VMODeploymentName Deployment name for Verrazzano Monitoring Operator
 	VMODeploymentName = "verrazzano-monitoring-operator"
@@ -126,14 +115,4 @@ const (
 
 	// OpenSearchDataLabel Label selector for OpenSearch data pods
 	OpenSearchDataLabel = "opensearch.verrazzano.io/role-data=true"
-
-	NewOpenSearchMasterLabel = "opensearch.role=cluster_manager"
-
-	NewOpenSearchDataLabel = "opster.io/opensearch-nodepool=es-data"
-
-	NewOpenSearchIngestLabel = "opster.io/opensearch-nodepool=es-ingest"
-
-	OpsterDeploymentName = "opensearch-operator-controller-manager"
-
-	OpsterDeploymentLabel = "control-plane=controller-manager"
 )

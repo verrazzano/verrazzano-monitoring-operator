@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/log"
+	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/opensearch"
 	kutil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s"
 	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s/fake"
 	"go.uber.org/zap"
@@ -155,6 +156,7 @@ func TestCheckPodStatus(t *testing.T) {
 // THEN checks kibana and ingest pods are Ready after reboot
 func TestCheckAllPodsAfterRestore(t *testing.T) {
 	t.Parallel()
+	opensearchVar := opensearch.NewOpensearchVar(false)
 	IngestLabel := make(map[string]string)
 	KibanaLabel := make(map[string]string)
 	IngestLabel["app"] = "system-es-ingest"
@@ -213,13 +215,13 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 
 	os.Setenv(constants.OpenSearchHealthCheckTimeoutKey, "1s")
 
-	err := k8s.CheckAllPodsAfterRestore()
+	err := k8s.CheckAllPodsAfterRestore(opensearchVar)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
 
 	fc = fake.NewSimpleClientset(&IngestPod, &KibanaPod)
 	k8snew := kutil.New(dclient, clientk, fc, nil, "default", log)
-	err = k8snew.CheckAllPodsAfterRestore()
+	err = k8snew.CheckAllPodsAfterRestore(opensearchVar)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
 

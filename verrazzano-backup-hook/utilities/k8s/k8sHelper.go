@@ -9,12 +9,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
+	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/opensearch"
 	model "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	futil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities"
 	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s/fake"
 	"go.uber.org/zap"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -338,7 +341,7 @@ func (k *K8sImpl) CheckPodStatus(podName, namespace, checkFlag string, timeout s
 }
 
 // CheckAllPodsAfterRestore checks presence of pods part of Opensearch cluster implementation after restore
-func (k *K8sImpl) CheckAllPodsAfterRestore() error {
+func (k *K8sImpl) CheckAllPodsAfterRestore(opensearchVar *opensearch.OpensearchVar) error {
 	timeout := futil.GetEnvWithDefault(constants.OpenSearchHealthCheckTimeoutKey, constants.OpenSearchHealthCheckTimeoutDefaultValue)
 
 	message := "Waiting for OpenSearch Operator to come up"
@@ -349,20 +352,9 @@ func (k *K8sImpl) CheckAllPodsAfterRestore() error {
 
 	var wg sync.WaitGroup
 
-	namespace := constants.VerrazzanoLoggingNamespace
-	ingestLabel := constants.NewIngestLabelSelector
-	osdLabel := constants.OSDDeploymentLabelSelector
-
-	ok, err := k.IsLegacyOS()
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		namespace = constants.VerrazzanoSystemNamespace
-		ingestLabel = constants.IngestLabelSelector
-		osdLabel = constants.KibanaLabelSelector
-	}
+	namespace := opensearchVar.Namespace
+	ingestLabel := opensearchVar.IngestLabelSelector
+	osdLabel := opensearchVar.OSDLabelSelector
 
 	k.Log.Infof("Checking pods with labelselector '%v' in namespace '%s", ingestLabel, namespace)
 	listOptions := metav1.ListOptions{LabelSelector: ingestLabel}
@@ -438,35 +430,19 @@ func (k *K8sImpl) ExecPod(pod *v1.Pod, container string, command []string) (stri
 }
 
 // UpdateKeystore Update Opensearch keystore with object store creds
-func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string) (bool, error) {
+func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string, opensearchVar *opensearch.OpensearchVar) (bool, error) {
 
 	var accessKeyCmd, secretKeyCmd []string
 	accessKeyCmd = append(accessKeyCmd, "/bin/sh", "-c", fmt.Sprintf("echo %s | %s", strconv.Quote(connData.Secret.ObjectAccessKey), constants.OpenSearchKeystoreAccessKeyCmd))
 	secretKeyCmd = append(secretKeyCmd, "/bin/sh", "-c", fmt.Sprintf("echo %s | %s", strconv.Quote(connData.Secret.ObjectSecretKey), constants.OpenSearchKeystoreSecretAccessKeyCmd))
 
-	ok, err := k.IsLegacyOS()
-	if err != nil {
-		return false, err
-	}
+	namespace := opensearchVar.Namespace
 
-	namespace := constants.VerrazzanoLoggingNamespace
+	masterLabel := opensearchVar.OpenSearchMasterLabel
+	masterPodContainerName := opensearchVar.OpenSearchMasterPodContainerName
 
-	masterLabel := constants.NewOpenSearchMasterLabel
-	masterPodContainerName := constants.OpenSearchPodContainerName
-
-	dataLabel := constants.NewOpenSearchDataLabel
-	dataPodContainerName := constants.OpenSearchPodContainerName
-
-	// If VMO based OS use original values
-	if ok {
-		namespace = constants.VerrazzanoSystemNamespace
-
-		masterLabel = constants.OpenSearchMasterLabel
-		masterPodContainerName = constants.OpenSearchMasterPodContainerName
-
-		dataLabel = constants.OpenSearchDataLabel
-		dataPodContainerName = constants.OpenSearchDataPodContainerName
-	}
+	dataLabel := opensearchVar.OpenSearchDataLabel
+	dataPodContainerName := opensearchVar.OpenSearchDataPodContainerName
 
 	// Updating keystore in other masters
 	listOptions := metav1.ListOptions{LabelSelector: masterLabel}
@@ -562,4 +538,26 @@ func (k *K8sImpl) IsLegacyOS() (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (k *K8sImpl) ResetClusterInitialization() error {
+	k.Log.Infof("Fetching OpenSearchCluster %s in namespace %s", constants.OpenSearchClusterName, constants.VerrazzanoLoggingNamespace)
+	gvr := schema.GroupVersionResource{
+		Group:    "opensearch.opster.io",
+		Version:  "v1",
+		Resource: "opensearchclusters",
+	}
+	opensearchFetched, err := k.DynamicK8sInterface.Resource(gvr).Namespace(constants.VerrazzanoLoggingNamespace).Get(context.Background(), constants.OpenSearchClusterName, metav1.GetOptions{})
+	if err != nil {
+		if meta.IsNoMatchError(err) || errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	k.Log.Infof("Setting cluster initialized status to false")
+	opensearchFetched.Object["status"].(map[string]interface{})["initialized"] = false
+
+	_, updateErr := k.DynamicK8sInterface.Resource(gvr).Namespace(constants.VerrazzanoLoggingNamespace).UpdateStatus(context.TODO(), opensearchFetched, metav1.UpdateOptions{})
+	return updateErr
 }

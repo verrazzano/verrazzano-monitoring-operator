@@ -5,6 +5,7 @@ package opensearch
 
 import (
 	"context"
+	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	"go.uber.org/zap"
 	"io"
@@ -92,5 +93,70 @@ func New(baseURL string, timeout string, client *http.Client, secretData *types.
 		SecretData: secretData,
 		Log:        log,
 		BasicAuth:  basicAuth,
+	}
+}
+
+type OpensearchVar struct {
+	// OpenSearchURL Opensearch url used internally
+	OpenSearchURL string
+	// Namespace for Opensearch pods
+	Namespace string
+	// OpenSearchDataPodContainerName Opensearch data pod container name
+	OpenSearchDataPodContainerName string
+	// OpenSearchMasterPodContainerName Opensearch master pod container name
+	OpenSearchMasterPodContainerName string
+	// IngestResourceName Opensearch ingest deployment/sts name
+	IngestResourceName string
+	// IngestLabelSelector Opensearch ingest pod label selector
+	IngestLabelSelector string
+	// OSDDeploymentName OSD deployment name
+	OSDDeploymentName string
+	// OSDLabelSelector Label selector for OSD pod
+	OSDLabelSelector string
+	// OSDDeploymentLabelSelector OSD deployment label selector
+	OSDDeploymentLabelSelector string
+	// OperatorDeploymentName Deployment name for Opensearch Operator
+	OperatorDeploymentName string
+	// OperatorDeploymentLabelSelector Label selector for Opensearch Operator
+	OperatorDeploymentLabelSelector string
+	// OpenSearchMasterLabel Label selector for OpenSearch master pods
+	OpenSearchMasterLabel string
+	// OpenSearchDataLabel Label selector for OpenSearch data pods
+	OpenSearchDataLabel string
+}
+
+func NewOpensearchVar(isLegacyOS bool) *OpensearchVar {
+	if isLegacyOS {
+		return &OpensearchVar{
+			OpenSearchURL:                    "http://127.0.0.1:9200",
+			Namespace:                        constants.VerrazzanoSystemNamespace,
+			OpenSearchDataPodContainerName:   "es-data",
+			OpenSearchMasterPodContainerName: "es-master",
+			IngestResourceName:               "vmi-system-es-ingest",
+			IngestLabelSelector:              "app=system-es-ingest",
+			OSDDeploymentName:                "vmi-system-osd",
+			OSDLabelSelector:                 "app=system-osd",
+			OSDDeploymentLabelSelector:       "verrazzano-component=osd",
+			OperatorDeploymentName:           "verrazzano-monitoring-operator",
+			OperatorDeploymentLabelSelector:  "k8s-app=verrazzano-monitoring-operator",
+			OpenSearchMasterLabel:            "opensearch.verrazzano.io/role-master=true",
+			OpenSearchDataLabel:              "opensearch.verrazzano.io/role-data=true",
+		}
+	} else {
+		return &OpensearchVar{
+			OpenSearchURL:                    "https://127.0.0.1:9200",
+			Namespace:                        constants.VerrazzanoLoggingNamespace,
+			OpenSearchDataPodContainerName:   "opensearch",
+			OpenSearchMasterPodContainerName: "opensearch",
+			IngestResourceName:               "opensearch-es-ingest",
+			IngestLabelSelector:              "opster.io/opensearch-nodepool=es-ingest",
+			OSDDeploymentName:                "opensearch-dashboards",
+			OSDLabelSelector:                 "opensearch.cluster.dashboards=opensearch",
+			OSDDeploymentLabelSelector:       "opensearch.cluster.dashboards=opensearch",
+			OperatorDeploymentName:           "opensearch-operator-controller-manager",
+			OperatorDeploymentLabelSelector:  "control-plane=controller-manager",
+			OpenSearchMasterLabel:            "opensearch.role=cluster_manager",
+			OpenSearchDataLabel:              "opster.io/opensearch-nodepool=es-data",
+		}
 	}
 }

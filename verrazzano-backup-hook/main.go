@@ -134,7 +134,6 @@ func main() {
 	k8s := kutil.New(dynamicKubeClientInterface, kubeClient, kubeClientInterface, config, Profile, log)
 
 	httpClient := http.DefaultClient
-	opensearchURL := constants.OpenSearchURL
 	isLegacyOS, err := k8s.IsLegacyOS()
 
 	if err != nil {
@@ -149,6 +148,7 @@ func main() {
 		log.Infof("Security Plugin Enabled. Backup and Restore will be done for Opster OpenSearch")
 	}
 
+	opensearchVar := opensearch.NewOpensearchVar(isLegacyOS)
 	basicAuth := opensearch.NewBasicAuth(false, "", "")
 	if !isLegacyOS {
 		username, err := os.ReadFile("/mnt/admin-credentials/username")
@@ -167,11 +167,10 @@ func main() {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec //#nosec G402
 		}
 		httpClient = &http.Client{Transport: tr}
-		opensearchURL = constants.OpenSearchHTTPSURL
 	}
 
 	// Initialize Opensearch object
-	search := opensearch.New(opensearchURL, globalTimeout, httpClient, &checkConData, log, basicAuth)
+	search := opensearch.New(opensearchVar.OpenSearchURL, globalTimeout, httpClient, &checkConData, log, basicAuth)
 	// Check OpenSearch health before proceeding with backup or restore
 	err = search.EnsureOpenSearchIsHealthy()
 	if err != nil {
@@ -188,13 +187,13 @@ func main() {
 	}
 
 	// Update OpenSearch keystore
-	_, err = k8s.UpdateKeystore(openSearchConData, globalTimeout)
+	_, err = k8s.UpdateKeystore(openSearchConData, globalTimeout, opensearchVar)
 	if err != nil {
 		log.Errorf("Unable to update keystore")
 		os.Exit(1)
 	}
 
-	openSearch := opensearch.New(opensearchURL, globalTimeout, httpClient, openSearchConData, log, basicAuth)
+	openSearch := opensearch.New(opensearchVar.OpenSearchURL, globalTimeout, httpClient, openSearchConData, log, basicAuth)
 	err = search.ReloadOpensearchSecureSettings()
 	if err != nil {
 		log.Errorf("Unable to reload security settings")
@@ -215,68 +214,57 @@ func main() {
 	case constants.RestoreOperation:
 		// OpenSearch restore handling
 		log.Infof("Commencing OpenSearch restore ..")
-		operatorDeploymentName := constants.OpsterDeploymentName
-		namespace := constants.VerrazzanoLoggingNamespace
-		operatorDeploymentLabel := constants.OpsterDeploymentLabel
 
-		if isLegacyOS {
-			operatorDeploymentName = constants.VMODeploymentName
-			operatorDeploymentLabel = constants.VMOLabelSelector
-			namespace = constants.VerrazzanoSystemNamespace
-		}
-		err = k8s.ScaleDeployment(operatorDeploymentLabel, namespace, operatorDeploymentName, int32(0))
+		err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(0))
 		if err != nil {
-			log.Errorf("Unable to scale deployment '%s' due to %v", operatorDeploymentName, zap.Error(err))
+			log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
 			os.Exit(1)
 		}
 		if isLegacyOS {
-			err = k8s.ScaleDeployment(constants.IngestLabelSelector, constants.VerrazzanoSystemNamespace, constants.IngestDeploymentName, int32(0))
+			err = k8s.ScaleDeployment(opensearchVar.IngestLabelSelector, opensearchVar.Namespace, opensearchVar.IngestResourceName, int32(0))
 			if err != nil {
-				log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
 				os.Exit(1)
 			}
 		} else {
-			err = k8s.ScaleSTS(constants.NewIngestStatefulSetName, constants.VerrazzanoLoggingNamespace, int32(0))
+			err = k8s.ScaleSTS(opensearchVar.IngestResourceName, opensearchVar.Namespace, int32(0))
 			if err != nil {
-				log.Errorf("Unable to scale sts '%s' due to %v", constants.NewIngestLabelSelector, zap.Error(err))
+				log.Errorf("Unable to scale sts '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
 				os.Exit(1)
 			}
 		}
 
-		if err != nil {
-			log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
-			os.Exit(1)
-		}
 		err = openSearch.Restore()
 		if err != nil {
 			log.Errorf("Operation '%s' unsuccessfull due to %v", Operation, zap.Error(err))
 			os.Exit(1)
 		}
 
-		osdDeploymentName := constants.OSDDeploymentName
-		osdLabel := constants.OSDDeploymentLabelSelector
-		if isLegacyOS {
-			osdDeploymentName = constants.KibanaDeploymentName
-			osdLabel = constants.KibanaDeploymentLabelSelector
-		}
-		ok, err := k8s.CheckDeployment(osdLabel, namespace)
+		ok, err := k8s.CheckDeployment(opensearchVar.OSDLabelSelector, opensearchVar.Namespace)
 		if err != nil {
-			log.Errorf("Unable to detect OSD deployment '%s' due to %v", osdLabel, zap.Error(err))
+			log.Errorf("Unable to detect OSD deployment '%s' due to %v", opensearchVar.OSDLabelSelector, zap.Error(err))
 			os.Exit(1)
 		}
 		// If kibana is deployed then scale it down
 		if ok {
-			err = k8s.ScaleDeployment(osdLabel, namespace, osdDeploymentName, int32(0))
+			err = k8s.ScaleDeployment(opensearchVar.OSDLabelSelector, opensearchVar.Namespace, opensearchVar.OSDDeploymentName, int32(0))
 			if err != nil {
-				log.Errorf("Unable to scale deployment '%s' due to %v", osdDeploymentName, zap.Error(err))
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OSDDeploymentName, zap.Error(err))
 			}
 		}
-		err = k8s.ScaleDeployment(operatorDeploymentLabel, namespace, operatorDeploymentName, int32(1))
+		// Reset cluster status
+		if !isLegacyOS {
+			err = k8s.ResetClusterInitialization()
+			if err != nil {
+				log.Errorf("Failed to reset cluster status: %v", zap.Error(err))
+			}
+		}
+		err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(1))
 		if err != nil {
-			log.Errorf("Unable to scale deployment '%s' due to %v", operatorDeploymentName, zap.Error(err))
+			log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
 		}
 
-		err = k8s.CheckAllPodsAfterRestore()
+		err = k8s.CheckAllPodsAfterRestore(opensearchVar)
 		if err != nil {
 			log.Errorf("Unable to check deployments after restoring Opensearch Operator %v", zap.Error(err))
 		}
