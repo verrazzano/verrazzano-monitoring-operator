@@ -220,6 +220,13 @@ func main() {
 			log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
 			os.Exit(1)
 		}
+		// Reset cluster status
+		if !isLegacyOS {
+			err = k8s.ResetClusterInitialization()
+			if err != nil {
+				log.Errorf("Failed to reset cluster status: %v", zap.Error(err))
+			}
+		}
 		if isLegacyOS {
 			err = k8s.ScaleDeployment(opensearchVar.IngestLabelSelector, opensearchVar.Namespace, opensearchVar.IngestResourceName, int32(0))
 			if err != nil {
@@ -240,7 +247,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		ok, err := k8s.CheckDeployment(opensearchVar.OSDLabelSelector, opensearchVar.Namespace)
+		ok, err := k8s.CheckDeployment(opensearchVar.OSDDeploymentLabelSelector, opensearchVar.Namespace)
 		if err != nil {
 			log.Errorf("Unable to detect OSD deployment '%s' due to %v", opensearchVar.OSDLabelSelector, zap.Error(err))
 			os.Exit(1)
@@ -250,13 +257,6 @@ func main() {
 			err = k8s.ScaleDeployment(opensearchVar.OSDLabelSelector, opensearchVar.Namespace, opensearchVar.OSDDeploymentName, int32(0))
 			if err != nil {
 				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OSDDeploymentName, zap.Error(err))
-			}
-		}
-		// Reset cluster status
-		if !isLegacyOS {
-			err = k8s.ResetClusterInitialization()
-			if err != nil {
-				log.Errorf("Failed to reset cluster status: %v", zap.Error(err))
 			}
 		}
 		err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(1))

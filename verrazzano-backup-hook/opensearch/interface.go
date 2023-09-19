@@ -128,19 +128,19 @@ type OpensearchVar struct {
 func NewOpensearchVar(isLegacyOS bool) *OpensearchVar {
 	if isLegacyOS {
 		return &OpensearchVar{
-			OpenSearchURL:                    "http://127.0.0.1:9200",
+			OpenSearchURL:                    constants.OpenSearchURL,
 			Namespace:                        constants.VerrazzanoSystemNamespace,
-			OpenSearchDataPodContainerName:   "es-data",
-			OpenSearchMasterPodContainerName: "es-master",
-			IngestResourceName:               "vmi-system-es-ingest",
-			IngestLabelSelector:              "app=system-es-ingest",
-			OSDDeploymentName:                "vmi-system-osd",
-			OSDLabelSelector:                 "app=system-osd",
-			OSDDeploymentLabelSelector:       "verrazzano-component=osd",
-			OperatorDeploymentName:           "verrazzano-monitoring-operator",
-			OperatorDeploymentLabelSelector:  "k8s-app=verrazzano-monitoring-operator",
-			OpenSearchMasterLabel:            "opensearch.verrazzano.io/role-master=true",
-			OpenSearchDataLabel:              "opensearch.verrazzano.io/role-data=true",
+			OpenSearchDataPodContainerName:   constants.OpenSearchDataPodContainerName,
+			OpenSearchMasterPodContainerName: constants.OpenSearchMasterPodContainerName,
+			IngestResourceName:               constants.IngestDeploymentName,
+			IngestLabelSelector:              constants.IngestLabelSelector,
+			OSDDeploymentName:                constants.KibanaDeploymentName,
+			OSDLabelSelector:                 constants.KibanaLabelSelector,
+			OSDDeploymentLabelSelector:       constants.KibanaDeploymentLabelSelector,
+			OperatorDeploymentName:           constants.VMODeploymentName,
+			OperatorDeploymentLabelSelector:  constants.VMOLabelSelector,
+			OpenSearchMasterLabel:            constants.OpenSearchMasterLabel,
+			OpenSearchDataLabel:              constants.OpenSearchDataLabel,
 		}
 	} else {
 		return &OpensearchVar{
