@@ -142,21 +142,20 @@ func NewOpensearchVar(isLegacyOS bool) *OpensearchVar {
 			OpenSearchMasterLabel:            constants.OpenSearchMasterLabel,
 			OpenSearchDataLabel:              constants.OpenSearchDataLabel,
 		}
-	} else {
-		return &OpensearchVar{
-			OpenSearchURL:                    "https://127.0.0.1:9200",
-			Namespace:                        constants.VerrazzanoLoggingNamespace,
-			OpenSearchDataPodContainerName:   "opensearch",
-			OpenSearchMasterPodContainerName: "opensearch",
-			IngestResourceName:               "opensearch-es-ingest",
-			IngestLabelSelector:              "opster.io/opensearch-nodepool=es-ingest",
-			OSDDeploymentName:                "opensearch-dashboards",
-			OSDLabelSelector:                 "opensearch.cluster.dashboards=opensearch",
-			OSDDeploymentLabelSelector:       "opensearch.cluster.dashboards=opensearch",
-			OperatorDeploymentName:           "opensearch-operator-controller-manager",
-			OperatorDeploymentLabelSelector:  "control-plane=controller-manager",
-			OpenSearchMasterLabel:            "opensearch.role=cluster_manager",
-			OpenSearchDataLabel:              "opster.io/opensearch-nodepool=es-data",
-		}
+	}
+	return &OpensearchVar{
+		OpenSearchURL:                    "https://127.0.0.1:9200",
+		Namespace:                        constants.VerrazzanoLoggingNamespace,
+		OpenSearchDataPodContainerName:   "opensearch",
+		OpenSearchMasterPodContainerName: "opensearch",
+		IngestResourceName:               "opensearch-es-ingest",
+		IngestLabelSelector:              "opster.io/opensearch-nodepool=es-ingest",
+		OSDDeploymentName:                "opensearch-dashboards",
+		OSDLabelSelector:                 "opensearch.cluster.dashboards=opensearch",
+		OSDDeploymentLabelSelector:       "opensearch.cluster.dashboards=opensearch",
+		OperatorDeploymentName:           "opensearch-operator-controller-manager",
+		OperatorDeploymentLabelSelector:  "control-plane=controller-manager",
+		OpenSearchMasterLabel:            "opensearch.role=cluster_manager",
+		OpenSearchDataLabel:              "opster.io/opensearch-nodepool=es-data",
 	}
 }
