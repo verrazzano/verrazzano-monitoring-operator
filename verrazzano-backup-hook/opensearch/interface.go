@@ -97,6 +97,7 @@ func New(baseURL string, timeout string, client *http.Client, secretData *types.
 }
 
 type OpensearchVar struct {
+	IsLegacyOS bool
 	// OpenSearchURL Opensearch url used internally
 	OpenSearchURL string
 	// Namespace for Opensearch pods
@@ -128,6 +129,7 @@ type OpensearchVar struct {
 func NewOpensearchVar(isLegacyOS bool) *OpensearchVar {
 	if isLegacyOS {
 		return &OpensearchVar{
+			IsLegacyOS:                       isLegacyOS,
 			OpenSearchURL:                    constants.OpenSearchURL,
 			Namespace:                        constants.VerrazzanoSystemNamespace,
 			OpenSearchDataPodContainerName:   constants.OpenSearchDataPodContainerName,
@@ -144,6 +146,7 @@ func NewOpensearchVar(isLegacyOS bool) *OpensearchVar {
 		}
 	}
 	return &OpensearchVar{
+		IsLegacyOS:                       isLegacyOS,
 		OpenSearchURL:                    "https://127.0.0.1:9200",
 		Namespace:                        constants.VerrazzanoLoggingNamespace,
 		OpenSearchDataPodContainerName:   "opensearch",

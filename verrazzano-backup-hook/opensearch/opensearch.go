@@ -335,6 +335,13 @@ func (o *OpensearchImpl) DeleteData() error {
 	o.Log.Infof("Deleting data streams followed by index ..")
 	dataStreamURL := fmt.Sprintf("%s/_data_stream/*", o.BaseURL)
 	dataIndexURL := fmt.Sprintf("%s/*", o.BaseURL)
+
+	// if we are using basic auth, means we have security plugin enabled
+	// skip deleting .opendistro_security index in that case
+	if o.BasicAuthRequired() {
+		dataIndexURL = fmt.Sprintf("%s/*,-.opendistro_security", o.BaseURL)
+	}
+
 	var deleteResponse types.OpenSearchOperationResponse
 
 	err := o.HTTPHelper(context.Background(), "DELETE", dataStreamURL, nil, &deleteResponse)
@@ -365,7 +372,16 @@ func (o *OpensearchImpl) TriggerRestore() error {
 	restoreURL := fmt.Sprintf("%s/_snapshot/%s/%s/_restore", o.BaseURL, constants.OpenSearchSnapShotRepoName, o.SecretData.BackupName)
 	var restoreResponse types.OpenSearchSnapshotResponse
 
-	err := o.HTTPHelper(context.Background(), "POST", restoreURL, nil, &restoreResponse)
+	body := map[string]interface{}{
+		"indices":            "-.opendistro_security",
+		"ignore_unavailable": true,
+	}
+	// Marshal the body map to JSON.
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	err = o.HTTPHelper(context.Background(), "POST", restoreURL, bytes.NewBuffer(jsonBody), &restoreResponse)
 	if err != nil {
 		return err
 	}

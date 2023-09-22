@@ -20,6 +20,9 @@ const (
 	// RestoreOperation restore operation expected value
 	RestoreOperation = "restore"
 
+	// PreRestoreOperation pre-restore operation expected value
+	PreRestoreOperation = "pre-restore"
+
 	// Min value used in WaitRandom
 	Min = 10
 
@@ -115,4 +118,6 @@ const (
 
 	// OpenSearchDataLabel Label selector for OpenSearch data pods
 	OpenSearchDataLabel = "opensearch.verrazzano.io/role-data=true"
+
+	SecurityJobLabel = "job-name=opensearch-securityconfig-update"
 )

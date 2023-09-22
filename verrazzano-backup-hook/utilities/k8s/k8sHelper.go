@@ -15,6 +15,7 @@ import (
 	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s/fake"
 	"go.uber.org/zap"
 	apps "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -220,7 +221,7 @@ func (k *K8sImpl) ScaleDeployment(labelSelector, namespace, deploymentName strin
 
 }
 
-// CheckDeployment checks the existence of a deployment in anamespace
+// CheckDeployment checks the existence of a deployment in namespace
 func (k *K8sImpl) CheckDeployment(labelSelector, namespace string) (bool, error) {
 	k.Log.Infof("Checking deployment with labelselector '%v' exists in namespace '%s", labelSelector, namespace)
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
@@ -444,6 +445,25 @@ func (k *K8sImpl) UpdateKeystore(connData *model.ConnectionData, timeout string,
 	dataLabel := opensearchVar.OpenSearchDataLabel
 	dataPodContainerName := opensearchVar.OpenSearchDataPodContainerName
 
+	// Updating keystore in bootstrap if present
+	if !opensearchVar.IsLegacyOS {
+		bootstrapPod, err := k.K8sInterface.CoreV1().Pods(namespace).Get(context.TODO(), "opensearch-bootstrap-0", metav1.GetOptions{})
+		if err == nil {
+			err = k.ExecRetry(bootstrapPod, masterPodContainerName, timeout, accessKeyCmd) //nolint:gosec //#gosec G601
+			if err != nil {
+				k.Log.Errorf("Unable to exec into pod %s due to %v", bootstrapPod.Name, err)
+				return false, err
+			}
+			err = k.ExecRetry(bootstrapPod, masterPodContainerName, timeout, secretKeyCmd) //nolint:gosec //#gosec G601
+			if err != nil {
+				k.Log.Errorf("Unable to exec into pod %s due to %v", bootstrapPod.Name, err)
+				return false, err
+			}
+		}
+		if err != nil && !errors.IsNotFound(err) {
+			return false, err
+		}
+	}
 	// Updating keystore in other masters
 	listOptions := metav1.ListOptions{LabelSelector: masterLabel}
 	esMasterPods, err := k.K8sInterface.CoreV1().Pods(namespace).List(context.TODO(), listOptions)
@@ -540,6 +560,7 @@ func (k *K8sImpl) IsLegacyOS() (bool, error) {
 	return false, nil
 }
 
+// ResetClusterInitialization sets the initialized field to false so that bootstrap pod can be created again
 func (k *K8sImpl) ResetClusterInitialization() error {
 	k.Log.Infof("Fetching OpenSearchCluster %s in namespace %s", constants.OpenSearchClusterName, constants.VerrazzanoLoggingNamespace)
 	gvr := schema.GroupVersionResource{
@@ -560,4 +581,126 @@ func (k *K8sImpl) ResetClusterInitialization() error {
 
 	_, updateErr := k.DynamicK8sInterface.Resource(gvr).Namespace(constants.VerrazzanoLoggingNamespace).UpdateStatus(context.TODO(), opensearchFetched, metav1.UpdateOptions{})
 	return updateErr
+}
+
+// GetSecurityJob returns the securityconfig-update job in the verrazzano-logging namespace
+func (k *K8sImpl) GetSecurityJob() (*batchv1.Job, error) {
+	k.Log.Infof("Fetching jobs with labelselector '%v' in namespace '%s", constants.SecurityJobLabel, constants.VerrazzanoLoggingNamespace)
+	listOptions := metav1.ListOptions{LabelSelector: constants.SecurityJobLabel}
+
+	jobPods, err := k.K8sInterface.BatchV1().Jobs(constants.VerrazzanoLoggingNamespace).List(context.TODO(), listOptions)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(jobPods.Items) > 0 {
+		return &jobPods.Items[0], nil
+	}
+
+	k.Log.Infof("No securityjob found")
+	return nil, nil
+}
+
+// DeleteSecurityJob deletes the securityconfig-update job
+func (k *K8sImpl) DeleteSecurityJob() error {
+	k.Log.Infof("Cleaning up old securityconfig-update job if it exists")
+	job, err := k.GetSecurityJob()
+
+	if err != nil {
+		return err
+	}
+
+	propagationPolicy := metav1.DeletePropagationForeground
+	err = k.K8sInterface.BatchV1().Jobs(constants.VerrazzanoLoggingNamespace).Delete(context.TODO(), job.Name, metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CheckBootstrapResources waits and checks for the bootstrap pod and the new securityconfig-update job to exist
+func (k *K8sImpl) CheckBootstrapResources() error {
+	timeout := futil.GetEnvWithDefault(constants.OpenSearchHealthCheckTimeoutKey, constants.OpenSearchHealthCheckTimeoutDefaultValue)
+	var timeSeconds float64
+
+	timeParse, err := time.ParseDuration(timeout)
+	if err != nil {
+		k.Log.Errorf("Unable to parse time duration ", zap.Error(err))
+		return err
+	}
+	totalSeconds := timeParse.Seconds()
+
+	waitForSecurityJobPod := false
+	waitForBootstrapPod := false
+
+	securityJobPodExists := false
+	bootstrapPodExists := false
+
+	k.Log.Infof("Waiting for bootstrap and securityjob pods in namespace '%s' to exist", constants.VerrazzanoLoggingNamespace)
+	for !securityJobPodExists || !bootstrapPodExists {
+
+		if !securityJobPodExists {
+			listOptions := metav1.ListOptions{LabelSelector: constants.SecurityJobLabel}
+			jobPods, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoLoggingNamespace).List(context.TODO(), listOptions)
+			if err != nil {
+				return err
+			}
+
+			if len(jobPods.Items) <= 0 {
+				waitForSecurityJobPod = true
+			} else {
+				k.Log.Infof("SecurityJob pod %s has been created", jobPods.Items[0].Name)
+				securityJobPodExists = true
+			}
+		}
+
+		if !bootstrapPodExists {
+			bootstrapPod, err := k.K8sInterface.CoreV1().Pods(constants.VerrazzanoLoggingNamespace).Get(context.TODO(), "opensearch-bootstrap-0", metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					waitForSecurityJobPod = true
+				} else {
+					return err
+				}
+			}
+			if err == nil && bootstrapPod != nil {
+				k.Log.Infof("Bootstrap pod %s has been created", bootstrapPod.Name)
+				bootstrapPodExists = true
+			}
+		}
+
+		if waitForSecurityJobPod || waitForBootstrapPod {
+			fmt.Printf("timeSeconds = %v, totalSeconds = %v ", timeSeconds, totalSeconds)
+			if timeSeconds < totalSeconds {
+				message := fmt.Sprintf("Waiting for bootstrap/securityjob pod to be created")
+				duration, err := futil.WaitRandom(message, timeout, k.Log)
+				if err != nil {
+					return err
+				}
+				timeSeconds = timeSeconds + float64(duration)
+
+			} else {
+				return fmt.Errorf("Timeout '%s' exceeded. Required pods for bootstrapping the cluster still doesn't exist", timeout)
+			}
+			// change wait to false after each wait
+			waitForBootstrapPod = false
+			waitForSecurityJobPod = false
+		}
+	}
+	return nil
+}
+
+// DeleteOpenSearchService deletes the opensearch service so that data is not ingested while restore
+func (k *K8sImpl) DeleteOpenSearchService() error {
+	k.Log.Infof("Deleting opensearch service prior to restore")
+	svc, err := k.K8sInterface.CoreV1().Services(constants.VerrazzanoLoggingNamespace).Get(context.TODO(), constants.OpenSearchClusterName, metav1.GetOptions{})
+	if err == nil {
+		return k.K8sInterface.CoreV1().Services(constants.VerrazzanoLoggingNamespace).Delete(context.TODO(), svc.Name, metav1.DeleteOptions{})
+	}
+	if err != nil && errors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }

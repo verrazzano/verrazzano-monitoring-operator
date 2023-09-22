@@ -52,8 +52,8 @@ func main() {
 		fmt.Printf("Operation cannot be empty . It has to be 'backup/restore\n")
 		os.Exit(1)
 	}
-	if Operation != constants.BackupOperation && Operation != constants.RestoreOperation {
-		fmt.Printf("Operation has to be 'backup/restore\n")
+	if Operation != constants.BackupOperation && Operation != constants.RestoreOperation && Operation != constants.PreRestoreOperation {
+		fmt.Printf("Operation has to be 'backup/pre-restore/restore\n")
 		os.Exit(1)
 	}
 	if VeleroBackupName == "" {
@@ -149,6 +149,54 @@ func main() {
 	}
 
 	opensearchVar := opensearch.NewOpensearchVar(isLegacyOS)
+
+	// If the Operation is pre-restore, do not check for OS health as cluster is not yet up
+	if strings.ToLower(Operation) == constants.PreRestoreOperation {
+
+		// 1. Scale up the operator
+		// 2. Delete the security-job if it exists
+		// 3. Wait for the bootstrap pod to exist
+		// 4. Wait for the security-job to exist again
+		// 5. Scale down the operator again
+
+		if !isLegacyOS {
+			err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(0))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
+				os.Exit(1)
+			}
+			// Reset cluster status
+			err = k8s.ResetClusterInitialization()
+			if err != nil {
+				log.Errorf("Failed to reset cluster status: %v", zap.Error(err))
+			}
+			err = k8s.DeleteSecurityJob()
+			if err != nil {
+				log.Errorf("Unable to delete security job")
+			}
+			err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(1))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
+				os.Exit(1)
+			}
+
+			err = k8s.CheckBootstrapResources()
+			if err != nil {
+				log.Errorf("Failed to find bootstrap pod or securityconfig job pod: %v", err)
+				os.Exit(1)
+			}
+
+			err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(0))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
+				os.Exit(1)
+			}
+		}
+
+		log.Infof("Pre-restore operation successfully completed")
+		os.Exit(0)
+	}
+
 	basicAuth := opensearch.NewBasicAuth(false, "", "")
 	if !isLegacyOS {
 		username, err := os.ReadFile("/mnt/admin-credentials/username")
@@ -220,13 +268,7 @@ func main() {
 			log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
 			os.Exit(1)
 		}
-		// Reset cluster status
-		if !isLegacyOS {
-			err = k8s.ResetClusterInitialization()
-			if err != nil {
-				log.Errorf("Failed to reset cluster status: %v", zap.Error(err))
-			}
-		}
+
 		if isLegacyOS {
 			err = k8s.ScaleDeployment(opensearchVar.IngestLabelSelector, opensearchVar.Namespace, opensearchVar.IngestResourceName, int32(0))
 			if err != nil {
@@ -237,6 +279,14 @@ func main() {
 			err = k8s.ScaleSTS(opensearchVar.IngestResourceName, opensearchVar.Namespace, int32(0))
 			if err != nil {
 				log.Errorf("Unable to scale sts '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
+				os.Exit(1)
+			}
+		}
+
+		if !isLegacyOS {
+			err = k8s.DeleteOpenSearchService()
+			if err != nil {
+				log.Errorf("Failed to delete opensearch service")
 				os.Exit(1)
 			}
 		}
