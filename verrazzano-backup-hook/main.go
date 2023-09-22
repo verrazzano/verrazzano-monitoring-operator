@@ -152,13 +152,6 @@ func main() {
 
 	// If the Operation is pre-restore, do not check for OS health as cluster is not yet up
 	if strings.ToLower(Operation) == constants.PreRestoreOperation {
-
-		// 1. Scale up the operator
-		// 2. Delete the security-job if it exists
-		// 3. Wait for the bootstrap pod to exist
-		// 4. Wait for the security-job to exist again
-		// 5. Scale down the operator again
-
 		if !isLegacyOS {
 			err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(0))
 			if err != nil {
