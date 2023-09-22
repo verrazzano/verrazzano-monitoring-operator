@@ -637,8 +637,9 @@ func (k *K8sImpl) CheckBootstrapResources() error {
 
 	securityJobPodExists := false
 	bootstrapPodExists := false
+	message := fmt.Sprintf("Waiting for bootstrap and security-config job pods to be created in namespace %s", constants.VerrazzanoLoggingNamespace)
 
-	k.Log.Infof("Waiting for bootstrap and securityjob pods in namespace '%s' to exist", constants.VerrazzanoLoggingNamespace)
+	k.Log.Infof(message)
 	for !securityJobPodExists || !bootstrapPodExists {
 
 		if !securityJobPodExists {
@@ -674,7 +675,6 @@ func (k *K8sImpl) CheckBootstrapResources() error {
 		if waitForSecurityJobPod || waitForBootstrapPod {
 			fmt.Printf("timeSeconds = %v, totalSeconds = %v ", timeSeconds, totalSeconds)
 			if timeSeconds < totalSeconds {
-				message := fmt.Sprintf("Waiting for bootstrap/securityjob pod to be created")
 				duration, err := futil.WaitRandom(message, timeout, k.Log)
 				if err != nil {
 					return err
