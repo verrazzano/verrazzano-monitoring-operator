@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Oracle and/or its affiliates.
+// Copyright (c) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package k8s_test
@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/log"
+	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/opensearch"
 	kutil "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s"
 	vmofake "github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/utilities/k8s/fake"
 	"go.uber.org/zap"
@@ -155,10 +156,11 @@ func TestCheckPodStatus(t *testing.T) {
 // THEN checks kibana and ingest pods are Ready after reboot
 func TestCheckAllPodsAfterRestore(t *testing.T) {
 	t.Parallel()
+	opensearchVar := opensearch.NewOpensearchVar(false)
 	IngestLabel := make(map[string]string)
 	KibanaLabel := make(map[string]string)
 	IngestLabel["app"] = "system-es-ingest"
-	KibanaLabel["app"] = "system-kibana"
+	KibanaLabel["app"] = "system-osd"
 	IngestPod := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",
@@ -213,13 +215,13 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 
 	os.Setenv(constants.OpenSearchHealthCheckTimeoutKey, "1s")
 
-	err := k8s.CheckAllPodsAfterRestore()
+	err := k8s.CheckAllPodsAfterRestore(opensearchVar)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
 
 	fc = fake.NewSimpleClientset(&IngestPod, &KibanaPod)
 	k8snew := kutil.New(dclient, clientk, fc, nil, "default", log)
-	err = k8snew.CheckAllPodsAfterRestore()
+	err = k8snew.CheckAllPodsAfterRestore(opensearchVar)
 	log.Infof("%v", err)
 	assert.Nil(t, err)
 
@@ -232,7 +234,7 @@ func TestCheckAllPodsAfterRestore(t *testing.T) {
 func TestCheckDeployment(t *testing.T) {
 	t.Parallel()
 	KibanaLabel := make(map[string]string)
-	KibanaLabel["verrazzano-component"] = "kibana"
+	KibanaLabel["verrazzano-component"] = "osd"
 	PrimaryDeploy := apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "foo",

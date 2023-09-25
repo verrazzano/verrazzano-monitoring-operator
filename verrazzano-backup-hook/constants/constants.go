@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Oracle and/or its affiliates.
+// Copyright (c) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package constants
@@ -8,6 +8,9 @@ const (
 	// VerrazzanoSystemNamespace is the Namespace where Opensearch components are installed
 	VerrazzanoSystemNamespace = "verrazzano-system"
 
+	// VerrazzanoLoggingNamespace is the namespace where new Opensearch components are installed
+	VerrazzanoLoggingNamespace = "verrazzano-logging"
+
 	// VerrazzanoNameSpaceName Namespace where Velero components are installed
 	VeleroNameSpace = "verrazzano-backup"
 
@@ -16,6 +19,9 @@ const (
 
 	// RestoreOperation restore operation expected value
 	RestoreOperation = "restore"
+
+	// PreRestoreOperation pre-restore operation expected value
+	PreRestoreOperation = "pre-restore"
 
 	// Min value used in WaitRandom
 	Min = 10
@@ -40,6 +46,9 @@ const (
 
 	// OpenSearchHealthCheckTimeoutDefaultValue Env value for key OpenSearchHealthCheckTimeoutKey for Opensearch health check
 	OpenSearchHealthCheckTimeoutDefaultValue = "10m"
+
+	// DisableSecurityPluginOS Env key to disable Security Plugin
+	DisableSecurityPluginOS = "DISABLE_SECURITY_PLUGIN"
 )
 
 const (
@@ -61,6 +70,8 @@ const (
 	// OpenSearchMasterPodContainerName Opensearch master pod container name
 	OpenSearchMasterPodContainerName = "es-master"
 
+	OpenSearchClusterName = "opensearch"
+
 	// HTTPContentType content type in http request/response
 	HTTPContentType = "application/json"
 
@@ -72,15 +83,14 @@ const (
 
 	// IngestLabelSelector Opensearch ingest pod label selector
 	IngestLabelSelector = "app=system-es-ingest"
-
 	// KibanaDeploymentName Kibana deployment name
 	KibanaDeploymentName = "vmi-system-osd"
 
 	// KibanaLabelSelector Label selector for Kibana pod
-	KibanaLabelSelector = "app=system-kibana"
+	KibanaLabelSelector = "app=system-osd"
 
 	// KibanaDeploymentLabelSelector Kibana deployment label selector
-	KibanaDeploymentLabelSelector = "verrazzano-component=kibana"
+	KibanaDeploymentLabelSelector = "verrazzano-component=osd"
 
 	// VMODeploymentName Deployment name for Verrazzano Monitoring Operator
 	VMODeploymentName = "verrazzano-monitoring-operator"
@@ -108,4 +118,6 @@ const (
 
 	// OpenSearchDataLabel Label selector for OpenSearch data pods
 	OpenSearchDataLabel = "opensearch.verrazzano.io/role-data=true"
+
+	SecurityJobLabel = "job-name=opensearch-securityconfig-update"
 )

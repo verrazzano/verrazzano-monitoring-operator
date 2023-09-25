@@ -6,3 +6,12 @@ vendor
 **/*.iml
 dist/**
 ATTRIBUTION-HELPER-DEPS
+.trivyignore
+coverage.html
+grype-scan.sh
+scanning-report-grype.json
+scanning-report-trivy.json
+summarize-scan-reports.sh
+thirdparty_check.sh
+trivy-scan.sh
+

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Oracle and/or its affiliates.
+// Copyright (c) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch
@@ -48,6 +48,10 @@ func (o *OpensearchImpl) HTTPHelper(ctx context.Context, method, requestURL stri
 	}
 
 	request.Header.Add("Content-Type", constants.HTTPContentType)
+	if o.BasicAuthRequired() {
+		username, password := o.GetCredential()
+		request.SetBasicAuth(username, password)
+	}
 	response, err = o.Client.Do(request)
 	if err != nil {
 		o.Log.Errorf("HTTP '%s' failure while invoking url '%s' due to '%v'", method, requestURL, zap.Error(err))
@@ -331,6 +335,13 @@ func (o *OpensearchImpl) DeleteData() error {
 	o.Log.Infof("Deleting data streams followed by index ..")
 	dataStreamURL := fmt.Sprintf("%s/_data_stream/*", o.BaseURL)
 	dataIndexURL := fmt.Sprintf("%s/*", o.BaseURL)
+
+	// if we are using basic auth, means we have security plugin enabled
+	// skip deleting .opendistro_security index in that case
+	if o.BasicAuthRequired() {
+		dataIndexURL = fmt.Sprintf("%s/*,-.opendistro_security", o.BaseURL)
+	}
+
 	var deleteResponse types.OpenSearchOperationResponse
 
 	err := o.HTTPHelper(context.Background(), "DELETE", dataStreamURL, nil, &deleteResponse)
@@ -361,7 +372,16 @@ func (o *OpensearchImpl) TriggerRestore() error {
 	restoreURL := fmt.Sprintf("%s/_snapshot/%s/%s/_restore", o.BaseURL, constants.OpenSearchSnapShotRepoName, o.SecretData.BackupName)
 	var restoreResponse types.OpenSearchSnapshotResponse
 
-	err := o.HTTPHelper(context.Background(), "POST", restoreURL, nil, &restoreResponse)
+	body := map[string]interface{}{
+		"indices":            "-.opendistro_security",
+		"ignore_unavailable": true,
+	}
+	// Marshal the body map to JSON.
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	err = o.HTTPHelper(context.Background(), "POST", restoreURL, bytes.NewBuffer(jsonBody), &restoreResponse)
 	if err != nil {
 		return err
 	}
@@ -478,4 +498,14 @@ func (o *OpensearchImpl) Restore() error {
 	}
 
 	return nil
+}
+
+// BasicAuthRequired - whether to use basic auth or not
+func (o *OpensearchImpl) BasicAuthRequired() bool {
+	return o.BasicAuth.required
+}
+
+// GetCredential - returns username and password required for basic auth
+func (o *OpensearchImpl) GetCredential() (string, string) {
+	return o.BasicAuth.username, o.BasicAuth.password
 }

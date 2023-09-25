@@ -1,10 +1,11 @@
-// Copyright (c) 2022, Oracle and/or its affiliates.
+// Copyright (c) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch
 
 import (
 	"context"
+	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/types"
 	"go.uber.org/zap"
 	"io"
@@ -49,6 +50,12 @@ type Opensearch interface {
 
 	// Restore Toplevel method to start the restore operation
 	Restore() error
+
+	// BasicAuthRequired tells whether to use basic auth while performing http requests or not
+	BasicAuthRequired() bool
+
+	// GetCredential returns the username and password required for basic auth
+	GetCredential() (string, string)
 }
 
 // OpensearchImpl struct for Opensearch interface
@@ -58,15 +65,100 @@ type OpensearchImpl struct {
 	BaseURL    string
 	SecretData *types.ConnectionData
 	Log        *zap.SugaredLogger
+	BasicAuth  *BasicAuth
+}
+
+// BasicAuth for BasicAuth interface
+type BasicAuth struct {
+	required bool
+	username string
+	password string
+}
+
+// NewBasicAuth returns a new BasicAuth struct
+func NewBasicAuth(required bool, username, password string) *BasicAuth {
+	return &BasicAuth{
+		required: required,
+		username: username,
+		password: password,
+	}
 }
 
 // New Opensearch Impl constructor
-func New(baseURL string, timeout string, client *http.Client, secretData *types.ConnectionData, log *zap.SugaredLogger) *OpensearchImpl {
+func New(baseURL string, timeout string, client *http.Client, secretData *types.ConnectionData, log *zap.SugaredLogger, basicAuth *BasicAuth) *OpensearchImpl {
 	return &OpensearchImpl{
 		Client:     client,
 		Timeout:    timeout,
 		BaseURL:    baseURL,
 		SecretData: secretData,
 		Log:        log,
+		BasicAuth:  basicAuth,
+	}
+}
+
+type OpensearchVar struct {
+	IsLegacyOS bool
+	// OpenSearchURL Opensearch url used internally
+	OpenSearchURL string
+	// Namespace for Opensearch pods
+	Namespace string
+	// OpenSearchDataPodContainerName Opensearch data pod container name
+	OpenSearchDataPodContainerName string
+	// OpenSearchMasterPodContainerName Opensearch master pod container name
+	OpenSearchMasterPodContainerName string
+	// IngestResourceName Opensearch ingest deployment/sts name
+	IngestResourceName string
+	// IngestLabelSelector Opensearch ingest pod label selector
+	IngestLabelSelector string
+	// OSDDeploymentName OSD deployment name
+	OSDDeploymentName string
+	// OSDLabelSelector Label selector for OSD pod
+	OSDLabelSelector string
+	// OSDDeploymentLabelSelector OSD deployment label selector
+	OSDDeploymentLabelSelector string
+	// OperatorDeploymentName Deployment name for Opensearch Operator
+	OperatorDeploymentName string
+	// OperatorDeploymentLabelSelector Label selector for Opensearch Operator
+	OperatorDeploymentLabelSelector string
+	// OpenSearchMasterLabel Label selector for OpenSearch master pods
+	OpenSearchMasterLabel string
+	// OpenSearchDataLabel Label selector for OpenSearch data pods
+	OpenSearchDataLabel string
+}
+
+func NewOpensearchVar(isLegacyOS bool) *OpensearchVar {
+	if isLegacyOS {
+		return &OpensearchVar{
+			IsLegacyOS:                       isLegacyOS,
+			OpenSearchURL:                    constants.OpenSearchURL,
+			Namespace:                        constants.VerrazzanoSystemNamespace,
+			OpenSearchDataPodContainerName:   constants.OpenSearchDataPodContainerName,
+			OpenSearchMasterPodContainerName: constants.OpenSearchMasterPodContainerName,
+			IngestResourceName:               constants.IngestDeploymentName,
+			IngestLabelSelector:              constants.IngestLabelSelector,
+			OSDDeploymentName:                constants.KibanaDeploymentName,
+			OSDLabelSelector:                 constants.KibanaLabelSelector,
+			OSDDeploymentLabelSelector:       constants.KibanaDeploymentLabelSelector,
+			OperatorDeploymentName:           constants.VMODeploymentName,
+			OperatorDeploymentLabelSelector:  constants.VMOLabelSelector,
+			OpenSearchMasterLabel:            constants.OpenSearchMasterLabel,
+			OpenSearchDataLabel:              constants.OpenSearchDataLabel,
+		}
+	}
+	return &OpensearchVar{
+		IsLegacyOS:                       isLegacyOS,
+		OpenSearchURL:                    "https://127.0.0.1:9200",
+		Namespace:                        constants.VerrazzanoLoggingNamespace,
+		OpenSearchDataPodContainerName:   "opensearch",
+		OpenSearchMasterPodContainerName: "opensearch",
+		IngestResourceName:               "opensearch-es-ingest",
+		IngestLabelSelector:              "opster.io/opensearch-nodepool=es-ingest",
+		OSDDeploymentName:                "opensearch-dashboards",
+		OSDLabelSelector:                 "opensearch.cluster.dashboards=opensearch",
+		OSDDeploymentLabelSelector:       "opensearch.cluster.dashboards=opensearch",
+		OperatorDeploymentName:           "opensearch-operator-controller-manager",
+		OperatorDeploymentLabelSelector:  "control-plane=controller-manager",
+		OpenSearchMasterLabel:            "opensearch.role=cluster_manager",
+		OpenSearchDataLabel:              "opster.io/opensearch-nodepool=es-data",
 	}
 }

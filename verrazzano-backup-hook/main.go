@@ -1,9 +1,10 @@
-// Copyright (c) 2022, Oracle and/or its affiliates.
+// Copyright (c) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/verrazzano/verrazzano-monitoring-operator/verrazzano-backup-hook/constants"
@@ -51,8 +52,8 @@ func main() {
 		fmt.Printf("Operation cannot be empty . It has to be 'backup/restore\n")
 		os.Exit(1)
 	}
-	if Operation != constants.BackupOperation && Operation != constants.RestoreOperation {
-		fmt.Printf("Operation has to be 'backup/restore\n")
+	if Operation != constants.BackupOperation && Operation != constants.RestoreOperation && Operation != constants.PreRestoreOperation {
+		fmt.Printf("Operation has to be 'backup/pre-restore/restore\n")
 		os.Exit(1)
 	}
 	if VeleroBackupName == "" {
@@ -86,14 +87,6 @@ func main() {
 	globalTimeout := futil.GetEnvWithDefault(constants.OpenSearchHealthCheckTimeoutKey, constants.OpenSearchHealthCheckTimeoutDefaultValue)
 	var checkConData model.ConnectionData
 	checkConData.VeleroTimeout = globalTimeout
-	// Initialize Opensearch object
-	search := opensearch.New(constants.OpenSearchURL, globalTimeout, http.DefaultClient, &checkConData, log)
-	// Check OpenSearch health before proceeding with backup or restore
-	err = search.EnsureOpenSearchIsHealthy()
-	if err != nil {
-		log.Errorf("Operation cannot be performed as OpenSearch is not healthy")
-		os.Exit(1)
-	}
 
 	// Feedback loop to gather k8s context
 	for !done {
@@ -140,6 +133,92 @@ func main() {
 	// Initialize K8s object
 	k8s := kutil.New(dynamicKubeClientInterface, kubeClient, kubeClientInterface, config, Profile, log)
 
+	httpClient := http.DefaultClient
+	isLegacyOS, err := k8s.IsLegacyOS()
+
+	if err != nil {
+		log.Errorf("Failed to determine if Security Plugin is enabled: %v", err)
+		os.Exit(1)
+	}
+
+	// Log which OS we are backing up or restoring
+	if isLegacyOS {
+		log.Infof("Security Plugin Disabled. Backup and Restore will be done for VMO OpenSearch")
+	} else {
+		log.Infof("Security Plugin Enabled. Backup and Restore will be done for Opster OpenSearch")
+	}
+
+	opensearchVar := opensearch.NewOpensearchVar(isLegacyOS)
+
+	// If the Operation is pre-restore, do not check for OS health as cluster is not yet up
+	if strings.ToLower(Operation) == constants.PreRestoreOperation {
+		if !isLegacyOS {
+			err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(0))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
+				os.Exit(1)
+			}
+			// Reset cluster status
+			err = k8s.ResetClusterInitialization()
+			if err != nil {
+				log.Errorf("Failed to reset cluster status: %v", zap.Error(err))
+			}
+			err = k8s.DeleteSecurityJob()
+			if err != nil {
+				log.Errorf("Unable to delete security job")
+			}
+			err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(1))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
+				os.Exit(1)
+			}
+
+			err = k8s.CheckBootstrapResources()
+			if err != nil {
+				log.Errorf("Failed to find bootstrap pod or securityconfig job pod: %v", err)
+				os.Exit(1)
+			}
+
+			err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(0))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
+				os.Exit(1)
+			}
+		}
+
+		log.Infof("Pre-restore operation successfully completed")
+		os.Exit(0)
+	}
+
+	basicAuth := opensearch.NewBasicAuth(false, "", "")
+	if !isLegacyOS {
+		username, err := os.ReadFile("/mnt/admin-credentials/username")
+		if err != nil {
+			log.Errorf("Failed to get username for basic auth")
+			os.Exit(1)
+		}
+		password, err := os.ReadFile("/mnt/admin-credentials/password")
+		if err != nil {
+			log.Errorf("Failed to get password for basic auth")
+			os.Exit(1)
+		}
+
+		basicAuth = opensearch.NewBasicAuth(true, string(username), string(password))
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec //#nosec G402
+		}
+		httpClient = &http.Client{Transport: tr}
+	}
+
+	// Initialize Opensearch object
+	search := opensearch.New(opensearchVar.OpenSearchURL, globalTimeout, httpClient, &checkConData, log, basicAuth)
+	// Check OpenSearch health before proceeding with backup or restore
+	err = search.EnsureOpenSearchIsHealthy()
+	if err != nil {
+		log.Errorf("Operation cannot be performed as OpenSearch is not healthy")
+		os.Exit(1)
+	}
+
 	// Get S3 access details from Velero Backup Storage location associated with Backup given as input
 	// Ensure the Backup Storage Location is NOT default
 	openSearchConData, err := k8s.PopulateConnData(VeleroNamespace, VeleroBackupName)
@@ -149,13 +228,13 @@ func main() {
 	}
 
 	// Update OpenSearch keystore
-	_, err = k8s.UpdateKeystore(openSearchConData, globalTimeout)
+	_, err = k8s.UpdateKeystore(openSearchConData, globalTimeout, opensearchVar)
 	if err != nil {
 		log.Errorf("Unable to update keystore")
 		os.Exit(1)
 	}
 
-	openSearch := opensearch.New(constants.OpenSearchURL, globalTimeout, http.DefaultClient, openSearchConData, log)
+	openSearch := opensearch.New(opensearchVar.OpenSearchURL, globalTimeout, httpClient, openSearchConData, log, basicAuth)
 	err = search.ReloadOpensearchSecureSettings()
 	if err != nil {
 		log.Errorf("Unable to reload security settings")
@@ -176,42 +255,61 @@ func main() {
 	case constants.RestoreOperation:
 		// OpenSearch restore handling
 		log.Infof("Commencing OpenSearch restore ..")
-		err = k8s.ScaleDeployment(constants.VMOLabelSelector, constants.VerrazzanoSystemNamespace, constants.VMODeploymentName, int32(0))
+
+		err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(0))
 		if err != nil {
-			log.Errorf("Unable to scale deployment '%s' due to %v", constants.VMODeploymentName, zap.Error(err))
+			log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
 			os.Exit(1)
 		}
-		err = k8s.ScaleDeployment(constants.IngestLabelSelector, constants.VerrazzanoSystemNamespace, constants.IngestDeploymentName, int32(0))
-		if err != nil {
-			log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
-			os.Exit(1)
+
+		if isLegacyOS {
+			err = k8s.ScaleDeployment(opensearchVar.IngestLabelSelector, opensearchVar.Namespace, opensearchVar.IngestResourceName, int32(0))
+			if err != nil {
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
+				os.Exit(1)
+			}
+		} else {
+			err = k8s.ScaleSTS(opensearchVar.IngestResourceName, opensearchVar.Namespace, int32(0))
+			if err != nil {
+				log.Errorf("Unable to scale sts '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
+				os.Exit(1)
+			}
 		}
+
+		if !isLegacyOS {
+			err = k8s.DeleteOpenSearchService()
+			if err != nil {
+				log.Errorf("Failed to delete opensearch service")
+				os.Exit(1)
+			}
+		}
+
 		err = openSearch.Restore()
 		if err != nil {
 			log.Errorf("Operation '%s' unsuccessfull due to %v", Operation, zap.Error(err))
 			os.Exit(1)
 		}
 
-		ok, err := k8s.CheckDeployment(constants.KibanaDeploymentLabelSelector, constants.VerrazzanoSystemNamespace)
+		ok, err := k8s.CheckDeployment(opensearchVar.OSDDeploymentLabelSelector, opensearchVar.Namespace)
 		if err != nil {
-			log.Errorf("Unable to detect Kibana deployment '%s' due to %v", constants.KibanaDeploymentLabelSelector, zap.Error(err))
+			log.Errorf("Unable to detect OSD deployment '%s' due to %v", opensearchVar.OSDLabelSelector, zap.Error(err))
 			os.Exit(1)
 		}
 		// If kibana is deployed then scale it down
 		if ok {
-			err = k8s.ScaleDeployment(constants.KibanaLabelSelector, constants.VerrazzanoSystemNamespace, constants.KibanaDeploymentName, int32(0))
+			err = k8s.ScaleDeployment(opensearchVar.OSDLabelSelector, opensearchVar.Namespace, opensearchVar.OSDDeploymentName, int32(0))
 			if err != nil {
-				log.Errorf("Unable to scale deployment '%s' due to %v", constants.IngestDeploymentName, zap.Error(err))
+				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OSDDeploymentName, zap.Error(err))
 			}
 		}
-		err = k8s.ScaleDeployment(constants.VMOLabelSelector, constants.VerrazzanoSystemNamespace, constants.VMODeploymentName, int32(1))
+		err = k8s.ScaleDeployment(opensearchVar.OperatorDeploymentLabelSelector, opensearchVar.Namespace, opensearchVar.OperatorDeploymentName, int32(1))
 		if err != nil {
-			log.Errorf("Unable to scale deployment '%s' due to %v", constants.VMODeploymentName, zap.Error(err))
+			log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
 		}
 
-		err = k8s.CheckAllPodsAfterRestore()
+		err = k8s.CheckAllPodsAfterRestore(opensearchVar)
 		if err != nil {
-			log.Errorf("Unable to check deployments after restoring Verrazzano Monitoring Operator %v", zap.Error(err))
+			log.Errorf("Unable to check deployments after restoring Opensearch Operator %v", zap.Error(err))
 		}
 
 		log.Infof("%s restore was successfull", strings.ToTitle(Component))
