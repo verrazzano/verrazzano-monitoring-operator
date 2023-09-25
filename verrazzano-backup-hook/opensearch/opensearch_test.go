@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Oracle and/or its affiliates.
+// Copyright (c) 2022, 2023, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package opensearch_test
@@ -25,6 +25,10 @@ const (
 	dataStreamsURL    = "/_data_stream"
 	snapshotURL       = "/_snapshot"
 	timeOutGlobal     = "10m"
+)
+
+var (
+	fakeBasicAuth = opensearch.NewBasicAuth(false, "", "")
 )
 
 func logHelper() (*zap.SugaredLogger, string) {
@@ -182,7 +186,7 @@ func TestMain(m *testing.M) {
 	defer httpServer.Close()
 
 	fmt.Println("mock opensearch handler")
-	openSearch = opensearch.New(httpServer.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	openSearch = opensearch.New(httpServer.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 
 	fmt.Println("Start tests")
 	m.Run()
@@ -210,7 +214,7 @@ func Test_EnsureOpenSearchIsReachable(t *testing.T) {
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 	}
-	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.EnsureOpenSearchIsReachable()
 	assert.Nil(t, err)
 
@@ -224,7 +228,7 @@ func Test_EnsureOpenSearchIsReachable(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err = o.EnsureOpenSearchIsReachable()
 	assert.Nil(t, err)
 
@@ -252,7 +256,7 @@ func Test_EnsureOpenSearchIsHealthy(t *testing.T) {
 		BackupName:    "mango",
 		VeleroTimeout: "1s",
 	}
-	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.EnsureOpenSearchIsHealthy()
 	assert.Nil(t, err)
 
@@ -266,7 +270,7 @@ func Test_EnsureOpenSearchIsHealthy(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err = o.EnsureOpenSearchIsHealthy()
 	assert.NotNil(t, err)
 }
@@ -303,7 +307,7 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 		Secret:        objsecret,
 	}
 
-	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.RegisterSnapshotRepository()
 	assert.Nil(t, err)
 
@@ -317,7 +321,7 @@ func Test_RegisterSnapshotRepository(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err = o.RegisterSnapshotRepository()
 	assert.NotNil(t, err)
 
@@ -345,7 +349,7 @@ func Test_ReloadOpensearchSecureSettings(t *testing.T) {
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.ReloadOpensearchSecureSettings()
 	assert.Nil(t, err)
 
@@ -358,7 +362,7 @@ func Test_ReloadOpensearchSecureSettings(t *testing.T) {
 		}
 	}))
 	defer server2.Close()
-	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err = o.ReloadOpensearchSecureSettings()
 	assert.NotNil(t, err)
 }
@@ -386,7 +390,7 @@ func Test_TriggerSnapshot(t *testing.T) {
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.TriggerSnapshot()
 	assert.Nil(t, err)
 
@@ -399,7 +403,7 @@ func Test_TriggerSnapshot(t *testing.T) {
 		}
 	}))
 	defer server2.Close()
-	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err = o.TriggerSnapshot()
 	assert.NotNil(t, err)
 
@@ -428,7 +432,7 @@ func TestCheckSnapshotProgress(t *testing.T) {
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.CheckSnapshotProgress()
 	assert.Nil(t, err)
 }
@@ -456,7 +460,7 @@ func Test_DeleteDataStreams(t *testing.T) {
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.DeleteData()
 	assert.Nil(t, err)
 
@@ -470,7 +474,7 @@ func Test_DeleteDataStreams(t *testing.T) {
 	}))
 	defer server2.Close()
 
-	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err = o.DeleteData()
 	assert.NotNil(t, err)
 }
@@ -498,7 +502,7 @@ func Test_TriggerRestore(t *testing.T) {
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server1.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.TriggerRestore()
 	assert.Nil(t, err)
 
@@ -511,7 +515,7 @@ func Test_TriggerRestore(t *testing.T) {
 		}
 	}))
 	defer server2.Close()
-	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o = opensearch.New(server2.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err = o.TriggerRestore()
 	assert.NotNil(t, err)
 }
@@ -539,7 +543,7 @@ func Test_CheckRestoreProgress(t *testing.T) {
 		VeleroTimeout: "1s",
 		RegionName:    "region",
 	}
-	o := opensearch.New(server.URL, timeOutGlobal, http.DefaultClient, &conData, log)
+	o := opensearch.New(server.URL, timeOutGlobal, http.DefaultClient, &conData, log, fakeBasicAuth)
 	err := o.CheckRestoreProgress()
 	assert.Nil(t, err)
 }
