@@ -241,10 +241,5 @@ func (o *OSClient) IsOpenSearchReady(vmi *vmcontrollerv1.VerrazzanoMonitoringIns
 		return false
 	}
 
-	if len(statefulSets) > 1 {
-		zap.S().Errorf("invalid number of OpenSearch statefulset created %v.", len(statefulSets))
-		return false
-	}
-
 	return statefulSets[0].Status.ReadyReplicas == statefulSets[0].Status.Replicas
 }
