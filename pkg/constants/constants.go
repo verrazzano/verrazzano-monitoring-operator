@@ -186,6 +186,8 @@ const (
 	ObjectStoreAccessKey          = "object_store_access_key"
 	ObjectStoreCustomerKeyVarName = "OBJECT_STORE_SECRET_KEY_ID"
 	ObjectStoreCustomerKey        = "object_store_secret_key"
+	DisableSecurityPluginOS       = "DISABLE_SECURITY_PLUGIN"
+	DisableSecurityPluginOSD      = "DISABLE_SECURITY_DASHBOARDS_PLUGIN"
 )
 
 // ComponentLabel - the label for a specific component
