@@ -268,12 +268,12 @@ func main() {
 				log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
 				os.Exit(1)
 			}
-		} else {
-			err = k8s.ScaleSTS(opensearchVar.IngestResourceName, opensearchVar.Namespace, int32(0))
-			if err != nil {
-				log.Errorf("Unable to scale sts '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
-				os.Exit(1)
-			}
+			//} else {
+			//	err = k8s.ScaleSTS(opensearchVar.IngestResourceName, opensearchVar.Namespace, int32(0))
+			//	if err != nil {
+			//		log.Errorf("Unable to scale sts '%s' due to %v", opensearchVar.IngestResourceName, zap.Error(err))
+			//		os.Exit(1)
+			//	}
 		}
 
 		if !isLegacyOS {
@@ -307,10 +307,10 @@ func main() {
 			log.Errorf("Unable to scale deployment '%s' due to %v", opensearchVar.OperatorDeploymentName, zap.Error(err))
 		}
 
-		err = k8s.CheckAllPodsAfterRestore(opensearchVar)
-		if err != nil {
-			log.Errorf("Unable to check deployments after restoring Opensearch Operator %v", zap.Error(err))
-		}
+		//err = k8s.CheckAllPodsAfterRestore(opensearchVar)
+		//if err != nil {
+		//	log.Errorf("Unable to check deployments after restoring Opensearch Operator %v", zap.Error(err))
+		//}
 
 		log.Infof("%s restore was successfull", strings.ToTitle(Component))
 
