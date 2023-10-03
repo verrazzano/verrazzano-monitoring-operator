@@ -66,6 +66,9 @@ pipeline {
         stage('Check Repo Clean') {
             steps {
                 checkRepoClean()
+                sh """
+                   rm .trivyignore || true
+                """
             }
         }
 
