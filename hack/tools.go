@@ -54,4 +54,5 @@ import (
 	_ "go.opentelemetry.io/otel/sdk"
 	_ "go.opentelemetry.io/otel/trace"
 	_ "gopkg.in/natefinch/lumberjack.v2"
+	_ "gotest.tools/v3"
 )
