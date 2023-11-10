@@ -36,6 +36,7 @@ import (
 	_ "github.com/dustin/go-humanize"
 	_ "github.com/felixge/httpsnoop"
 	_ "github.com/form3tech-oss/jwt-go"
+	_ "github.com/getkin/kin-openapi/openapi3"
 	_ "github.com/google/btree"
 	_ "github.com/googleapis/gnostic"
 	_ "github.com/gorilla/websocket"

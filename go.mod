@@ -22,6 +22,7 @@ require (
 require (
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/uuid v1.1.2 // indirect
@@ -111,6 +112,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/felixge/httpsnoop v1.0.1
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible
+	github.com/getkin/kin-openapi v0.76.0
 	github.com/google/btree v1.0.1
 	github.com/googleapis/gnostic v0.5.5
 	github.com/gorilla/websocket v1.4.2
