@@ -4,15 +4,6 @@ ARG FINAL_IMAGE=ghcr.io/verrazzano/ol8-static:v0.0.1-20231102152128-e7afc807
 
 FROM ghcr.io/oracle/oraclelinux:8-slim AS build_base
 
-RUN yum update -y \
-    && yum-config-manager --save --setopt=ol7_ociyum_config.skip_if_unavailable=true \
-    && yum install -y oracle-golang-release-el7 \
-    && yum-config-manager --disable ol7_developer_golang\* \
-    && yum-config-manager --enable ol7_developer_golang119 \
-    && yum -y install golang \
-    && yum clean all \
-    && go version
-
 ARG BUILDVERSION
 ARG BUILDDATE
 ARG EXTLDFLAGS
@@ -31,7 +22,10 @@ RUN groupadd -r verrazzano-monitoring-operator && \
     useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
 
 FROM $FINAL_IMAGE AS final
-
+FROM ghcr.io/oracle/oraclelinux:8-slim
+RUN microdnf update -y \
+    && microdnf clean all \
+    && rm -rf /var/cache/yum/*
 # copy users/groups added in build_base stage
 COPY --from=build_base /etc/passwd /etc/passwd
 COPY --from=build_base /etc/group /etc/group
