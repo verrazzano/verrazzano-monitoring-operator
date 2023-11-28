@@ -5,7 +5,7 @@ ARG FINAL_IMAGE=ghcr.io/verrazzano/ol8-static:v0.0.1-20231102152128-e7afc807
 FROM ghcr.io/oracle/oraclelinux:8-slim AS build_base
 RUN microdnf update -y --setopt=install_weak_deps=0 --setopt=tsflags=nodocs && \
     microdnf install -y golang-1.20.10-1.module+el8.9.0+90068+08775a1f.x86_64
-    
+
 # Need to use specific WORKDIR to match verrazzano-monitoring-operator's source packages
 WORKDIR /root/go/src/github.com/verrazzano/verrazzano-monitoring-operator
 ENV GOPATH /root/go
@@ -20,7 +20,6 @@ RUN groupadd -r verrazzano-monitoring-operator && \
     useradd --no-log-init -r -g verrazzano-monitoring-operator -u 1000 verrazzano-monitoring-operator
 
 FROM $FINAL_IMAGE AS final
-FROM ghcr.io/oracle/oraclelinux:8-slim
 
 # copy users/groups added in build_base stage
 COPY --from=build_base /etc/passwd /etc/passwd
