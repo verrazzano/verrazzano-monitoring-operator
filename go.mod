@@ -1,6 +1,6 @@
 module github.com/verrazzano/verrazzano-monitoring-operator
 
-go 1.19
+go 1.20
 
 require (
 	github.com/go-resty/resty/v2 v2.6.0
