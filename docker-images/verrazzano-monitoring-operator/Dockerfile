@@ -25,7 +25,6 @@ RUN groupadd -r verrazzano-monitoring-operator && \
 
 FROM $FINAL_IMAGE AS final
 
-FROM ghcr.io/oracle/oraclelinux:8-slim
 RUN microdnf update -y \
     && microdnf clean all \
     && rm -rf /var/cache/yum/*
