@@ -3,8 +3,7 @@
 ARG FINAL_IMAGE=ghcr.io/verrazzano/ol8-static:v0.0.1-20231102152128-e7afc807
 
 FROM ghcr.io/oracle/oraclelinux:8-slim AS build_base
-RUN microdnf update -y --setopt=install_weak_deps=0 --setopt=tsflags=nodocs && \
-    microdnf install -y golang-1.20.10-1.module+el8.9.0+90068+08775a1f.x86_64 && \
+RUN microdnf install -y golang-1.20.10-1.module+el8.9.0+90068+08775a1f.x86_64 && \
     microdnf clean all \
     && rm -rf /var/cache/yum/*
 
