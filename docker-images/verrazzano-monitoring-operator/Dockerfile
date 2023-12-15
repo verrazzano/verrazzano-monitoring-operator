@@ -2,19 +2,13 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 ARG FINAL_IMAGE=ghcr.io/verrazzano/ol8-static:v0.0.1-20231102152128-e7afc807
 
-FROM ghcr.io/oracle/oraclelinux:7-slim AS build_base
-
-RUN yum update -y \
-    && yum-config-manager --save --setopt=ol7_ociyum_config.skip_if_unavailable=true \
-    && yum install -y oracle-golang-release-el7 \
-    && yum-config-manager --disable ol7_developer_golang\* \
-    && yum-config-manager --enable ol7_developer_golang119 \
-    && yum -y install golang \
-    && yum clean all \
-    && go version
+FROM ghcr.io/oracle/oraclelinux:8-slim AS build_base
+RUN microdnf install -y golang-1.20.10-1.module+el8.9.0+90068+08775a1f.x86_64 && \
+    microdnf clean all \
+    && rm -rf /var/cache/yum/*
 
 ARG BUILDVERSION
-ARG BUILDDATE
+ARG BUILDDATE 
 ARG EXTLDFLAGS
 
 # Need to use specific WORKDIR to match verrazzano-monitoring-operator's source packages
