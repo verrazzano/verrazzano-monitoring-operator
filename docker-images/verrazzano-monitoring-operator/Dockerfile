@@ -5,9 +5,6 @@ ARG FINAL_IMAGE=ghcr.io/verrazzano/ol8-static:v0.0.1-20231102152128-e7afc807
 ARG GOLANG_IMAGE=ghcr.io/verrazzano/golang:v1.20.12
 FROM $GOLANG_IMAGE AS build_base
 
-RUN microdnf clean all \
-    && rm -rf /var/cache/yum/*
-
 ARG BUILDVERSION
 ARG BUILDDATE 
 ARG EXTLDFLAGS
