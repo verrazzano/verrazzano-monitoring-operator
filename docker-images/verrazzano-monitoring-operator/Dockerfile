@@ -2,10 +2,8 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 ARG FINAL_IMAGE=ghcr.io/verrazzano/ol8-static:v0.0.1-20231102152128-e7afc807
 
-FROM ghcr.io/oracle/oraclelinux:8-slim AS build_base
-RUN microdnf install -y golang-1.20.10-1.module+el8.9.0+90068+08775a1f.x86_64 && \
-    microdnf clean all \
-    && rm -rf /var/cache/yum/*
+ARG GOLANG_IMAGE=ghcr.io/verrazzano/golang:v1.20.12
+FROM $GOLANG_IMAGE AS build_base
 
 ARG BUILDVERSION
 ARG BUILDDATE 
