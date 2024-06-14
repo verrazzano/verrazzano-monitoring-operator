@@ -411,10 +411,10 @@ func NewOpenSearchDashboardsDeployment(vmo *vmcontrollerv1.VerrazzanoMonitoringI
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds = 20
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold = 10
 
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 15
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 3
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 20
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 5
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds = 5
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds = 2
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds = 10
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold = 3
 
 		// When the deployment does not have a pod security context with an FSGroup attribute, any mounted volumes are
 		// initially owned by root/root. The current OSD image creates a group
